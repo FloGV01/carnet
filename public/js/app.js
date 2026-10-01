@@ -12,10 +12,12 @@ import { EcranAttente } from './ui/ecrans/attente.js';
 import { Reglages } from './ui/ecrans/reglages.js';
 import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
+import { Episode } from './ui/ecrans/episode.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
+  episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   historique: () => html`<${EcranAttente} titre="Historique" />`,
   soins: () => html`<${EcranAttente} titre="Soins" />`,
   reglages: () => html`<${Reglages} />`,

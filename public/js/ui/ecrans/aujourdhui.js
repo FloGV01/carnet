@@ -10,6 +10,9 @@ import { Segmente, OuiNon } from '../composants/segmente.js';
 import { ChampTexte } from '../composants/texte.js';
 import { ChampHeure } from '../composants/heure.js';
 import { Repli } from '../composants/repli.js';
+import { Icones } from '../icones.js';
+import { etatApp } from '../../store.js';
+import { carteLibelles, libelle } from '../../domain/libelles.js';
 
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const EXPLOSIONS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: String(i) }));
@@ -42,6 +45,11 @@ export function Aujourdhui({ date: dateRoute }) {
     return { entree: lue || { date }, items, baseVide: dates.length === 0 };
   }, [date], { suivre: false });
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
+  useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
+  const { donnees: evenements } = useDonnees(async () => {
+    const [episodes, items] = await Promise.all([repo.episodes.parJour(date, date), repo.listes.items()]);
+    return { episodes, carte: carteLibelles(items) };
+  }, [date]);
 
   const aller = (cible) => {
     let d = cible;
@@ -115,7 +123,17 @@ export function Aujourdhui({ date: dateRoute }) {
         cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
     </${Repli}>
 
+    ${evenements && evenements.episodes.length > 0 && html`<section class="section">
+      <h2>Épisodes et symptômes</h2>
+      <ul class="liste evenements">${evenements.episodes.map((ep) => html`<li>
+        <a class="ligne lien-ligne" href=${versHash('episode', { id: ep.id })}>
+          <span class="heure">${ep.heure || ''}</span>
+          <span class="resume">${[libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode'}</span>
+          <span aria-hidden="true">›</span></a></li>`)}</ul>
+    </section>`}
+
     <p class="pied discret">Tout est facultatif. Toucher un choix une seconde fois l'efface.</p>
     ${baseVide && vide && html`<a class="ligne-info lien discret" href="#/reglages/sauvegarde">Importer une sauvegarde</a>`}
+    <a class="fab" href="#/episode/nouveau">${Icones.plus()}<span>Épisode</span></a>
   </main>`;
 }

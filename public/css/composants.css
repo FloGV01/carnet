@@ -83,7 +83,7 @@
   min-height: var(--cible); padding: 4px 6px; border-radius: var(--r-petit);
   border: 1px solid var(--hairline); background: var(--surface); color: var(--text);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  font-size: 0.92rem; line-height: 1.15; text-align: center; transition: background var(--duree), color var(--duree);
+  font-size: 0.92rem; line-height: 1.15; text-align: center;
 }
 .pastille small { font-size: 0.7rem; color: var(--text-2); }
 .pastille[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
@@ -95,7 +95,7 @@
 .segmente { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: var(--surface); padding: 2px; gap: 2px; }
 .segmente button {
   flex: 1; min-height: 40px; min-width: 56px; padding: 0 var(--esp-3); border: 0; border-radius: 8px;
-  background: none; color: var(--text); font-size: 0.92rem; transition: background var(--duree);
+  background: none; color: var(--text); font-size: 0.92rem;
 }
 .segmente button[aria-pressed="true"] { background: var(--accent); color: var(--accent-texte); font-weight: 600; }
 
@@ -133,3 +133,40 @@
 .ligne-info { display: block; margin-top: 4px; font-size: 0.85rem; }
 .lien { color: var(--accent); text-decoration: none; min-height: var(--cible); display: flex; align-items: center; }
 .pied { margin-top: var(--esp-4); text-align: center; }
+
+/* Bouton flottant « + Épisode » */
+.fab {
+  position: fixed; right: calc(var(--marge) + env(safe-area-inset-right)); bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 9;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 20px; border-radius: 26px;
+  background: var(--accent); color: var(--accent-texte); font-weight: 600; text-decoration: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+.fab svg { width: 20px; height: 20px; }
+.aujourdhui { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+
+/* Listes d'événements */
+.lien-ligne { color: var(--text); text-decoration: none; }
+.evenements .heure { min-width: 3.2em; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.evenements .resume { flex: 1; }
+
+/* Parcours plein écran */
+.parcours {
+  position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.parcours-tete { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--marge); min-height: 52px; border-bottom: 1px solid var(--hairline); }
+.parcours-tete h1 { font-size: 1rem; }
+.parcours-tete .btn-lien { justify-self: start; }
+.reperes { justify-self: end; color: var(--accent); letter-spacing: 0.08em; font-size: 0.8rem; }
+.parcours-corps { flex: 1; overflow-y: auto; padding: var(--esp-3) var(--marge) var(--esp-5); -webkit-overflow-scrolling: touch; }
+.parcours-pied { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--marge); border-top: 1px solid var(--hairline); }
+.parcours-pied .terminer { flex: 1; max-width: 60%; }
+.question { font-size: 1.15rem; margin: var(--esp-2) 0 var(--esp-4); }
+.ligne-date { padding: var(--esp-2) var(--marge) 0; }
+.edition-date { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); margin-top: var(--esp-2); }
+.recap .ligne-recap { width: 100%; display: flex; align-items: center; gap: var(--esp-3); min-height: 48px; border: 0; background: none; text-align: left; padding: 0; }
+.recap-nom { color: var(--text-2); min-width: 7.5em; font-size: 0.9rem; }
+.recap-val { flex: 1; font-weight: 500; }
+.supprimer { margin-top: var(--esp-5); color: var(--text-2); }
+.confirmation { margin-top: var(--esp-4); padding: var(--esp-3); border: 1px solid var(--hairline); border-radius: var(--r-moyen); background: var(--surface); }
+.pastille:focus-visible, .segmente button:focus-visible { outline-offset: 1px; }

@@ -53,8 +53,10 @@ export async function ecrireAvecEssais(action, signaler, { essais = 3, delaiMs =
 }
 
 export function lireLocal(cle, defaut = null) {
+  if (!cle) return defaut;
   try { const v = localStorage.getItem(cle); return v == null ? defaut : JSON.parse(v); } catch { return defaut; }
 }
 export function ecrireLocal(cle, valeur) {
+  if (!cle) return;
   try { if (valeur == null) localStorage.removeItem(cle); else localStorage.setItem(cle, JSON.stringify(valeur)); } catch { /* stockage indisponible */ }
 }

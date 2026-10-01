@@ -15,7 +15,8 @@ const guide = doitAfficherGuide(window);
 // L'app s'ouvre toujours sur Aujourd'hui, quel que soit le hash de départ.
 history.replaceState(null, '', `${location.pathname}${location.search}#/${ROUTE_ACCUEIL}`);
 etatApp.maj({ route: lireRoute(location.hash) });
-window.addEventListener('hashchange', () => {
+window.addEventListener('hashchange', (e) => {
+  try { etatApp.maj({ routePrecedente: new URL(e.oldURL).hash }); } catch { /* ancienne adresse illisible */ }
   const route = lireRoute(location.hash);
   if (route.inconnue) history.replaceState(null, '', `${location.pathname}${location.search}#/${ROUTE_ACCUEIL}`);
   etatApp.maj({ route });
