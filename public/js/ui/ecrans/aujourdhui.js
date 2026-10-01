@@ -2,7 +2,7 @@
 import { html, useEffect, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais } from '../hooks.js';
-import { addDays, JOURS, jourSemaine, estAvantBascule } from '../../domain/dates.js';
+import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 import { EnteteJour } from '../composants/entete-jour.js';
 import { Pastilles } from '../composants/pastilles.js';
@@ -12,6 +12,7 @@ import { ChampHeure } from '../composants/heure.js';
 import { Repli } from '../composants/repli.js';
 import { Icones } from '../icones.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
+import { afficherToast } from '../composants/toast.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 
@@ -40,11 +41,13 @@ export function Aujourdhui({ date: dateRoute }) {
   const date = dateRoute && dateRoute <= aujourdhui ? dateRoute : aujourdhui;
   const [indicateur, signaler] = useIndicateur();
   const [entree, setEntree] = useState(null);
+  const [generation, setGeneration] = useState(0);
+  const [confirmerEffacer, setConfirmerEffacer] = useState(false);
 
   const { donnees } = useDonnees(async () => {
     const [lue, items, dates] = await Promise.all([repo.journal.lire(date), repo.listes.items(), repo.journal.dates()]);
     return { entree: lue || { date }, items, baseVide: dates.length === 0 };
-  }, [date], { suivre: false });
+  }, [date, generation], { suivre: false });
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
@@ -71,6 +74,12 @@ export function Aujourdhui({ date: dateRoute }) {
   };
   const ecrireTexte = (champ) => (valeur) => ecrireAvecEssais(() => repo.journal.patch(date, { [champ]: valeur }), signaler)
     .then((r) => { setEntree((e) => ({ ...e, [champ]: valeur })); return r; });
+  const effacerJournee = async () => {
+    setConfirmerEffacer(false);
+    const sauve = await repo.journal.supprimer(date);
+    setGeneration((g) => g + 1);
+    afficherToast('Journée effacée', { libelle: 'Annuler', faire: async () => { await repo.journal.restaurer(sauve); setGeneration((g) => g + 1); } });
+  };
   const vide = Object.entries(entree).every(([k, v]) => ['date', 'createdAt', 'updatedAt'].includes(k) || v == null);
   const enVeille = date === aujourdhui && estAvantBascule(maintenant);
 
@@ -104,10 +113,10 @@ export function Aujourdhui({ date: dateRoute }) {
       <${Segmente} etiquette="Traitement pris" options=${options(items, 'traitementPris', entree.traitementPris)} valeur=${entree.traitementPris} surChoix=${ecrire('traitementPris')} />
     </div>
     <div class="champ">
-      <${ChampTexte} key=${`${date}-pp`} id="points-positifs" etiquette="Mes points positifs" valeur=${entree.pointsPositifs}
+      <${ChampTexte} key=${`${date}-pp-${generation}`} id="points-positifs" etiquette="Mes points positifs" valeur=${entree.pointsPositifs}
         placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
         cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />
-      <${MemoVocal} key=${`memo-${date}`} parentStore="journal" parentId=${date} date=${date} />
+      <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} />
     </div>
 
     <${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)}>
@@ -121,7 +130,7 @@ export function Aujourdhui({ date: dateRoute }) {
       </div>
     </${Repli}>
     <${Repli} cle="notes" titre="Notes libres" resume=${entree.notes ? entree.notes.slice(0, 40) : null}>
-      <${ChampTexte} key=${`${date}-notes`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${4}
+      <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${4}
         cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
     </${Repli}>
 
@@ -136,6 +145,12 @@ export function Aujourdhui({ date: dateRoute }) {
 
     <p class="pied discret">Tout est facultatif. Toucher un choix une seconde fois l'efface.</p>
     ${baseVide && vide && html`<a class="ligne-info lien discret" href="#/reglages/sauvegarde">Importer une sauvegarde</a>`}
+    ${!vide && (confirmerEffacer
+      ? html`<div class="confirmation" role="alert">
+          <p>Effacer la journée du ${formaterJour(date)} ? Les épisodes et symptômes de ce jour sont conservés.</p>
+          <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmerEffacer(false)}>Garder</button>
+          <button type="button" class="btn btn-effacer" onClick=${effacerJournee}>Effacer</button></div></div>`
+      : html`<button type="button" class="btn-lien effacer-jour discret" onClick=${() => setConfirmerEffacer(true)}>Effacer cette journée</button>`)}
     <a class="fab" href="#/episode/nouveau">${Icones.plus()}<span>Épisode</span></a>
   </main>`;
 }
