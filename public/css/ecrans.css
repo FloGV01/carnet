@@ -9,3 +9,34 @@
 .diag dd { margin: 0; word-break: break-word; }
 .diag .actions { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 .diag pre { white-space: pre-wrap; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }
+
+/* Historique */
+.historique .segmente { width: 100%; }
+.barre-recherche { display: flex; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); position: relative; }
+.barre-recherche input { flex: 1; padding-left: 38px; }
+.barre-recherche .loupe { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-2); width: 20px; height: 20px; }
+.filtres { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+.filtre { display: grid; gap: 2px; }
+.case { display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); }
+.case input { width: 22px; height: 22px; }
+.ligne-hist { display: grid; gap: 2px; padding: 10px 0; min-height: var(--cible); }
+.hist-date { font-weight: 600; font-size: 0.9rem; }
+.hist-faits { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.icone-memo { display: inline-flex; width: 18px; height: 18px; color: var(--accent); }
+.extrait mark { background: var(--info-bg); color: var(--text); border-radius: 3px; padding: 0 2px; }
+.vide { margin-top: var(--esp-5); text-align: center; }
+.effacer-jour { margin-top: var(--esp-3); }
+
+/* Soins et fiches */
+.soins .segmente { width: 100%; }
+.lien-bouton svg { width: 18px; height: 18px; margin-right: 4px; }
+.prochain .liste li { padding: 4px 0; border: 0; }
+.ajout-question { margin-top: var(--esp-2); }
+.ajout-question input { padding-right: 52px; }
+.ajout-question .dicter { top: 0; }
+.questions .case { flex: 1; }
+.abordee { text-decoration: line-through; color: var(--text-2); }
+.fiche .champ-heure { margin-top: var(--esp-2); }
+.indicateur-fiche { font-size: 0.78rem; min-width: 5em; text-align: right; }
+.ajout { color: var(--accent); }
+.prochain-rdv { margin-top: var(--esp-2); color: var(--accent); }

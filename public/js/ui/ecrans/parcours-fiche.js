@@ -77,7 +77,8 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         if (cree) { idRef.current = cree.id; history.replaceState(null, '', versHash(route, { id: cree.id })); }
         return;
       }
-      await ecrireAvecEssais(() => repo[store].modifier(idRef.current, changements), signaler);
+      const res = await ecrireAvecEssais(() => repo[store].modifier(idRef.current, changements), signaler);
+      if (res === null) { idRef.current = null; history.replaceState(null, '', versHash(route, { id: 'nouveau' })); }
     }).catch(() => {});
     return file.current;
   };

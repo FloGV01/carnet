@@ -19,5 +19,6 @@ export const Icones = {
   chevron: () => svg(html`<path d="M9 5l7 7-7 7"/>`),
   retour: () => svg(html`<path d="M15 5l-7 7 7 7"/>`),
   plus: () => svg(html`<path d="M12 5v14M5 12h14"/>`),
+  loupe: () => svg(html`<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l4.5 4.5"/>`),
   onde: () => svg(html`<path d="M4 12h1.5M8 8v8M11.5 5v14M15 9v6M18.5 11v2"/>`),
 };

@@ -16,13 +16,21 @@ import { Episode } from './ui/ecrans/episode.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
+import { Historique } from './ui/ecrans/historique.js';
+import { Soins } from './ui/ecrans/soins.js';
+import { Rdv } from './ui/ecrans/rdv.js';
+import { Traitement } from './ui/ecrans/traitement.js';
+import { Symptome } from './ui/ecrans/symptome.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
-  historique: () => html`<${EcranAttente} titre="Historique" />`,
-  soins: () => html`<${EcranAttente} titre="Soins" />`,
+  historique: () => html`<${Historique} />`,
+  soins: () => html`<${Soins} />`,
+  rdv: (p) => html`<${Rdv} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
+  traitement: (p) => html`<${Traitement} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
+  symptome: (p) => html`<${Symptome} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   reglages: () => html`<${Reglages} />`,
   'reglages-sauvegarde': () => html`<${Sauvegarde} />`,
   'reglages-effacer': () => html`<${Effacer} />`,
