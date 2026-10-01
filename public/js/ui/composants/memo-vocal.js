@@ -14,9 +14,20 @@ function Puce({ audio, surSupprimer }) {
   const [lecture, setLecture] = useState(false);
   const lecteur = useRef(null);
   const url = useRef(null);
+  // La source est détachée avant de révoquer l'adresse, qui ne l'est qu'un peu plus tard :
+  // un lecteur qui lit encore ne doit jamais tomber sur une adresse déjà révoquée.
   const arreter = () => {
-    if (lecteur.current) { lecteur.current.pause(); lecteur.current = null; }
-    if (url.current) { URL.revokeObjectURL(url.current); url.current = null; }
+    const a = lecteur.current;
+    lecteur.current = null;
+    if (a) {
+      a.onended = null; a.onerror = null;
+      a.pause();
+      a.removeAttribute('src');
+      try { a.load(); } catch { /* déjà déchargé */ }
+    }
+    const u = url.current;
+    url.current = null;
+    if (u) setTimeout(() => URL.revokeObjectURL(u), 1000);
     setLecture(false);
   };
   useEffect(() => arreter, []);
