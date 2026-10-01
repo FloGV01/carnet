@@ -1,6 +1,6 @@
 {
   "name": "suivi-audhd",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Carnet : PWA personnelle de suivi quotidien, 100 % locale.",
@@ -14,7 +14,8 @@
     "test:utc": "TZ=UTC node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
     "test:paris": "TZ=Europe/Paris node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
     "test:e2e": "playwright test",
-    "test": "npm run precache:check && npm run test:paris && npm run test:utc && npm run test:e2e"
+    "test": "npm run precache:check && npm run test:paris && npm run test:utc && npm run test:e2e",
+    "test:calibration": "TZ=Europe/Paris node --test --test-reporter=spec \"tests/calibration/*.test.js\""
   },
   "engines": {
     "node": ">=22"

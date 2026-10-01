@@ -9,7 +9,7 @@ test('ouvre toujours sur Aujourd\'hui, même avec un autre hash au départ', asy
 test('les onglets mènent aux écrans, sans pastille ni compteur', async ({ page }) => {
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
-  await expect(nav.getByRole('link')).toHaveText(["Aujourd'hui", 'Historique', 'Soins', 'Réglages']);
+  await expect(nav.getByRole('link')).toHaveText(["Aujourd'hui", 'Analyse', 'Historique', 'Soins', 'Réglages']);
   await nav.getByRole('link', { name: 'Réglages' }).click();
   await expect(page.getByText('Tes données restent sur cet iPhone.')).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Réglages' })).toHaveAttribute('aria-current', 'page');

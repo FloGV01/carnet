@@ -40,3 +40,37 @@
 .indicateur-fiche { font-size: 0.78rem; min-width: 5em; text-align: right; }
 .ajout { color: var(--accent); }
 .prochain-rdv { margin-top: var(--esp-2); color: var(--accent); }
+
+/* Analyse */
+.analyse .segmente { width: 100%; }
+.tuiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--esp-2); margin-top: var(--esp-3); }
+.tuile { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); padding: 10px 12px; display: grid; gap: 2px; min-height: 76px; align-content: start; }
+.tuile-titre { font-size: 0.78rem; color: var(--text-2); font-weight: 600; }
+.tuile-valeur { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tuile-detail { font-size: 0.78rem; }
+.graphe { margin: var(--esp-3) 0 0; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); padding: var(--esp-3); }
+.graphe figcaption { display: grid; gap: 2px; margin-bottom: var(--esp-2); }
+.graphe svg { width: 100%; height: auto; display: block; }
+.g-axe { font-size: 9px; fill: var(--text-2); }
+.g-filet { stroke: var(--hairline); stroke-width: 1; }
+.g-ligne { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.g-point { fill: var(--accent); }
+.g-anneau { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.g-barre { fill: var(--accent); }
+.g-sommeil-1 { fill: var(--sommeil-1); background: var(--sommeil-1); }
+.g-sommeil-2 { fill: var(--sommeil-2); background: var(--sommeil-2); }
+.g-sommeil-3 { fill: var(--sommeil-3); background: var(--sommeil-3); }
+.pastille-legende { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 8px; vertical-align: -1px; }
+.legende { margin-top: 4px; }
+.tableau-simple, .tableau-evolution { border-collapse: collapse; font-size: 0.85rem; width: 100%; }
+.tableau-simple th, .tableau-simple td, .tableau-evolution th, .tableau-evolution td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+.tableau-simple th, .tableau-evolution th { color: var(--text-2); font-weight: 600; }
+.defile-x { overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); }
+.constat + .constat { margin-top: var(--esp-4); }
+.haltere { width: 100%; height: 26px; margin-top: 6px; }
+.etiquette-haltere { margin-top: 0; }
+.pied-section { margin-top: var(--esp-3); }
+.phrase + .phrase { margin-top: var(--esp-2); }
+.regle { margin-top: var(--esp-2); }
+.ligne-classement { display: grid; gap: 2px; padding: 10px 0; }
+.apercu-export { white-space: pre-wrap; word-break: break-word; font: 0.78rem/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); padding: var(--esp-3); user-select: text; -webkit-user-select: text; }
