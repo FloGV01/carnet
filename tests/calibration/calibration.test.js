@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { bonnesJournees } from '../../public/js/analyse/bonnes-journees.js';
 import { sommeilHumeur } from '../../public/js/analyse/sommeil.js';
 import { generer } from '../fixtures/generateur.js';
+import { analyze } from '../../public/js/analyse/index.js';
+import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 
 const N = 60;
 
@@ -36,4 +38,19 @@ test('puissance : un vrai effet est retrouvé dans la plupart des cas', () => {
   }
   console.log(`  puissance « bureau +3 » : ${trouves}/20`);
   assert.ok(trouves >= 16, `${trouves}/20`);
+});
+
+test('budget (machine au repos) : 1 100 jours en moins de 300 ms sans constat, 1,5 s avec constats', () => {
+  const items = seedItems(SEED_V1, 'x');
+  for (const [scenario, max] of [['nul', 300], ['sommeilJourMeme', 1500]]) {
+    const journal = generer({ jours: 1100, seed: 31, scenario });
+    let dt = Infinity;
+    for (let k = 0; k < 3; k++) {
+      const t0 = performance.now();
+      analyze({ journal, episodes: [], symptomes: [], traitements: [] }, { aujourdhui: journal[journal.length - 1].date, items });
+      dt = Math.min(dt, performance.now() - t0);
+    }
+    console.log(`  budget ${scenario} : ${Math.round(dt)} ms`);
+    assert.ok(dt < max, `${scenario} : ${Math.round(dt)} ms`);
+  }
 });

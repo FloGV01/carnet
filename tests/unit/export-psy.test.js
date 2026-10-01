@@ -1,0 +1,91 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { exportPsy, reperesPsy } from '../../public/js/export/psy.js';
+import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { carteLibelles } from '../../public/js/domain/libelles.js';
+
+const carte = carteLibelles(seedItems(SEED_V1, 'x'));
+const J = (date, o) => ({ date, lieu: null, sommeilRessenti: null, humeur: null, contactHumain: null, sportMouvement: null, explosions: null,
+  traitementPris: null, pointsPositifs: null, heureCoucher: null, heureLever: null, reveilsNocturnes: null, notes: null, ...o });
+
+// Données fictives de l'exemple du plan (§7.8).
+const journal = [
+  J('2026-09-14', { humeur: 5, explosions: 1, lieu: 'lieu:bureau' }), J('2026-09-15', { humeur: 5, explosions: 1 }),
+  J('2026-09-16', { humeur: 6, explosions: 1 }), J('2026-09-17', { humeur: 5, explosions: 0 }), J('2026-09-18', { humeur: 6, explosions: 0, lieu: 'lieu:teletravail' }),
+  J('2026-09-21', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:mal', reveilsNocturnes: 2, humeur: 5, contactHumain: true, sportMouvement: false, explosions: 1,
+    pointsPositifs: "café avec Léo, point projet qui s'est bien passé", notes: "open space très bruyant l'après-midi", traitementPris: 'traitementPris:oui' }),
+  J('2026-09-22', { lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:moyen', humeur: 6, contactHumain: false, sportMouvement: true, explosions: 0, pointsPositifs: 'marche de 40 min au soleil' }),
+  J('2026-09-23', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:bien', heureCoucher: '23:10', heureLever: '06:40', humeur: 7, contactHumain: true, sportMouvement: false, explosions: 0,
+    pointsPositifs: "bloc 7h-9h tenu, déjeuner avec l'équipe" }),
+  J('2026-09-25', { lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:mal', reveilsNocturnes: 3, humeur: 4, contactHumain: false, sportMouvement: false, explosions: 1, pointsPositifs: "j'ai tenu aujourd'hui" }),
+  J('2026-09-26', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:moyen', humeur: 7, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'repas en famille' }),
+  J('2026-09-27', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:bien', humeur: 8, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'vélo, bonne soirée' }),
+];
+const episodes = [
+  { id: 'e1', date: '2026-09-21', heure: '14:30', emotion: 'emotion:colere', intensite: 8, declencheur: 'declencheur:pris_pour_un_con', dessous: 'dessous:injustice',
+    reaction: 'reaction:explosion', situation: "remarque sur mon retard devant toute l'équipe", ceQuiAAide: 'sortir marcher 10 min' },
+  { id: 'e2', date: '2026-09-25', heure: '18:10', emotion: 'emotion:surcharge', intensite: 6, declencheur: 'declencheur:trop_sollicitations', dessous: 'dessous:fatigue_debordement',
+    reaction: 'reaction:retrait_isolement', situation: null, ceQuiAAide: null },
+];
+const symptomes = [{ id: 's1', date: '2026-09-25', symptome: 'symptome:ruminations', intensite: 6, duree: 'duree:quelques_heures', contexte: "après les échanges de l'après-midi", note: null }];
+const reperes = [
+  'Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).',
+  "Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.",
+];
+
+const ATTENDU = `SUIVI APP · 7 jours du lun 21/09 au dim 27/09/2026
+
+JOURS
+lun 21/09 · Bureau · nuit Mal (2 réveils) · humeur 5 · contact oui · sport non · explosions 1
+  + café avec Léo, point projet qui s'est bien passé
+  note : open space très bruyant l'après-midi
+mar 22/09 · Télétravail · nuit Moyen · humeur 6 · contact non · sport oui · explosions 0
+  + marche de 40 min au soleil
+mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur 7 · contact oui · sport non · explosions 0
+  + bloc 7h-9h tenu, déjeuner avec l'équipe
+ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur 4 · contact non · sport non · explosions 1
+  + j'ai tenu aujourd'hui
+sam 26/09 · Congé / repos · nuit Moyen · humeur 7 · contact oui · sport oui · explosions 0
+  + repas en famille
+dim 27/09 · Congé / repos · nuit Bien · humeur 8 · contact oui · sport oui · explosions 0
+  + vélo, bonne soirée
+
+ÉPISODES (2)
+lun 21/09 14:30 · Colère 8/10 · déclencheur : Me sentir pris pour un con · dessous : Injustice · réaction : Explosion
+  situation : remarque sur mon retard devant toute l'équipe
+  a aidé : sortir marcher 10 min
+ven 25/09 18:10 · Surcharge 6/10 · déclencheur : Trop de sollicitations · dessous : Fatigue / débordement · réaction : Retrait / isolement
+
+SYMPTÔMES (1)
+ven 25/09 · Ruminations 6/10 · durée : Quelques heures · contexte : après les échanges de l'après-midi
+
+COMPTEURS
+cette semaine : humeur moyenne 6,2 (de 4 à 8) · explosions 2 · jours au bureau 2 · contact humain 4 jours · sport 3 jours · nuits Mal 2
+semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1
+
+REPÈRES DE L'APP (tout l'historique)
+- Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).
+- Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.
+
+PSY : fais-moi le récap de la semaine, format habituel.`;
+
+test('instantané exact de l\'exemple du plan', () => {
+  assert.equal(exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes }), ATTENDU);
+});
+
+test('exclusions : ni traitement, ni rendez-vous, ni jour manquant mentionné', () => {
+  const t = exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes: [] });
+  assert.ok(!/traitement|rendez-vous|RDV|jeu 24\/09|jours? (notés|remplis)|\/7\b/i.test(t), t);
+});
+
+test('textes coupés à 280 caractères, rubriques vides omises', () => {
+  const long = 'a'.repeat(400);
+  const t = exportPsy({ journal: [J('2026-09-27', { pointsPositifs: long })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
+  assert.ok(t.includes(`  + ${'a'.repeat(279)}…`));
+  assert.ok(!t.includes('ÉPISODES') && !t.includes('SYMPTÔMES'));
+});
+
+test('repères : insuffisant et phrases en voix « je »', () => {
+  const analyse = { bonnesJournees: { statut: 'insuffisant', constats: [] }, sommeil: { meme: { statut: 'insuffisant' }, lendemain: { statut: 'insuffisant' } } };
+  assert.deepEqual(reperesPsy(analyse, carte), ['Bonnes journées : pas encore assez de données.', 'Sommeil et humeur : pas encore assez de données pour le dire.']);
+});

@@ -21,6 +21,8 @@ import { Soins } from './ui/ecrans/soins.js';
 import { Rdv } from './ui/ecrans/rdv.js';
 import { Traitement } from './ui/ecrans/traitement.js';
 import { Symptome } from './ui/ecrans/symptome.js';
+import { Analyse } from './ui/ecrans/analyse.js';
+import { ExportPsy } from './ui/ecrans/export-psy.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -36,6 +38,8 @@ const ECRANS = {
   'reglages-effacer': () => html`<${Effacer} />`,
   'reglages-rappel': () => html`<${Rappel} />`,
   diagnostic: () => html`<${Diagnostic} />`,
+  analyse: () => html`<${Analyse} />`,
+  'export-psy': () => html`<${ExportPsy} />`,
 };
 
 function useEtatApp() {

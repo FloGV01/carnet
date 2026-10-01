@@ -140,13 +140,9 @@ test('invariants : entrée vide, ordre des entrées, constats affichés', () => 
   assert.ok(Array.isArray(base.constatsAffiches));
 });
 
-test('budget : 1 100 jours en moins de 300 ms sans constat, moins de 1,5 s avec constats à confirmer', () => {
-  for (const [scenario, max] of [['nul', 300], ['sommeilJourMeme', 1500]]) {
-    const journal = generer({ jours: 1100, seed: 31, scenario });
-    const fin = journal[journal.length - 1].date;
-    const t0 = performance.now();
-    analyze({ journal, ...vide }, { aujourdhui: fin, items });
-    const dt = performance.now() - t0;
-    assert.ok(dt < max, `${scenario} : ${Math.round(dt)} ms`);
-  }
+test('garde-fou : 1 100 jours analysés en moins de 5 s (budget strict dans test:calibration)', () => {
+  const journal = generer({ jours: 1100, seed: 31, scenario: 'nul' });
+  const t0 = performance.now();
+  analyze({ journal, ...vide }, { aujourdhui: journal[journal.length - 1].date, items });
+  assert.ok(performance.now() - t0 < 5000);
 });
