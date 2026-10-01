@@ -1,6 +1,6 @@
 // Générateur de journaux synthétiques à vérité connue (aucune donnée réelle).
 import { generateur } from '../../public/js/analyse/stats.js';
-import { addDays } from '../../public/js/domain/dates.js';
+import { addDays, jourSemaine } from '../../public/js/domain/dates.js';
 
 const LIEUX = ['lieu:bureau', 'lieu:teletravail', 'lieu:conge_repos'];
 const SOMMEILS = ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'];
@@ -8,7 +8,7 @@ const SOMMEILS = ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'];
 function normale(alea) { let u = 0; let v = 0; while (u === 0) u = alea(); while (v === 0) v = alea(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 const borne = (x) => Math.max(1, Math.min(10, Math.round(x)));
 
-// scenario : 'nul' | 'bureau' | 'sommeilJourMeme' | 'sommeilLendemain' | 'ar1' | 'malEnSuite'
+// scenario : 'nul' | 'bureau' | 'sommeilJourMeme' | 'sommeilLendemain' | 'ar1' | 'malEnSuite' | 'jourMemeAR' | 'ar1Long' | 'emploiDuTemps'
 export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario = 'nul', effet = 3, trous = 0 } = {}) {
   const alea = generateur(seed);
   const res = [];
@@ -17,21 +17,51 @@ export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario 
   let sommeilPrec = 1;
   for (let i = 0; i < jours; i++) {
     const date = addDays(debut, i);
-    if (scenario === 'ar1' && i % 7 === 0) lieuBloc = LIEUX[Math.floor(alea() * LIEUX.length)];
-    const lieu = scenario === 'ar1' ? lieuBloc : LIEUX[Math.floor(alea() * 2)];
+    if (scenario === 'ar1' && (i + seed) % 7 === 0) lieuBloc = LIEUX[Math.floor(alea() * LIEUX.length)];
+    if (scenario === 'ar1Long' && alea() < 1 / 14) lieuBloc = LIEUX[Math.floor(alea() * LIEUX.length)];
+    // Emploi du temps fixe : bureau lun/mar/jeu, télétravail mer/ven, repos sam/dim.
+    const jsem = (jourSemaine(addDays(debut, i)));
+    const lieuEdt = [0, 1, 3].includes(jsem) ? LIEUX[0] : [2, 4].includes(jsem) ? LIEUX[1] : LIEUX[2];
+    const lieu = scenario === 'ar1' || scenario === 'ar1Long' ? lieuBloc : scenario === 'emploiDuTemps' ? lieuEdt : LIEUX[Math.floor(alea() * 2)];
     let s = Math.floor(alea() * 3);
     if (scenario === 'malEnSuite') s = alea() < 0.8 ? sommeilPrec : Math.floor(alea() * 3);
+    if (scenario === 'ar1Long' && alea() < 0.9) s = sommeilPrec;
     let h = 5.5 + normale(alea) * 1.6;
-    if (scenario === 'bureau' && lieu === 'lieu:bureau') h += effet;
+    if ((scenario === 'bureau' || scenario === 'emploiDuTemps') && lieu === 'lieu:bureau') h += effet;
     if (scenario === 'sommeilJourMeme' || scenario === 'malEnSuite') h += (s - 1) * 1.8;
     if (scenario === 'sommeilLendemain') h += (sommeilPrec - 1) * 2.2;
     if (scenario === 'ar1') { ar = 0.6 * ar + normale(alea) * 1.6; h = 5.5 + ar; }
+    if (scenario === 'ar1Long') { ar = 0.9 * ar + normale(alea) * 1.6 * Math.sqrt(1 - 0.81); h = 5.5 + ar; }
+    if (scenario === 'jourMemeAR') { ar = 0.7 * ar + normale(alea) * 1.15; h = 5.5 + ar + (s - 1) * 1.5; }
     sommeilPrec = s;
     if (trous && alea() < trous) continue;
     res.push({
       date, lieu, sommeilRessenti: SOMMEILS[s], humeur: borne(h), contactHumain: alea() < 0.5, sportMouvement: alea() < 0.4,
       explosions: alea() < 0.15 ? 1 : 0, traitementPris: 'traitementPris:oui', reveilsNocturnes: Math.floor(alea() * 3),
       pointsPositifs: null, heureCoucher: null, heureLever: null, notes: null,
+    });
+  }
+  return res;
+}
+
+// Périodes plus basses plantées, chacune précédée de 4 jours « signature » (nuits Mal, pas de
+// contact, réveils). leurres : fenêtres signature NON suivies d'une période (précision basse).
+export function genererPeriodes({ jours = 320, debut = '2025-11-01', seed = 1, periodes = [90, 150, 210, 270], leurres = [], signatureAvant = true } = {}) {
+  const alea = generateur(seed);
+  const res = [];
+  const dansSignature = (i) => (signatureAvant && periodes.some((p) => i >= p - 4 && i < p)) || leurres.some((l) => i >= l && i < l + 4);
+  const dansPeriode = (i) => periodes.some((p) => i >= p && i < p + 7);
+  for (let i = 0; i < jours; i++) {
+    const sig = dansSignature(i);
+    const bas = dansPeriode(i);
+    let h = 6.8 + normale(alea) * 0.9;
+    if (bas) h = 2.5 + alea();
+    else if (sig) h = 5.8 + normale(alea) * 0.6;
+    res.push({
+      date: addDays(debut, i), lieu: LIEUX[Math.floor(alea() * 2)],
+      sommeilRessenti: sig ? 'sommeil:mal' : SOMMEILS[1 + Math.floor(alea() * 2)], humeur: borne(h),
+      contactHumain: sig ? false : alea() < 0.8, sportMouvement: alea() < 0.5, explosions: 0, traitementPris: 'traitementPris:oui',
+      reveilsNocturnes: sig ? 3 : Math.floor(alea() * 2), pointsPositifs: null, heureCoucher: null, heureLever: null, notes: null,
     });
   }
   return res;

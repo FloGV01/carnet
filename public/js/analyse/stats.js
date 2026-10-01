@@ -103,10 +103,24 @@ export function spearmanPartielle(xs, ys, zs) {
   return den === 0 ? null : (rxy - rxz * ryz) / den;
 }
 
-// Permutation par blocs de jours consécutifs (préserve l'autocorrélation locale).
+// Découpage en blocs de longueur aléatoire (de taille/2 à 3·taille/2, taille en moyenne), redécoupés
+// à chaque tirage : des blocs fixes garderaient les mêmes jours de la semaine, et un facteur qui suit
+// l'emploi du temps reviendrait identique à chaque permutation (p = 1).
+function bornesBlocs(n, taille, alea, debuts) {
+  const lMin = Math.max(1, Math.ceil(taille / 2));
+  const etendue = 2 * (taille - lMin) + 1;
+  let nb = 0;
+  for (let i = 0; i < n; i += lMin + Math.floor(alea() * etendue)) debuts[nb++] = i;
+  debuts[nb] = n;
+  return nb;
+}
+
+// Permutation par blocs de jours consécutifs (préserve l'autocorrélation locale). Référence.
 export function permuterBlocs(serie, taille, alea) {
+  const debuts = new Int32Array(serie.length + 1);
+  const nb = bornesBlocs(serie.length, taille, alea, debuts);
   const blocs = [];
-  for (let i = 0; i < serie.length; i += taille) blocs.push(serie.slice(i, i + taille));
+  for (let k = 0; k < nb; k++) blocs.push(serie.slice(debuts[k], debuts[k + 1]));
   for (let i = blocs.length - 1; i > 0; i--) { const j = Math.floor(alea() * (i + 1)); [blocs[i], blocs[j]] = [blocs[j], blocs[i]]; }
   return blocs.flat();
 }
@@ -114,30 +128,31 @@ export function permuterBlocs(serie, taille, alea) {
 // p = (1 + c) / (1 + B), c = nombre de permutations dont la statistique atteint l'observée.
 export function testPermutation(serie, statistique, { permutations, blocJours, seed }) {
   const obs = statistique(serie);
-  if (obs == null) return { obs: null, p: null };
+  if (obs == null || !Number.isFinite(obs)) return { obs: null, p: null };
   const alea = generateur(seed);
   let c = 0;
   for (let b = 0; b < permutations; b++) {
     const v = statistique(permuterBlocs(serie, blocJours, alea));
-    if (v != null && v >= obs - 1e-12) c++;
+    if (v != null && (!Number.isFinite(v) || v >= obs - 1e-12)) c++;
   }
   return { obs, p: (1 + c) / (1 + permutations) };
 }
 
 // ---------- Versions rapides pour les tests par permutation (tableaux typés, NaN = inconnu) ----------
 
-// Permuteur de blocs réutilisable : copie src dans dst avec l'ordre des blocs mélangé.
+// Permuteur de blocs réutilisable : copie src dans dst avec des blocs de longueur aléatoire,
+// redécoupés à chaque tirage, dans un ordre mélangé (même loi que permuterBlocs).
 export function creerPermuteur(n, taille) {
-  const nb = Math.ceil(n / taille);
-  const ordre = new Int32Array(nb);
+  const debuts = new Int32Array(n + 1);
+  const ordre = new Int32Array(n);
   return (src, dst, alea) => {
+    const nb = bornesBlocs(n, taille, alea, debuts);
     for (let i = 0; i < nb; i++) ordre[i] = i;
     for (let i = nb - 1; i > 0; i--) { const j = Math.floor(alea() * (i + 1)); const t = ordre[i]; ordre[i] = ordre[j]; ordre[j] = t; }
     let p = 0;
     for (let k = 0; k < nb; k++) {
-      const debut = ordre[k] * taille;
-      const fin = Math.min(n, debut + taille);
-      for (let i = debut; i < fin; i++) dst[p++] = src[i];
+      const fin = debuts[ordre[k] + 1];
+      for (let i = debuts[ordre[k]]; i < fin; i++) dst[p++] = src[i];
     }
     return dst;
   };
@@ -146,14 +161,14 @@ export function creerPermuteur(n, taille) {
 export function testPermutationRapide(serie, statistique, { permutations, blocJours, seed }) {
   const n = serie.length;
   const obs = statistique(serie);
-  if (obs == null) return { obs: null, p: null };
+  if (obs == null || !Number.isFinite(obs)) return { obs: null, p: null };
   const alea = generateur(seed);
   const tampon = new Float64Array(n);
   const permuter = creerPermuteur(n, blocJours);
   let c = 0;
   for (let b = 0; b < permutations; b++) {
     const v = statistique(permuter(serie, tampon, alea));
-    if (v != null && v >= obs - 1e-12) c++;
+    if (v != null && (!Number.isFinite(v) || v >= obs - 1e-12)) c++;
   }
   return { obs, p: (1 + c) / (1 + permutations) };
 }

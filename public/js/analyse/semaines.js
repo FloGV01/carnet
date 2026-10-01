@@ -10,15 +10,17 @@ export function serieHebdo({ journal, episodes, symptomes, traitements }, aujour
   const semaines = [];
   for (let k = nbSemaines - 1; k >= 0; k--) {
     const lundi = addDays(dernier, -7 * k);
-    const dimanche = addDays(lundi, 6);
+    const dimanche = addDays(lundi, 6) < aujourdhui ? addDays(lundi, 6) : aujourdhui;
     const dansSemaine = (d) => d >= lundi && d <= dimanche;
     const jours = journal.filter((j) => dansSemaine(j.date));
     const humeurs = jours.map((j) => j.humeur).filter((h) => h != null);
     const expl = jours.map((j) => j.explosions).filter((x) => x != null);
     const som = jours.map((j) => j.sommeilRessenti).filter(Boolean);
+    // N°1 de la semaine : au moins 2 occurrences et première place unique (§7.2).
     const premier = (valeurs) => {
-      const c = classer(valeurs, horsClassement);
-      return c.statut === 'ok' && c.top.length === 1 && c.nTop >= SEUILS.semaine.minPremier ? c.top[0] : null;
+      const { tries } = classer(valeurs, horsClassement);
+      if (!tries.length || tries[0][1] < SEUILS.semaine.minPremier) return null;
+      return tries.length === 1 || tries[1][1] < tries[0][1] ? tries[0][0] : null;
     };
     const eps = episodes.filter((e) => dansSemaine(jourEvenement(e.date, e.heure)));
     semaines.push({

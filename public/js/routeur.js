@@ -16,6 +16,7 @@ export const ROUTES = [
   { nom: 'reglages-sauvegarde', motif: '/reglages/sauvegarde' },
   { nom: 'reglages-effacer', motif: '/reglages/effacer' },
   { nom: 'reglages-rappel', motif: '/reglages/rappel' },
+  { nom: 'listes-index', motif: '/reglages/listes' },
   { nom: 'listes', motif: `/reglages/listes/${ID}`, params: ['liste'] },
   { nom: 'diagnostic', motif: '/diagnostic' },
   { nom: 'analyse', motif: '/analyse' },

@@ -1,5 +1,5 @@
 import { test, expect } from '../aides/gardes.js';
-import { viderBase } from '../aides/saisie.js';
+import { viderBase, aller } from '../aides/saisie.js';
 
 test('export PSY : aperçu complet, copie dans le geste, mémos et traitement exclus', async ({ page, context, browserName }) => {
   await page.clock.install({ time: new Date(2026, 8, 30, 21, 0) });
@@ -18,7 +18,7 @@ test('export PSY : aperçu complet, copie dans le geste, mémos et traitement ex
     await r.rdv.creer({ date: '2026-10-02', professionnel: 'professionnel:psychiatre' });
   });
   await page.goto('/#/aujourdhui');
-  await page.evaluate(() => { location.hash = '#/export-psy'; });
+  await aller(page, '#/export-psy');
   const apercu = page.getByLabel('Aperçu du texte');
   await expect(apercu).toContainText('SUIVI APP · 7 jours du jeu 24/09 au mer 30/09/2026');
   await expect(apercu).toContainText('mar 29/09 · Bureau · humeur 5');

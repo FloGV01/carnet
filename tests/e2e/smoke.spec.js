@@ -1,4 +1,5 @@
 import { test, expect } from '../aides/gardes.js';
+import { aller } from '../aides/saisie.js';
 
 test('ouvre toujours sur Aujourd\'hui, même avec un autre hash au départ', async ({ page }) => {
   await page.goto('/#/reglages');
@@ -30,6 +31,6 @@ test('l\'appui long sur la version ouvre le diagnostic', async ({ page }) => {
 
 test('une route inconnue ramène sur Aujourd\'hui', async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => { location.hash = '#/nimporte'; });
+  await aller(page, '#/nimporte');
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 });

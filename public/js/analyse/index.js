@@ -1,18 +1,19 @@
 // Point d'entrée unique du moteur d'analyse. Pur : la date du jour et les libellés
 // arrivent par ctx. L'écran Analyse, l'export PSY et la vue soignants lisent ce même objet.
-import { indicateurs, bornesFenetre } from './fenetres.js';
+import { indicateurs, bornesFenetre, premiereDate } from './fenetres.js';
 import { classements } from './classements.js';
 import { serieHebdo } from './semaines.js';
 import { bonnesJournees } from './bonnes-journees.js';
 import { sommeilHumeur } from './sommeil.js';
+import { ressemblance } from './ressemblance.js';
 
 export const FENETRES = ['7', '30', 'tout'];
 
 export function analyze(data, ctx) {
-  const { aujourdhui, items, constatsAffiches = [] } = ctx;
+  const { aujourdhui, items, constatsAffiches = [], reglages = {} } = ctx;
   const journal = data.journal.filter((j) => j.date <= aujourdhui);
   const d = { ...data, journal };
-  const premier = journal.reduce((m, j) => (!m || j.date < m ? j.date : m), null);
+  const premier = premiereDate(d, aujourdhui);
   const fenetres = {};
   const classes = {};
   for (const f of FENETRES) {
@@ -32,5 +33,6 @@ export function analyze(data, ctx) {
     aujourdhui, premier, fenetres, classements: classes,
     semaines: serieHebdo(d, aujourdhui, items),
     bonnesJournees: bj, sommeil, constatsAffiches: affiches,
+    signal: ressemblance(d, { aujourdhui, items, actif: reglages.signal !== false }),
   };
 }

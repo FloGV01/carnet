@@ -11,4 +11,15 @@ export async function viderBase(page) {
     localStorage.clear();
   });
   await page.reload();
+  await appPrete(page);
+}
+
+// L'app ramène toujours sur Aujourd'hui à son démarrage : on attend qu'elle soit prête
+// avant tout changement d'écran, sinon le démarrage annule la navigation.
+export async function appPrete(page) {
+  await page.waitForFunction(() => Boolean(window.__carnet) && Boolean(document.querySelector('.app')));
+}
+export async function aller(page, hash) {
+  await appPrete(page);
+  await page.evaluate((h) => { location.hash = h; }, hash);
 }
