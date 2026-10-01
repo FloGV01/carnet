@@ -9,7 +9,7 @@ import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
 import { semainesAvecDonnees } from '../../analyse/semaines.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, duree, phraseConstat, phrasesSommeil, phraseClassement, piedObservations, PAS_ASSEZ, REGLES } from '../../analyse/textes.js';
+import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseClassement, piedObservations, PAS_ASSEZ, REGLES } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { formaterSemaine } from '../../domain/dates.js';
 import { GrapheHumeur, GrapheExplosions, GrapheSommeil } from '../graphes/graphes.js';
@@ -21,19 +21,36 @@ const NOMS_CLASSEMENT = { declencheur: 'Déclencheur', dessous: 'En dessous', em
 let cache = null;
 
 export async function calculerAnalyse() {
-  const [journal, episodes, symptomes, traitements, items, ecriture, affiches] = await Promise.all([
+  const [journal, episodes, symptomes, traitements, items, ecriture, affiches, reglages, masque] = await Promise.all([
     repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.listes.items(),
-    repo.meta.lire('derniereEcriture'), repo.meta.lire('constatsAffiches'),
+    repo.meta.lire('derniereEcriture'), repo.meta.lire('constatsAffiches'), repo.meta.lire('reglages'), repo.meta.lire('signalMasque'),
   ]);
   const aujourdhui = repo.aujourdhui();
-  const cle = `${ecriture}|${aujourdhui}`;
+  const cle = `${ecriture}|${aujourdhui}|${JSON.stringify(reglages)}|${masque}`;
   if (cache && cache.cle === cle) return cache.valeur;
   await new Promise((ok) => setTimeout(ok, 0));
-  const resultat = analyze({ journal, episodes, symptomes, traitements }, { aujourdhui, items, constatsAffiches: affiches || [] });
-  const valeur = { resultat, items, carte: carteLibelles(items) };
+  const resultat = analyze({ journal, episodes, symptomes, traitements }, { aujourdhui, items, constatsAffiches: affiches || [], reglages: reglages || {} });
+  // « Masquer » ne vaut que tant que la ressemblance dure : elle repartie, le masque tombe.
+  let signalMasque = Boolean(masque);
+  if (signalMasque && !resultat.signal.ressemble) { await repo.meta.ecrire('signalMasque', false); signalMasque = false; }
+  const valeur = { resultat, items, carte: carteLibelles(items), signalMasque };
   if (JSON.stringify(resultat.constatsAffiches) !== JSON.stringify(affiches || [])) await repo.meta.ecrire('constatsAffiches', resultat.constatsAffiches);
-  cache = { cle: `${(await repo.meta.lire('derniereEcriture'))}|${aujourdhui}`, valeur };
+  cache = { cle: `${(await repo.meta.lire('derniereEcriture'))}|${aujourdhui}|${JSON.stringify(reglages)}|${signalMasque}`, valeur };
   return valeur;
+}
+
+function CartePourInfo({ signal }) {
+  const [detail, setDetail] = useState(false);
+  return html`<section class="carte pour-info" aria-label="Pour info">
+    <p class="etiquette">Pour info</p>
+    <p>${signal.phrase}</p>
+    <div class="ligne">
+      <button type="button" class="btn-lien" onClick=${() => setDetail(!detail)}>${detail ? 'Masquer le détail' : 'Voir le détail'}</button>
+      <button type="button" class="btn-lien" onClick=${() => repo.meta.ecrire('signalMasque', true)}>Masquer</button>
+    </div>
+    ${detail && html`<table class="tableau-simple"><thead><tr><th></th><th>Ces 4 jours</th><th>Avant ces périodes</th><th>D'habitude</th></tr></thead>
+      <tbody>${signal.detail.map((d) => html`<tr><td>${d.libelle}</td><td>${nombre(d.cesJours)}</td><td>${nombre(d.avant)}</td><td>${nombre(d.habitude)}</td></tr>`)}</tbody></table>`}
+  </section>`;
 }
 
 const Tuile = ({ titre, valeur, detail, fragile }) => html`<div class="tuile">
@@ -67,13 +84,13 @@ function Tuiles({ f, carte }) {
     <${Tuile} titre="Explosions" valeur=${f.explosions.n ? f.explosions.total : '·'} detail=${f.explosions.jours ? `${f.explosions.jours} jour${f.explosions.jours > 1 ? 's' : ''} avec` : ''} />
     <${Tuile} titre=${`Nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? f.nuits.mal : '·'}
       detail=${f.nuits.n ? `${lib('sommeil:bien')} ${f.nuits.bien} · ${lib('sommeil:moyen')} ${f.nuits.moyen}` : ''} />
-    <${Tuile} titre="Réveils" valeur=${nombre(f.nuits.reveils.moyenne)} fragile=${f.nuits.reveils.n > 0 && f.nuits.reveils.fragile} />
+    <${Tuile} titre="Réveils" valeur=${moyenneReveils(f.nuits.reveils)} fragile=${f.nuits.reveils.n > 0 && f.nuits.reveils.fragile} />
     <${Tuile} titre="Coucher · lever" valeur=${f.nuits.coucher ? `${f.nuits.coucher} · ${f.nuits.lever || '·'}` : '·'} detail=${f.nuits.duree ? duree(f.nuits.duree) : ''} />
     <${Tuile} titre="Contact humain" valeur=${f.contact.n ? `${f.contact.oui} j` : '·'} />
     <${Tuile} titre="Bureau" valeur=${f.lieux.n ? `${f.lieux.bureau} j` : '·'} detail=${f.lieux.n ? `télétravail ${f.lieux.teletravail} j` : ''} />
     <${Tuile} titre="Sport / mouvement" valeur=${f.sport.n ? `${f.sport.oui} j` : '·'} />
     <${Tuile} titre="Traitement pris" valeur=${f.traitement.n ? `${f.traitement.oui}` : '·'} detail=${f.traitement.n ? `partiel ${f.traitement.partiel} · non ${f.traitement.non}` : ''} />
-    <${Tuile} titre="Épisodes" valeur=${f.episodes.nombre} detail=${f.episodes.nIntensite ? `intensité ${nombre(f.episodes.intensite)}` : ''} />
+    <${Tuile} titre="Épisodes" valeur=${f.episodes.nombre} detail=${f.episodes.nIntensite ? `intensité ${nombre(f.episodes.intensite)}` : ''} fragile=${f.episodes.nIntensite > 0 && f.episodes.fragile} />
     <${Tuile} titre="Symptômes" valeur=${f.symptomes.nombre} />
   </div>`;
 }
@@ -96,13 +113,14 @@ export function Analyse() {
   useEffect(() => { let actif = true; calculerAnalyse().then((v) => { if (actif) setEtat(v); }); return () => { actif = false; }; }, [version]);
 
   if (!etat) return html`<main class="ecran"><${Entete} titre="Analyse" /><p class="discret">Calcul…</p></main>`;
-  const { resultat: r, carte } = etat;
+  const { resultat: r, carte, signalMasque } = etat;
   const f = r.fenetres[fenetre];
   const cl = r.classements[fenetre];
   const assezSemaines = semainesAvecDonnees(r.semaines) >= SEUILS.semaine.minSemainesGraphe;
 
   return html`<main class="ecran analyse">
     <${Entete} titre="Analyse" />
+    ${r.signal && r.signal.ressemble && !signalMasque && html`<${CartePourInfo} signal=${r.signal} />`}
     <${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} />
     <${Tuiles} f=${f} carte=${carte} />
     <${Chiffres} f=${f} />

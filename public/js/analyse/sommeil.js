@@ -1,8 +1,10 @@
 // Sommeil et humeur, le jour même et le lendemain. Mal = 0, Moyen = 1, Bien = 2.
-// Lendemain : Spearman partielle (on neutralise l'humeur du jour), jours consécutifs seulement.
+// Lendemain : Spearman partielle entre la nuit s[i] et l'humeur h[i+1] en neutralisant la nuit
+// SUIVANTE s[i+1] (jours consécutifs seulement). Neutraliser l'humeur du jour h[i] créait un faux
+// effet dès qu'existait un lien le jour même avec une humeur autocorrélée (biais de collision).
 import { SEUILS } from './seuils.js';
 import { spearman, spearmanPartielle, testPermutationRapide, moyenne, rangsEntiers, pearsonTableaux } from './stats.js';
-import { calendrier } from './calendrier.js';
+import { calendrierTests } from './calendrier.js';
 import { addDays } from '../domain/dates.js';
 
 const S = SEUILS.sommeil;
@@ -15,6 +17,22 @@ function suffisant(codes) {
   return codes.length >= S.minPaires && parModalite.filter((n) => n >= S.minParModalite).length >= S.minModalites;
 }
 
+// Qualités de nuit assez renseignées (au moins 4 paires), de la pire à la meilleure.
+export function extremesFiables(moyennes) {
+  const ok = MODALITES.filter((k) => moyennes[k] && moyennes[k].n >= S.minParModalite);
+  if (ok.length < 2) return null;
+  return { bas: [ok[0], moyennes[ok[0]]], haut: [ok[ok.length - 1], moyennes[ok[ok.length - 1]]] };
+}
+
+// Les moyennes affichées (arrondies au dixième) vont-elles dans le sens de rho ? Sinon, pas de
+// constat : la phrase ne doit jamais contredire ses propres chiffres.
+function coherent(r) {
+  const e = extremesFiables(r.moyennes);
+  if (!e || r.rho == null) return false;
+  const ecart = Math.round(e.haut[1].moyenne * 10) - Math.round(e.bas[1].moyenne * 10);
+  return ecart !== 0 && Math.sign(ecart) === Math.sign(r.rho);
+}
+
 function moyennesPar(paires) {
   const res = {};
   MODALITES.forEach((m, c) => { const hs = paires.filter((p) => p.s === c).map((p) => p.h); res[m] = hs.length ? { moyenne: moyenne(hs), n: hs.length } : null; });
@@ -22,9 +40,9 @@ function moyennesPar(paires) {
 }
 
 export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}) {
-  const { entrees } = calendrier(journal, fin);
+  const { entrees, consecutif } = calendrierTests(journal, fin, SEUILS.calendrier.trouMaxJours);
   const s = entrees.map((j) => (j && j.sommeilRessenti in CODE_SOMMEIL ? CODE_SOMMEIL[j.sommeilRessenti] : null));
-  const h = entrees.map((j) => (j && j.humeur != null ? j.humeur : null));
+  const h = entrees.map((j) => (j && Number.isInteger(j.humeur) && j.humeur >= 1 && j.humeur <= 10 ? j.humeur : null));
   const opts = { permutations: S.permutations, blocJours: S.blocJours, seed: S.seed };
   const n = s.length;
   const sT = Float64Array.from(s, (v) => (v == null ? NaN : v));
@@ -41,10 +59,14 @@ export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}
   };
   const statLendemain = (t) => {
     let k = 0;
-    for (let i = 0; i + 1 < n; i++) { const a = t[i]; const b = hT[i + 1]; const c = hT[i]; if (a === a && b === b && c === c) { bx[k] = a; by[k] = b; bz[k] = c; k++; } }
+    for (let i = 0; i + 1 < n; i++) {
+      if (!consecutif[i]) continue;
+      const a = t[i]; const b = hT[i + 1]; const c = t[i + 1];
+      if (a === a && b === b && c === c) { bx[k] = a; by[k] = b; bz[k] = c; k++; }
+    }
     if (k < 3) return null;
     const rxy = pearsonTableaux(rangsEntiers(bx, k, 2, rx), rangsEntiers(by, k, 10, ry), k);
-    const rxz = pearsonTableaux(rx, rangsEntiers(bz, k, 10, rz), k);
+    const rxz = pearsonTableaux(rx, rangsEntiers(bz, k, 2, rz), k);
     const ryz = pearsonTableaux(ry, rz, k);
     if (rxy == null) return null;
     if (rxz == null || ryz == null) return Math.abs(rxy);
@@ -62,32 +84,33 @@ export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}
   }
 
   // Lendemain (jours calendaires consécutifs : i et i + 1 dans la série continue)
-  const idxLend = s.map((_, i) => i).filter((i) => i + 1 < s.length && s[i] != null && h[i] != null && h[i + 1] != null);
+  const idxLend = s.map((_, i) => i).filter((i) => consecutif[i] && s[i] != null && s[i + 1] != null && h[i + 1] != null);
   const lendemain = { n: idxLend.length, statut: 'insuffisant' };
   if (decalages.includes('lendemain') && suffisant(idxLend.map((i) => s[i]))) {
-    const rho = spearmanPartielle(idxLend.map((i) => s[i]), idxLend.map((i) => h[i + 1]), idxLend.map((i) => h[i]));
+    const rho = spearmanPartielle(idxLend.map((i) => s[i]), idxLend.map((i) => h[i + 1]), idxLend.map((i) => s[i + 1]));
     const { p } = testPermutationRapide(sT, statLendemain, opts);
     Object.assign(lendemain, { statut: 'ok', rho, p, net: rho != null && p != null && p <= S.alpha, moyennes: moyennesPar(idxLend.map((i) => ({ s: s[i], h: h[i + 1] }))) });
   }
 
   // Les nuits Mal arrivent-elles à la suite ?
-  const idxSuite = s.map((_, i) => i).filter((i) => i + 1 < s.length && s[i] != null && s[i + 1] != null);
+  const idxSuite = s.map((_, i) => i).filter((i) => consecutif[i] && s[i] != null && s[i + 1] != null);
   const suite = idxSuite.length >= S.minPaires ? spearman(idxSuite.map((i) => s[i]), idxSuite.map((i) => s[i + 1])) : null;
   return { meme, lendemain, suite: suite != null && suite >= S.autocorrSuite };
 }
 
-// Stabilité : net aujourd'hui et sur les 6 troncatures ; déjà affiché, reste tant que p ≤ 0,05.
+// Stabilité : net aujourd'hui et sur les 6 troncatures ; déjà affiché, reste tant que p ≤ 0,01.
 export function sommeilHumeur(journal, aujourdhui, dejaAffiches = new Set()) {
   const res = evaluer(journal, aujourdhui);
   for (const cle of ['meme', 'lendemain']) {
     const r = res[cle];
     if (r.statut !== 'ok') continue;
+    const garde = dejaAffiches.has(`sommeil:${cle}`) && r.p != null && r.p <= S.alphaSortie;
     let stable = r.net;
-    for (let k = 1; k < S.joursStables && stable; k++) {
+    for (let k = 1; k < S.joursStables && stable && !garde; k++) {
       const rk = evaluer(journal, addDays(aujourdhui, -k), { decalages: [cle] })[cle];
       stable = rk.statut === 'ok' && rk.net;
     }
-    r.constat = stable || (dejaAffiches.has(`sommeil:${cle}`) && r.p != null && r.p <= S.alphaSortie);
+    r.constat = (stable || garde) && coherent(r);
   }
   return res;
 }

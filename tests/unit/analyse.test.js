@@ -6,7 +6,7 @@ import { classer } from '../../public/js/analyse/classements.js';
 import { bonnesJournees, facteursPossibles } from '../../public/js/analyse/bonnes-journees.js';
 import { sommeilHumeur } from '../../public/js/analyse/sommeil.js';
 import { serieHebdo } from '../../public/js/analyse/semaines.js';
-import { phraseConstat, phrasesSommeil, phraseClassement, PAS_ASSEZ } from '../../public/js/analyse/textes.js';
+import { phraseConstat, phrasesSommeil, phraseClassement, PAS_ASSEZ, duree } from '../../public/js/analyse/textes.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { addDays } from '../../public/js/domain/dates.js';
@@ -95,7 +95,7 @@ test('sommeil : effet le lendemain seulement → net en décalage 1, pas en déc
   assert.equal(r.lendemain.constat, true);
   assert.equal(r.meme.constat, false);
   const ph = phrasesSommeil(r, carte);
-  assert.ok(ph.some((p) => /^Le lendemain, une nuit notée Mal va encore avec une humeur plus basse/.test(p)), ph.join(' | '));
+  assert.ok(ph.some((p) => /^Le lendemain, une nuit notée Mal va avec une humeur plus basse/.test(p)), ph.join(' | '));
   assert.ok(ph.every((p) => !/provoqu|cause/i.test(p)));
 });
 
@@ -145,4 +145,99 @@ test('garde-fou : 1 100 jours analysés en moins de 5 s (budget strict dans test
   const t0 = performance.now();
   analyze({ journal, ...vide }, { aujourdhui: journal[journal.length - 1].date, items });
   assert.ok(performance.now() - t0 < 5000);
+});
+
+test('sommeil : une qualité de nuit vue une seule fois n\'est jamais affichée, et la phrase ne contredit pas ses chiffres', () => {
+  const journal = [];
+  for (let i = 0; i < 60; i++) {
+    const date = addDays('2026-07-01', i);
+    if (i === 0) journal.push({ date, sommeilRessenti: 'sommeil:mal', humeur: 9 });
+    else if (i % 2) journal.push({ date, sommeilRessenti: 'sommeil:moyen', humeur: 3 + (i % 3 === 0 ? 1 : 0) });
+    else journal.push({ date, sommeilRessenti: 'sommeil:bien', humeur: 6 + (i % 4 === 0 ? 1 : 0) });
+  }
+  const r = sommeilHumeur(journal, addDays('2026-07-01', 59));
+  const ph = phrasesSommeil(r, carte).join(' ');
+  assert.ok(!/nuit notée Mal/.test(ph), ph);
+  for (const m of ph.matchAll(/humeur (plus basse|plus haute)[^(]*\((\d+(?:,\d)?) contre (\d+(?:,\d)?)/g)) {
+    const a = Number(m[2].replace(',', '.')); const b = Number(m[3].replace(',', '.'));
+    assert.ok(m[1] === 'plus basse' ? a < b : a > b, ph);
+  }
+});
+
+test('« encore » seulement si le constat du jour même est affiché', () => {
+  const journal = generer({ jours: 200, seed: 11, scenario: 'sommeilLendemain' });
+  const ph = phrasesSommeil(sommeilHumeur(journal, journal[journal.length - 1].date), carte);
+  assert.ok(ph.some((p) => /^Le lendemain, une nuit notée .+ va avec/.test(p)), ph.join(' | '));
+  assert.ok(ph.every((p) => !/va encore/.test(p)));
+});
+
+test('« Depuis le début » part de la première date connue, toutes sources', () => {
+  const r = analyze({ journal: [], episodes: [{ date: '2026-09-01', heure: '10:00', emotion: 'emotion:colere' }], symptomes: [], traitements: [] }, { aujourdhui: '2026-09-30', items });
+  assert.equal(r.premier, '2026-09-01');
+  assert.equal(r.fenetres.tout.episodes.nombre, 1);
+});
+
+test('n°1 de la semaine avec 2 occurrences ; semaine en cours bornée à aujourd\'hui', () => {
+  const eps = [{ date: '2026-09-28', heure: '10:00', emotion: 'emotion:colere' }, { date: '2026-09-29', heure: '10:00', emotion: 'emotion:colere' },
+    { date: '2026-10-02', heure: '10:00', emotion: 'emotion:joie' }, { date: '2026-10-02', heure: '11:00', emotion: 'emotion:joie' }, { date: '2026-10-03', heure: '11:00', emotion: 'emotion:joie' }];
+  const s = serieHebdo({ journal: [], episodes: eps, symptomes: [], traitements: [] }, '2026-09-30', items, 1);
+  assert.equal(s[0].emotion, 'emotion:colere');
+});
+
+test('effet secondaire « Aucun » seul : « Aucun effet noté sur la période » ; durée sans « 60 » ; lieu renommé', () => {
+  const hc = new Set(['effetSecondaire:aucun']);
+  assert.match(phraseClassement('effetSecondaire', classer(Array(4).fill('effetSecondaire:aucun'), hc), carte), /^Aucun effet noté sur la période/);
+  assert.equal(duree(479.5), '8 h 00');
+  const renomme = new Map(carte); renomme.set('lieu:bureau', 'Au labo');
+  assert.match(phraseConstat({ variable: 'lieu', valeur: 'lieu:bureau', cle: 'x', d: 0.5, a: 1, n1: 2, b: 0, n2: 2 }, renomme), /le lieu « Au labo »/);
+});
+
+test('bonnes journées : aucun facteur testable = pas encore assez de données', () => {
+  const journal = Array.from({ length: 20 }, (_, i) => ({ date: addDays('2026-09-01', i), humeur: i % 2 ? 8 : 3 }));
+  assert.equal(bonnesJournees(journal, '2026-09-20').statut, 'insuffisant');
+});
+
+test('lendemain : un effet du jour même avec une humeur autocorrélée ne crée pas de faux effet le lendemain', () => {
+  let faux = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const journal = generer({ jours: 200, seed, scenario: 'jourMemeAR' });
+    const r = sommeilHumeur(journal, journal[journal.length - 1].date);
+    assert.equal(r.meme.constat, true, `graine ${seed}`);
+    if (r.lendemain.constat) faux++;
+  }
+  assert.ok(faux <= 1, `${faux}/10`);
+});
+
+test('humeur hors bornes traitée comme inconnue (jamais de p = 0,001 par NaN)', () => {
+  const journal = generer({ jours: 150, seed: 2001, scenario: 'nul' });
+  journal[50] = { ...journal[50], humeur: 11 };
+  const r = sommeilHumeur(journal, journal[journal.length - 1].date);
+  for (const cle of ['meme', 'lendemain']) assert.ok(r[cle].p == null || r[cle].p > 0.002, `${cle} p=${r[cle].p}`);
+});
+
+test('invariance : une entrée sans humeur avant la première humeur ne change aucun p', async () => {
+  const { evaluer } = await import('../../public/js/analyse/bonnes-journees.js');
+  for (const seed of [1, 21, 33, 45]) {
+    const j = generer({ jours: 150, seed, scenario: 'bureau', effet: 1.2 });
+    const fin = j[j.length - 1].date;
+    const ps = (x) => evaluer(x, fin).facteurs.map((f) => [f.cle, f.p]);
+    assert.deepEqual(ps([{ date: addDays(j[0].date, -3), notes: 'note seule' }, ...j]), ps(j));
+  }
+});
+
+test('une date aberrante très ancienne ne fait ni exploser le calcul ni changer les verdicts', () => {
+  const journal = generer({ jours: 400, seed: 31, scenario: 'bureau' });
+  const fin = journal[journal.length - 1].date;
+  const base = analyze({ journal, ...vide }, { aujourdhui: fin, items });
+  const t0 = performance.now();
+  const avec = analyze({ journal: [{ date: '1926-03-01', humeur: 5 }, ...journal], ...vide }, { aujourdhui: fin, items });
+  assert.ok(performance.now() - t0 < 5000);
+  assert.deepEqual(avec.bonnesJournees.constats.map((c) => c.cle), base.bonnesJournees.constats.map((c) => c.cle));
+});
+
+test('réveils « 5 ou plus » : la moyenne s\'affiche comme une borne basse', async () => {
+  const { moyenneReveils } = await import('../../public/js/analyse/textes.js');
+  const f = indicateurs({ journal: [5, 5, 0].map((r, i) => ({ date: addDays('2026-09-01', i), reveilsNocturnes: r })), ...vide }, '2026-09-01', '2026-09-03');
+  assert.equal(f.nuits.reveils.plafonne, 2);
+  assert.equal(moyenneReveils(f.nuits.reveils), 'au moins 3,3');
 });

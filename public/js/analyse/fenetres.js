@@ -4,6 +4,17 @@ import { SEUILS } from './seuils.js';
 import { moyenne, mediane } from './stats.js';
 import { addDays, jourEvenement } from '../domain/dates.js';
 
+// Première date connue, toutes sources confondues (jusqu'à aujourd'hui).
+export function premiereDate({ journal = [], episodes = [], symptomes = [], traitements = [] }, aujourdhui) {
+  const dates = [
+    ...journal.map((j) => j.date),
+    ...episodes.filter((e) => e.date).map((e) => jourEvenement(e.date, e.heure)),
+    ...symptomes.map((s) => s.date),
+    ...traitements.map((t) => t.date),
+  ].filter((x) => typeof x === 'string' && x <= aujourdhui);
+  return dates.reduce((m, x) => (!m || x < m ? x : m), null);
+}
+
 const enMinutes = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
 const versHeure = (m) => { const x = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 const estHeure = (h) => typeof h === 'string' && /^\d{2}:\d{2}$/.test(h);
@@ -53,7 +64,7 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     nuits: {
       n: sommeils.length, mal: compte(sommeils, (s) => s === 'sommeil:mal'), moyen: compte(sommeils, (s) => s === 'sommeil:moyen'),
       bien: compte(sommeils, (s) => s === 'sommeil:bien'),
-      reveils: { n: reveils.length, moyenne: moyenne(reveils), fragile: reveils.length < SEUILS.moyenne.peuDeValeurs },
+      reveils: { n: reveils.length, moyenne: moyenne(reveils), plafonne: compte(reveils, (r) => r >= SEUILS.reveils.plafond), fragile: reveils.length < SEUILS.moyenne.peuDeValeurs },
       coucher: couchers.length >= min ? versHeure(mediane(couchers.map(coucherAjuste))) : null,
       lever: levers.length >= min ? versHeure(mediane(levers.map(enMinutes))) : null,
       duree: durees.length >= min ? mediane(durees) : null,
@@ -63,7 +74,7 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     sport: { n: val('sportMouvement').length, oui: compte(val('sportMouvement'), (x) => x === true) },
     lieux: { n: lieux.length, parLieu, bureau: parLieu['lieu:bureau'] || 0, teletravail: parLieu['lieu:teletravail'] || 0 },
     traitement: { n: tp.length, oui: compte(tp, (x) => x === 'traitementPris:oui'), partiel: compte(tp, (x) => x === 'traitementPris:partiel'), non: compte(tp, (x) => x === 'traitementPris:non') },
-    episodes: { nombre: eps.length, intensite: moyenne(intensites), nIntensite: intensites.length },
+    episodes: { nombre: eps.length, intensite: moyenne(intensites), nIntensite: intensites.length, fragile: intensites.length < SEUILS.moyenne.peuDeValeurs },
     symptomes: { nombre: symptomes.filter((s) => dans(s.date, du, au)).length },
   };
 }

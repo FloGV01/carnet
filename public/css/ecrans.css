@@ -93,3 +93,6 @@
   .apercu-page { border: 0; width: 100%; }
   body, html { background: #FFFFFF; }
 }
+.pour-info { margin-top: var(--esp-3); background: var(--info-bg); border-color: var(--info-bg); }
+.pour-info .ligne { justify-content: flex-start; gap: var(--esp-4); }
+.pour-info table { margin-top: var(--esp-2); }

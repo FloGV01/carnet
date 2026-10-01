@@ -54,3 +54,79 @@ test('budget (machine au repos) : 1 100 jours en moins de 300 ms sans constat, 1
     assert.ok(dt < max, `${scenario} : ${Math.round(dt)} ms`);
   }
 });
+
+test('signal : au plus 2 affichages par an sur des données sans signature (humeur autocorrélée)', async () => {
+  const { ressemblance } = await import('../../public/js/analyse/ressemblance.js');
+  const { addDays } = await import('../../public/js/domain/dates.js');
+  const items = seedItems(SEED_V1, 'x');
+  let parle = 0; let evaluations = 0;
+  for (const seed of [41, 42, 43]) {
+    const journal = generer({ jours: 500, seed, scenario: 'ar1' });
+    const debut = journal[135].date;
+    for (let k = 0; k < 365; k += 3) {
+      const r = ressemblance({ journal }, { aujourdhui: addDays(debut, k), items });
+      evaluations++;
+      if (r.ressemble) parle++;
+    }
+  }
+  const parAn = (parle / evaluations) * 365;
+  console.log(`  signal sans signature : ${parle}/${evaluations} évaluations, soit ${parAn.toFixed(1)} jours par an`);
+  assert.ok(parAn <= 2, `${parAn.toFixed(1)} jours par an`);
+});
+
+test('bonnes journées : au plus 8 % de faux constats, humeur φ = 0,9 et lieu par plages hors grille', () => {
+  let faux = 0;
+  for (let seed = 1000; seed < 1000 + N; seed++) {
+    const j = generer({ jours: 180, seed, scenario: 'ar1Long' });
+    if (bonnesJournees(j, j[j.length - 1].date).constats.length) faux++;
+  }
+  console.log(`  bonnes journées φ 0,9 : ${faux}/${N}`);
+  assert.ok(faux / N <= 0.08, `${faux}/${N}`);
+});
+
+test('sommeil : au plus 5 % de faux positifs, humeur φ = 0,9 et nuits qui se répètent', () => {
+  let faux = 0;
+  for (let seed = 2000; seed < 2000 + N; seed++) {
+    const j = generer({ jours: 150, seed, scenario: 'ar1Long' });
+    const r = sommeilHumeur(j, j[j.length - 1].date);
+    if (r.meme.constat || r.lendemain.constat) faux++;
+  }
+  console.log(`  sommeil φ 0,9 : ${faux}/${N}`);
+  assert.ok(faux / N <= 0.05, `${faux}/${N}`);
+});
+
+test('sommeil : effet du jour même + humeur autocorrélée, au plus 5 % de faux constats le lendemain', () => {
+  let faux = 0;
+  for (let seed = 4000; seed < 4000 + N; seed++) {
+    const j = generer({ jours: 200, seed, scenario: 'jourMemeAR' });
+    if (sommeilHumeur(j, j[j.length - 1].date).lendemain.constat) faux++;
+  }
+  console.log(`  lendemain sous effet du jour même : ${faux}/${N}`);
+  assert.ok(faux / N <= 0.05, `${faux}/${N}`);
+});
+
+test('puissance : un emploi du temps fixe (bureau lun/mar/jeu, +3) est retrouvé', () => {
+  let trouves = 0;
+  for (let seed = 3000; seed < 3020; seed++) {
+    const j = generer({ jours: 182, seed, scenario: 'emploiDuTemps' });
+    if (bonnesJournees(j, j[j.length - 1].date).constats.some((c) => c.variable === 'lieu')) trouves++;
+  }
+  console.log(`  puissance emploi du temps : ${trouves}/20`);
+  assert.ok(trouves >= 16, `${trouves}/20`);
+});
+
+test('bonnes journées : au plus 10 % de journaux avec un faux constat sur un an de recalcul quotidien', () => {
+  const n = 30;
+  let touches = 0;
+  for (let seed = 5000; seed < 5000 + n; seed++) {
+    const j = generer({ jours: 425, seed, scenario: 'nul' });
+    let deja = new Set();
+    for (let k = 60; k < j.length; k++) {
+      const r = bonnesJournees(j.slice(0, k + 1), j[k].date, deja);
+      deja = new Set(r.constats.map((c) => `bj:${c.cle}`));
+      if (r.constats.length) { touches++; break; }
+    }
+  }
+  console.log(`  un an de recalcul quotidien : ${touches}/${n}`);
+  assert.ok(touches / n <= 0.10, `${touches}/${n}`);
+});

@@ -1,8 +1,8 @@
 // Modèle de la vue soignants (une page A4, voix neutre). Exclut : situations, notes, points
 // positifs, « ce qui a aidé », détail jour par jour, signal, mémos. Pur.
 import { addDays, diffDays, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
-import { indicateurs } from '../analyse/fenetres.js';
-import { nombre, duree, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
+import { indicateurs, premiereDate } from '../analyse/fenetres.js';
+import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
 import { trierRdv } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 
@@ -17,7 +17,7 @@ function lignesIndicateurs(colonnes, lib) {
     ['Journées à 7 ou plus / à 4 ou moins', (f) => (f.humeur.n ? `${f.humeur.haut} / ${f.humeur.bas}` : '·')],
     ['Explosions (jours avec)', (f) => (f.explosions.n ? `${f.explosions.total} (${f.explosions.jours})` : '·')],
     [`Nuits ${lib('sommeil:mal')}`, (f) => (f.nuits.n ? `${f.nuits.mal}${sur(f.nuits.n, 'nuits')}` : '·')],
-    ['Réveils nocturnes (moyenne)', (f) => (f.nuits.reveils.n ? `${nombre(f.nuits.reveils.moyenne)}${sur(f.nuits.reveils.n)}` : '·')],
+    ['Réveils nocturnes (moyenne)', (f) => (f.nuits.reveils.n ? `${moyenneReveils(f.nuits.reveils)}${sur(f.nuits.reveils.n)}` : '·')],
     ['Coucher · lever · durée (médianes)', (f) => (f.nuits.coucher || f.nuits.lever ? `${f.nuits.coucher || '·'} · ${f.nuits.lever || '·'} · ${duree(f.nuits.duree)}` : '·')],
     ['Contact humain', (f) => (f.contact.n ? `${f.contact.oui} j${sur(f.contact.n)}` : '·')],
     ['Bureau · télétravail', (f) => (f.lieux.n ? `${f.lieux.bureau} · ${f.lieux.teletravail}${sur(f.lieux.n)}` : '·')],
@@ -31,7 +31,7 @@ function lignesIndicateurs(colonnes, lib) {
 
 export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [] }) {
   const lib = (id) => (carte && carte.get(id)) || id;
-  const premier = data.journal.reduce((m, j) => (!m || j.date < m ? j.date : m), null);
+  const premier = premiereDate(data, aujourdhui);
   const { aVenir, passes } = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui);
   const dernierRdv = passes[0] || null;
   const prochain = aVenir[0] || null;
