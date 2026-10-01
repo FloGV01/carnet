@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '4c58f14ab466';
+const VERSION = '7e872176d254';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -27,8 +27,10 @@ const FICHIERS = [
   "./js/domain/libelles.js",
   "./js/domain/listes-def.js",
   "./js/domain/vocabulaire.js",
+  "./js/donnees.js",
   "./js/export/pdf.js",
   "./js/main.js",
+  "./js/plateforme/cycle.js",
   "./js/plateforme/micro.js",
   "./js/plateforme/mode.js",
   "./js/plateforme/partage.js",
@@ -39,12 +41,22 @@ const FICHIERS = [
   "./js/store.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
+  "./js/ui/composants/dicter.js",
+  "./js/ui/composants/entete-jour.js",
   "./js/ui/composants/entete.js",
+  "./js/ui/composants/heure.js",
+  "./js/ui/composants/oui-non.js",
+  "./js/ui/composants/pastilles.js",
+  "./js/ui/composants/repli.js",
+  "./js/ui/composants/segmente.js",
+  "./js/ui/composants/texte.js",
   "./js/ui/composants/toast.js",
   "./js/ui/ecrans/attente.js",
+  "./js/ui/ecrans/aujourdhui.js",
   "./js/ui/ecrans/diagnostic.js",
   "./js/ui/ecrans/guide.js",
   "./js/ui/ecrans/reglages.js",
+  "./js/ui/hooks.js",
   "./js/ui/icones.js",
   "./js/ui/lib.js",
   "./js/version.js",

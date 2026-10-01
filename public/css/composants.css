@@ -64,3 +64,72 @@
   border: 1px solid var(--border); background: var(--surface); resize: vertical;
 }
 .champ-ligne { width: 100%; min-height: var(--cible); padding: 0 var(--esp-3); border-radius: var(--r-petit); border: 1px solid var(--border); background: var(--surface); }
+
+/* Champs de saisie */
+.champ { margin-top: 10px; }
+.etiquette { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+.etiquette .discret { font-weight: 400; }
+.ligne-champ { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+.ligne-champ .etiquette { margin: 0; }
+.deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); }
+.deux-colonnes .segmente { width: 100%; }
+
+/* Pastilles */
+.pastilles { display: grid; gap: 6px; grid-template-columns: repeat(3, 1fr); }
+.pastilles.colonnes-2 { grid-template-columns: repeat(2, 1fr); }
+.pastilles.colonnes-5 { grid-template-columns: repeat(5, 1fr); }
+.pastilles.colonnes-6 { grid-template-columns: repeat(6, 1fr); }
+.pastille {
+  min-height: var(--cible); padding: 4px 6px; border-radius: var(--r-petit);
+  border: 1px solid var(--hairline); background: var(--surface); color: var(--text);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-size: 0.92rem; line-height: 1.15; text-align: center; transition: background var(--duree), color var(--duree);
+}
+.pastille small { font-size: 0.7rem; color: var(--text-2); }
+.pastille[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
+.pastille[aria-pressed="true"] small { color: inherit; opacity: 0.85; }
+.pastilles.chiffres .pastille { font-size: 1rem; }
+.pastilles.grille-choix .pastille { min-height: var(--cible-grille); }
+
+/* Segmenté */
+.segmente { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: var(--surface); padding: 2px; gap: 2px; }
+.segmente button {
+  flex: 1; min-height: 40px; min-width: 56px; padding: 0 var(--esp-3); border: 0; border-radius: 8px;
+  background: none; color: var(--text); font-size: 0.92rem; transition: background var(--duree);
+}
+.segmente button[aria-pressed="true"] { background: var(--accent); color: var(--accent-texte); font-weight: 600; }
+
+/* Texte et Dicter */
+.champ-avec-dicter { position: relative; }
+.champ-avec-dicter .champ-texte { padding-right: 52px; min-height: 64px; }
+.dicter {
+  position: absolute; top: 4px; right: 4px; width: var(--cible); height: var(--cible);
+  display: grid; place-items: center; border: 0; border-radius: var(--r-petit); background: none; color: var(--accent);
+}
+.dicter svg { width: 22px; height: 22px; }
+.aide-dicter { margin-top: 4px; }
+
+/* Heure */
+.ligne-heure { display: flex; gap: 6px; align-items: center; }
+.ligne-heure input { min-height: var(--cible); flex: 1; }
+.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); font-size: 1rem; }
+
+/* Replis */
+.repli { margin-top: var(--esp-3); border-top: 1px solid var(--hairline); }
+.repli-tete { width: 100%; display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); border: 0; background: none; padding: 0; text-align: left; }
+.repli-fleche { width: 1em; color: var(--text-2); }
+.repli-titre { font-weight: 600; }
+.repli-resume { margin-left: auto; color: var(--text-2); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.repli-corps { padding-bottom: var(--esp-3); }
+
+/* En-tête du jour */
+.entete-jour { display: grid; grid-template-columns: var(--cible) 1fr var(--cible); align-items: center; position: relative; }
+.nav-jour { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--accent); font-size: 1.6rem; line-height: 1; }
+.nav-jour[disabled] { color: var(--hairline); }
+.titre-jour { position: relative; text-align: center; min-height: var(--cible); display: grid; place-items: center; }
+.titre-jour h1 { font-size: 1.02rem; }
+.choix-date { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; border: 0; }
+.indicateur { grid-column: 1 / -1; text-align: right; min-height: 1em; font-size: 0.78rem; color: var(--text-2); margin-top: -4px; }
+.ligne-info { display: block; margin-top: 4px; font-size: 0.85rem; }
+.lien { color: var(--accent); text-decoration: none; min-height: var(--cible); display: flex; align-items: center; }
+.pied { margin-top: var(--esp-4); text-align: center; }

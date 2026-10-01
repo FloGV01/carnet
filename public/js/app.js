@@ -11,12 +11,15 @@ import { Guide } from './ui/ecrans/guide.js';
 import { EcranAttente } from './ui/ecrans/attente.js';
 import { Reglages } from './ui/ecrans/reglages.js';
 import { Diagnostic } from './ui/ecrans/diagnostic.js';
+import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 
 const ECRANS = {
-  aujourdhui: () => html`<${EcranAttente} titre="Aujourd'hui" />`,
+  aujourdhui: () => html`<${Aujourdhui} />`,
+  jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
   historique: () => html`<${EcranAttente} titre="Historique" />`,
   soins: () => html`<${EcranAttente} titre="Soins" />`,
   reglages: () => html`<${Reglages} />`,
+  'reglages-sauvegarde': () => html`<${Reglages} />`,
   diagnostic: () => html`<${Diagnostic} />`,
 };
 
