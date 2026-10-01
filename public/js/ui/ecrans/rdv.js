@@ -53,7 +53,8 @@ export function Rdv({ id: idRoute }) {
     <div class="champ">
       <span class="etiquette">Professionnel</span>
       <${Pastilles} etiquette="Professionnel" options=${options(items, 'professionnel', fiche.professionnel)} valeur=${fiche.professionnel}
-        surChoix=${(v) => ecrire({ professionnel: v })} colonnes=${2} classe="grille-choix" />
+        surChoix=${(v) => ecrire({ professionnel: v })} colonnes=${2} classe="grille-choix"
+        surAjouter=${async (t) => { const it = await repo.listes.creer('professionnel', t); setItems(await repo.listes.items('professionnel')); ecrire({ professionnel: it.id }); }} />
     </div>
     <div class="champ">
       <span class="etiquette">Questions à poser</span>

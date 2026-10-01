@@ -167,6 +167,11 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     <h2 class="question">${et.question}</h2>
     <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
       colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
-      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} />
+      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null}
+      surAjouter=${et.type === 'intensite' ? null : async (texte) => {
+        const item = await repo.listes.creer(et.liste, texte);
+        setItems(await repo.listes.items());
+        choisir(etape, et.champ)(item.id);
+      }} />
   </${CadreParcours}>`;
 }

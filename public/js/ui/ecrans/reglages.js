@@ -39,6 +39,7 @@ export function Reglages() {
       <ul class="liste carte">
         <${Ligne} href="#/reglages/sauvegarde" titre="Sauvegarde" detail=${derniere} />
         <${Ligne} href="#/reglages/rappel" titre="Rappel du soir" />
+        <${Ligne} href="#/reglages/listes" titre="Listes" />
       </ul>
     </section>
     <section class="section">

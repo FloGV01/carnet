@@ -23,6 +23,7 @@ import { Traitement } from './ui/ecrans/traitement.js';
 import { Symptome } from './ui/ecrans/symptome.js';
 import { Analyse } from './ui/ecrans/analyse.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
+import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -40,6 +41,8 @@ const ECRANS = {
   diagnostic: () => html`<${Diagnostic} />`,
   analyse: () => html`<${Analyse} />`,
   'export-psy': () => html`<${ExportPsy} />`,
+  'listes-index': () => html`<${IndexListes} />`,
+  listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
 };
 
 function useEtatApp() {

@@ -74,3 +74,16 @@
 .regle { margin-top: var(--esp-2); }
 .ligne-classement { display: grid; gap: 2px; padding: 10px 0; }
 .apercu-export { white-space: pre-wrap; word-break: break-word; font: 0.78rem/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); padding: var(--esp-3); user-select: text; -webkit-user-select: text; }
+
+/* Listes */
+.element-liste { display: flex; align-items: center; gap: var(--esp-2); min-height: 52px; }
+.libelle-element { flex: 1; text-align: left; border: 0; background: none; min-height: var(--cible); padding: 0; font: inherit; color: var(--text); }
+.element-liste input { flex: 1; }
+.ordre { display: flex; gap: 2px; }
+.fleche { width: var(--cible); height: var(--cible); border: 1px solid var(--hairline); border-radius: var(--r-petit); background: var(--surface); color: var(--text); font-size: 1.1rem; }
+.fleche[disabled] { opacity: 0.3; }
+.ajout-element { display: flex; gap: var(--esp-2); }
+.ajout-element input { flex: 1; }
+.pastille-ajout { color: var(--accent); border-style: dashed; }
+.ajout-pastille { grid-column: 1 / -1; display: flex; gap: var(--esp-2); }
+.ajout-pastille input { flex: 1; }
