@@ -1,6 +1,7 @@
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { BoutonDicter, AIDE_DICTER } from './dicter.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
+import { vidanges } from '../../store.js';
 
 // Champ de texte libre, non contrôlé (la dictée iOS n'est jamais réécrite pendant la saisie).
 // Enregistré 500 ms après la frappe, à la sortie du champ et quand l'app passe en arrière-plan.
@@ -35,7 +36,9 @@ export function ChampTexte({ id, etiquette, ariaLabel, valeur, placeholder, surE
     const surCache = () => { if (document.visibilityState === 'hidden') enregistrer(); };
     document.addEventListener('visibilitychange', surCache);
     window.addEventListener('pagehide', enregistrer);
+    vidanges.add(enregistrer);
     return () => {
+      vidanges.delete(enregistrer);
       document.removeEventListener('visibilitychange', surCache);
       window.removeEventListener('pagehide', enregistrer);
       enregistrer();

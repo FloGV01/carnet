@@ -45,7 +45,8 @@ export const SCHEMAS = {
 export const STORES_SAISIE = Object.keys(SCHEMAS);
 export const CHAMPS_TECHNIQUES = ['createdAt', 'updatedAt'];
 
-// Maxima appliqués aux seuls imports (repérer un fichier corrompu), jamais aux saisies.
+// Maxima appliqués aux seuls imports de fichiers étrangers, jamais aux saisies ni aux sauvegardes de Carnet.
+const SANS_PLAFOND = new Set(['app', 'sauvegarde']);
 const MAX_IMPORT = { texte: 20000, heureBrute: 20 };
 
 export class ErreurValidation extends Error {
@@ -69,7 +70,7 @@ function normaliserChamp(nom, def, v, origine, erreurs) {
     case 'texte': {
       if (typeof v !== 'string') { erreurs.push(`${nom} : texte attendu`); return null; }
       const t = v.normalize('NFC').trim();
-      if (origine !== 'app' && t.length > MAX_IMPORT.texte) { erreurs.push(`${nom} : texte trop long`); return null; }
+      if (!SANS_PLAFOND.has(origine) && t.length > MAX_IMPORT.texte) { erreurs.push(`${nom} : texte trop long`); return null; }
       return t;
     }
     case 'bool':
@@ -133,8 +134,12 @@ export function valider(store, brut, options) {
   return res.valeur;
 }
 
+// Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
+const CONTEXTE = { episodes: ['heure'] };
+
 export function estVide(store, valeur) {
-  return Object.keys(SCHEMAS[store].saisis).every((k) => valeur[k] === null || valeur[k] === undefined);
+  const contexte = CONTEXTE[store] || [];
+  return Object.keys(SCHEMAS[store].saisis).every((k) => contexte.includes(k) || valeur[k] === null || valeur[k] === undefined);
 }
 
 export function referencesDe(store, valeur) {

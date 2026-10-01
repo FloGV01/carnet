@@ -28,6 +28,7 @@ test('aucune limite de longueur pour une saisie, mais une à l\'import', () => {
   const long = 'x'.repeat(50000);
   assert.equal(valider('journal', { date: '2026-09-30', notes: long }).notes.length, 50000);
   assert.throws(() => valider('journal', { date: '2026-09-30', notes: long }, { origine: 'import' }), ErreurValidation);
+  assert.equal(valider('journal', { date: '2026-09-30', notes: long }, { origine: 'sauvegarde' }).notes.length, 50000);
 });
 
 test('texte en NFC, retours à la ligne gardés, extrémités nettoyées', () => {

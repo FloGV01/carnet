@@ -7,6 +7,7 @@ import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { cleLocale, heureLocale, addDays, formaterJour } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { versHash } from '../../routeur.js';
+import { nouvelId } from '../../domain/ids.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { ChampTexte } from '../composants/texte.js';
@@ -71,7 +72,8 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     file.current = file.current.then(async () => {
       if (!idRef.current) {
         const base = { date: fiche.date, ...(avecHeure ? { heure: fiche.heure ?? null } : {}) };
-        const cree = await ecrireAvecEssais(() => repo[store].creer({ ...base, ...changements }), signaler);
+        const id = nouvelId(store === 'episodes' ? 'ep' : 'sy');
+        const cree = await ecrireAvecEssais(() => repo[store].creer({ ...base, ...changements }, { id }), signaler);
         if (cree) { idRef.current = cree.id; history.replaceState(null, '', versHash(route, { id: cree.id })); }
         return;
       }

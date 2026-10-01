@@ -86,7 +86,7 @@ test('mémo du jour : crée l\'entrée, la garde même vide, part avec le dernie
   await repo.journal.patch('2026-09-30', { humeur: 5 });
   assert.ok(await repo.journal.patch('2026-09-30', { humeur: null }), 'gardé car un mémo y est rattaché');
   const sup = await repo.audios.supprimer(a.id);
-  assert.ok(sup.journal, 'entrée vide retirée avec le mémo');
+  assert.ok(sup.parent, 'entrée vide retirée avec le mémo');
   assert.equal(await repo.journal.lire('2026-09-30'), null);
   await repo.audios.restaurer(sup);
   assert.ok(await repo.journal.lire('2026-09-30'));
@@ -173,4 +173,89 @@ test('méta : lire et écrire', async () => {
   assert.equal(await repo.meta.lire('reglages'), null);
   await repo.meta.ecrire('reglages', { signal: true });
   assert.deepEqual(await repo.meta.lire('reglages'), { signal: true });
+});
+
+test('Annuler la suppression d\'un mémo n\'écrase pas une saisie faite entre-temps', async () => {
+  const { repo, changements } = nouveauRepo();
+  const a = await repo.audios.creer({ parentStore: 'journal', parentId: '2026-09-30', dureeMs: 1000, data: new ArrayBuffer(4) });
+  const sauve = await repo.audios.supprimer(a.id);
+  assert.equal(await repo.journal.lire('2026-09-30'), null);
+  await repo.journal.patch('2026-09-30', { humeur: 6 });
+  changements.length = 0;
+  assert.equal(await repo.audios.restaurer(sauve), true);
+  assert.equal((await repo.journal.lire('2026-09-30')).humeur, 6);
+  assert.equal((await repo.audios.parParent('journal', '2026-09-30')).length, 1);
+  assert.deepEqual(changements.map((c) => c.store), ['journal', 'audios']);
+});
+
+test('Annuler « journée effacée » garde ce qui a été saisi entre-temps', async () => {
+  const { repo } = nouveauRepo();
+  await repo.journal.patch('2026-09-30', { humeur: 4, lieu: 'lieu:bureau' });
+  const sauve = await repo.journal.supprimer('2026-09-30');
+  await repo.journal.patch('2026-09-30', { humeur: 7 });
+  await repo.journal.restaurer(sauve);
+  const e = await repo.journal.lire('2026-09-30');
+  assert.equal(e.humeur, 7);
+  assert.equal(e.lieu, 'lieu:bureau');
+});
+
+test('dernier mémo d\'un épisode vide : la fiche part avec lui, et revient avec Annuler', async () => {
+  const { repo } = nouveauRepo();
+  const ep = await repo.episodes.creer({ date: '2026-09-30', heure: '10:00' });
+  const a = await repo.audios.creer({ parentStore: 'episodes', parentId: ep.id, data: new ArrayBuffer(2) });
+  assert.equal(a.date, '2026-09-30', 'date du mémo = date de sa fiche');
+  const sauve = await repo.audios.supprimer(a.id);
+  assert.equal(await repo.episodes.lire(ep.id), null);
+  await repo.audios.restaurer(sauve);
+  assert.ok(await repo.episodes.lire(ep.id));
+  assert.equal((await repo.audios.parParent('episodes', ep.id)).length, 1);
+});
+
+test('jamais de mémo orphelin : fiche disparue entre-temps', async () => {
+  const { repo } = nouveauRepo();
+  const ep = await repo.episodes.creer({ date: '2026-09-30', emotion: 'emotion:peur' });
+  const a = await repo.audios.creer({ parentStore: 'episodes', parentId: ep.id, data: new ArrayBuffer(2) });
+  const sauve = await repo.audios.supprimer(a.id);
+  await repo.episodes.supprimer(ep.id);
+  assert.equal(await repo.audios.restaurer(sauve), false);
+  assert.equal((await repo.audios.metas()).length, 0);
+});
+
+test('épisode : retirer le seul choix supprime la fiche malgré l\'heure préremplie', async () => {
+  const { repo } = nouveauRepo();
+  const ep = await repo.episodes.creer({ date: '2026-09-30', heure: '18:42', declencheur: 'declencheur:injustice' });
+  assert.equal(await repo.episodes.modifier(ep.id, { declencheur: null }), null);
+  assert.equal(await repo.episodes.lire(ep.id), null);
+});
+
+test('creer avec un id fourni est idempotent (nouvel essai sans doublon)', async () => {
+  const { repo } = nouveauRepo();
+  await repo.episodes.creer({ date: '2026-09-30', emotion: 'emotion:joie' }, { id: 'ep_fixe' });
+  await repo.episodes.creer({ date: '2026-09-30', emotion: 'emotion:joie' }, { id: 'ep_fixe' });
+  assert.equal((await repo.episodes.tous()).length, 1);
+});
+
+test('meta.ecrire marque une écriture, sauf pour les méta techniques', async () => {
+  const { repo, horloge } = nouveauRepo();
+  horloge.t = new Date(2026, 8, 30, 22, 0);
+  await repo.meta.ecrire('reglages', { signal: false });
+  assert.equal(await repo.meta.lire('derniereEcriture'), horloge.t.toISOString());
+  const avant = horloge.t.toISOString();
+  horloge.t = new Date(2026, 8, 30, 23, 0);
+  await repo.meta.ecrire('derniereSauvegarde', horloge.t.toISOString());
+  assert.equal(await repo.meta.lire('derniereEcriture'), avant);
+});
+
+test('listes.libelles rend la carte id → libellé, archivés compris', async () => {
+  const { repo } = nouveauRepo();
+  await repo.listes.archiver('lieu:clinique');
+  const carte = await repo.listes.libelles();
+  assert.equal(carte.get('lieu:bureau'), 'Bureau');
+  assert.equal(carte.get('lieu:clinique'), 'Clinique');
+});
+
+test('une écriture non attendue qui échoue rejette avec sa vraie cause', async () => {
+  const { repo } = nouveauRepo();
+  await repo.journal.patch('2026-09-30', { humeur: 5 });
+  await assert.rejects(repo.tx(['journal'], 'readwrite', (t) => { t.objectStore('journal').add({ date: '2026-09-30' }); }), (e) => e && e.name === 'ConstraintError');
 });

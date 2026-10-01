@@ -10,7 +10,7 @@ export function req(requete) {
 export function fin(tx) {
   return new Promise((ok, ko) => {
     tx.oncomplete = () => ok();
-    tx.onerror = () => ko(tx.error);
+    tx.onerror = (ev) => ko(tx.error || (ev && ev.target && ev.target.error) || new DOMException('Erreur de requête', 'UnknownError'));
     tx.onabort = () => ko(tx.error || new DOMException('Transaction annulée', 'AbortError'));
   });
 }
@@ -23,8 +23,8 @@ export async function dansTx(db, stores, mode, travail) {
     resultat = await travail(tx);
   } catch (e) {
     try { tx.abort(); } catch { /* déjà terminée */ }
-    await termine.catch(() => {});
-    throw e;
+    const cause = await termine.then(() => null, (x) => x);
+    throw e && e.name === 'AbortError' && cause ? cause : e;
   }
   await termine;
   return resultat;

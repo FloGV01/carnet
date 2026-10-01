@@ -138,7 +138,7 @@ export function analyserFichiers(fichiers) {
   for (const store of Object.keys(SCHEMAS)) {
     valides[store] = [];
     (data[store] || []).forEach((brut, i) => {
-      const { valeur, erreurs: errs } = normaliser(store, brut, { origine: 'import' });
+      const { valeur, erreurs: errs } = normaliser(store, brut, { origine: 'sauvegarde' });
       if (errs.length) { erreurs.push(`${store} n° ${i + 1} : ${errs.join(', ')}`); return; }
       for (const [champ, def] of Object.entries(SCHEMAS[store].saisis)) {
         const refs = def.type === 'ref' ? [valeur[champ]] : def.type === 'refs' ? valeur[champ] || [] : [];

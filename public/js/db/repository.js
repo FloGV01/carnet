@@ -8,12 +8,17 @@ import { jourLogique, jourEvenement, addDays } from '../domain/dates.js';
 import { nouvelId, nouvelIdListe } from '../domain/ids.js';
 import { LISTES, estListe } from '../domain/listes-def.js';
 import { normLabel } from '../domain/vocabulaire.js';
+import { carteLibelles } from '../domain/libelles.js';
 
 export { DataError };
 
 const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au' };
 const AVEC_HEURE = new Set(['episodes']);
 const ERREURS_CONNEXION = new Set(['InvalidStateError', 'UnknownError', 'TransactionInactiveError']);
+const PARENTS_AUDIO = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv'];
+// Méta qui ne comptent pas comme une saisie (pas de mise à jour de derniereEcriture).
+const META_SANS_MARQUE = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde', 'constatsAffiches']);
+const nonNuls = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined));
 
 export function creerRepository({
   nom = 'carnet',
@@ -29,7 +34,7 @@ export function creerRepository({
 
   function getDb() {
     if (!dbP) {
-      dbP = ouvrirBase({ nom, fabrique, horodatage: horo(), surVersionChange: () => { dbP = null; surVersionChange(); } })
+      dbP = ouvrirBase({ nom, fabrique, horodatage: horo(), surVersionChange: async () => { try { await surVersionChange(); } finally { dbP = null; } } })
         .catch((e) => { dbP = null; throw e; });
     }
     return dbP;
@@ -100,21 +105,27 @@ export function creerRepository({
     },
 
     supprimer: async (date) => {
+      let photo = null;
       const res = await tx(['journal', 'audios', 'meta'], 'readwrite', async (t) => {
         const entree = (await req(t.objectStore('journal').get(date))) || null;
         const audios = await req(t.objectStore('audios').index('parent').getAll(['journal', date]));
         t.objectStore('journal').delete(date);
         for (const a of audios) t.objectStore('audios').delete(a.id);
         marquer(t);
-        return { entree, audios };
+        if (entree || audios.length) photo = { entree, audios };
+        return photo || { entree, audios };
       });
       signaler('journal', date);
       return res;
     },
 
+    // Une saisie faite entre la suppression et « Annuler » n'est jamais écrasée : elle prime.
     restaurer: async ({ entree, audios = [] }) => {
       await tx(['journal', 'audios', 'meta'], 'readwrite', async (t) => {
-        if (entree) t.objectStore('journal').put(entree);
+        if (entree) {
+          const actuelle = await req(t.objectStore('journal').get(entree.date));
+          t.objectStore('journal').put(actuelle ? { ...entree, ...nonNuls(actuelle), updatedAt: horo() } : entree);
+        }
         for (const a of audios) t.objectStore('audios').put(a);
         marquer(t);
       });
@@ -130,9 +141,9 @@ export function creerRepository({
   function evenements(store) {
     const stores = [store, 'listes', 'meta', 'audios'];
     return {
-      creer: async (brut = {}) => {
+      // L'id est tiré une seule fois : un nouvel essai réécrit la même clé, sans doublon.
+      creer: async (brut = {}, { id = nouvelId(PREFIXES[store], alea) } = {}) => {
         const res = await tx(stores, 'readwrite', async (t) => {
-          const id = nouvelId(PREFIXES[store], alea);
           const valeur = preparer(store, { ...brut, id });
           await verifierRefs(t, store, valeur);
           const h = horo();
@@ -163,13 +174,15 @@ export function creerRepository({
       },
 
       supprimer: async (id) => {
+        let photo = null;
         const res = await tx([store, 'audios', 'meta'], 'readwrite', async (t) => {
           const entree = (await req(t.objectStore(store).get(id))) || null;
           const audios = await req(t.objectStore('audios').index('parent').getAll([store, id]));
           t.objectStore(store).delete(id);
           for (const a of audios) t.objectStore('audios').delete(a.id);
           marquer(t);
-          return { entree, audios };
+          if (entree || audios.length) photo = { entree, audios };
+          return photo || { entree, audios };
         });
         signaler(store, id);
         return res;
@@ -211,6 +224,8 @@ export function creerRepository({
   const listes = {
     items: (liste) => tx(['listes'], 'readonly', async (t) => trierItems(
       liste ? await itemsDe(t, liste) : await req(t.objectStore('listes').getAll()))),
+
+    libelles: async (liste) => carteLibelles(await listes.items(liste)),
 
     trouver: (liste, texte) => tx(['listes'], 'readonly', async (t) => {
       const cible = normLabel(texte);
@@ -299,10 +314,12 @@ export function creerRepository({
 
   // ---------- mémos vocaux ----------
   const audios = {
-    // Crée le mémo. Le parent du journal est créé s'il n'existe pas encore.
-    creer: async ({ parentStore, parentId, date, dureeMs, mime, taille, data }) => {
-      if (!['journal', 'episodes', 'symptomes', 'traitements', 'rdv'].includes(parentStore)) throw new DataError('VALIDATION', 'parent invalide');
+    // Crée le mémo. Le parent du journal est créé s'il n'existe pas encore. La date du mémo
+    // est celle de sa fiche (jamais une valeur libre).
+    creer: async ({ parentStore, parentId, dureeMs, mime, taille, data }) => {
+      if (!PARENTS_AUDIO.includes(parentStore)) throw new DataError('VALIDATION', 'parent invalide');
       if (!(data instanceof ArrayBuffer)) throw new DataError('VALIDATION', 'données audio invalides');
+      const id = nouvelId(PREFIXES.audios, alea);
       const stores = ['audios', 'meta', parentStore];
       const res = await tx(stores, 'readwrite', async (t) => {
         const parent = await req(t.objectStore(parentStore).get(parentId));
@@ -313,7 +330,7 @@ export function creerRepository({
           t.objectStore('journal').put({ ...vide, createdAt: h, updatedAt: h });
         }
         const enreg = {
-          id: nouvelId(PREFIXES.audios, alea), parentStore, parentId, date: date || (parent && parent.date) || parentId,
+          id, parentStore, parentId, date: parentStore === 'journal' ? parentId : (parent.date ?? null),
           dureeMs: Math.max(0, Math.round(dureeMs || 0)), mime: mime || 'audio/mp4', taille: taille ?? data.byteLength, data, createdAt: h,
         };
         t.objectStore('audios').put(enreg);
@@ -330,32 +347,47 @@ export function creerRepository({
 
     lire: (id) => tx(['audios'], 'readonly', async (t) => (await req(t.objectStore('audios').get(id))) || null),
 
-    // Supprime le mémo ; une entrée de journal restée vide sans autre mémo part avec lui.
+    // Supprime le mémo ; une fiche restée vide sans autre mémo part avec lui.
     supprimer: async (id) => {
-      const res = await tx(['audios', 'journal', 'meta'], 'readwrite', async (t) => {
+      let photo = null;
+      const res = await tx(['audios', 'meta', ...PARENTS_AUDIO], 'readwrite', async (t) => {
         const audio = await req(t.objectStore('audios').get(id));
-        if (!audio) return { audio: null, journal: null };
+        if (!audio) return photo || { audio: null, parent: null };
         t.objectStore('audios').delete(id);
-        let journalSupprime = null;
-        if (audio.parentStore === 'journal') {
-          const entree = await req(t.objectStore('journal').get(audio.parentId));
-          const restants = await nbAudios(t, 'journal', audio.parentId);
-          if (entree && estVide('journal', entree) && restants === 0) { t.objectStore('journal').delete(audio.parentId); journalSupprime = entree; }
+        const os = t.objectStore(audio.parentStore);
+        const fiche = await req(os.get(audio.parentId));
+        let parent = null;
+        if (fiche && estVide(audio.parentStore, fiche) && (await nbAudios(t, audio.parentStore, audio.parentId)) === 0) {
+          os.delete(audio.parentId);
+          parent = fiche;
         }
         marquer(t);
-        return { audio, journal: journalSupprime };
+        photo = { audio, parent };
+        return photo;
       });
       signaler('audios', id);
+      if (res.parent) signaler(res.audio.parentStore, res.audio.parentId);
       return res;
     },
 
-    restaurer: async ({ audio, journal: entree }) => {
-      await tx(['audios', 'journal', 'meta'], 'readwrite', async (t) => {
-        if (entree) t.objectStore('journal').put(entree);
-        if (audio) t.objectStore('audios').put(audio);
+    // Remet le mémo. La fiche supprimée avec lui n'est remise que si elle n'a pas été recréée
+    // entre-temps (une saisie faite pendant les 5 s prime). Jamais de mémo orphelin.
+    restaurer: async ({ audio, parent }) => {
+      if (!audio) return false;
+      const ok = await tx(['audios', 'meta', ...PARENTS_AUDIO], 'readwrite', async (t) => {
+        const os = t.objectStore(audio.parentStore);
+        const actuelle = await req(os.get(audio.parentId));
+        if (!actuelle) {
+          if (parent) os.put(parent);
+          else if (audio.parentStore === 'journal') { const h = horo(); os.put({ ...preparer('journal', { date: audio.parentId }), createdAt: h, updatedAt: h }); }
+          else return false;
+        }
+        t.objectStore('audios').put(audio);
         marquer(t);
+        return true;
       });
-      if (audio) signaler('audios', audio.id);
+      if (ok) { signaler(audio.parentStore, audio.parentId); signaler('audios', audio.id); }
+      return ok;
     },
 
     // Métadonnées seules (sans les octets), pour l'Historique et l'espace utilisé.
@@ -376,7 +408,13 @@ export function creerRepository({
   // ---------- méta ----------
   const meta = {
     lire: (cle) => tx(['meta'], 'readonly', async (t) => { const r = await req(t.objectStore('meta').get(cle)); return r ? r.valeur : null; }),
-    ecrire: async (cle, valeur) => { await tx(['meta'], 'readwrite', (t) => { t.objectStore('meta').put({ cle, valeur }); }); signaler('meta', cle); },
+    ecrire: async (cle, valeur) => {
+      await tx(['meta'], 'readwrite', (t) => {
+        t.objectStore('meta').put({ cle, valeur });
+        if (!META_SANS_MARQUE.has(cle)) marquer(t);
+      });
+      signaler('meta', cle);
+    },
   };
 
   return {

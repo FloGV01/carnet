@@ -58,7 +58,9 @@ export function ouvrirBase({
     r.onblocked = () => { if (surBloque) surBloque(); };
     r.onsuccess = () => {
       const db = r.result;
-      db.onversionchange = () => { if (surVersionChange) surVersionChange(); db.close(); };
+      db.onversionchange = () => {
+        Promise.resolve().then(() => surVersionChange && surVersionChange()).catch(() => {}).finally(() => db.close());
+      };
       ok(db);
     };
     r.onerror = () => {
