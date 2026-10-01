@@ -17,7 +17,7 @@ export function normaliser(texte) {
 function versRegex(motif) {
   const prefixe = motif.endsWith('*');
   const corps = (prefixe ? motif.slice(0, -1) : motif).replace(/[.*+?^${}()|[\]\\/]/g, '\\$&').replace(/ /g, '\\s+');
-  return new RegExp(`(^|[^a-z0-9])${corps}${prefixe ? '' : '(?![a-z0-9])'}`, 'i');
+  return new RegExp(`(^|[^a-z0-9_])${corps}${prefixe ? '' : '(?![a-z0-9_])'}`, 'i');
 }
 export const REGEX_INTERDITS = MOTS_INTERDITS.map((m) => [m, versRegex(m)]);
 

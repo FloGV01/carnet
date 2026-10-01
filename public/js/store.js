@@ -19,3 +19,10 @@ export const etatApp = creerStore({
   parcoursOuvert: false,
   toast: null,
 });
+
+// Enregistrements en attente (texte en cours) à vider avant une fermeture forcée de la base.
+export const vidanges = new Set();
+export async function viderEnregistrements(delaiMs = 2000) {
+  const tout = Promise.allSettled([...vidanges].map((f) => f()));
+  await Promise.race([tout, new Promise((ok) => setTimeout(ok, delaiMs))]);
+}

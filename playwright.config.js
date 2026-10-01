@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 5174;
-const AVEC_SW = /(hors-ligne|mise-a-jour|memo-vocal)\.spec\.js/;
+const AVEC_SW = /(hors-ligne|mise-a-jour)\.spec\.js/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -19,7 +19,7 @@ export default defineConfig({
     { name: 'iphone', use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } }, testIgnore: AVEC_SW },
     {
       name: 'chromium-sw',
-      use: { ...devices['Pixel 7'], launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] } },
+      use: { ...devices['Pixel 7'] },
       testMatch: AVEC_SW,
     },
   ],
