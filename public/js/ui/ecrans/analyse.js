@@ -156,6 +156,7 @@ export function Analyse() {
 
     <ul class="liste carte section">
       <li><a class="ligne lien-ligne" href="#/export-psy"><span>Export PSY</span><span aria-hidden="true">›</span></a></li>
+      <li><a class="ligne lien-ligne" href="#/soignants"><span>Vue soignants</span><span aria-hidden="true">›</span></a></li>
     </ul>
   </main>`;
 }

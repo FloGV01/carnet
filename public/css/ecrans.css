@@ -87,3 +87,9 @@
 .pastille-ajout { color: var(--accent); border-style: dashed; }
 .ajout-pastille { grid-column: 1 / -1; display: flex; gap: var(--esp-2); }
 .ajout-pastille input { flex: 1; }
+.apercu-page { width: 100%; height: auto; display: block; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: #FFFFFF; }
+@media print {
+  .onglets, .entete, .actions-col, .soignants .pastilles, .bandeau, .toast { display: none !important; }
+  .apercu-page { border: 0; width: 100%; }
+  body, html { background: #FFFFFF; }
+}

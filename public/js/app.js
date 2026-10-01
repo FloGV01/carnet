@@ -24,6 +24,7 @@ import { Symptome } from './ui/ecrans/symptome.js';
 import { Analyse } from './ui/ecrans/analyse.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
+import { Soignants } from './ui/ecrans/soignants.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -42,6 +43,7 @@ const ECRANS = {
   analyse: () => html`<${Analyse} />`,
   'export-psy': () => html`<${ExportPsy} />`,
   'listes-index': () => html`<${IndexListes} />`,
+  soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
 };
 

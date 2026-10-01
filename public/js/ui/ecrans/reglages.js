@@ -23,8 +23,8 @@ export function Reglages() {
   const horsLigne = typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller;
   useEffect(() => {
     etatStockage().then(setStockage);
-    Promise.all([repo.meta.lire('derniereSauvegarde'), repo.audios.metas()]).then(([derniere, metas]) =>
-      setInfos({ derniere, memos: metas.reduce((n, m) => n + (m.taille || 0), 0) }));
+    Promise.all([repo.meta.lire('derniereSauvegarde'), repo.audios.metas(), repo.meta.lire('prenomSoignants')]).then(([derniere, metas, prenom]) =>
+      setInfos({ derniere, memos: metas.reduce((n, m) => n + (m.taille || 0), 0), prenom }));
   }, []);
   const appui = useAppuiLong(() => { location.hash = '#/diagnostic'; });
   const chercher = async () => {
@@ -41,6 +41,14 @@ export function Reglages() {
         <${Ligne} href="#/reglages/rappel" titre="Rappel du soir" />
         <${Ligne} href="#/reglages/listes" titre="Listes" />
       </ul>
+    </section>
+    <section class="section">
+      <h2>Analyse</h2>
+      <div class="carte">
+        <label class="etiquette" for="prenom-soignants">Prénom pour la vue soignants (facultatif)</label>
+        <input id="prenom-soignants" class="champ-ligne" autocomplete="off" defaultValue=${infos.prenom || ''}
+          onBlur=${(e) => repo.meta.ecrire('prenomSoignants', e.target.value.trim() || null)} />
+      </div>
     </section>
     <section class="section">
       <h2>À propos</h2>
