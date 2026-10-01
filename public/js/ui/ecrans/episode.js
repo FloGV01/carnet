@@ -1,5 +1,6 @@
 import { html } from '../lib.js';
 import { ParcoursFiche } from './parcours-fiche.js';
+import { MemoVocal } from '../composants/memo-vocal.js';
 
 // Ordre retenu avec l'utilisateur : le déclencheur d'abord (plus facile à dire que l'émotion).
 export const ETAPES_EPISODE = [
@@ -14,7 +15,9 @@ const TEXTES = [
   { champ: 'ceQuiAAide', etiquette: 'Ce qui a aidé', placeholder: 'Une personne, un geste…' },
 ];
 
-export function Episode({ id, memo }) {
+const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="episodes" parentId=${id} date=${date} assurerParent=${assurerFiche} />`;
+
+export function Episode({ id }) {
   return html`<${ParcoursFiche} store="episodes" route="episode" titre="Épisode" nomFiche="Épisode" etapes=${ETAPES_EPISODE}
     textes=${TEXTES} avecHeure=${true} id=${id} memo=${memo} />`;
 }

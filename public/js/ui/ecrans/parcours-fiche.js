@@ -147,7 +147,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         etiquette=${`${t.etiquette} (facultatif)`} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrire({ [t.champ]: v }); }} /></div>`)}
-      ${memo && memo({ id: idRef.current, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
+      ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
       ${idRef.current && (confirmer
         ? html`<div class="confirmation" role="alert"><p>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?</p>
             <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmer(false)}>Garder</button>

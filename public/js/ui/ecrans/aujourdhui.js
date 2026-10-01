@@ -11,6 +11,7 @@ import { ChampTexte } from '../composants/texte.js';
 import { ChampHeure } from '../composants/heure.js';
 import { Repli } from '../composants/repli.js';
 import { Icones } from '../icones.js';
+import { MemoVocal } from '../composants/memo-vocal.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 
@@ -106,6 +107,7 @@ export function Aujourdhui({ date: dateRoute }) {
       <${ChampTexte} key=${`${date}-pp`} id="points-positifs" etiquette="Mes points positifs" valeur=${entree.pointsPositifs}
         placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
         cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />
+      <${MemoVocal} key=${`memo-${date}`} parentStore="journal" parentId=${date} date=${date} />
     </div>
 
     <${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)}>

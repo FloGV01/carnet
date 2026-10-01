@@ -17,11 +17,13 @@ export function ChampTexte({ id, etiquette, ariaLabel, valeur, placeholder, surE
     const z = zone.current;
     if (!z || enCours.current) return;
     const texte = z.value;
-    if (texte === derniere.current) { ecrireLocal(cleBrouillon, null); return; }
+    // Le brouillon n'est retiré que s'il correspond au texte effectivement enregistré.
+    const retirerBrouillon = () => { if (lireLocal(cleBrouillon) === texte) ecrireLocal(cleBrouillon, null); };
+    if (texte === derniere.current) { retirerBrouillon(); return; }
     try {
       await surEnregistrer(texte.trim() === '' ? null : texte);
       derniere.current = texte;
-      if (zone.current && zone.current.value === texte) ecrireLocal(cleBrouillon, null);
+      retirerBrouillon();
     } catch { /* le brouillon local reste : rien n'est perdu */ }
   };
   const planifier = () => { clearTimeout(minuteur.current); minuteur.current = setTimeout(enregistrer, 500); };

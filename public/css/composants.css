@@ -170,3 +170,19 @@
 .supprimer { margin-top: var(--esp-5); color: var(--text-2); }
 .confirmation { margin-top: var(--esp-4); padding: var(--esp-3); border: 1px solid var(--hairline); border-radius: var(--r-moyen); background: var(--surface); }
 .pastille:focus-visible, .segmente button:focus-visible { outline-offset: 1px; }
+
+/* Mémo vocal */
+.memo-vocal { display: grid; gap: 6px; margin-top: 6px; }
+.btn-memo {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: var(--cible); padding: 0 14px;
+  border: 1px solid var(--hairline); border-radius: 22px; background: var(--surface); color: var(--accent); font-weight: 500;
+}
+.btn-memo svg { width: 20px; height: 20px; }
+.btn-memo.en-cours { border-color: var(--accent); color: var(--text); }
+.btn-memo .duree { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.btn-memo .onde { width: 36px; height: 14px; background: linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 6px) 0 50% / 6px 100% repeat-x; opacity: 0.6; animation: onde 1.2s ease-in-out infinite alternate; }
+@keyframes onde { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .btn-memo .onde { animation: none; } }
+.puce-memo { display: flex; align-items: center; gap: 8px; min-height: var(--cible); padding: 0 4px 0 6px; border-radius: 22px; background: var(--surface-2); justify-self: start; }
+.puce-lecture { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 18px; background: var(--surface); color: var(--accent); }
+.puce-lecture svg { width: 18px; height: 18px; }
