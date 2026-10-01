@@ -26,3 +26,17 @@
 .extrait mark { background: var(--info-bg); color: var(--text); border-radius: 3px; padding: 0 2px; }
 .vide { margin-top: var(--esp-5); text-align: center; }
 .effacer-jour { margin-top: var(--esp-3); }
+
+/* Soins et fiches */
+.soins .segmente { width: 100%; }
+.lien-bouton svg { width: 18px; height: 18px; margin-right: 4px; }
+.prochain .liste li { padding: 4px 0; border: 0; }
+.ajout-question { margin-top: var(--esp-2); }
+.ajout-question input { padding-right: 52px; }
+.ajout-question .dicter { top: 0; }
+.questions .case { flex: 1; }
+.abordee { text-decoration: line-through; color: var(--text-2); }
+.fiche .champ-heure { margin-top: var(--esp-2); }
+.indicateur-fiche { font-size: 0.78rem; min-width: 5em; text-align: right; }
+.ajout { color: var(--accent); }
+.prochain-rdv { margin-top: var(--esp-2); color: var(--accent); }

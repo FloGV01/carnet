@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '05f8a5a24f8b';
+const VERSION = '29eace542258';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -28,6 +28,7 @@ const FICHIERS = [
   "./js/domain/ids.js",
   "./js/domain/libelles.js",
   "./js/domain/listes-def.js",
+  "./js/domain/soins.js",
   "./js/domain/vocabulaire.js",
   "./js/donnees.js",
   "./js/export/pdf.js",
@@ -48,6 +49,7 @@ const FICHIERS = [
   "./js/ui/composants/entete.js",
   "./js/ui/composants/heure.js",
   "./js/ui/composants/memo-vocal.js",
+  "./js/ui/composants/multiples.js",
   "./js/ui/composants/oui-non.js",
   "./js/ui/composants/parcours.js",
   "./js/ui/composants/pastilles.js",
@@ -64,8 +66,13 @@ const FICHIERS = [
   "./js/ui/ecrans/historique.js",
   "./js/ui/ecrans/parcours-fiche.js",
   "./js/ui/ecrans/rappel.js",
+  "./js/ui/ecrans/rdv.js",
   "./js/ui/ecrans/reglages.js",
   "./js/ui/ecrans/sauvegarde.js",
+  "./js/ui/ecrans/soins.js",
+  "./js/ui/ecrans/symptome.js",
+  "./js/ui/ecrans/traitement.js",
+  "./js/ui/fiche.js",
   "./js/ui/hooks.js",
   "./js/ui/icones.js",
   "./js/ui/lib.js",

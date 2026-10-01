@@ -15,6 +15,8 @@ import { MemoVocal } from '../composants/memo-vocal.js';
 import { afficherToast } from '../composants/toast.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { prochainRdv } from '../../domain/soins.js';
+import { libelleRdv } from './soins.js';
 
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const EXPLOSIONS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: String(i) }));
@@ -51,8 +53,10 @@ export function Aujourdhui({ date: dateRoute }) {
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
-    const [episodes, items] = await Promise.all([repo.episodes.parJour(date, date), repo.listes.items()]);
-    return { episodes, carte: carteLibelles(items) };
+    const [episodes, symptomes, items, rdvs] = await Promise.all([
+      repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(),
+    ]);
+    return { episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()) };
   }, [date]);
 
   const aller = (cible) => {
@@ -134,13 +138,22 @@ export function Aujourdhui({ date: dateRoute }) {
         cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
     </${Repli}>
 
-    ${evenements && evenements.episodes.length > 0 && html`<section class="section">
+    ${evenements && html`<section class="section">
       <h2>Épisodes et symptômes</h2>
       <ul class="liste evenements">${evenements.episodes.map((ep) => html`<li>
         <a class="ligne lien-ligne" href=${versHash('episode', { id: ep.id })}>
           <span class="heure">${ep.heure || ''}</span>
           <span class="resume">${[libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode'}</span>
-          <span aria-hidden="true">›</span></a></li>`)}</ul>
+          <span aria-hidden="true">›</span></a></li>`)}
+        ${evenements.symptomes.map((sy) => html`<li>
+        <a class="ligne lien-ligne" href=${versHash('symptome', { id: sy.id })}>
+          <span class="heure"></span>
+          <span class="resume">${[libelle(evenements.carte, sy.symptome), sy.intensite, libelle(evenements.carte, sy.duree)].filter((x) => x != null).join(' · ') || 'Symptôme'}</span>
+          <span aria-hidden="true">›</span></a></li>`)}
+        <li><a class="ligne lien-ligne ajout" href="#/symptome/nouveau"><span>+ Symptôme</span></a></li>
+      </ul>
+      ${evenements.rdv && html`<a class="ligne lien-ligne prochain-rdv" href=${versHash('rdv', { id: evenements.rdv.id })}>
+        <span>Prochain RDV : ${libelleRdv(evenements.rdv, evenements.carte)}</span><span aria-hidden="true">›</span></a>`}
     </section>`}
 
     <p class="pied discret">Tout est facultatif. Toucher un choix une seconde fois l'efface.</p>
