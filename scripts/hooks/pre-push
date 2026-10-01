@@ -1,0 +1,3 @@
+#!/bin/sh
+# Aucune version ne part sans des tests verts.
+npm test || { echo "pre-push : tests en échec, push annulé."; exit 1; }

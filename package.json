@@ -1,0 +1,28 @@
+{
+  "name": "suivi-audhd",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Carnet : PWA personnelle de suivi quotidien, 100 % locale.",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "precache": "node scripts/precache.mjs",
+    "precache:check": "node scripts/precache.mjs --check",
+    "vendor": "node scripts/vendor.mjs",
+    "icones": "node scripts/icones.mjs",
+    "test:unit": "node --test --test-reporter=spec \"tests/unit/**/*.test.js\"",
+    "test:utc": "TZ=UTC node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
+    "test:paris": "TZ=Europe/Paris node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
+    "test:e2e": "playwright test",
+    "test": "npm run precache:check && npm run test:paris && npm run test:utc && npm run test:e2e"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "fake-indexeddb": "6.2.5",
+    "htm": "3.1.1",
+    "preact": "10.29.8"
+  }
+}

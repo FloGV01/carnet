@@ -1,0 +1,66 @@
+/* Coquille */
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.ecran {
+  flex: 1;
+  padding: calc(var(--esp-3) + env(safe-area-inset-top)) calc(var(--marge) + env(safe-area-inset-right))
+           calc(96px + env(safe-area-inset-bottom)) calc(var(--marge) + env(safe-area-inset-left));
+}
+.entete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); min-height: var(--cible); margin-bottom: var(--esp-3); }
+.entete h1 { font-size: 1.15rem; }
+.retour { min-height: var(--cible); padding: 0 var(--esp-2) 0 0; border: 0; background: none; color: var(--accent); font-weight: 500; }
+.discret { color: var(--text-2); font-size: 0.82rem; }
+.section { margin-top: var(--esp-5); }
+.section > h2 { font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); margin-bottom: var(--esp-2); font-weight: 600; }
+.carte { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-moyen); padding: var(--esp-4); }
+.ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); min-height: var(--cible); }
+.liste { list-style: none; margin: 0; padding: 0; }
+.liste > li { border-bottom: 1px solid var(--hairline); }
+.liste > li:last-child { border-bottom: 0; }
+
+/* Boutons */
+.btn {
+  min-height: var(--cible); padding: 0 var(--esp-4); border-radius: var(--r-petit);
+  border: 1px solid var(--border); background: var(--surface); font-weight: 500;
+}
+.btn-plein { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); font-weight: 600; }
+.btn-lien { border: 0; background: none; color: var(--accent); min-height: var(--cible); padding: 0; font-weight: 500; text-align: left; }
+.btn-danger { background: var(--danger); color: var(--bg); border-color: var(--danger); font-weight: 600; }
+.btn[disabled], .btn-lien[disabled] { opacity: 0.45; cursor: default; }
+
+/* Barre d'onglets */
+.onglets {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: var(--surface); border-top: 1px solid var(--hairline);
+  padding: 4px env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.onglet {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 52px; border: 0; background: none; color: var(--text-2); font-size: 0.68rem; font-weight: 500;
+}
+.onglet svg { width: 24px; height: 24px; }
+.onglet[aria-current="page"] { color: var(--accent); font-weight: 700; }
+
+/* Bandeau de mise à jour */
+.bandeau {
+  position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: var(--esp-3);
+  padding: calc(var(--esp-2) + env(safe-area-inset-top)) var(--marge) var(--esp-2);
+  background: var(--info-bg); color: var(--text); font-size: 0.9rem;
+}
+.bandeau button { border: 0; background: none; color: var(--accent); font-weight: 600; min-height: var(--cible); }
+.bandeau-test { background: var(--surface-2); text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--text-2); padding: 2px; }
+
+/* Toast */
+.toast {
+  position: fixed; left: var(--marge); right: var(--marge); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3);
+  background: var(--text); color: var(--bg); border-radius: var(--r-moyen); padding: var(--esp-2) var(--esp-4); min-height: 52px;
+}
+.toast button { border: 0; background: none; color: var(--bg); font-weight: 700; min-height: var(--cible); text-decoration: underline; }
+
+/* Formulaires simples */
+.champ-texte {
+  width: 100%; min-height: 88px; padding: var(--esp-3); border-radius: var(--r-petit);
+  border: 1px solid var(--border); background: var(--surface); resize: vertical;
+}
+.champ-ligne { width: 100%; min-height: var(--cible); padding: 0 var(--esp-3); border-radius: var(--r-petit); border: 1px solid var(--border); background: var(--surface); }

@@ -1,0 +1,11 @@
+/* Guide d'installation */
+.guide { max-width: 34rem; margin: 0 auto; }
+.guide ol { padding-left: 1.2rem; display: grid; gap: var(--esp-3); }
+.guide li { line-height: 1.45; }
+
+/* Diagnostic */
+.diag dl { display: grid; grid-template-columns: auto 1fr; gap: var(--esp-1) var(--esp-3); margin: 0; font-size: 0.86rem; }
+.diag dt { color: var(--text-2); }
+.diag dd { margin: 0; word-break: break-word; }
+.diag .actions { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+.diag pre { white-space: pre-wrap; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }

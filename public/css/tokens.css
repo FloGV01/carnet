@@ -1,0 +1,53 @@
+/* Jetons de design (plan §6.8). Provisoires jusqu'au retour de Claude Design (J2.0). */
+:root {
+  color-scheme: light dark;
+  --bg: #FAF8F5;
+  --surface: #FFFFFF;
+  --surface-2: #F2EEE8;
+  --text: #1F1D1A;
+  --text-2: #6B665E;
+  --border: #8C857B;
+  --hairline: #E4DFD8;
+  --accent: #3B4A6B;
+  --accent-texte: #FFFFFF;
+  --info-bg: #EEF1F7;
+  --danger: #9E3B2F;
+  --sommeil-1: #A9B5CF;
+  --sommeil-2: #6D7FA6;
+  --sommeil-3: #3B4A6B;
+
+  --r-petit: 10px;
+  --r-moyen: 14px;
+  --r-grand: 20px;
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 24px;
+  --esp-6: 32px;
+  --cible: 44px;
+  --cible-grille: 48px;
+  --duree: 200ms;
+  --marge: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1A1917;
+    --surface: #24221F;
+    --surface-2: #2E2B27;
+    --text: #EDE9E3;
+    --text-2: #A8A29A;
+    --border: #7A746B;
+    --hairline: #3A3632;
+    --accent: #9DB0D9;
+    --accent-texte: #1A1917;
+    --info-bg: #262B36;
+    --danger: #E8A195;
+    --sommeil-1: #4A5878;
+    --sommeil-2: #7688B0;
+    --sommeil-3: #AFC0E3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --duree: 0ms; }
+}

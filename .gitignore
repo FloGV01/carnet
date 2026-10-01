@@ -1,0 +1,12 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+donnees-privees/
+*.numbers
+*.csv
+carnet-*.json
+carnet-*.zip
+carnet-*.pdf
+.DS_Store
+!tests/fixtures/**
