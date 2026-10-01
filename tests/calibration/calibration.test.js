@@ -1,0 +1,39 @@
+// Calibration (npm run test:calibration) : taux de faux constats sur des données sans effet.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { bonnesJournees } from '../../public/js/analyse/bonnes-journees.js';
+import { sommeilHumeur } from '../../public/js/analyse/sommeil.js';
+import { generer } from '../fixtures/generateur.js';
+
+const N = 60;
+
+test('bonnes journées : au plus 8 % de faux constats avec humeur autocorrélée (AR(1), lieu par blocs)', () => {
+  let faux = 0;
+  for (let seed = 1000; seed < 1000 + N; seed++) {
+    const j = generer({ jours: 180, seed, scenario: 'ar1' });
+    if (bonnesJournees(j, j[j.length - 1].date).constats.length) faux++;
+  }
+  console.log(`  bonnes journées AR(1) : ${faux}/${N}`);
+  assert.ok(faux / N <= 0.08, `${faux}/${N}`);
+});
+
+test('sommeil : au plus 5 % de faux positifs sans effet', () => {
+  let faux = 0;
+  for (let seed = 2000; seed < 2000 + N; seed++) {
+    const j = generer({ jours: 150, seed, scenario: 'nul' });
+    const r = sommeilHumeur(j, j[j.length - 1].date);
+    if (r.meme.constat || r.lendemain.constat) faux++;
+  }
+  console.log(`  sommeil sans effet : ${faux}/${N}`);
+  assert.ok(faux / N <= 0.05, `${faux}/${N}`);
+});
+
+test('puissance : un vrai effet est retrouvé dans la plupart des cas', () => {
+  let trouves = 0;
+  for (let seed = 3000; seed < 3020; seed++) {
+    const j = generer({ jours: 180, seed, scenario: 'bureau' });
+    if (bonnesJournees(j, j[j.length - 1].date).constats.some((c) => c.variable === 'lieu')) trouves++;
+  }
+  console.log(`  puissance « bureau +3 » : ${trouves}/20`);
+  assert.ok(trouves >= 16, `${trouves}/20`);
+});

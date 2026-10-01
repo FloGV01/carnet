@@ -14,7 +14,8 @@
     "test:utc": "TZ=UTC node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
     "test:paris": "TZ=Europe/Paris node --test --test-reporter=dot \"tests/unit/**/*.test.js\"",
     "test:e2e": "playwright test",
-    "test": "npm run precache:check && npm run test:paris && npm run test:utc && npm run test:e2e"
+    "test": "npm run precache:check && npm run test:paris && npm run test:utc && npm run test:e2e",
+    "test:calibration": "TZ=Europe/Paris node --test --test-reporter=spec \"tests/calibration/*.test.js\""
   },
   "engines": {
     "node": ">=22"
