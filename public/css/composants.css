@@ -24,7 +24,7 @@
 }
 .btn-plein { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); font-weight: 600; }
 .btn-lien { border: 0; background: none; color: var(--accent); min-height: var(--cible); padding: 0; font-weight: 500; text-align: left; }
-.btn-danger { background: var(--danger); color: var(--bg); border-color: var(--danger); font-weight: 600; }
+.btn-effacer { background: var(--danger); color: var(--bg); border-color: var(--danger); font-weight: 600; }
 .btn[disabled], .btn-lien[disabled] { opacity: 0.45; cursor: default; }
 
 /* Barre d'onglets */
@@ -186,3 +186,11 @@
 .puce-memo { display: flex; align-items: center; gap: 8px; min-height: var(--cible); padding: 0 4px 0 6px; border-radius: 22px; background: var(--surface-2); justify-self: start; }
 .puce-lecture { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 18px; background: var(--surface); color: var(--accent); }
 .puce-lecture svg { width: 18px; height: 18px; }
+
+/* Réglages et sauvegarde */
+.liste.carte { padding: 0 var(--esp-4); }
+.actions-col { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+.lien-bouton { display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); }
+.etapes { padding-left: 1.2rem; display: grid; gap: var(--esp-2); line-height: 1.45; }
+.apercu p + p { margin-top: var(--esp-2); }
+details summary { min-height: var(--cible); display: flex; align-items: center; color: var(--text-2); }

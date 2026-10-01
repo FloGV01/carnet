@@ -25,3 +25,13 @@ export function variantesTexte(nom, contenu, type) {
 export function premierPartageable(variantes, nav = globalThis.navigator) {
   return variantes.find((f) => peutPartager(f, nav)) || null;
 }
+
+// Plusieurs fichiers dans une seule feuille de partage (ex. sauvegarde en parties).
+export function partagerPlusieurs(fichiers, nav = globalThis.navigator) {
+  let ok = false;
+  try { ok = Boolean(nav.canShare && nav.canShare({ files: fichiers })); } catch { ok = false; }
+  if (!ok) return Promise.resolve('impossible');
+  let p;
+  try { p = nav.share({ files: fichiers }); } catch (e) { return Promise.resolve(e && e.name === 'AbortError' ? 'annule' : 'echec'); }
+  return p.then(() => 'partage', (e) => (e && e.name === 'AbortError' ? 'annule' : 'echec'));
+}

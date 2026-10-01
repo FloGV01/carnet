@@ -13,6 +13,9 @@ import { Reglages } from './ui/ecrans/reglages.js';
 import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
+import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
+import { Effacer } from './ui/ecrans/effacer.js';
+import { Rappel } from './ui/ecrans/rappel.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -21,7 +24,9 @@ const ECRANS = {
   historique: () => html`<${EcranAttente} titre="Historique" />`,
   soins: () => html`<${EcranAttente} titre="Soins" />`,
   reglages: () => html`<${Reglages} />`,
-  'reglages-sauvegarde': () => html`<${Reglages} />`,
+  'reglages-sauvegarde': () => html`<${Sauvegarde} />`,
+  'reglages-effacer': () => html`<${Effacer} />`,
+  'reglages-rappel': () => html`<${Rappel} />`,
   diagnostic: () => html`<${Diagnostic} />`,
 };
 

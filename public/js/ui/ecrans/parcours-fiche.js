@@ -151,7 +151,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       ${idRef.current && (confirmer
         ? html`<div class="confirmation" role="alert"><p>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?</p>
             <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmer(false)}>Garder</button>
-            <button type="button" class="btn btn-danger" onClick=${supprimer}>Supprimer</button></div></div>`
+            <button type="button" class="btn btn-effacer" onClick=${supprimer}>Supprimer</button></div></div>`
         : html`<button type="button" class="btn-lien supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`)}
     </${CadreParcours}>`;
   }
