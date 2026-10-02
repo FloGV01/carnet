@@ -12,6 +12,8 @@ import { dessinerPage, TAILLE_PX } from '../graphes/dessin-canvas.js';
 import { partager } from '../../plateforme/partage.js';
 import { estModeApp } from '../../plateforme/mode.js';
 import { options } from './aujourdhui.js';
+import { LibelleChamp } from '../composants/rubrique.js';
+import { Icones } from '../icones.js';
 
 export function Soignants() {
   const [pro, setPro] = useState(null);
@@ -54,12 +56,11 @@ export function Soignants() {
 
   return html`<main class="ecran soignants">
     <${Entete} titre="Vue soignants" retour=${() => { location.hash = '#/analyse'; }} />
-    ${items && html`<${Pastilles} etiquette="Pour qui" options=${options(items, 'professionnel', pro)} valeur=${pro} surChoix=${(v) => v && setPro(v)} colonnes=${2} classe="grille-choix" />`}
-    <div class="actions-col section">
-      <button type="button" class="btn btn-plein" disabled=${!fichier} onClick=${partagerPdf}>${fichier ? 'Partager en PDF' : 'Préparation…'}</button>
-      ${!estModeApp() && html`<button type="button" class="btn" onClick=${() => window.print()}>Imprimer</button>`}
-      ${message && html`<p class="discret" role="status">${message}</p>`}
-    </div>
-    <canvas ref=${toile} class="apercu-page section" role="img" aria-label="Aperçu de la page pour la consultation"></canvas>
+    ${items && html`<div class="champ-fiche"><${LibelleChamp} icone="personne">Pour qui</${LibelleChamp}>
+      <${Pastilles} etiquette="Pour qui" options=${options(items, 'professionnel', pro)} valeur=${pro} surChoix=${(v) => v && setPro(v)} classe="souples larges" /></div>`}
+    <canvas ref=${toile} class="apercu-page" role="img" aria-label="Aperçu de la page pour la consultation"></canvas>
+    <button type="button" class="btn btn-plein" disabled=${!fichier} onClick=${partagerPdf}>${Icones.partager()}${fichier ? 'Partager en PDF' : 'Préparation…'}</button>
+    ${!estModeApp() && html`<button type="button" class="btn" onClick=${() => window.print()}>Imprimer</button>`}
+    ${message && html`<p class="statut-centre" role="status">${message}</p>`}
   </main>`;
 }

@@ -13,9 +13,8 @@ import { useFiche } from '../fiche.js';
 import { addDays } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { indicateurs } from '../../analyse/fenetres.js';
+import { uneDecimale } from '../../analyse/textes.js';
 import { nomRdv, quandRdv } from './soins.js';
-
-const decimale = (x) => x.toFixed(1).replace('.', ',');
 
 function revenir() {
   const precedente = etatApp.lire().routePrecedente;
@@ -34,7 +33,7 @@ export function Consultation({ id: idRoute }) {
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const cellules = [
-    { libelle: 'Humeur moyenne', valeur: ind.humeur.n ? decimale(ind.humeur.moyenne) : null, teinte: 'humeur' },
+    { libelle: 'Humeur moyenne', valeur: ind.humeur.n ? uneDecimale(ind.humeur.moyenne) : null, teinte: 'humeur' },
     { libelle: `Nuits ${libelle(carte, 'sommeil:mal')}`, valeur: ind.nuits.n ? String(ind.nuits.mal) : null, teinte: 'sommeil' },
     { libelle: 'Explosions', valeur: ind.explosions.n ? String(ind.explosions.total) : null, teinte: 'expl' },
     { libelle: 'Épisodes', valeur: String(ind.episodes.nombre), teinte: 'ep' },

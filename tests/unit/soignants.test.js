@@ -52,3 +52,10 @@ test('coupure des lignes sans perte de mots', () => {
   assert.equal(lignes.join(' '), 'un deux trois quatre cinq six sept huit neuf dix onze douze');
   assert.ok(lignes.length > 1);
 });
+
+test('légende du sommeil : Mal est la teinte la plus claire', () => {
+  const { ops } = mettreEnPage(cas({ extreme: false }));
+  const legende = ops.find((o) => o.type === 'texte' && /^Sommeil, /.test(o.texte));
+  assert.ok(legende, 'légende présente');
+  assert.match(legende.texte, /du plus clair au plus foncé : Mal · Moyen · Bien\.$/);
+});

@@ -74,3 +74,21 @@ test('nuit en détail : heures effaçables, réveils, résumé du repli', async 
   await page.getByRole('button', { name: /Nuit en détail/ }).click();
   await expect(page.getByText('23:40 → · · 1 réveil')).toBeVisible();
 });
+
+test('pas à pas : une question par écran, enregistrée au toucher, récapitulatif, Terminer', async ({ page }) => {
+  await page.getByRole('link', { name: 'Pas à pas' }).click();
+  const vue = page.getByRole('dialog', { name: 'Ma journée' });
+  await expect(vue.getByRole('heading', { name: 'Lieu' })).toBeVisible();
+  await expect(page.getByRole('navigation')).toHaveCount(0);
+  await vue.getByRole('button', { name: 'Télétravail' }).click();
+  await expect(vue.getByRole('heading', { name: 'Sommeil' })).toBeVisible();
+  await vue.getByRole('button', { name: 'Bien' }).click();
+  await vue.getByRole('button', { name: 'Humeur 7' }).click();
+  await expect(vue.getByRole('heading', { name: 'Contact humain' })).toBeVisible();
+  await expect(vue.locator('.phrase-resume')).toHaveText('Télétravail · nuit bien · humeur 7');
+  for (let i = 0; i < 4; i++) await vue.getByRole('button', { name: 'Passer', exact: true }).click();
+  await expect(vue.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
+  await expect.poll(() => entreeDuJour(page)).toMatchObject({ lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:bien', humeur: 7 });
+  await vue.getByRole('button', { name: 'Terminer' }).click();
+  await expect(groupe(page, 'Humeur').getByRole('button', { name: 'Humeur 7' })).toHaveAttribute('aria-pressed', 'true');
+});

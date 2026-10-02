@@ -5,10 +5,13 @@ import { repo } from '../../donnees.js';
 import { calculerAnalyse } from './analyse.js';
 import { exportPsy, reperesPsy } from '../../export/psy.js';
 import { copier } from '../../plateforme/presse-papier.js';
+import { useSauvegarde } from '../sauvegarde.js';
+import { Icones } from '../icones.js';
 
 export function ExportPsy() {
   const [texte, setTexte] = useState(null);
   const [message, setMessage] = useState(null);
+  const sauvegarde = useSauvegarde();
   useEffect(() => {
     (async () => {
       const [{ resultat, carte }, journal, episodes, symptomes] = await Promise.all([
@@ -29,15 +32,14 @@ export function ExportPsy() {
     navigator.share({ text: texte }).catch(() => {});
   };
 
+  // « Faire aussi une sauvegarde » : la feuille de partage s'ouvre directement (fichiers prêts).
   return html`<main class="ecran export-psy">
     <${Entete} titre="Export PSY" retour=${() => { location.hash = '#/analyse'; }} />
-    <p class="discret">Les 7 derniers jours, prêts à coller dans le projet PSY.</p>
-    <div class="actions-col section">
-      <button type="button" class="btn btn-plein" disabled=${!texte} onClick=${copierTexte}>Copier les 7 derniers jours pour PSY</button>
-      ${message && html`<p class="discret" role="status">${message}</p>`}
-      ${typeof navigator !== 'undefined' && navigator.share && html`<button type="button" class="btn" disabled=${!texte} onClick=${partager}>Partager</button>`}
-      <a class="btn lien-bouton" href="#/reglages/sauvegarde">Faire aussi une sauvegarde</a>
-    </div>
-    <pre class="apercu-export section" aria-label="Aperçu du texte">${texte || 'Préparation…'}</pre>
+    <pre class="apercu-export" aria-label="Aperçu du texte">${texte || 'Préparation…'}</pre>
+    <button type="button" class="btn btn-plein" disabled=${!texte} onClick=${copierTexte}>${Icones.copier()}Copier les 7 derniers jours pour PSY</button>
+    ${message && html`<p class="statut-centre" role="status">${message}</p>`}
+    ${typeof navigator !== 'undefined' && navigator.share && html`<button type="button" class="btn" disabled=${!texte} onClick=${partager}>${Icones.partager()}Partager</button>`}
+    <button type="button" class="btn-lien lien-centre" disabled=${!sauvegarde.fichiers} onClick=${sauvegarde.exporterMaintenant}>Faire aussi une sauvegarde</button>
+    ${sauvegarde.message && html`<p class="statut-centre" role="status">${sauvegarde.message}</p>`}
   </main>`;
 }

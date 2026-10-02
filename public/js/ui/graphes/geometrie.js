@@ -2,7 +2,12 @@
 // Coordonnées arrondies au dixième. Une semaine vide ne dessine rien.
 const r1 = (x) => Math.round(x * 10) / 10;
 
-export const DIM = { largeur: 340, hauteur: 140, haut: 8, bas: 22, gauche: 24, droite: 6 };
+// 326 = largeur intérieure d'une carte sur un écran de 390 : une unité vaut un pixel.
+export const DIM = { largeur: 326, hauteur: 140, haut: 8, bas: 20, gauche: 22, droite: 6 };
+// Plancher de l'échelle des explosions : une semaine à 1 ne remplit pas tout le graphe.
+export const MIN_ECHELLE_EXPLOSIONS = 4;
+// Échelle fixe du sommeil : 7 nuits par semaine (une semaine incomplète est plus courte).
+export const NUITS_SEMAINE = 7;
 
 function colonnes(n, d) {
   const interieur = d.largeur - d.gauche - d.droite;
@@ -31,9 +36,9 @@ export function geometrieHumeur(semaines, d = DIM) {
 // Explosions : barres ; zéro avec des données = trait de 2 ; semaine sans donnée = rien.
 export function geometrieExplosions(semaines, d = DIM) {
   const h = d.hauteur - d.haut - d.bas;
-  const max = Math.max(1, ...semaines.map((s) => s.explosions || 0));
+  const max = Math.max(MIN_ECHELLE_EXPLOSIONS, ...semaines.map((s) => s.explosions || 0));
   const { pas, centre } = colonnes(semaines.length, d);
-  const larg = r1(Math.min(18, pas * 0.6));
+  const larg = r1(pas * 0.6);
   const base = d.haut + h;
   const barres = [];
   semaines.forEach((s, i) => {
@@ -44,12 +49,13 @@ export function geometrieExplosions(semaines, d = DIM) {
   return { barres, max, base: r1(base) };
 }
 
-// Sommeil : barres empilées Mal / Moyen / Bien (rampe d'une seule teinte, en classes CSS).
+// Sommeil : barres empilées Mal / Moyen / Bien (rampe d'une seule teinte, en classes CSS),
+// séparées par un liseré d'un pixel.
 export function geometrieSommeil(semaines, d = DIM) {
   const h = d.hauteur - d.haut - d.bas;
-  const max = Math.max(1, ...semaines.map((s) => (s.sommeil ? s.sommeil.mal + s.sommeil.moyen + s.sommeil.bien : 0)));
+  const max = Math.max(NUITS_SEMAINE, ...semaines.map((s) => (s.sommeil ? s.sommeil.mal + s.sommeil.moyen + s.sommeil.bien : 0)));
   const { pas, centre } = colonnes(semaines.length, d);
-  const larg = r1(Math.min(18, pas * 0.6));
+  const larg = r1(pas * 0.6);
   const base = d.haut + h;
   const piles = [];
   semaines.forEach((s, i) => {
@@ -61,21 +67,27 @@ export function geometrieSommeil(semaines, d = DIM) {
       if (!n) continue;
       const hh = r1((n / max) * h);
       yCourant -= hh;
-      morceaux.push({ classe, y: r1(yCourant), h: hh, n, cle });
+      morceaux.push({ classe, y: r1(yCourant), h: r1(Math.max(0.5, hh - 1)), n, cle });
     }
     piles.push({ x: r1(centre(i) - larg / 2), l: larg, morceaux });
   });
   return { piles, max, base: r1(base) };
 }
 
-// Étiquettes de l'axe des semaines (une sur trois pour rester lisible).
+// Étiquettes de l'axe des semaines (une sur trois, en partant de la plus récente).
 export function etiquettesSemaines(semaines, d = DIM) {
   const { centre } = colonnes(semaines.length, d);
-  return semaines.map((s, i) => ({ x: r1(centre(i)), texte: `${Number(s.lundi.slice(8))}/${Number(s.lundi.slice(5, 7))}`, visible: (semaines.length - 1 - i) % 3 === 0 }));
+  return semaines.map((s, i) => ({ x: r1(centre(i)), texte: `${Number(s.lundi.slice(8))}/${s.lundi.slice(5, 7)}`, visible: (semaines.length - 1 - i) % 3 === 0 }));
+}
+
+// Colonne d'une semaine (zone de toucher pleine hauteur).
+export function colonneSemaine(i, n, d = DIM) {
+  const { pas, centre } = colonnes(n, d);
+  return { x: r1(centre(i) - pas / 2), l: r1(pas), centre: r1(centre(i)) };
 }
 
 // Haltère : deux proportions sur une échelle de 0 à 1.
-export function geometrieHaltere(p1, p2, largeur = 300, marge = 10) {
+export function geometrieHaltere(p1, p2, largeur = 306, marge = 8) {
   const x = (p) => r1(marge + p * (largeur - 2 * marge));
   return { x1: x(p1), x2: x(p2) };
 }

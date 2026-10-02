@@ -11,6 +11,11 @@ export const REGLES = {
 
 const POSSESSIF = { tu: 'tes', je: 'mes', neutre: 'les' };
 
+// Moyenne affichée avec sa décimale, même ronde (« 6,0 ») : tuiles, Ma semaine, consultation.
+export function uneDecimale(x) {
+  if (x == null || Number.isNaN(x)) return '·';
+  return x.toFixed(1).replace('.', ',');
+}
 export function nombre(x, decimales = 1) {
   if (x == null || Number.isNaN(x)) return '·';
   return x.toFixed(decimales).replace('.', ',').replace(/,0$/, '');
@@ -52,6 +57,19 @@ export function phraseConstat(f, carte, voix = 'tu') {
 
 export function piedObservations(voix = 'tu') {
   return voix === 'neutre' ? 'Ce sont des observations sur les données, pas des causes.' : `Ce sont des observations sur ${voix === 'je' ? 'mes' : 'tes'} données, pas des causes.`;
+}
+
+// Phrase sommeil de « Ma semaine » : seulement quand le moteur a un constat (jour même, sinon
+// lendemain) ; sinon rien, ni « pas d'écart net » ni « pas encore assez ».
+export function phraseSommeilSemaine(res, carte) {
+  const lib = (id) => (carte && carte.get(id)) || id;
+  const sens = (e) => (e.haut[1].moyenne > e.bas[1].moyenne ? 'plus basse' : 'plus haute');
+  const m = res.meme; const l = res.lendemain;
+  const meme = m.statut === 'ok' && m.constat && extremesFiables(m.moyennes);
+  if (meme) return `Une nuit notée ${lib(meme.bas[0])} va avec une humeur ${sens(meme)} le jour même (${nombre(meme.bas[1].moyenne)} contre ${nombre(meme.haut[1].moyenne)} après une nuit ${lib(meme.haut[0])}).`;
+  const lend = l.statut === 'ok' && l.constat && extremesFiables(l.moyennes);
+  if (lend) return `Le lendemain, une nuit notée ${lib(lend.bas[0])} va avec une humeur ${sens(lend)} (${nombre(lend.bas[1].moyenne)} contre ${nombre(lend.haut[1].moyenne)}).`;
+  return null;
 }
 
 // Phrases sommeil et humeur (aucune ne dit « provoque »).

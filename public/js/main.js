@@ -39,4 +39,7 @@ survivreAuCycle({
 // Accès de test, uniquement en local.
 if (estLocal(location)) window.__carnet = { repo, etatApp };
 
-render(html`<${App} guide=${guide} />`, document.getElementById('app'));
+// Le texte d'attente « Carnet » du HTML est retiré : Preact ne le remplace pas de lui-même.
+const racine = document.getElementById('app');
+racine.textContent = '';
+render(html`<${App} guide=${guide} />`, racine);

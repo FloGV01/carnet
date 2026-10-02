@@ -24,7 +24,7 @@ export const ETAPES_JOUR = [
   { champ: 'humeur', choix: NOMBRES(10, 1), echelle: true, question: 'Humeur', teinte: 'humeur' },
   { champ: 'contactHumain', choix: OUI_NON, question: 'Contact humain', teinte: 'contact' },
   { champ: 'sportMouvement', choix: OUI_NON, question: 'Sport / mouvement', teinte: 'sport' },
-  { champ: 'explosions', choix: NOMBRES(6, 0), question: 'Explosions', teinte: 'expl' },
+  { champ: 'explosions', choix: NOMBRES(6, 0), echelle: true, question: 'Explosions', teinte: 'expl' },
   { champ: 'traitementPris', liste: 'traitementPris', question: 'Traitement pris', teinte: 'trt' },
 ];
 
@@ -114,7 +114,7 @@ export function ParcoursJour({ date }) {
       ${rendrePhrase('phrase-resume')}
       <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
       <${Pastilles} etiquette=${et.question} options=${opts} valeur=${entree[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
-        colonnes=${et.echelle ? 5 : 2} classe=${et.echelle ? 'chiffres grille-choix' : 'grille-choix'}
+        colonnes=${et.echelle ? (et.choix.length === 6 ? 6 : 5) : 2} classe=${et.echelle ? 'chiffres grille-choix' : 'grille-choix'}
         ariaPrefixe=${nombres ? et.question : null} teinte=${et.teinte} />
     </div>
   </${CadreParcours}>`;

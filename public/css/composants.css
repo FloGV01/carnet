@@ -61,7 +61,7 @@
 }
 .btn svg { width: 20px; height: 20px; }
 .btn-plein { background: var(--accent); color: var(--accent-texte); border: 0; font-weight: 600; }
-.btn-effacer { background: var(--danger); color: var(--danger-texte); border: 0; font-weight: 600; }
+.btn-effacer { background: var(--danger); color: var(--danger-texte); border: 0; font-weight: 600; width: 100%; }
 .btn-effacer[disabled] { background: var(--surface-2); color: var(--text-2); opacity: 1; }
 .btn[disabled] { opacity: 0.45; cursor: default; }
 .btn-lien {
@@ -82,6 +82,18 @@
 .pilule svg { width: 18px; height: 18px; }
 .pilule.teintee { border-color: var(--c); background: var(--t); color: var(--c); }
 .actions-col { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+
+/* Interrupteur (role=switch) */
+.interrupteur {
+  position: relative; flex: none; width: 51px; height: 31px; padding: 0; border-radius: 16px;
+  border: 1px solid var(--border); background: var(--surface-2); transition: background var(--duree), border-color var(--duree);
+}
+.interrupteur-bouton {
+  position: absolute; top: 2px; left: 2px; width: 25px; height: 25px; border-radius: 13px; background: var(--border);
+  transition: left var(--duree), background var(--duree);
+}
+.interrupteur[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.interrupteur[aria-checked="true"] .interrupteur-bouton { left: 22px; background: var(--on-accent); }
 
 /* ---------- Barre d'onglets ---------- */
 .onglets {

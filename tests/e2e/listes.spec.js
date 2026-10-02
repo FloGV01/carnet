@@ -51,7 +51,7 @@ test('réordonner, ajouter, refuser un doublon ; sens fixe = renommer seulement'
   await page.getByRole('button', { name: 'Ajouter' }).click();
   expect((await page.evaluate(() => window.__carnet.repo.listes.items('lieu'))).length).toBe(7);
   await aller(page, '#/reglages/listes/sommeil');
-  await expect(page.getByText(/on peut les renommer/)).toBeVisible();
+  await expect(page.getByText('Cette liste se renomme seulement.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Archiver' })).toHaveCount(0);
   await expect(page.getByLabel('Nouvel élément')).toHaveCount(0);
 });

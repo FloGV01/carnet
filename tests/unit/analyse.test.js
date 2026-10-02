@@ -6,7 +6,7 @@ import { classer } from '../../public/js/analyse/classements.js';
 import { bonnesJournees, facteursPossibles } from '../../public/js/analyse/bonnes-journees.js';
 import { sommeilHumeur } from '../../public/js/analyse/sommeil.js';
 import { serieHebdo } from '../../public/js/analyse/semaines.js';
-import { phraseConstat, phrasesSommeil, phraseClassement, PAS_ASSEZ, duree } from '../../public/js/analyse/textes.js';
+import { phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, PAS_ASSEZ, duree } from '../../public/js/analyse/textes.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { addDays } from '../../public/js/domain/dates.js';
@@ -97,6 +97,7 @@ test('sommeil : effet le lendemain seulement → net en décalage 1, pas en déc
   const ph = phrasesSommeil(r, carte);
   assert.ok(ph.some((p) => /^Le lendemain, une nuit notée Mal va avec une humeur plus basse/.test(p)), ph.join(' | '));
   assert.ok(ph.every((p) => !/provoqu|cause/i.test(p)));
+  assert.match(phraseSommeilSemaine(r, carte), /^Le lendemain, une nuit notée Mal va avec une humeur plus basse/);
 });
 
 test('sommeil : effet le jour même → constat du jour même', () => {
@@ -104,6 +105,7 @@ test('sommeil : effet le jour même → constat du jour même', () => {
   const r = sommeilHumeur(journal, journal[journal.length - 1].date);
   assert.equal(r.meme.constat, true);
   assert.match(phrasesSommeil(r, carte)[0], /^Une nuit notée Mal va avec une humeur plus basse le jour même \(\d+(,\d)? contre \d+(,\d)? après une nuit Bien\)\.$/);
+  assert.equal(phraseSommeilSemaine(r, carte), phrasesSommeil(r, carte)[0]);
 });
 
 test('sommeil : 13 paires = pas encore assez ; nuits Mal groupées = phrase « à la suite »', () => {
@@ -111,6 +113,7 @@ test('sommeil : 13 paires = pas encore assez ; nuits Mal groupées = phrase « �
   const r = sommeilHumeur(peu, peu[peu.length - 1].date);
   assert.equal(r.meme.statut, 'insuffisant');
   assert.deepEqual(phrasesSommeil(r, carte), [PAS_ASSEZ]);
+  assert.equal(phraseSommeilSemaine(r, carte), null, 'Ma semaine : rien sans constat');
   const suite = generer({ jours: 200, seed: 9, scenario: 'malEnSuite' });
   const r2 = sommeilHumeur(suite, suite[suite.length - 1].date);
   assert.equal(r2.suite, true);

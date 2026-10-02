@@ -55,7 +55,8 @@ export function mettreEnPage(m) {
   ['Humeur', 'Explosions', 'Sommeil'].forEach((t, i) => ops.push({ type: 'texte', x: x0 + i * (lg + 4), y: y + 2.5, taille: 7.5, gras: true, texte: t, couleur: 'texte' }));
   ops.push({ type: 'graphes', y: y + 4, hauteur: 30, largeur: lg, x: x0, ecart: 4, semaines: m.semaines });
   y += 4 + 30 + 3;
-  texte(`Sommeil : ${m.libellesSommeil.join(' · ')} (du plus foncé au plus clair).`, { taille: 6.5, couleur: 'secondaire' });
+  const [mal, moyen, bien] = m.libellesSommeil;
+  texte(`Sommeil, du plus clair au plus foncé : ${mal} · ${moyen} · ${bien}.`, { taille: 6.5, couleur: 'secondaire' });
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;
