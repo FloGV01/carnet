@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div data-theme="light" style="width:794px;height:1123px;box-sizing:border-box;padding:34px 48px;background:#FFFFFF;color:#1F1D1A;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;font-size:12px;line-height:1.35;display:flex;flex-direction:column;gap:11px;overflow:hidden;--accent:#3B4A6B;--surface:#FFFFFF;--hairline:#D9D3CA;--text-2:#5E594F;--sommeil-1:#C3CBDD;--sommeil-2:#6D7FA6;--sommeil-3:#2B3650">
+<div style="border-bottom:1.5px solid #1F1D1A;padding-bottom:10px;display:flex;flex-direction:column;gap:3px">
+<div style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums">{{ d.head }}</div>
+<div style="color:#5E594F">Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.</div>
+</div>
+<table style="border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:11.5px"><thead><tr><th style="text-align:left;padding:4px 6px 4px 0;font-weight:600;border-bottom:1px solid #8C857B;width:150px"></th><sc-for list="{{ d.cols }}" as="c"><th style="text-align:left;padding:4px 6px;font-weight:600;border-bottom:1px solid #8C857B">{{ c }}</th></sc-for></tr></thead><tbody><sc-for list="{{ d.rows }}" as="r"><tr><td style="padding:2px 6px 3.5px 0;border-bottom:1px solid #E4DFD8;color:#5E594F">{{ r.k }}</td><sc-for list="{{ r.v }}" as="x"><td style="padding:2px 6px;border-bottom:1px solid #E4DFD8">{{ x }}</td></sc-for></tr></sc-for></tbody></table>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:600">Humeur, moyenne par semaine</span><svg viewBox="{{ d.ch.vb }}" width="100%" style="display:block;height:104px"><line x1="{{ d.ch.pl }}" x2="{{ d.ch.W }}" y1="{{ d.ch.g4 }}" y2="{{ d.ch.g4 }}" stroke="#D9D3CA"></line><line x1="{{ d.ch.pl }}" x2="{{ d.ch.W }}" y1="{{ d.ch.g7 }}" y2="{{ d.ch.g7 }}" stroke="#D9D3CA"></line><text x="0" y="{{ d.ch.g7 }}" font-size="12" fill="#5E594F" dominant-baseline="middle">7</text><text x="0" y="{{ d.ch.g4 }}" font-size="12" fill="#5E594F" dominant-baseline="middle">4</text><sc-for list="{{ d.ch.segs }}" as="s"><line x1="{{ s.x1 }}" y1="{{ s.y1 }}" x2="{{ s.x2 }}" y2="{{ s.y2 }}" stroke="#1F1D1A" stroke-width="2"></line></sc-for><sc-for list="{{ d.ch.pts }}" as="p"><circle cx="{{ p.cx }}" cy="{{ p.cy }}" r="5" fill="{{ p.pf }}" stroke="#1F1D1A" stroke-width="2"></circle></sc-for></svg><span style="font-size:10.5px;color:#5E594F">anneau : moyenne fragile (peu de valeurs)</span></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:600">Explosions par semaine</span><svg viewBox="{{ d.ch.vb }}" width="100%" style="display:block;height:104px"><sc-for list="{{ d.ch.ebars }}" as="b"><rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" fill="#1F1D1A"></rect></sc-for></svg><span style="font-size:10.5px;color:#5E594F">trait fin : semaine sans explosion</span></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:600">Nuits Mal · Moyen · Bien</span><svg viewBox="{{ d.ch.vb }}" width="100%" style="display:block;height:104px"><sc-for list="{{ d.ch.sbars }}" as="b"><sc-for list="{{ b.parts }}" as="p"><rect x="{{ b.x }}" y="{{ p.y }}" width="{{ b.w }}" height="{{ p.h }}" fill="{{ p.f }}"></rect></sc-for></sc-for></svg><span style="font-size:10.5px;color:#5E594F">du plus clair (Mal) au plus foncé (Bien)</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Les plus fréquents, 30 jours</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px 18px"><sc-for list="{{ d.ranks }}" as="r"><div style="display:flex;flex-direction:column;gap:1px"><span style="color:#5E594F;font-size:11px">{{ r.k }}</span><sc-for list="{{ r.l }}" as="x"><span>{{ x }}</span></sc-for></div></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">Repères</span><sc-for list="{{ d.reperes }}" as="x"><span style="text-wrap:pretty">{{ x }}</span></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">Traitement, 90 jours</span><sc-for list="{{ d.trts }}" as="x"><span style="font-variant-numeric:tabular-nums">{{ x }}</span></sc-for><sc-if value="{{ d.noTrt }}"><span style="color:#5E594F">Aucune fiche sur la période.</span></sc-if></div>
+<div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid #8C857B;padding-top:10px"><span style="font-size:13px;font-weight:700">Pour ce rendez-vous</span><span style="font-variant-numeric:tabular-nums">{{ d.rdvTxt }}</span><sc-for list="{{ d.qs }}" as="q"><span>– {{ q }}</span></sc-for><sc-if value="{{ d.prev }}"><span style="color:#5E594F">{{ d.prev }}</span></sc-if></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:794,&quot;height&quot;:1123},&quot;d&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}"></script>
+</body>
+</html>

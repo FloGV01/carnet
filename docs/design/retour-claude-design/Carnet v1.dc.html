@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3B4A6B"></rect><path d="M36 30h26a4 4 0 0 1 4 4v32a4 4 0 0 1-4 4H36z M36 30v40 M45 42h13 M45 51h13" fill="none" stroke="#FAF8F5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg></template>
+<style>
+html,body{margin:0}
+body{background:#E7E2DA}
+button,input,textarea,select{font-family:inherit}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}a:hover{color:var(--text)}
+[data-theme="light"]{--bg:#FAF8F5;--surface:#FFFFFF;--surface-2:#F2EEE8;--text:#1F1D1A;--text-2:#6B665E;--border:#8C857B;--hairline:#E4DFD8;--accent:#3B4A6B;--on-accent:#FFFFFF;--info-bg:#EEF1F7;--danger:#9E3B2F;--on-danger:#FFFFFF;--sommeil-1:#A9B5CF;--sommeil-2:#6D7FA6;--sommeil-3:#3B4A6B;--desk:#E7E2DA;--c-lieu:#5F5648;--t-lieu:#EDE8E0;--c-sommeil:#3B4A6B;--t-sommeil:#E6EAF3;--c-humeur:#6E3F6B;--t-humeur:#F1E6F0;--c-contact:#24636A;--t-contact:#DFEEEF;--c-sport:#5E6326;--t-sport:#EEEFDC;--c-expl:#8C5413;--t-expl:#F5E8D6;--c-trt:#5A4E8C;--t-trt:#ECE9F5;--c-pos:#7A6214;--t-pos:#F4EED6;--c-ep:#6E3F6B;--t-ep:#F1E6F0;--c-sy:#24636A;--t-sy:#DFEEEF;color-scheme:light}
+[data-theme="dark"]{--bg:#1A1917;--surface:#24221F;--surface-2:#2E2B27;--text:#EDE9E3;--text-2:#A8A29A;--border:#7A746B;--hairline:#3A3632;--accent:#9DB0D9;--on-accent:#1A1917;--info-bg:#262B36;--danger:#E8A195;--on-danger:#1A1917;--sommeil-1:#4A5878;--sommeil-2:#7688B0;--sommeil-3:#AFC0E3;--desk:#0E0D0C;--c-lieu:#CFC3B0;--t-lieu:#2F2B25;--c-sommeil:#9DB0D9;--t-sommeil:#262B36;--c-humeur:#D8B0D4;--t-humeur:#33262F;--c-contact:#8FCCD1;--t-contact:#1F3032;--c-sport:#C9CD8E;--t-sport:#2C2D1E;--c-expl:#E6B47A;--t-expl:#33281B;--c-trt:#B9AEE6;--t-trt:#2A2638;--c-pos:#DCC57A;--t-pos:#312B19;--c-ep:#D8B0D4;--t-ep:#33262F;--c-sy:#8FCCD1;--t-sy:#1F3032;color-scheme:dark}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="{{ rootStyle }}">
+<sc-if value="{{ chrome }}"><div style="display:flex;align-items:center;gap:8px;font:13px -apple-system,system-ui,sans-serif;color:var(--text-2)"><span>Carnet · prototype</span><sc-for list="{{ themeBtns }}" as="b"><button onClick="{{ b.on }}" style="{{ b.st }}">{{ b.label }}</button></sc-for><button onClick="{{ resetDemo }}" style="min-height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--hairline);background:none;color:var(--text-2);font-size:13px;cursor:pointer">Réinitialiser la démo</button></div></sc-if>
+<sc-if value="{{ a4Only }}"><dc-import name="PageSoignants" d="{{ a4 }}" hint-size="794px,1123px"></dc-import></sc-if>
+<sc-if value="{{ phoneOn }}" hint-placeholder-val="{{ true }}">
+<div style="width:390px;height:844px;flex:none;position:relative;overflow:hidden;border-radius:54px;background:var(--bg);color:var(--text);display:flex;flex-direction:column;box-shadow:0 0 0 10px #151413,0 0 0 11px #4a4743,0 24px 60px rgba(0,0,0,.28);margin:12px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased">
+<div style="height:47px;flex:none;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 44px;background:var(--bg);font-size:16px;font-weight:600;z-index:30"><span style="font-variant-numeric:tabular-nums">{{ clock }}</span><div style="position:absolute;left:50%;top:11px;width:122px;height:35px;margin-left:-61px;border-radius:20px;background:#000"></div><div style="display:flex;align-items:center;gap:6px"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0M4 7a6 6 0 0 1 8 0"></path><circle cx="8" cy="10" r="1.3" fill="currentColor" stroke="none"></circle></svg><svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".45"></rect><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"></rect><path d="M25 4.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".45"></path></svg></div></div>
+<sc-if value="{{ bannerOn }}"><div style="flex:none;display:flex;align-items:center;justify-content:center;gap:2px;min-height:44px;background:var(--info-bg);font-size:15px;color:var(--text)">Nouvelle version prête ·<button onClick="{{ reload }}" style="border:none;background:none;color:var(--accent);font-weight:600;font-size:15px;min-height:44px;padding:0 6px;cursor:pointer">Recharger</button></div></sc-if>
+<sc-if value="{{ safari }}">
+<div style="flex:1;overflow-y:auto;padding:32px 24px 48px;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px"><h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Carnet</h1><p style="margin:0;font-size:17px;line-height:1.4;color:var(--text-2);text-wrap:pretty">Carnet s'ouvre depuis l'écran d'accueil. Trois gestes suffisent.</p></div>
+<sc-for list="{{ guideSteps }}" as="g" hint-placeholder-count="3"><div style="display:flex;gap:16px;align-items:flex-start"><div style="width:48px;height:48px;flex:none;border-radius:14px;background:var(--surface);border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;color:var(--accent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ g.icon }}"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;padding-top:2px"><span style="font-size:13px;font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums">{{ g.n }}</span><span style="font-size:17px;line-height:1.4;text-wrap:pretty">{{ g.t }}</span></div></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ app }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;position:relative">
+<div ref="{{ mainRef }}" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden">
+<div style="{{ zoomStyle }}">
+<sc-if value="{{ sToday }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 16px 92px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;min-height:44px;margin:0 -6px 0 -12px">
+<button aria-label="Jour précédent" onClick="{{ prevDay }}" style="width:44px;height:44px;flex:none;border:none;background:none;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+<label style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;min-height:44px;cursor:pointer"><span style="font-size:17px;font-weight:600;line-height:1.2">{{ head1 }}</span><sc-if value="{{ head2 }}"><span style="font-size:13px;line-height:1.3;color:var(--text-2)">{{ head2 }}</span></sc-if><input type="date" aria-label="Choisir une date" value="{{ date }}" max="{{ todayIso }}" onChange="{{ pickDate }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0"></label>
+<button aria-label="Jour suivant" disabled="{{ isTodayDate }}" onClick="{{ nextDay }}" style="{{ nextSt }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+<div aria-live="polite" style="width:80px;flex:none;text-align:right;font-size:13px;color:var(--text-2)">{{ savedTxt }}</div>
+</div>
+<sc-if value="{{ nightLine }}"><div style="font-size:15px;color:var(--text-2);margin-top:-8px">{{ nightTxt }}</div></sc-if>
+<sc-if value="{{ pastLine }}"><button onClick="{{ goToday }}" style="align-self:flex-start;min-height:44px;margin:-10px 0 -6px;border:none;background:none;padding:0;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer">Revenir à aujourd'hui</button></sc-if>
+<sc-if value="{{ failOn }}"><div role="status" style="font-size:13px;line-height:1.35;padding:8px 12px;border-radius:10px;background:var(--info-bg);color:var(--text)">Enregistrement impossible pour l'instant, nouvel essai en cours.</div></sc-if>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-lieu);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-lieu)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.pin }}"></path></svg></span>Lieu</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"><sc-for list="{{ fLieu }}" as="o" hint-placeholder-count="6"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:6px 8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:0 6px;font-size:15px;line-height:20px;flex-wrap:wrap;flex:1 1 0;min-width:96px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-sommeil);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-sommeil)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.moon }}"></path></svg></span>Sommeil<span style="color:var(--text-2);font-size:13px;line-height:16px;flex-basis:100%;padding-left:26px">nuit dernière</span></div>
+<div style="display:flex;gap:6px;flex:none;margin-left:auto"><sc-for list="{{ fSommeil }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-humeur);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-humeur)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.level }}"></path></svg></span>Humeur</div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px"><sc-for list="{{ fHumeur }}" as="o" hint-placeholder-count="10"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+<div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-contact);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-contact)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.people }}"></path></svg></span>Contact humain</div><div style="display:flex;gap:6px"><sc-for list="{{ fContact }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-sport);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-sport)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.move }}"></path></svg></span>Sport / mouvement</div><div style="display:flex;gap:6px"><sc-for list="{{ fSport }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-expl);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-expl)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.peak }}"></path></svg></span>Explosions</div>
+<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px"><sc-for list="{{ fExpl }}" as="o" hint-placeholder-count="6"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:6px 8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-trt);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-trt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.pill }}"></path></svg></span>Traitement pris</div>
+<div style="display:flex;gap:6px;flex:none;margin-left:auto"><sc-for list="{{ fTrt }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-pos);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-pos)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.sprout }}"></path></svg></span>Mes points positifs</div>
+<dc-import name="Dicter" value="{{ dayPos }}" on-change="{{ setPos }}" rows="{{ 2 }}" label="Mes points positifs" placeholder="Même petit. « J'ai tenu » compte aussi." demo="{{ dictDemo }}" hint-size="100%,70px"></dc-import>
+</div>
+<dc-import name="MemoVocal" memos="{{ dayMemos }}" ctx="{{ dayCtx }}" mode="{{ memoMode }}" demo="{{ memoDemo }}" on-add="{{ addDayMemo }}" on-delete="{{ delDayMemo }}" hint-size="100%,44px"></dc-import>
+<div style="display:flex;flex-direction:column;border-top:1px solid var(--hairline);margin-top:6px">
+<button onClick="{{ toggleNuit }}" aria-expanded="{{ foldNuit }}" style="min-height:48px;display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;color:var(--text);font-size:17px;cursor:pointer;text-align:left"><span style="{{ nuitChev }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></span>Nuit en détail<span style="margin-left:auto;color:var(--text-2);font-size:15px;font-variant-numeric:tabular-nums">{{ nuitSum }}</span></button>
+<sc-if value="{{ foldNuit }}"><div style="display:flex;flex-direction:column;gap:10px;padding:0 0 14px 24px">
+<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:15px">Coucher <span style="color:var(--text-2);font-size:13px">la veille</span></span><input type="time" aria-label="Coucher" value="{{ dCoucher }}" onChange="{{ setCoucher }}" style="min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;font-variant-numeric:tabular-nums"><button aria-label="Effacer le coucher" onClick="{{ clrCoucher }}" style="width:44px;height:44px;border:none;background:none;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:15px">Lever</span><input type="time" aria-label="Lever" value="{{ dLever }}" onChange="{{ setLever }}" style="min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;font-variant-numeric:tabular-nums"><button aria-label="Effacer le lever" onClick="{{ clrLever }}" style="width:44px;height:44px;border:none;background:none;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:15px">Réveils</span><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) minmax(0,1.6fr);gap:6px"><sc-for list="{{ fReveils }}" as="o" hint-placeholder-count="6"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+</div></sc-if>
+<div style="border-top:1px solid var(--hairline)"></div>
+<button onClick="{{ toggleNotes }}" aria-expanded="{{ foldNotes }}" style="min-height:48px;display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;color:var(--text);font-size:17px;cursor:pointer;text-align:left"><span style="{{ notesChev }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></span>Notes libres<span style="flex:1;min-width:0;text-align:right;color:var(--text-2);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ notesSum }}</span></button>
+<sc-if value="{{ foldNotes }}"><div style="padding:0 0 14px 24px"><dc-import name="Dicter" value="{{ dayNotes }}" on-change="{{ setNotes }}" rows="{{ 3 }}" label="Notes libres" hint-size="100%,96px"></dc-import></div></sc-if>
+<div style="border-top:1px solid var(--hairline)"></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin-top:8px">
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding-bottom:4px">ÉPISODES ET SYMPTÔMES</div>
+<sc-for list="{{ dayEvents }}" as="e" hint-placeholder-count="1"><button onClick="{{ e.on }}" style="min-height:48px;display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;color:var(--text);font-size:15px;text-align:left;cursor:pointer;border-bottom:1px solid var(--hairline)"><span style="{{ e.mk }}"></span><span style="width:40px;flex:none;color:var(--text-2);font-variant-numeric:tabular-nums">{{ e.time }}</span><span style="flex:1;min-width:0;line-height:1.3">{{ e.txt }}</span><sc-if value="{{ e.memo }}"><svg aria-label="Mémo vocal" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round"><path d="{{ ic.memo }}"></path></svg></sc-if><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></sc-for>
+<button onClick="{{ newSy }}" style="align-self:flex-start;min-height:44px;display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;color:var(--accent);font-size:17px;font-weight:600;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Symptôme</button>
+</div>
+<sc-if value="{{ rdvLine }}"><button onClick="{{ goSoins }}" style="min-height:44px;display:flex;align-items:center;gap:8px;border:none;background:var(--info-bg);border-radius:12px;padding:8px 12px;color:var(--text);font-size:15px;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.cal }}"></path></svg>{{ rdvLine }}</button></sc-if>
+<p style="margin:12px 0 0;font-size:13px;line-height:1.4;color:var(--text-2);text-align:center;text-wrap:pretty">Tout est facultatif. Toucher un choix une seconde fois l'efface.</p>
+<sc-if value="{{ pastLine }}"><button onClick="{{ askClearDay }}" style="align-self:center;min-height:44px;border:none;background:none;color:var(--text-2);font-size:13px;text-decoration:underline;cursor:pointer">Effacer cette journée</button></sc-if>
+<sc-if value="{{ importLine }}"><button onClick="{{ pickImport }}" style="align-self:center;min-height:44px;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Importer une sauvegarde</button></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ s_historique }}">
+<div style="padding:4px 16px 32px;display:flex;flex-direction:column;gap:12px">
+<h1 style="margin:4px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Historique</h1>
+<div style="display:flex;gap:6px"><sc-for list="{{ histSegs }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+<div style="display:flex;align-items:center;gap:8px">
+<button aria-label="Rechercher" onClick="{{ toggleSearch }}" style="width:44px;height:44px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="{{ ic.search }}"></path></svg></button>
+<sc-if value="{{ search }}"><input type="search" placeholder="Rechercher" aria-label="Rechercher" value="{{ q }}" onChange="{{ setQ }}" style="flex:1;min-width:0;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px"></sc-if>
+<button onClick="{{ toggleFilter }}" aria-expanded="{{ filterOpen }}" style="margin-left:auto;min-height:44px;display:flex;align-items:center;gap:4px;padding:0 4px 0 8px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer">Filtrer<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<sc-if value="{{ filterSum }}"><div style="font-size:13px;color:var(--text-2);margin-top:-6px">{{ filterSum }}</div></sc-if>
+<sc-if value="{{ filterOpen }}"><div style="display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:16px;background:var(--surface-2)"><sc-for list="{{ fGroups }}" as="g"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--text-2)">{{ g.t }}</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ g.opts }}" as="o"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div></sc-for></div></sc-if>
+<sc-if value="{{ histEmpty }}"><p style="margin:24px 0;font-size:17px;color:var(--text-2);text-align:center">{{ histEmptyTxt }}</p></sc-if>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:15px;font-weight:600;color:var(--text-2);padding-top:8px">{{ g.t }}</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ g.rows }}" as="r"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">{{ r.t }}<sc-if value="{{ r.memo }}"><svg aria-label="Mémo vocal" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round"><path d="{{ ic.memo }}"></path></svg></sc-if></span><span style="font-size:15px;line-height:1.3">{{ r.l2 }}</span><sc-if value="{{ r.hasL3 }}"><span style="font-size:13px;line-height:1.3;color:var(--text-2)">{{ r.l3 }}</span></sc-if><sc-if value="{{ r.hasH }}"><span style="font-size:13px;line-height:1.3;color:var(--text-2)">{{ r.h.pre }}<mark style="background:var(--info-bg);color:var(--text);font-weight:600;border-radius:3px;padding:0 2px">{{ r.h.hit }}</mark>{{ r.h.post }}</span></sc-if></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ s_soins }}">
+<div style="padding:4px 16px 0;display:flex;flex-direction:column;gap:14px;min-height:100%;box-sizing:border-box">
+<h1 style="margin:4px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Soins</h1>
+<div style="display:flex;gap:6px"><sc-for list="{{ soinsSegs }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+<sc-if value="{{ segRdv }}">
+<button onClick="{{ newRdv }}" style="align-self:flex-start;min-height:44px;display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;color:var(--accent);font-size:17px;font-weight:600;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Rendez-vous</button>
+<sc-if value="{{ rdvEmpty }}"><p style="margin:16px 0;font-size:17px;color:var(--text-2);text-align:center">Aucun rendez-vous noté pour l'instant.</p></sc-if>
+<sc-if value="{{ nextOn }}">
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2)">À VENIR</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<button onClick="{{ nxOpen }}" style="display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;color:var(--text);text-align:left;cursor:pointer;min-height:44px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:600">{{ nxPro }}</span><span style="font-size:15px;color:var(--text-2);font-variant-numeric:tabular-nums">{{ nxWhen }}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+<sc-for list="{{ nxQs }}" as="q"><div style="{{ q.sep }}"><button onClick="{{ q.on }}" aria-pressed="{{ q.done }}" style="width:100%;min-height:44px;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;text-align:left;cursor:pointer"><span style="{{ q.box }}"><sc-if value="{{ q.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></span><span style="{{ q.tst }}">{{ q.t }}</span></button></div></sc-for>
+<dc-import name="Dicter" rows="{{ 1 }}" placeholder="Une question pour ce rendez-vous…" label="Une question pour ce rendez-vous" on-enter="{{ nxAdd }}" hint-size="100%,46px"></dc-import>
+</div>
+</sc-if>
+<sc-if value="{{ upOn }}"><div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ upRows }}" as="r"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="width:100%;min-height:52px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer"><span style="flex:1;font-size:16px">{{ r.pro }}</span><span style="font-size:15px;color:var(--text-2);font-variant-numeric:tabular-nums">{{ r.when }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div></sc-if>
+<sc-if value="{{ pastOn }}"><div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding-top:6px">PASSÉS</div><div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;margin-bottom:24px"><sc-for list="{{ pastRows }}" as="r"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="width:100%;min-height:52px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer"><span style="flex:1;font-size:16px">{{ r.pro }}</span><sc-if value="{{ r.memo }}"><svg aria-label="Mémo vocal" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round"><path d="{{ ic.memo }}"></path></svg></sc-if><span style="font-size:15px;color:var(--text-2);font-variant-numeric:tabular-nums">{{ r.when }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div></sc-if>
+</sc-if>
+<sc-if value="{{ segTrt }}">
+<button onClick="{{ newTrt }}" style="align-self:flex-start;min-height:44px;display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;color:var(--accent);font-size:17px;font-weight:600;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Traitement</button>
+<sc-if value="{{ trtEmpty }}"><p style="margin:16px 0;font-size:17px;color:var(--text-2);text-align:center">Aucune fiche pour l'instant.</p></sc-if>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ trtRows }}" as="r"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">{{ r.t }}</span><span style="font-size:15px;line-height:1.3">{{ r.d }}</span></span><sc-if value="{{ r.memo }}"><svg aria-label="Mémo vocal" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round"><path d="{{ ic.memo }}"></path></svg></sc-if><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div>
+<div style="flex:1"></div>
+<div style="position:sticky;bottom:0;margin:0 -16px;padding:12px 16px;background:var(--bg);border-top:1px solid var(--hairline);font-size:13px;line-height:1.4;color:var(--text-2);text-align:center">Ce journal sert à préparer tes échanges avec ton psychiatre.</div>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ s_rdv }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Rendez-vous</h1>
+<div style="display:flex;gap:8px"><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:15px"><span style="display:flex;align-items:center;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.cal }}"></path></svg>Date</span><input type="date" value="{{ rDate }}" onChange="{{ setRDate }}" style="min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px"></label><label style="width:130px;display:flex;flex-direction:column;gap:6px;font-size:15px"><span style="display:flex;align-items:center;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.hist }}"></path></svg>Heure</span><input type="time" value="{{ rTime }}" onChange="{{ setRTime }}" style="min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-variant-numeric:tabular-nums"></label></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.user }}"></path></svg>Professionnel</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ rPros }}" as="o" hint-placeholder-count="7"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.q }}"></path></svg>Questions</div>
+<sc-if value="{{ rQsOn }}"><div style="background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:0 12px"><sc-for list="{{ rQs }}" as="q"><div style="{{ q.sep }}"><button onClick="{{ q.on }}" aria-pressed="{{ q.done }}" style="width:100%;min-height:44px;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;text-align:left;cursor:pointer"><span style="{{ q.box }}"><sc-if value="{{ q.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></span><span style="{{ q.tst }}">{{ q.t }}</span></button></div></sc-for></div></sc-if>
+<dc-import name="Dicter" rows="{{ 1 }}" placeholder="Une question pour ce rendez-vous…" label="Une question pour ce rendez-vous" on-enter="{{ rAddQ }}" hint-size="100%,46px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.note }}"></path></svg>Ce qui a été dit / décidé</div><dc-import name="Dicter" value="{{ rDit }}" on-change="{{ setRDit }}" rows="{{ 3 }}" label="Ce qui a été dit / décidé" hint-size="100%,96px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.step }}"></path></svg>Prochaine étape</div><dc-import name="Dicter" value="{{ rNext }}" on-change="{{ setRNext }}" rows="{{ 2 }}" label="Prochaine étape" hint-size="100%,70px"></dc-import></div>
+<dc-import name="MemoVocal" memos="{{ rMemos }}" ctx="{{ rCtx }}" mode="{{ memoMode }}" on-add="{{ rAddMemo }}" on-delete="{{ rDelMemo }}" hint-size="100%,44px"></dc-import>
+</div>
+</sc-if>
+<sc-if value="{{ s_trt }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Traitement</h1>
+<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px"><span style="display:flex;align-items:center;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.cal }}"></path></svg>Date</span><input type="date" value="{{ tDate }}" onChange="{{ setTDate }}" style="min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px"></label>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-trt);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-trt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.pill }}"></path></svg></span>Changement / ajustement<span style="color:var(--text-2);font-size:13px">facultatif</span></div><dc-import name="Dicter" value="{{ tChange }}" on-change="{{ setTChange }}" rows="{{ 2 }}" label="Changement / ajustement" hint-size="100%,70px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.fx }}"></path></svg>Effets secondaires</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ tEffets }}" as="o" hint-placeholder-count="14"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--t-humeur);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-humeur)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.level }}"></path></svg></span>Effet ressenti</div><div style="display:flex;gap:6px"><sc-for list="{{ tRessenti }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.note }}"></path></svg>Notes</div><dc-import name="Dicter" value="{{ tNotes }}" on-change="{{ setTNotes }}" rows="{{ 2 }}" label="Notes" hint-size="100%,70px"></dc-import></div>
+<dc-import name="MemoVocal" memos="{{ tMemos }}" ctx="{{ tCtx }}" mode="{{ memoMode }}" on-add="{{ tAddMemo }}" on-delete="{{ tDelMemo }}" hint-size="100%,44px"></dc-import>
+</div>
+</sc-if>
+<sc-if value="{{ s_reglages }}">
+<div style="padding:4px 16px 40px;display:flex;flex-direction:column;gap:10px">
+<h1 style="margin:4px 0 6px;font-size:30px;font-weight:700;letter-spacing:-0.01em">Réglages</h1>
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding:6px 0 0 4px">SAUVEGARDE</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden">
+<div style="padding:12px 16px;font-size:15px;line-height:1.4;color:var(--text);text-wrap:pretty">{{ backupTxt }}</div>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ doExport }}" style="min-height:48px;width:100%;display:flex;align-items:center;gap:10px;padding:0 16px;border:none;background:none;color:var(--accent);font-size:17px;text-align:left;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v12 M8 11.5l4 4 4-4 M5 20.5h14"></path></svg>Exporter</button></div>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ pickImport }}" style="min-height:48px;width:100%;display:flex;align-items:center;gap:10px;padding:0 16px;border:none;background:none;color:var(--accent);font-size:17px;text-align:left;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5v-12 M8 7.5l4-4 4 4 M5 20.5h14"></path></svg>Importer</button></div>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ revert }}" disabled="{{ noRevert }}" style="{{ revertSt }}">Revenir à l'état d'avant l'import</button></div>
+</div>
+<p style="margin:0 4px 6px;font-size:13px;line-height:1.4;color:var(--text-2)">Enregistrer dans Fichiers, puis iCloud Drive, dossier Carnet.</p>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden">
+<button onClick="{{ goListes }}" style="min-height:48px;width:100%;display:flex;align-items:center;gap:10px;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 6h11 M8.5 12h11 M8.5 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg><span style="flex:1">Listes</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ goRappel }}" style="min-height:48px;width:100%;display:flex;align-items:center;gap:10px;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z M10 20.5a2 2 0 0 0 4 0"></path></svg><span style="flex:1">Rappel du soir</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div>
+</div>
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding:10px 0 0 4px">ANALYSE</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden">
+<div style="min-height:52px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="flex:1;font-size:17px">Signal de ressemblance</span><button role="switch" aria-checked="{{ signal }}" aria-label="Signal de ressemblance" onClick="{{ toggleSignal }}" style="{{ swTrack }}"><span style="{{ swKnob }}"></span></button></div>
+<div style="border-top:1px solid var(--hairline);display:flex;flex-direction:column;gap:6px;padding:12px 16px"><label style="font-size:15px" for="prenom">Prénom pour la vue soignants</label><input id="prenom" value="{{ prenom }}" onChange="{{ setPrenom }}" autocomplete="off" style="min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px"></div>
+</div>
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding:10px 0 0 4px">À PROPOS</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;font-size:15px">
+<div style="padding:12px 16px;font-size:17px">Tes données restent sur cet iPhone.</div>
+<div style="border-top:1px solid var(--hairline);min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px"><span>Version</span><span style="color:var(--text-2);font-variant-numeric:tabular-nums">1.4.0</span></div>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ checkUpdate }}" style="min-height:44px;width:100%;padding:0 16px;border:none;background:none;color:var(--accent);font-size:15px;text-align:left;cursor:pointer">Rechercher une mise à jour</button></div>
+<div style="border-top:1px solid var(--hairline);min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px"><span>Stockage protégé</span><span style="color:var(--text-2)">oui</span></div>
+<div style="border-top:1px solid var(--hairline);min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 16px"><span>Espace utilisé</span><span style="color:var(--text-2);text-align:right;font-variant-numeric:tabular-nums">2,4 Mo, dont mémos vocaux 1,9 Mo</span></div>
+<div style="border-top:1px solid var(--hairline);min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px"><span>Hors ligne</span><span style="color:var(--text-2)">prêt</span></div>
+</div>
+<div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding:10px 0 0 4px">ZONE SENSIBLE</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><button onClick="{{ goEffacer }}" style="min-height:48px;width:100%;display:flex;align-items:center;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><span style="flex:1">Tout effacer</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div>
+</div>
+</sc-if>
+<sc-if value="{{ s_import }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Importer une sauvegarde</h1>
+<sc-if value="{{ impPreview }}">
+<p style="margin:0;font-size:17px;line-height:1.45;text-wrap:pretty">{{ impCount }}</p>
+<sc-if value="{{ impLoss }}"><p style="margin:0;padding:12px 14px;border-radius:12px;background:var(--info-bg);font-size:15px;line-height:1.45;text-wrap:pretty">{{ impLoss }}</p></sc-if>
+<button onClick="{{ doExport }}" style="min-height:52px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;cursor:pointer">Exporter d'abord</button>
+<button onClick="{{ doImport }}" style="min-height:52px;border-radius:14px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer">Importer</button>
+</sc-if>
+<sc-if value="{{ impIllisible }}"><p style="margin:0;font-size:17px">Ce fichier est illisible.</p><button onClick="{{ pickImport }}" style="min-height:52px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;cursor:pointer">Choisir un autre fichier</button></sc-if>
+<sc-if value="{{ impPasCarnet }}"><p style="margin:0;font-size:17px">Ce fichier ne ressemble pas à une sauvegarde de Carnet.</p><button onClick="{{ pickImport }}" style="min-height:52px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;cursor:pointer">Choisir un autre fichier</button></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ s_listes }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Listes</h1>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ listRows }}" as="r" hint-placeholder-count="8"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="min-height:48px;width:100%;display:flex;align-items:center;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><span style="flex:1">{{ r.t }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div>
+</div>
+</sc-if>
+<sc-if value="{{ s_liste }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:14px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">{{ lName }}</h1>
+<sc-if value="{{ lRo }}"><p style="margin:0;font-size:13px;color:var(--text-2)">Cette liste se renomme seulement.</p></sc-if>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ lItems }}" as="it" hint-placeholder-count="6"><div style="{{ it.sep }}"><div style="min-height:48px;display:flex;align-items:center;padding:0 4px 0 16px;gap:2px">
+<sc-if value="{{ it.notEditing }}"><button onClick="{{ it.startRename }}" aria-label="Renommer" style="flex:1;min-width:0;min-height:44px;border:none;background:none;padding:0;color:var(--text);font-size:16px;text-align:left;cursor:text;line-height:1.3">{{ it.t }}</button></sc-if>
+<sc-if value="{{ it.editing }}"><input value="{{ it.rv }}" onChange="{{ it.setRv }}" onBlur="{{ it.endRename }}" onKeyDown="{{ it.rk }}" aria-label="Nouveau nom" autofocus="{{ true }}" style="flex:1;min-width:0;min-height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--accent);background:var(--surface);color:var(--text);font-size:16px"></sc-if>
+<sc-if value="{{ lRw }}"><button aria-label="Monter" onClick="{{ it.up }}" style="{{ it.upSt }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5 M6 11l6-6 6 6"></path></svg></button><button aria-label="Descendre" onClick="{{ it.down }}" style="{{ it.downSt }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14 M6 13l6 6 6-6"></path></svg></button><button onClick="{{ it.archive }}" style="min-height:44px;padding:0 10px;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Archiver</button></sc-if>
+</div></div></sc-for></div>
+<sc-if value="{{ lRw }}"><div style="display:flex;gap:8px"><input value="{{ newItem }}" onChange="{{ setNewItem }}" onKeyDown="{{ addKey }}" placeholder="Nouvel élément" aria-label="Nouvel élément" style="flex:1;min-width:0;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px"><button onClick="{{ addItem }}" style="min-height:44px;padding:0 16px;border-radius:12px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer">Ajouter</button></div></sc-if>
+<sc-if value="{{ lArchOn }}"><div style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2);padding-top:8px">ARCHIVÉS</div><div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ lArch }}" as="it"><div style="{{ it.sep }}"><div style="min-height:48px;display:flex;align-items:center;padding:0 4px 0 16px"><span style="flex:1;font-size:16px;color:var(--text-2)">{{ it.t }}</span><button onClick="{{ it.restore }}" style="min-height:44px;padding:0 10px;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Restaurer</button></div></div></sc-for></div></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ s_rappel }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Rappel du soir</h1>
+<p style="margin:0;font-size:15px;line-height:1.45;color:var(--text-2)">Avec l'app Raccourcis de l'iPhone.</p>
+<ol style="margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:12px;font-size:17px;line-height:1.45">
+<li>Ouvre Raccourcis, onglet Automatisation.</li>
+<li>Touche « + », puis « Heure de la journée ».</li>
+<li>Choisis 21:00, chaque jour, puis « Exécuter immédiatement ».</li>
+<li>Ajoute l'action « Afficher une notification », avec le texte « Carnet du soir, si tu veux. »</li>
+</ol>
+</div>
+</sc-if>
+<sc-if value="{{ s_effacer }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Tout effacer</h1>
+<sc-if value="{{ eff1 }}">
+<p style="margin:0;font-size:17px;line-height:1.45;text-wrap:pretty">Avant d'effacer, tu peux garder une sauvegarde de tes données.</p>
+<button onClick="{{ doExport }}" style="min-height:52px;border-radius:14px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer">Exporter d'abord</button>
+<button onClick="{{ effNext }}" style="min-height:52px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;cursor:pointer">Continuer sans exporter</button>
+</sc-if>
+<sc-if value="{{ eff2 }}">
+<p style="margin:0;font-size:17px;line-height:1.45;text-wrap:pretty">Toutes les journées, épisodes, symptômes, rendez-vous, fiches et mémos seront effacés de cet iPhone. Écris EFFACER pour continuer.</p>
+<input value="{{ effText }}" onChange="{{ setEffText }}" aria-label="Écris EFFACER" autocapitalize="characters" autocomplete="off" placeholder="EFFACER" style="min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;letter-spacing:.08em">
+<button onClick="{{ effGo }}" disabled="{{ effNotReady }}" style="{{ effBtn }}">Effacer définitivement</button>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ s_analyse }}">
+<div style="padding:4px 16px 40px;display:flex;flex-direction:column;gap:16px">
+<h1 style="margin:4px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Analyse</h1>
+<sc-if value="{{ infoOn }}">
+<div style="background:var(--info-bg);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2)">POUR INFO</span><button onClick="{{ hideInfo }}" style="min-height:44px;margin:-12px -8px -12px 0;padding:0 8px;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Masquer</button></div>
+<p style="margin:0;font-size:16px;line-height:1.45;text-wrap:pretty">Ces 4 derniers jours ressemblent, surtout par les nuits notées Mal et le contact humain plus rare, aux jours qui ont précédé certaines périodes plus basses. C'est une ressemblance dans les chiffres, pas une prévision.</p>
+<button onClick="{{ toggleInfo }}" aria-expanded="{{ infoOpen }}" style="align-self:flex-start;min-height:44px;margin:-6px 0;padding:0;border:none;background:none;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer">Voir le détail</button>
+<sc-if value="{{ infoOpen }}"><div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:6px 8px;font-size:13px;font-variant-numeric:tabular-nums;align-items:baseline"><span></span><span style="color:var(--text-2)">Ces 4 jours</span><span style="color:var(--text-2)">Avant ces périodes</span><span style="color:var(--text-2)">D'habitude</span><sc-for list="{{ infoRows }}" as="r"><span style="color:var(--text-2)">{{ r.k }}</span><span style="font-weight:600">{{ r.a }}</span><span>{{ r.b }}</span><span>{{ r.c }}</span></sc-for></div></sc-if>
+</div>
+</sc-if>
+<div style="display:flex;gap:6px"><sc-for list="{{ periods }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+<sc-if value="{{ calc }}"><p style="margin:12px 0;font-size:15px;color:var(--text-2);text-align:center">Calcul…</p></sc-if>
+<sc-if value="{{ notCalc }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><sc-for list="{{ tiles }}" as="t" hint-placeholder-count="8"><div style="background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-height:96px;box-sizing:border-box"><span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);line-height:1.25"><span style="{{ t.dot }}"></span>{{ t.k }}</span><span style="{{ t.vst }}">{{ t.v }}</span><span style="font-size:13px;color:var(--text-2);line-height:1.25">{{ t.s }}</span></div></sc-for></div>
+</sc-if>
+<sc-if value="{{ chNo }}"><p style="margin:0;font-size:15px;color:var(--text-2)">Les graphes apparaissent après 2 semaines de données.</p></sc-if>
+<sc-if value="{{ chOk }}">
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600"><span style="width:10px;height:10px;border-radius:5px;background:var(--c-humeur)"></span>Humeur</span><span style="font-size:13px;color:var(--text-2)">12 semaines</span></div>
+<p style="margin:0;font-size:15px;line-height:1.4;color:var(--text-2)">{{ ch.moodSum }}</p>
+<sc-if value="{{ gMood }}"><svg viewBox="{{ ch.vb }}" width="100%" role="img" aria-label="Humeur moyenne par semaine" style="display:block;overflow:visible"><line x1="{{ ch.pl }}" x2="{{ ch.W }}" y1="{{ ch.g4 }}" y2="{{ ch.g4 }}" stroke="var(--hairline)" stroke-width="1"></line><line x1="{{ ch.pl }}" x2="{{ ch.W }}" y1="{{ ch.g7 }}" y2="{{ ch.g7 }}" stroke="var(--hairline)" stroke-width="1"></line><text x="0" y="{{ ch.y10 }}" font-size="10" fill="var(--text-2)" dominant-baseline="middle">10</text><text x="0" y="{{ ch.g7 }}" font-size="10" fill="var(--text-2)" dominant-baseline="middle">7</text><text x="0" y="{{ ch.g4 }}" font-size="10" fill="var(--text-2)" dominant-baseline="middle">4</text><text x="0" y="{{ ch.y1 }}" font-size="10" fill="var(--text-2)" dominant-baseline="middle">1</text><sc-for list="{{ ch.segs }}" as="s"><line x1="{{ s.x1 }}" y1="{{ s.y1 }}" x2="{{ s.x2 }}" y2="{{ s.y2 }}" stroke="var(--c-humeur)" stroke-width="2" stroke-linecap="round"></line></sc-for><sc-for list="{{ ch.pts }}" as="p"><circle cx="{{ p.cx }}" cy="{{ p.cy }}" r="4.5" fill="{{ p.fill }}" stroke="var(--c-humeur)" stroke-width="2"></circle></sc-for><sc-for list="{{ ch.xl }}" as="l"><text x="{{ l.x }}" y="138" font-size="10" fill="var(--text-2)" text-anchor="middle">{{ l.l }}</text></sc-for></svg>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="var(--surface)" stroke="var(--c-humeur)" stroke-width="2"></circle></svg>moyenne fragile (peu de valeurs)</div></sc-if>
+<sc-if value="{{ tMood }}"><div style="font-size:15px;font-variant-numeric:tabular-nums"><sc-for list="{{ ch.tMood }}" as="r"><div style="display:flex;justify-content:space-between;min-height:32px;align-items:center;border-bottom:1px solid var(--hairline)"><span style="color:var(--text-2)">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div></sc-if>
+<button onClick="{{ tgMood }}" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">{{ tMoodL }}</button>
+</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<span style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600"><span style="width:10px;height:10px;border-radius:5px;background:var(--c-expl)"></span>Explosions</span>
+<p style="margin:0;font-size:15px;line-height:1.4;color:var(--text-2)">{{ ch.explSum }}</p>
+<sc-if value="{{ gExpl }}"><svg viewBox="{{ ch.vb }}" width="100%" role="img" aria-label="Explosions par semaine" style="display:block"><sc-for list="{{ ch.ebars }}" as="b"><rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="2" fill="var(--c-expl)"></rect></sc-for><sc-for list="{{ ch.xl }}" as="l"><text x="{{ l.x }}" y="138" font-size="10" fill="var(--text-2)" text-anchor="middle">{{ l.l }}</text></sc-for></svg></sc-if>
+<sc-if value="{{ tExpl }}"><div style="font-size:15px;font-variant-numeric:tabular-nums"><sc-for list="{{ ch.tExpl }}" as="r"><div style="display:flex;justify-content:space-between;min-height:32px;align-items:center;border-bottom:1px solid var(--hairline)"><span style="color:var(--text-2)">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div></sc-if>
+<button onClick="{{ tgExpl }}" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">{{ tExplL }}</button>
+</div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<span style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600"><span style="width:10px;height:10px;border-radius:5px;background:var(--c-sommeil)"></span>Sommeil</span>
+<p style="margin:0;font-size:15px;line-height:1.4;color:var(--text-2)">{{ ch.sleepSum }}</p>
+<sc-if value="{{ gSleep }}"><svg viewBox="{{ ch.vb }}" width="100%" role="img" aria-label="Qualité des nuits par semaine" style="display:block"><sc-for list="{{ ch.sbars }}" as="b"><sc-for list="{{ b.parts }}" as="p"><rect x="{{ b.x }}" y="{{ p.y }}" width="{{ b.w }}" height="{{ p.h }}" fill="{{ p.f }}"></rect></sc-for></sc-for><sc-for list="{{ ch.xl }}" as="l"><text x="{{ l.x }}" y="138" font-size="10" fill="var(--text-2)" text-anchor="middle">{{ l.l }}</text></sc-for></svg>
+<div style="display:flex;gap:14px;font-size:13px;color:var(--text-2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:var(--sommeil-1)"></span>Mal</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:var(--sommeil-2)"></span>Moyen</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:var(--sommeil-3)"></span>Bien</span></div></sc-if>
+<sc-if value="{{ tSleep }}"><div style="font-size:15px;font-variant-numeric:tabular-nums"><sc-for list="{{ ch.tSleep }}" as="r"><div style="display:flex;justify-content:space-between;min-height:32px;align-items:center;border-bottom:1px solid var(--hairline);gap:8px"><span style="color:var(--text-2)">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div></sc-if>
+<button onClick="{{ tgSleep }}" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">{{ tSleepL }}</button>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
+<h2 style="margin:0;font-size:20px;font-weight:700;line-height:1.25;text-wrap:pretty">Ce que tes journées à 7 ou plus ont en commun</h2>
+<sc-if value="{{ cmNo }}"><p style="margin:0;font-size:15px;color:var(--text-2)">Pas encore assez de données pour le dire. <button onClick="{{ toggleWhy }}" style="min-height:44px;padding:0;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Pourquoi ?</button></p><sc-if value="{{ why }}"><p style="margin:0;font-size:15px;line-height:1.4;padding:12px 14px;border-radius:12px;background:var(--surface-2)">Il faut au moins 5 journées à 7 ou plus et 5 journées à 4 ou moins.</p></sc-if></sc-if>
+<sc-if value="{{ cmNone }}"><p style="margin:0;font-size:15px;color:var(--text-2)">Pas de différence nette sur cette période.</p></sc-if>
+<sc-for list="{{ cmItems }}" as="c"><div style="display:flex;flex-direction:column;gap:8px"><p style="margin:0;font-size:16px;line-height:1.45;text-wrap:pretty">{{ c.text }}</p><svg viewBox="0 0 306 34" width="100%" role="img" aria-label="{{ c.lab }}"><line x1="8" x2="298" y1="12" y2="12" stroke="var(--hairline)" stroke-width="2" stroke-linecap="round"></line><line x1="{{ c.x1 }}" x2="{{ c.x2 }}" y1="12" y2="12" stroke="var(--accent)" stroke-width="2"></line><circle cx="{{ c.x1 }}" cy="12" r="6" fill="var(--accent)"></circle><circle cx="{{ c.x2 }}" cy="12" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"></circle><text x="8" y="32" font-size="11" fill="var(--text-2)">{{ c.lab }}</text></svg></div></sc-for>
+<sc-if value="{{ cmOk }}"><p style="margin:0;font-size:13px;color:var(--text-2)">Plein : journées à 7 ou plus · creux : journées à 4 ou moins. Ce sont des observations sur tes données, pas des causes.</p></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
+<h2 style="margin:0;font-size:20px;font-weight:700">Sommeil et humeur</h2>
+<sc-if value="{{ smNo }}"><p style="margin:0;font-size:15px;color:var(--text-2)">Pas encore assez de données pour le dire.</p></sc-if>
+<sc-if value="{{ smOk }}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ smRows }}" as="r"><div style="display:flex;align-items:center;gap:10px"><span style="width:56px;font-size:15px;color:var(--text-2)">{{ r.k }}</span><div style="flex:1;position:relative;height:20px"><div style="position:absolute;left:0;right:0;top:9px;height:2px;background:var(--hairline);border-radius:1px"></div><span style="{{ r.dot }}"></span></div><span style="width:34px;text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">{{ r.v }}</span></div></sc-for><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);padding:0 44px 0 66px"><span>1</span><span>10</span></div></div><p style="margin:0;font-size:16px;line-height:1.45;text-wrap:pretty">{{ smT }}</p></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+<h2 style="margin:0;font-size:20px;font-weight:700">Les plus fréquents</h2>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ ranks }}" as="r" hint-placeholder-count="6"><div style="{{ r.sep }}"><div style="padding:10px 16px;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:var(--text-2)">{{ r.k }}</span><span style="font-size:15px;line-height:1.35;text-wrap:pretty">{{ r.v }}</span></div></div></sc-for></div>
+</div>
+<sc-if value="{{ evoOn }}"><div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+<h2 style="margin:0;font-size:20px;font-weight:700">Évolution</h2>
+<div style="overflow-x:auto;border:1px solid var(--hairline);border-radius:14px;background:var(--surface)"><table style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;min-width:760px;width:100%"><thead><tr style="text-align:left;color:var(--text-2)"><th style="padding:10px 12px;font-weight:600;position:sticky;left:0;background:var(--surface)">Semaine</th><th style="padding:10px 8px;font-weight:600">Humeur</th><th style="padding:10px 8px;font-weight:600">Explosions</th><th style="padding:10px 8px;font-weight:600">Nuits Mal</th><th style="padding:10px 8px;font-weight:600">Émotion n°1</th><th style="padding:10px 8px;font-weight:600">Déclencheur n°1</th><th style="padding:10px 8px;font-weight:600">Symptôme n°1</th><th style="padding:10px 12px 10px 8px;font-weight:600">Effet n°1</th></tr></thead><tbody><sc-for list="{{ evo }}" as="r"><tr style="border-top:1px solid var(--hairline)"><td style="padding:9px 12px;position:sticky;left:0;background:var(--surface)">{{ r.w }}</td><td style="padding:9px 8px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:5px"><sc-if value="{{ r.fr }}"><svg width="10" height="10" viewBox="0 0 12 12" aria-label="moyenne fragile"><circle cx="6" cy="6" r="4" fill="none" stroke="var(--accent)" stroke-width="2"></circle></svg></sc-if>{{ r.m }}</span></td><td style="padding:9px 8px">{{ r.ex }}</td><td style="padding:9px 8px">{{ r.mal }}</td><td style="padding:9px 8px">{{ r.emo }}</td><td style="padding:9px 8px">{{ r.trig }}</td><td style="padding:9px 8px">{{ r.sym }}</td><td style="padding:9px 12px 9px 8px">{{ r.eff }}</td></tr></sc-for></tbody></table></div>
+</div></sc-if>
+<div style="border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)"><button onClick="{{ toggleNums }}" aria-expanded="{{ showNums }}" style="min-height:48px;width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;color:var(--text);font-size:17px;cursor:pointer"><span style="{{ numsChev }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></span>Voir les chiffres</button>
+<sc-if value="{{ showNums }}"><div style="padding:0 0 12px 24px;font-size:15px;font-variant-numeric:tabular-nums"><sc-if value="{{ numsOn }}"><div style="font-size:13px;color:var(--text-2);padding-bottom:4px">Journées à 7 ou plus · journées à 4 ou moins</div></sc-if><sc-for list="{{ numRows }}" as="r"><div style="{{ r.sep }}"><div style="display:flex;justify-content:space-between;gap:8px;min-height:36px;align-items:center"><span>{{ r.k }}</span><span style="color:var(--text-2)">{{ r.v }}</span></div></div></sc-for><sc-if value="{{ cmNo }}"><span style="color:var(--text-2)">Pas encore assez de données pour le dire.</span></sc-if></div></sc-if></div>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden">
+<button onClick="{{ goExport }}" style="min-height:52px;width:100%;display:flex;align-items:center;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><span style="flex:1">Export PSY</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+<div style="border-top:1px solid var(--hairline)"><button onClick="{{ goSoignants }}" style="min-height:52px;width:100%;display:flex;align-items:center;padding:0 10px 0 16px;border:none;background:none;color:var(--text);font-size:17px;text-align:left;cursor:pointer"><span style="flex:1">Vue soignants</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ s_export }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:14px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Export PSY</h1>
+<pre style="margin:0;max-height:330px;overflow:auto;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--hairline);font:12px/1.55 ui-monospace,'SF Mono',Menlo,monospace;color:var(--text);white-space:pre-wrap;word-break:break-word">{{ exportTxt }}</pre>
+<button onClick="{{ copy }}" style="min-height:52px;border-radius:14px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5h11v11h-11z M5 15.5V4.5h11"></path></svg>Copier les 7 derniers jours pour PSY</button>
+<sc-if value="{{ copied }}"><p role="status" style="margin:-4px 0 0;font-size:15px;text-align:center">Copié. Prêt à coller dans PSY.</p></sc-if>
+<button onClick="{{ share }}" style="min-height:48px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.share }}"></path></svg>Partager</button>
+<button onClick="{{ doExport }}" style="min-height:44px;border:none;background:none;color:var(--accent);font-size:15px;cursor:pointer">Faire aussi une sauvegarde</button>
+</div>
+</sc-if>
+<sc-if value="{{ s_soignants }}">
+<div style="padding:0 16px 40px;display:flex;flex-direction:column;gap:14px">
+<div style="height:44px;display:flex;align-items:center;margin:0 -8px"><button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button></div>
+<h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Vue soignants</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ pros }}" as="o" hint-placeholder-count="7"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div>
+<div style="width:358px;height:507px;overflow:hidden;border-radius:6px;border:1px solid var(--hairline);box-shadow:0 1px 3px rgba(0,0,0,.08);background:#fff"><div style="width:794px;height:1123px;transform:scale(0.4509);transform-origin:0 0"><dc-import name="PageSoignants" d="{{ a4 }}" hint-size="794px,1123px"></dc-import></div></div>
+<button onClick="{{ printA4 }}" style="min-height:52px;border-radius:14px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ic.share }}"></path></svg>Partager en PDF</button>
+</div>
+</sc-if>
+</div>
+</div>
+<sc-if value="{{ fabOn }}"><button onClick="{{ newEp }}" style="position:absolute;right:16px;bottom:4px;min-height:44px;padding:0 18px 0 14px;border-radius:22px;border:none;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,.16);cursor:pointer;z-index:10"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Épisode</button></sc-if>
+</div>
+<div style="flex:none;display:flex;background:var(--surface);border-top:1px solid var(--hairline);height:83px;box-sizing:border-box;padding:4px 2px 34px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><button onClick="{{ t.on }}" aria-current="{{ t.cur }}" style="{{ t.st }}"><span style="{{ t.pill }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg></span><span style="{{ t.lst }}">{{ t.label }}</span></button></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ flowOn }}">
+<div role="dialog" aria-label="{{ flowName }}" style="position:absolute;top:47px;left:0;right:0;bottom:0;z-index:20;background:var(--bg);display:flex;flex-direction:column">
+<div style="flex:none;display:flex;align-items:center;height:48px;padding:0 8px">
+<button onClick="{{ closeFlow }}" style="min-height:44px;display:flex;align-items:center;gap:4px;padding:0 6px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg>Fermer</button>
+<span style="font-size:17px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px">· {{ flowName }}<span style="{{ flowTint }}"></span></span>
+<div role="img" aria-label="{{ dotsLabel }}" style="margin-left:auto;display:flex;gap:6px;padding-right:12px"><sc-for list="{{ dots }}" as="d" hint-placeholder-count="5"><span style="{{ d }}"></span></sc-for></div>
+</div>
+<div style="flex:none;padding:0 16px">
+<button onClick="{{ toggleDT }}" aria-expanded="{{ flowDT }}" style="min-height:44px;display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;color:var(--text-2);font-size:15px;cursor:pointer;font-variant-numeric:tabular-nums">{{ dtLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{ flowDT }}"><div style="display:flex;gap:8px;padding-bottom:8px"><input type="date" aria-label="Date" value="{{ fDate }}" max="{{ todayIso }}" onChange="{{ setFDate }}" style="flex:1;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px"><sc-if value="{{ showTime }}"><input type="time" aria-label="Heure" value="{{ fTime }}" onChange="{{ setFTime }}" style="width:120px;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-variant-numeric:tabular-nums"></sc-if></div></sc-if>
+</div>
+<div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden">
+<div style="{{ slideSt }}">
+<sc-if value="{{ isStep }}">
+<div style="padding:8px 16px 20px;display:flex;flex-direction:column;gap:18px">
+<div><h2 style="margin:0;font-size:24px;font-weight:700;line-height:1.2;letter-spacing:-0.01em;text-wrap:pretty">{{ stepTitle }}</h2><sc-if value="{{ stepSub }}"><div style="font-size:15px;color:var(--text-2);margin-top:4px">{{ stepSub }}</div></sc-if></div>
+<sc-if value="{{ stepGrid }}"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><sc-for list="{{ stepOpts }}" as="o" hint-placeholder-count="8"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}"><sc-if value="{{ o.sel }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span>{{ o.main }}</span><sc-if value="{{ o.sub }}"><span style="font-size:13px">{{ o.sub }}</span></sc-if></span></button></sc-for></div></sc-if>
+<sc-if value="{{ stepScale }}"><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px"><sc-for list="{{ stepOpts }}" as="o" hint-placeholder-count="10"><button onClick="{{ o.on }}" aria-pressed="{{ o.sel }}" style="{{ o.st }}">{{ o.label }}</button></sc-for></div></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ isRecap }}">
+<div style="padding:8px 16px 24px;display:flex;flex-direction:column;gap:20px">
+<h2 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-0.01em">Récapitulatif</h2>
+<div style="background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden"><sc-for list="{{ recapRows }}" as="r" hint-placeholder-count="5"><div style="{{ r.sep }}"><button onClick="{{ r.on }}" style="width:100%;min-height:52px;display:flex;align-items:center;gap:12px;padding:8px 10px 8px 16px;border:none;background:none;color:var(--text);font-size:16px;text-align:left;cursor:pointer;line-height:1.3"><span style="width:96px;flex:none;color:var(--text-2);font-size:15px">{{ r.k }}</span><span style="{{ r.vst }}">{{ r.v }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-for></div>
+<sc-for list="{{ recapFields }}" as="f" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ f.icon }}"></path></svg>{{ f.label }}<span style="color:var(--text-2);font-size:13px">facultatif</span></div><dc-import name="Dicter" value="{{ f.value }}" on-change="{{ f.set }}" rows="{{ 2 }}" label="{{ f.label }}" hint-size="100%,70px"></dc-import></div></sc-for>
+<dc-import name="MemoVocal" memos="{{ fMemos }}" ctx="{{ fCtx }}" mode="{{ memoMode }}" on-add="{{ fAddMemo }}" on-delete="{{ fDelMemo }}" hint-size="100%,44px"></dc-import>
+<sc-if value="{{ fHasItem }}"><button onClick="{{ fDel }}" style="align-self:flex-start;min-height:44px;border:none;background:none;padding:0;color:var(--text-2);font-size:15px;text-decoration:underline;cursor:pointer">{{ fDelLabel }}</button></sc-if>
+</div>
+</sc-if>
+</div>
+</div>
+<sc-if value="{{ isStep }}"><div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 10px 40px;border-top:1px solid var(--hairline);background:var(--bg)"><button onClick="{{ fBack }}" disabled="{{ noBack }}" style="{{ backSt }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Retour</button><button onClick="{{ fSkip }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 6px 0 12px;border:none;background:none;color:var(--accent);font-size:17px;cursor:pointer">Passer<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></div></sc-if>
+<sc-if value="{{ isRecap }}"><div style="flex:none;padding:10px 16px 42px;border-top:1px solid var(--hairline);background:var(--bg)"><button onClick="{{ fDone }}" style="width:100%;min-height:52px;border:none;border-radius:14px;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;cursor:pointer">Terminer</button></div></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ toastOn }}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:156px;z-index:45;display:flex;align-items:center;gap:4px;min-height:48px;padding:0 4px 0 16px;border-radius:14px;background:var(--text);color:var(--bg);font-size:15px"><span style="flex:1">{{ toastMsg }}</span><sc-if value="{{ toastUndo }}"><span aria-hidden="true">·</span><button onClick="{{ undo }}" style="min-height:44px;padding:0 12px;border:none;background:none;color:var(--bg);font-weight:600;font-size:15px;text-decoration:underline;cursor:pointer">Annuler</button></sc-if></div></sc-if>
+<sc-if value="{{ confirmOn }}"><div style="position:absolute;inset:0;z-index:50;background:rgba(10,9,8,.38);display:flex;align-items:center;justify-content:center;padding:24px"><div role="alertdialog" style="width:290px;border-radius:16px;background:var(--surface);color:var(--text);overflow:hidden;text-align:center"><div style="padding:20px 18px 16px;display:flex;flex-direction:column;gap:6px"><div style="font-size:17px;font-weight:600;line-height:1.3;text-wrap:pretty">{{ cTitle }}</div><sc-if value="{{ cBody }}"><div style="font-size:13px;line-height:1.4;color:var(--text-2);text-wrap:pretty">{{ cBody }}</div></sc-if></div><div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hairline)"><button onClick="{{ cNo }}" style="min-height:48px;border:none;border-right:1px solid var(--hairline);background:none;color:var(--accent);font-size:17px;cursor:pointer">Annuler</button><button onClick="{{ cYes }}" style="min-height:48px;border:none;background:none;color:var(--accent);font-size:17px;font-weight:600;cursor:pointer">{{ cOk }}</button></div></div></div></sc-if>
+<input type="file" ref="{{ fileRef }}" accept=".json,application/json" onChange="{{ onFile }}" style="display:none">
+<div style="position:absolute;bottom:8px;left:50%;margin-left:-67px;width:134px;height:5px;border-radius:3px;background:var(--text);z-index:60;pointer-events:none"></div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Affichage&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;empty&quot;,&quot;past&quot;,&quot;night&quot;,&quot;fail&quot;,&quot;large&quot;],&quot;default&quot;:&quot;default&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États&quot;},&quot;banner&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;États&quot;},&quot;safari&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;États&quot;},&quot;memoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ok&quot;,&quot;denied&quot;,&quot;unavail&quot;],&quot;default&quot;:&quot;ok&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États&quot;},&quot;screen&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;flow&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;flowStep&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;flowExisting&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;},&quot;overlay&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;persist&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;},&quot;chrome&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;},&quot;scrollTo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;a4Only&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const TODAY0 = '2026-09-30', KEY = 'carnet-proto-v1';
+const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'], J3 = ['dim','lun','mar','mer','jeu','ven','sam'];
+const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const MOISF = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const pad = n => String(n).padStart(2, '0');
+const s2d = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const d2s = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const addD = (s, n) => { const d = s2d(s); d.setDate(d.getDate() + n); return d2s(d); };
+const fLong = s => { const d = s2d(s); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
+const fShort = s => { const d = s2d(s); return J3[d.getDay()] + '. ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
+const fFull = s => { const d = s2d(s); return JOURS[d.getDay()] + ' ' + (d.getDate() === 1 ? '1er' : d.getDate()) + ' ' + MOISF[d.getMonth()]; };
+const fNum = s => { const d = s2d(s); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1); };
+const fNumY = s => fNum(s) + '/' + s.slice(0, 4);
+const monday = s => addD(s, -((s2d(s).getDay() + 6) % 7));
+const dec = x => x == null ? '·' : (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+const sum = a => a.reduce((x, y) => x + y, 0);
+const med = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const hm = (t, eve) => { const [h, m] = t.split(':').map(Number); let x = h * 60 + m; if (eve && x < 720) x += 1440; return x; };
+const mh = x => { x = Math.round(x) % 1440; return pad(Math.floor(x / 60)) + ':' + pad(x % 60); };
+const split = l => { const m = l.match(/^(.*?)\s*\((.*)\)$/); return m ? { main: m[1], sub: m[2] } : { main: l, sub: '' }; };
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const LISTS = {
+  lieu: { name: 'Lieu', items: ['Bureau','Télétravail','Congé / repos','Arrêt','Clinique','Autre'] },
+  sommeil: { name: 'Sommeil', items: ['Mal','Moyen','Bien'], ro: true },
+  trtPris: { name: 'Traitement pris', items: ['Oui','Partiel','Non'], ro: true },
+  declencheur: { name: 'Déclencheurs', items: ['Me sentir pris pour un con','Injustice','Ne pas être compris','Imprévu / changement','Surcharge sensorielle (bruit, monde)','Manque de sommeil','Trop de sollicitations','Conflit','Attente / lenteur','Erreur / échec','Solitude',"Rien d'identifié"] },
+  emotion: { name: 'Émotions', items: ['Colère','Frustration',"Sentiment d'injustice",'Honte','Culpabilité','Tristesse','Anxiété','Peur','Vide / rien','Épuisement','Surcharge','Irritabilité','Soulagement','Joie','Fierté','Calme','Enthousiasme'] },
+  dessous: { name: 'En dessous', items: ['Injustice','Ne pas être vu / reconnu','Honte','Peur','Tristesse','Fatigue / débordement','Je ne sais pas'] },
+  reaction: { name: 'Réactions', items: ['Explosion','Retrait / isolement','Masquage (fait comme si)',"J'ai réussi à en parler",'Rien fait','Report (revenu à froid)'] },
+  symptome: { name: 'Symptômes', items: ["Crise d'angoisse",'Vide / shutdown',"Paralysie (impossible d'agir)",'Ruminations','Explosion de colère','Surcharge sensorielle','Hyperfocus','Endormissement difficile','Réveil non reposé','Irritabilité','Fatigue extrême','Difficulté de concentration','Évitement social','Douleurs / tensions'] },
+  duree: { name: 'Durées', items: ['Quelques minutes',"Moins d'une heure",'Quelques heures','Toute la journée','Plusieurs jours'] },
+  pro: { name: 'Professionnels', items: ['Psychiatre','Neuropsychologue','Psychologue','Médecin traitant','Médecin du travail','Équipe de réhabilitation','Autre'] },
+  effets: { name: 'Effets secondaires', items: ['Aucun','Bouche sèche','Somnolence','Fatigue','Nausées','Maux de tête','Tremblements','Prise de poids',"Perte d'appétit",'Troubles digestifs','Baisse de libido','Vertiges','Sueurs','Agitation / nervosité'] },
+  ressenti: { name: 'Effet ressenti', items: ['Moins bien','Stable','Mieux'], ro: true }
+};
+const IC = {
+  pin: 'M12 21s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11z M9.5 10a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
+  moon: 'M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z',
+  level: 'M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0 M8 12h8',
+  people: 'M6 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M3 19.5a6 6 0 0 1 12 0 M15.5 5.3a3 3 0 0 1 0 5.4 M17.5 14a5.5 5.5 0 0 1 3.5 5.5',
+  move: 'M5 12a7 7 0 0 1 12-4.9 M17.5 3.5v4h-4 M19 12a7 7 0 0 1-12 4.9 M6.5 20.5v-4h4',
+  peak: 'M3 17l4-5 3 3 4-8 3 6 4-3',
+  pill: 'M9 20.5a4.5 4.5 0 0 1-6-6.4l8.6-8.6a4.5 4.5 0 0 1 6.4 6.4z M7.3 9.8l6.4 6.4',
+  sprout: 'M12 20.5v-9 M12 11.5c0-4 2.8-6.5 7-6.5 0 4-2.8 6.5-7 6.5z M12 14c0-3-2.4-5-5.5-5 0 3 2.4 5 5.5 5z',
+  memo: 'M3 12h1.5 M7 9v6 M10.5 5.5v13 M14 8.5v7 M17.5 10.5v3 M20.5 12h.5',
+  cal: 'M4 6.5h16v13.5H4z M4 10.5h16 M8.5 3.5v4 M15.5 3.5v4',
+  today: 'M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z M9.5 3.5v17 M12.5 8h3 M12.5 12h3',
+  ana: 'M4 20h16 M7 16.5v-5 M12 16.5V7 M17 16.5v-8',
+  hist: 'M12 7.5v4.5l3 2 M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0',
+  set: 'M4 7h9 M17 7h3 M4 17h3 M11 17h9 M13 4.5v5 M7 14.5v5',
+  search: 'M4.5 11a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0 M20 20l-4.3-4.3',
+  share: 'M12 15V3.5 M8 7.5l4-4 4 4 M6 11H5v9.5h14V11h-1',
+  dots: 'M5 12h.01 M12 12h.01 M19 12h.01',
+  toggle: 'M8 7h8a5 5 0 0 1 0 10H8A5 5 0 0 1 8 7z M13.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
+  add: 'M5 5h14v14H5z M12 9v6 M9 12h6',
+  user: 'M8.5 8a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0 M5 20a7 7 0 0 1 14 0',
+  note: 'M5 4.5h14v15H5z M8.5 9h7 M8.5 13h7 M8.5 17h4',
+  help: 'M12 21a9 9 0 1 0 0-18a9 9 0 1 0 0 18 M8 12.5l2.5 2.5L16 9.5',
+  q: 'M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z',
+  step: 'M5 12h12 M13 8l4 4-4 4',
+  fx: 'M12 3.5v4 M12 16.5v4 M3.5 12h4 M16.5 12h4 M6 6l2.8 2.8 M15.2 15.2L18 18 M6 18l2.8-2.8 M15.2 8.8L18 6'
+};
+const LEN = { ep: 5, sy: 3 };
+const STEPS = {
+  ep: [{ key: 'trig', title: 'Ça a démarré avec…', list: 'declencheur' }, { key: 'emo', title: 'Ça ressemblait plutôt à…', list: 'emotion' }, { key: 'int', title: 'Intensité', sub: '1 = à peine, 10 = maximum', scale: true }, { key: 'under', title: 'Et en dessous, il y avait peut-être…', list: 'dessous' }, { key: 'react', title: 'Ta réaction', list: 'reaction' }],
+  sy: [{ key: 'sym', title: 'Symptôme', list: 'symptome' }, { key: 'int', title: 'Intensité', sub: '1 = à peine, 10 = maximum', scale: true }, { key: 'dur', title: 'Durée', list: 'duree' }]
+};
+const RECAP = { ep: [['trig', 'Déclencheur'], ['emo', 'Émotion'], ['int', 'Intensité'], ['under', 'En dessous'], ['react', 'Réaction']], sy: [['sym', 'Symptôme'], ['int', 'Intensité'], ['dur', 'Durée']] };
+const TXT = { ep: [['situation', 'Situation', IC.note], ['aide', 'Ce qui a aidé', IC.sprout]], sy: [['contexte', 'Contexte', IC.note], ['note', 'Note', IC.note]] };
+const mkRdvs = () => [
+  { id: 'r1', date: '2026-10-14', time: '10:30', pro: 'Psychiatre', questions: [{ t: "Avancer l'horaire du soir ?", done: false }, { t: 'Fatigue en fin de matinée', done: false }], dit: '', next: '' },
+  { id: 'r2', date: null, time: '', pro: 'Neuropsychologue', questions: [], dit: '', next: '' },
+  { id: 'r0', date: '2026-09-16', time: '09:00', pro: 'Psychiatre', questions: [{ t: "Sommeil depuis l'ajustement", done: true }], dit: 'on garde le même dosage deux semaines', next: 'noter les réveils la nuit' },
+  { id: 'r00', date: '2026-08-27', time: '17:15', pro: 'Psychologue', questions: [], dit: 'travail sur les retours à froid', next: '' }
+];
+const mkTrts = () => [
+  { id: 't1', date: '2026-09-16', change: "prise du soir avancée d'une heure", effets: ['Somnolence'], ressenti: 'Stable', notes: '' },
+  { id: 't2', date: '2026-08-19', change: 'dose ajustée', effets: ['Bouche sèche', 'Fatigue'], ressenti: 'Mieux', notes: '' },
+  { id: 't3', date: '2026-07-22', change: 'reprise après une pause', effets: ['Aucun'], ressenti: 'Moins bien', notes: '' }
+];
+
+class Component extends DCLogic {
+  state = this.init(this.props);
+  mainRef = React.createRef();
+  fileRef = React.createRef();
+  rm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  gen() {
+    const r = rng(11), days = {}, eps = [], sys = [], memos = {}, L = LISTS, pk = a => a[Math.floor(r() * a.length)];
+    const pos = ['marche de 20 min', 'déjeuner au calme', "J'ai tenu", 'rangé le bureau', 'appel court', 'lu quelques pages', 'cuisiné', 'douche chaude', "sorti prendre l'air", 'fini une tâche'];
+    const trigW = ['Me sentir pris pour un con', 'Me sentir pris pour un con', 'Me sentir pris pour un con', 'Imprévu / changement', 'Surcharge sensorielle (bruit, monde)', 'Trop de sollicitations', 'Ne pas être compris', 'Injustice', 'Attente / lenteur', 'Conflit', "Rien d'identifié", "Rien d'identifié"];
+    const emoW = ['Colère', 'Colère', 'Frustration', 'Frustration', 'Anxiété', 'Épuisement', "Sentiment d'injustice", 'Irritabilité', 'Tristesse', 'Surcharge'];
+    let id = 1;
+    for (let i = 83; i >= 1; i--) {
+      const iso = addD(TODAY0, -i); if (r() < 0.2) continue;
+      const wd = s2d(iso).getDay(), we = wd === 0 || wd === 6;
+      let lieu; if (i >= 38 && i <= 44 && !we) lieu = 'Arrêt'; else if (we) lieu = r() < .85 ? 'Congé / repos' : 'Autre'; else { const x = r(); lieu = x < .48 ? 'Bureau' : x < .9 ? 'Télétravail' : x < .96 ? 'Congé / repos' : 'Clinique'; }
+      const x = r(), sommeil = x < .27 ? 'Mal' : x < .58 ? 'Moyen' : 'Bien';
+      let h = 5.2 + (lieu === 'Bureau' ? 1.8 : 0) + (lieu === 'Arrêt' ? -1.2 : 0) + (sommeil === 'Bien' ? .9 : sommeil === 'Mal' ? -1.6 : 0) + (r() - .5) * 3.6;
+      h = Math.max(1, Math.min(10, Math.round(h)));
+      const d = { lieu, sommeil, humeur: h, contact: r() < (lieu === 'Bureau' ? .85 : .4) ? 'Oui' : 'Non', sport: r() < .35 ? 'Oui' : 'Non', expl: h <= 4 ? (r() < .65 ? 1 + Math.floor(r() * 2) : 0) : (r() < .1 ? 1 : 0), trt: r() < .86 ? 'Oui' : r() < .6 ? 'Partiel' : 'Non' };
+      if (r() < .08) delete d.humeur; if (r() < .1) delete d.sport;
+      if (r() < .5) { d.coucher = mh(23 * 60 + Math.round((r() - .4) * 90) + 1440); d.lever = mh(7 * 60 + Math.round((r() - .5) * 70)); d.reveils = sommeil === 'Mal' ? 1 + Math.floor(r() * 3) : Math.floor(r() * 2); }
+      if (r() < .55) d.pos = pk(pos);
+      if (r() < .1) d.notes = "journée calme dans l'ensemble";
+      days[iso] = d;
+      const ne = d.expl > 0 ? d.expl : (r() < .12 ? 1 : 0);
+      for (let k = 0; k < ne; k++) { const e = { id: 'e' + id++, date: iso, time: pad(9 + Math.floor(r() * 12)) + ':' + pad(Math.floor(r() * 60)), trig: pk(trigW), emo: pk(emoW), int: 4 + Math.floor(r() * 6), under: pk(L.dessous.items), react: d.expl && r() < .7 ? 'Explosion' : pk(L.reaction.items) }; if (r() < .15) delete e.under; eps.push(e); }
+      if (r() < .22) sys.push({ id: 's' + id++, date: iso, sym: pk(['Ruminations', 'Ruminations', 'Fatigue extrême', 'Surcharge sensorielle', 'Endormissement difficile', 'Difficulté de concentration', "Crise d'angoisse", 'Vide / shutdown']), int: 3 + Math.floor(r() * 6), dur: pk(L.duree.items) });
+      if (r() < .07) memos['day:' + iso] = [{ id: 'm' + id++, dur: 15 + Math.floor(r() * 60) }];
+    }
+    ['2026-09-27', '2026-09-28', '2026-09-29'].forEach(k => { if (days[k]) { days[k].sommeil = 'Mal'; days[k].contact = 'Non'; } });
+    days[TODAY0] = { lieu: 'Télétravail', sommeil: 'Moyen', humeur: 6, contact: 'Oui', expl: 0, trt: 'Oui', pos: 'déjeuner au calme', coucher: '23:40', lever: '07:10', reveils: 1 };
+    eps.push({ id: 'e' + id++, date: TODAY0, time: '18:42', trig: 'Me sentir pris pour un con', emo: 'Colère', int: 7, under: 'Ne pas être vu / reconnu', react: 'Retrait / isolement', situation: 'réunion qui a débordé', aide: 'marche de 20 min' });
+    memos['ep:e' + (id - 1)] = [{ id: 'm' + id++, dur: 24 }];
+    return { days, episodes: eps, symptomes: sys, memos };
+  }
+
+  init(p) {
+    const v = p.variant || 'default', empty = v === 'empty';
+    let g = empty ? { days: {}, episodes: [], symptomes: [], memos: {} } : this.gen();
+    let rdvs = empty ? [] : mkRdvs(), trts = empty ? [] : mkTrts(), lists = JSON.parse(JSON.stringify(LISTS)), extra = {};
+    Object.values(lists).forEach(l => l.archived = []);
+    const persist = p.persist !== false && v === 'default' && !p.screen && !p.flow && !p.overlay;
+    if (persist) { try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.days) { g = { days: s.days, episodes: s.episodes || [], symptomes: s.symptomes || [], memos: s.memos || {} }; rdvs = s.rdvs || rdvs; trts = s.trts || trts; lists = s.lists || lists; extra = { signal: s.signal !== false, prenom: s.prenom || '', lastBackup: s.lastBackup ?? '2026-09-18', theme: s.theme || p.theme || 'light' }; } } catch (e) {} }
+    const today = v === 'night' ? '2026-09-29' : TODAY0, sc = p.screen || 'today';
+    const tabs = ['today', 'analyse', 'historique', 'soins', 'reglages'];
+    const pm = { export: 'analyse', soignants: 'analyse', import: 'reglages', listes: 'reglages', liste: 'reglages', rappel: 'reglages', effacer: 'reglages', rdv: 'soins', trt: 'soins' };
+    const st = {
+      persist, theme: p.theme || 'light', tab: tabs.includes(sc) ? sc : (pm[sc] || 'today'), push: pm[sc] ? sc : null, pushId: p.pushId || null,
+      today, date: v === 'past' ? '2026-09-28' : today, ...g, rdvs, trts, lists, flow: null, flowStep: 0, flowDT: false, slide: { x: 0, o: 1, t: false },
+      flash: false, fail: v === 'fail', toast: null, confirm: null, foldNuit: !!p.foldNuit, foldNotes: false,
+      histSeg: p.histSeg || 'jours', search: !!p.q, q: p.q || '', filterOpen: !!p.filterOpen, filters: {}, soinsSeg: p.soinsSeg || 'rdv',
+      period: '30', infoHidden: false, infoOpen: !!p.infoOpen, tbl: {}, showNums: false, calc: false, why: !!p.why, copied: false, pro: 'Psychiatre',
+      eff: p.effStep || 1, effText: p.effStep === 3 ? 'EFFACER' : '', signal: true, prenom: '', lastBackup: empty ? null : '2026-09-18',
+      listKey: p.listKey || null, renaming: null, renameVal: '', newItem: '', newQ: '',
+      imp: p.importState ? { state: p.importState } : null, preImport: null, banner: !!p.banner, safari: !!p.safari, memoMode: p.memoMode || 'ok', bannerHidden: false, ...extra
+    };
+    if (sc === 'liste' && !st.listKey) st.listKey = 'emotion';
+    if (sc === 'rdv' && !st.pushId) st.pushId = 'r1';
+    if (sc === 'trt' && !st.pushId) st.pushId = 't1';
+    if (sc === 'import' && !st.imp) st.imp = { state: 'preview' };
+    if (p.flow) {
+      const kind = p.flow; let item = null;
+      if (p.flowExisting) { const arr = kind === 'ep' ? st.episodes : st.symptomes; item = arr.filter(e => e.date === today).slice(-1)[0] || null; if (!item && kind === 'sy') { item = { id: 's-demo', date: today, sym: 'Ruminations', int: 5, dur: 'Quelques heures' }; st.symptomes = [...st.symptomes, item]; } }
+      const nid = 'n' + Math.floor(Math.random() * 1e9);
+      st.flow = { kind, id: item ? item.id : nid, snap: item ? { ...item } : null, draft: { id: nid, date: today, time: kind === 'ep' ? '18:42' : '' } };
+      st.flowStep = p.flowStep ?? (item ? LEN[kind] : 0);
+    }
+    if (p.overlay === 'toast') st.toast = { msg: 'Épisode enregistré', undo: () => {} };
+    if (p.overlay === 'memoToast') st.toast = { msg: 'Mémo supprimé', undo: () => {} };
+    if (p.overlay === 'confirmDay') st.confirm = { title: `Effacer la journée du ${fLong(st.date)} ?`, body: 'Les épisodes et symptômes de ce jour sont conservés.', ok: 'Effacer', on: () => {} };
+    if (p.overlay === 'confirmEp') st.confirm = { title: 'Supprimer cet épisode ?', body: 'Ses mémos vocaux sont supprimés aussi.', ok: 'Supprimer', on: () => {} };
+    return st;
+  }
+
+  componentDidMount() { if (this.props.scrollTo && this.mainRef.current) this.mainRef.current.scrollTop = this.props.scrollTo; }
+  componentDidUpdate(pp, ps) {
+    const S = this.state;
+    if ((ps.tab !== S.tab || ps.push !== S.push || ps.pushId !== S.pushId || ps.listKey !== S.listKey) && this.mainRef.current) this.mainRef.current.scrollTop = 0;
+    if (S.persist && ['days', 'episodes', 'symptomes', 'memos', 'rdvs', 'trts', 'lists', 'signal', 'prenom', 'lastBackup', 'theme'].some(k => ps[k] !== S[k])) {
+      try { localStorage.setItem(KEY, JSON.stringify({ days: S.days, episodes: S.episodes, symptomes: S.symptomes, memos: S.memos, rdvs: S.rdvs, trts: S.trts, lists: S.lists, signal: S.signal, prenom: S.prenom, lastBackup: S.lastBackup, theme: S.theme })); } catch (e) {}
+    }
+    if (pp.theme !== this.props.theme && this.props.theme) this.setState({ theme: this.props.theme });
+  }
+
+  chip(sel, o = {}) {
+    const { c, ...rest } = o; const col = c ? 'var(--c-' + c + ')' : 'var(--accent)';
+    return Object.assign({ minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '4px 6px', boxSizing: 'border-box', border: '1px solid ' + (sel ? col : 'var(--hairline)'), borderRadius: sel ? 22 : 12, background: sel ? col : 'var(--surface)', color: sel ? 'var(--on-accent)' : 'var(--text)', fontWeight: sel ? 600 : 400, fontSize: 16, lineHeight: 1.15, fontVariantNumeric: 'tabular-nums', cursor: 'pointer', textAlign: 'center', transition: this.rm ? 'none' : 'background 150ms, border-radius 150ms, color 150ms', fontFamily: 'inherit' }, rest);
+  }
+  opts(items, cur, on, o = {}, multi) { return items.map(l => { const sel = multi ? (cur || []).includes(l) : cur === l; const sp = split(String(l)); return { label: String(l), main: sp.main, sub: sp.sub, sel, st: this.chip(sel, typeof o === 'function' ? o(sel) : o), on: () => on(l) }; }); }
+  sep(i) { return { borderTop: i ? '1px solid var(--hairline)' : 'none' }; }
+  L(k) { return this.state.lists[k].items; }
+
+  saved() { if (this.state.fail) return; clearTimeout(this.ft); this.setState({ flash: true }); this.ft = setTimeout(() => this.setState({ flash: false }), 1500); }
+  toast(msg, undo) { clearTimeout(this.tt); this.setState({ toast: { msg, undo } }); this.tt = setTimeout(() => this.setState({ toast: null }), 5000); }
+  day() { return this.state.days[this.state.date] || {}; }
+  daySet(patch, date) {
+    this.setState(s => { const dt = date || s.date, cur = { ...(s.days[dt] || {}) }; Object.entries(patch).forEach(([k, v]) => { if (v == null || v === '') delete cur[k]; else cur[k] = v; }); const days = { ...s.days }; if (Object.keys(cur).length) days[dt] = cur; else delete days[dt]; return { days }; });
+    this.saved();
+  }
+  tog(f, v) { this.daySet({ [f]: this.day()[f] === v ? null : v }); }
+  memoAdd(ctx, m) { this.setState(s => ({ memos: { ...s.memos, [ctx]: [...(s.memos[ctx] || []), m] } })); this.saved(); }
+  memoDel(ctx, id) {
+    const arr = this.state.memos[ctx] || [], i = arr.findIndex(m => m.id === id), m = arr[i]; if (!m) return;
+    this.setState(s => ({ memos: { ...s.memos, [ctx]: (s.memos[ctx] || []).filter(x => x.id !== id) } }));
+    this.toast('Mémo supprimé', () => this.setState(s => { const a = [...(s.memos[ctx] || [])]; a.splice(i, 0, m); return { memos: { ...s.memos, [ctx]: a } }; }));
+  }
+
+  openFlow(kind, id) {
+    const S = this.state, arr = kind === 'ep' ? S.episodes : S.symptomes, it = id ? arr.find(e => e.id === id) : null;
+    const nid = 'n' + Date.now(), now = new Date();
+    const time = S.date === S.today && kind === 'ep' ? pad(now.getHours()) + ':' + pad(now.getMinutes()) : '';
+    this.setState({ flow: { kind, id: it ? it.id : nid, snap: it ? { ...it } : null, draft: { id: nid, date: S.date, time } }, flowStep: it ? LEN[kind] : 0, flowDT: false, slide: { x: 0, o: 1, t: false } });
+  }
+  fkey() { return this.state.flow.kind === 'ep' ? 'episodes' : 'symptomes'; }
+  fitem() { const f = this.state.flow; if (!f) return null; return this.state[this.fkey()].find(e => e.id === f.id) || null; }
+  fpatch(patch) {
+    const k = this.fkey(), f = this.state.flow;
+    this.setState(s => { const arr = s[k], i = arr.findIndex(e => e.id === f.id); const base = i >= 0 ? arr[i] : { ...f.draft }; const n = { ...base }; Object.entries(patch).forEach(([a, b]) => { if (b == null || b === '') delete n[a]; else n[a] = b; }); const out = [...arr]; if (i >= 0) out[i] = n; else out.push(n); return { [k]: out }; });
+  }
+  fgo(n) {
+    const dir = n > this.state.flowStep ? 1 : -1;
+    if (this.rm) { this.setState({ flowStep: n }); return; }
+    this.setState({ flowStep: n, slide: { x: dir * 28, o: 0, t: false } });
+    requestAnimationFrame(() => requestAnimationFrame(() => this.setState({ slide: { x: 0, o: 1, t: true } })));
+  }
+  fpick(key, v) {
+    const it = this.fitem(), cur = it ? it[key] : undefined;
+    if (cur === v) { this.fpatch({ [key]: null }); return; }
+    this.fpatch({ [key]: v });
+    clearTimeout(this.adv); const step = this.state.flowStep;
+    this.adv = setTimeout(() => { if (this.state.flow && this.state.flowStep === step) this.fgo(step + 1); }, 250);
+  }
+  fclose() {
+    const f = this.state.flow; if (!f) return; const it = this.fitem(), k = this.fkey();
+    this.setState({ flow: null });
+    if (it) this.toast(f.kind === 'ep' ? 'Épisode enregistré' : 'Symptôme enregistré', () => this.setState(s => ({ [k]: f.snap ? s[k].map(e => e.id === f.id ? f.snap : e) : s[k].filter(e => e.id !== f.id) })));
+  }
+  fdelete() {
+    const f = this.state.flow, k = this.fkey(), ep = f.kind === 'ep';
+    this.setState({ confirm: { title: ep ? 'Supprimer cet épisode ?' : 'Supprimer ce symptôme ?', body: 'Ses mémos vocaux sont supprimés aussi.', ok: 'Supprimer', on: () => {
+      const it = this.fitem(), mk = (ep ? 'ep:' : 'sy:') + f.id, mem = this.state.memos[mk];
+      this.setState(s => { const m = { ...s.memos }; delete m[mk]; return { [k]: s[k].filter(e => e.id !== f.id), memos: m, flow: null }; });
+      if (it) this.toast(ep ? 'Épisode supprimé' : 'Symptôme supprimé', () => this.setState(s => ({ [k]: [...s[k], it], memos: mem ? { ...s.memos, [mk]: mem } : s.memos })));
+    } } });
+  }
+  askClearDay() {
+    const dt = this.state.date;
+    this.setState({ confirm: { title: `Effacer la journée du ${fLong(dt)} ?`, body: 'Les épisodes et symptômes de ce jour sont conservés.', ok: 'Effacer', on: () => {
+      const snap = this.state.days[dt]; this.setState(s => { const d = { ...s.days }; delete d[dt]; return { days: d }; });
+      this.toast('Journée effacée', () => this.setState(s => ({ days: { ...s.days, [dt]: snap } })));
+    } } });
+  }
+  go(tab) { this.setState({ tab, push: null, pushId: null, date: tab === 'today' ? this.state.date : this.state.date }); }
+  push(push, pushId) { this.setState({ push, pushId: pushId || null }); }
+
+  backup() {
+    const S = this.state, data = { carnet: 1, exporte: new Date().toISOString(), days: S.days, episodes: S.episodes, symptomes: S.symptomes, rdvs: S.rdvs, trts: S.trts, lists: S.lists, memos: S.memos };
+    try { const b = new Blob([JSON.stringify(data)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'carnet-' + S.today + '.json'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+    this.setState({ lastBackup: S.today });
+  }
+  onFile(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+    f.text().then(t => {
+      let d; try { d = JSON.parse(t); } catch (x) { this.setState({ imp: { state: 'illisible' }, tab: 'reglages', push: 'import' }); return; }
+      if (!d || !d.carnet || !d.days) { this.setState({ imp: { state: 'pasCarnet' }, tab: 'reglages', push: 'import' }); return; }
+      this.setState({ imp: { state: 'preview', data: d }, tab: 'reglages', push: 'import' });
+    });
+  }
+  doImport() {
+    const S = this.state, d = S.imp && S.imp.data;
+    if (!d) { this.setState({ push: null }); this.toast('Import terminé'); return; }
+    this.setState({ preImport: { days: S.days, episodes: S.episodes, symptomes: S.symptomes, rdvs: S.rdvs, trts: S.trts, memos: S.memos }, days: d.days, episodes: d.episodes || [], symptomes: d.symptomes || [], rdvs: d.rdvs || [], trts: d.trts || [], memos: d.memos || {}, imp: null, push: null });
+    this.toast('Import terminé');
+  }
+
+  stats(from, to) {
+    const S = this.state; to = to || S.today;
+    const ds = Object.keys(S.days).filter(k => (!from || k >= from) && k <= to && Object.keys(S.days[k]).length).sort().map(k => ({ iso: k, ...S.days[k] }));
+    const mo = ds.filter(d => d.humeur != null).map(d => d.humeur), ex = ds.filter(d => d.expl != null).map(d => d.expl);
+    const rv = ds.filter(d => d.reveils != null).map(d => d.reveils), co = ds.filter(d => d.coucher).map(d => hm(d.coucher, true)), le = ds.filter(d => d.lever).map(d => hm(d.lever));
+    const du = ds.filter(d => d.coucher && d.lever).map(d => hm(d.lever) + 1440 - hm(d.coucher, true));
+    const cnt = (f, v) => ds.filter(d => d[f] === v).length, has = f => ds.filter(d => d[f] != null).length;
+    const eps = S.episodes.filter(e => (!from || e.date >= from) && e.date <= to), ints = eps.filter(e => e.int).map(e => e.int);
+    const sys = S.symptomes.filter(e => (!from || e.date >= from) && e.date <= to);
+    return { ds, mo, n: ds.length, avg: mo.length ? sum(mo) / mo.length : null, min: mo.length ? Math.min(...mo) : null, max: mo.length ? Math.max(...mo) : null, hi: mo.filter(x => x >= 7).length, lo: mo.filter(x => x <= 4).length, ex: sum(ex), nEx: ex.length, mal: cnt('sommeil', 'Mal'), moy: cnt('sommeil', 'Moyen'), bien: cnt('sommeil', 'Bien'), nSl: has('sommeil'), rv: med(rv), nRv: rv.length, co: med(co), le: med(le), du: med(du), nCo: co.length, nLe: le.length, nDu: du.length, contact: cnt('contact', 'Oui'), nContact: has('contact'), bureau: cnt('lieu', 'Bureau'), nLieu: has('lieu'), sport: cnt('sport', 'Oui'), nSport: has('sport'), tOui: cnt('trt', 'Oui'), tPar: cnt('trt', 'Partiel'), tNon: cnt('trt', 'Non'), nTrt: has('trt'), eps, sys, epsInt: ints.length ? sum(ints) / ints.length : null };
+  }
+  from(p) { const t = this.state.today; return p === '7' ? addD(t, -6) : p === '30' ? addD(t, -29) : null; }
+  top(arr, key, unit) {
+    const c = {}; arr.forEach(x => { const v = x[key]; (Array.isArray(v) ? v : [v]).forEach(y => { if (y && y !== 'Aucun') c[y] = (c[y] || 0) + 1; }); });
+    const e = Object.entries(c).sort((a, b) => b[1] - a[1]); if (!e.length) return null;
+    const T = arr.filter(x => x[key] && !(Array.isArray(x[key]) && !x[key].filter(y => y !== 'Aucun').length)).length, m = e[0][1], tied = e.filter(x => x[1] === m).map(x => x[0]);
+    const u = n => n > 1 ? unit + 's' : unit;
+    let s = (tied.length > 1 ? 'à égalité : ' + tied.slice(0, -1).join(', ') + ' et ' + tied[tied.length - 1] : tied[0]) + ' · ' + m + ' ' + u(m) + (tied.length > 1 ? ' chacun' : '') + ' sur ' + T;
+    if (key === 'trig' && c["Rien d'identifié"]) s += ` (hors « Rien d'identifié » : ${T - c["Rien d'identifié"]})`;
+    return { s, list: e };
+  }
+  weeks() {
+    const S = this.state, m0 = addD(monday(S.today), -77);
+    return Array.from({ length: 12 }, (_, i) => { const a = addD(m0, 7 * i), b = addD(a, 6); return { a, st: this.stats(a, b < S.today ? b : S.today) }; });
+  }
+  charts(W) {
+    const H = 140, pl = 22, pr = 6, pt = 8, pb = 20, cw = (W - pl - pr) / 12, x = i => pl + cw * (i + .5), ph = H - pt - pb, y = v => pt + (10 - v) / 9 * ph, base = H - pb;
+    const wk = this.weeks(), withData = wk.filter(w => w.st.n).length;
+    const pts = [], segs = [], ebars = [], sbars = [], xl = [];
+    wk.forEach((w, i) => {
+      const s = w.st;
+      if (i % 3 === 0) xl.push({ x: x(i), l: fNum(w.a).replace(/^0/, '') });
+      if (s.avg != null) { const fr = s.mo.length < 3; pts.push({ cx: x(i), cy: y(s.avg), fill: fr ? 'var(--surface)' : 'var(--c-humeur)', pf: fr ? '#FFFFFF' : '#1F1D1A' }); const n = wk[i + 1]; if (n && n.st.avg != null) segs.push({ x1: x(i), y1: y(s.avg), x2: x(i + 1), y2: y(n.st.avg) }); }
+      if (s.nEx) { const mx = Math.max(4, ...wk.map(q => q.st.ex)), h = s.ex ? s.ex / mx * ph : 2; ebars.push({ x: x(i) - cw * .3, y: base - h, w: cw * .6, h }); }
+      if (s.nSl) { let yy = base; const parts = [['mal', 'var(--sommeil-1)'], ['moy', 'var(--sommeil-2)'], ['bien', 'var(--sommeil-3)']].filter(([k]) => s[k]).map(([k, f]) => { const h = s[k] / 7 * ph; yy -= h; return { y: yy, h: Math.max(0, h - 1), f }; }); sbars.push({ x: x(i) - cw * .3, w: cw * .6, parts }); }
+    });
+    const avgs = wk.filter(w => w.st.avg != null).map(w => w.st.avg), tot = sum(wk.map(w => w.st.ex)), mxw = Math.max(0, ...wk.map(w => w.st.ex));
+    const sl = wk.reduce((a, w) => [a[0] + w.st.mal, a[1] + w.st.moy, a[2] + w.st.bien], [0, 0, 0]);
+    return {
+      ok: withData >= 2, vb: `0 0 ${W} ${H}`, W, base, g4: y(4), g7: y(7), y1: y(1), y10: y(10), pl, xl, pts, segs, ebars, sbars,
+      moodSum: avgs.length ? `Moyenne par semaine entre ${dec(Math.min(...avgs))} et ${dec(Math.max(...avgs))}.` : '',
+      explSum: `${tot} explosions sur 12 semaines, ${mxw} au plus en une semaine.`,
+      sleepSum: `Nuits notées : ${sl[0]} Mal, ${sl[1]} Moyen, ${sl[2]} Bien.`,
+      tMood: wk.filter(w => w.st.avg != null).map(w => ({ k: 'Semaine du ' + fNum(w.a), v: dec(w.st.avg) + (w.st.mo.length < 3 ? ' (peu de valeurs)' : '') })),
+      tExpl: wk.filter(w => w.st.nEx).map(w => ({ k: 'Semaine du ' + fNum(w.a), v: String(w.st.ex) })),
+      tSleep: wk.filter(w => w.st.nSl).map(w => ({ k: 'Semaine du ' + fNum(w.a), v: `Mal ${w.st.mal} · Moyen ${w.st.moy} · Bien ${w.st.bien}` })),
+      wk
+    };
+  }
+  communs(st) {
+    const H = st.ds.filter(d => d.humeur >= 7), Lo = st.ds.filter(d => d.humeur != null && d.humeur <= 4);
+    if (H.length < 5 || Lo.length < 5) return { ok: false, items: [], H: H.length, L: Lo.length };
+    const F = [['une journée au bureau', d => d.lieu === 'Bureau'], ['du contact humain', d => d.contact === 'Oui'], ['du sport ou du mouvement', d => d.sport === 'Oui'], ['une nuit notée Bien', d => d.sommeil === 'Bien'], ['le traitement pris', d => d.trt === 'Oui']];
+    const all = F.map(([t, f]) => { const a = H.filter(f).length, b = Lo.filter(f).length; return { t, a, b, H: H.length, L: Lo.length, diff: a / H.length - b / Lo.length }; });
+    const items = all.filter(x => x.diff >= .2).sort((p, q) => q.diff - p.diff).slice(0, 3).map(x => ({ ...x, text: `Plus présent dans tes journées à 7 ou plus : ${x.t} (${x.a} sur ${x.H}, contre ${x.b} sur ${x.L} journées à 4 ou moins).`, lab: `${x.a} sur ${x.H} · ${x.b} sur ${x.L}`, x1: 8 + x.a / x.H * 290, x2: 8 + x.b / x.L * 290 }));
+    return { ok: true, items, all, H: H.length, L: Lo.length };
+  }
+  sleepMood(st) {
+    const by = k => { const a = st.ds.filter(d => d.sommeil === k && d.humeur != null).map(d => d.humeur); return a.length >= 3 ? sum(a) / a.length : null; };
+    const nx = k => { const a = st.ds.filter(d => d.sommeil === k).map(d => this.state.days[addD(d.iso, 1)]).filter(d => d && d.humeur != null).map(d => d.humeur); return a.length >= 3 ? sum(a) / a.length : null; };
+    const m = by('Mal'), mo = by('Moyen'), b = by('Bien'), nm = nx('Mal'), nb = nx('Bien');
+    if (m == null || b == null) return { ok: false };
+    const lend = nm == null || nb == null || Math.abs(nm - nb) < .5 ? "Le lendemain, pas d'écart net." : `Le lendemain, l'écart va dans le même sens (${dec(nm)} contre ${dec(nb)}).`;
+    const t = `Une nuit notée Mal va avec une humeur plus ${m < b ? 'basse' : 'haute'} le jour même (${dec(m)} contre ${dec(b)} après une nuit Bien). ${lend}`;
+    const row = (k, v) => ({ k, v: dec(v), x: v == null ? 0 : (v - 1) / 9 * 100, has: v != null });
+    return { ok: true, t, rows: [row('Mal', m), row('Moyen', mo), row('Bien', b)] };
+  }
+  a4data() {
+    const S = this.state, pro = S.pro, t = S.today;
+    const past = S.rdvs.filter(r => r.pro === pro && r.date && r.date < t).sort((a, b) => b.date.localeCompare(a.date))[0];
+    const next = S.rdvs.filter(r => r.pro === pro && r.date && r.date >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const cols = [['7 j', this.stats(addD(t, -6))], ['30 j', this.stats(addD(t, -29))]];
+    if (past) cols.push(['Depuis le RDV du ' + fNum(past.date), this.stats(past.date)]);
+    cols.push(['Depuis le début', this.stats(null)]);
+    const nj = n => `sur ${n} j`;
+    const R = [
+      ['Humeur moyenne', s => s.mo.length ? `${dec(s.avg)} (de ${s.min} à ${s.max}, ${nj(s.mo.length)})` : '·'],
+      ['Journées à 7 ou plus', s => `${s.hi} (${nj(s.mo.length)})`], ['Journées à 4 ou moins', s => `${s.lo} (${nj(s.mo.length)})`],
+      ['Explosions', s => `${s.ex} (${nj(s.nEx)})`], ['Nuits Mal', s => `${s.mal} (sur ${s.nSl} nuits)`],
+      ['Réveils, médiane', s => s.nRv ? `${dec(s.rv)} (sur ${s.nRv} nuits)` : '·'],
+      ['Coucher · lever, médians', s => s.nCo ? `${mh(s.co)} · ${s.le != null ? mh(s.le) : '·'} (sur ${s.nCo} nuits)` : '·'],
+      ['Contact humain', s => `${s.contact} j (${nj(s.nContact)})`],
+      ['Traitement pris (Oui · Partiel · Non)', s => `${s.tOui} · ${s.tPar} · ${s.tNon} (${nj(s.nTrt)})`],
+      ['Épisodes', s => s.eps.length ? `${s.eps.length} (intensité moy. ${dec(s.epsInt)})` : '0'], ['Symptômes', s => String(s.sys.length)]
+    ];
+    const s30 = cols[1][1], top3 = (arr, key) => { const c = {}; arr.forEach(x => { const v = x[key]; (Array.isArray(v) ? v : [v]).forEach(y => { if (y && y !== 'Aucun') c[y] = (c[y] || 0) + 1; }); }); return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} (${n})`); };
+    const trts90 = S.trts.filter(x => x.date >= addD(t, -90));
+    const cm = this.communs(this.stats(null)), sm = this.sleepMood(this.stats(null)), ch = this.charts(326);
+    const first = Object.keys(S.days).sort()[0] || t;
+    return {
+      head: `Suivi quotidien${S.prenom ? ' · ' + S.prenom : ''} · édité le ${fNumY(t)} · données depuis le ${fNumY(first)}`,
+      cols: cols.map(c => c[0]), colsN: cols.length,
+      rows: R.map(([k, f]) => ({ k, v: cols.map(c => f(c[1])) })),
+      ch,
+      ranks: [['Déclencheur', top3(s30.eps, 'trig')], ['Émotion', top3(s30.eps, 'emo')], ['En dessous', top3(s30.eps, 'under')], ['Réaction', top3(s30.eps, 'react')], ['Symptôme', top3(s30.sys, 'sym')], ['Effet secondaire', top3(S.trts.filter(x => x.date >= addD(t, -29)), 'effets')]].map(([k, l]) => ({ k, l: l.length ? l : ['·'] })),
+      reperes: cm.ok || sm.ok ? [...cm.items.map(i => i.text), ...(sm.ok ? [sm.t] : [])] : ['Pas encore assez de données'],
+      trts: trts90.slice(0, 4).map(x => `${fNum(x.date)} · ${x.change || '·'} · ${x.ressenti || '·'} · ${(x.effets || []).join(', ') || '·'}`),
+      noTrt: !trts90.length,
+      rdvTxt: next ? `${next.pro} · ${fFull(next.date)} ${next.date.slice(0, 4)}${next.time ? ' · ' + next.time : ''}` : `Pas de rendez-vous à venir avec ce professionnel.`,
+      qs: next ? next.questions.filter(q => !q.done).slice(0, 6).map(q => q.t) : [],
+      prev: past && past.next ? `Prochaine étape (RDV du ${fNum(past.date)}) : ${past.next}` : ''
+    };
+  }
+  exportText() {
+    const S = this.state, t = S.today, a = addD(t, -6), lines = [`SUIVI APP · 7 jours du ${J3[s2d(a).getDay()]} ${fNum(a)} au ${J3[s2d(t).getDay()]} ${fNumY(t)}`, 'JOURS'];
+    for (let i = 0; i < 7; i++) {
+      const k = addD(a, i), d = S.days[k]; if (!d || !Object.keys(d).length) continue;
+      const p = [J3[s2d(k).getDay()] + ' ' + fNum(k)];
+      if (d.lieu) p.push(d.lieu);
+      if (d.sommeil) p.push('nuit ' + d.sommeil + (d.reveils != null ? ` (${d.reveils} réveil${d.reveils > 1 ? 's' : ''})` : ''));
+      if (d.humeur != null) p.push('humeur ' + d.humeur);
+      if (d.contact) p.push('contact ' + d.contact.toLowerCase());
+      if (d.sport) p.push('sport ' + d.sport.toLowerCase());
+      if (d.expl != null) p.push('explosions ' + d.expl);
+      if (d.trt) p.push('traitement ' + d.trt.toLowerCase());
+      lines.push(p.join(' · ')); if (d.pos) lines.push('  + ' + d.pos);
+    }
+    const eps = S.episodes.filter(e => e.date >= a && e.date <= t).sort((x, y) => (x.date + x.time).localeCompare(y.date + y.time));
+    if (eps.length) { lines.push('ÉPISODES'); eps.forEach(e => lines.push([J3[s2d(e.date).getDay()] + ' ' + fNum(e.date) + (e.time ? ' ' + e.time : ''), e.trig, e.emo && e.emo + (e.int ? ' ' + e.int : ''), e.under && 'dessous : ' + e.under, e.react].filter(Boolean).join(' · '))); }
+    const sys = S.symptomes.filter(e => e.date >= a && e.date <= t);
+    if (sys.length) { lines.push('SYMPTÔMES'); sys.forEach(e => lines.push([J3[s2d(e.date).getDay()] + ' ' + fNum(e.date), e.sym, e.int, e.dur].filter(x => x != null).join(' · '))); }
+    return lines.join('\n');
+  }
+
+  renderVals() {
+    const S = this.state, P = this.props, d = this.day(), isT = S.date === S.today;
+    const scr = S.push || S.tab;
+    const tabDefs = [['today', "Aujourd'hui", IC.today], ['analyse', 'Analyse', IC.ana], ['historique', 'Historique', IC.hist], ['soins', 'Soins', IC.cal], ['reglages', 'Réglages', IC.set]];
+    const tabs = tabDefs.map(([k, l, ic]) => { const cur = S.tab === k; return { label: l, icon: ic, cur: cur ? 'page' : undefined, on: () => this.go(k),
+      st: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: 'none', background: 'none', cursor: 'pointer', minHeight: 44, padding: 0, color: cur ? 'var(--accent)' : 'var(--text-2)' },
+      pill: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 28, borderRadius: 14, background: cur ? 'var(--info-bg)' : 'transparent' },
+      lst: { fontSize: 10.5, fontWeight: cur ? 600 : 400, letterSpacing: '.01em', color: cur ? 'var(--accent)' : 'var(--text-2)' } }; });
+    const chrome = P.chrome ?? (P.persist !== false && !P.a4Only);
+    const nowClock = P.variant === 'night' ? '0:38' : (P.clock || '21:04');
+    const memoMode = P.memoMode || S.memoMode;
+    const ctx = 'day:' + S.date;
+    const rev = d.reveils;
+    const nuitSum = [d.coucher && d.lever ? `${d.coucher} → ${d.lever}` : d.coucher ? 'coucher ' + d.coucher : d.lever ? 'lever ' + d.lever : '', rev != null ? (rev === 5 ? '5 réveils ou plus' : `${rev} réveil${rev > 1 ? 's' : ''}`) : ''].filter(Boolean).join(' · ');
+    const dayEvents = [...S.episodes.filter(e => e.date === S.date).sort((a, b) => (a.time || '').localeCompare(b.time || '')).map(e => ({ time: e.time || '', mk: { width: 8, height: 8, borderRadius: 4, flex: 'none', background: 'var(--c-ep)' }, txt: [e.emo, e.int, e.trig].filter(x => x != null).join(' · ') || 'Épisode', memo: !!(S.memos['ep:' + e.id] || []).length, on: () => this.openFlow('ep', e.id) })),
+      ...S.symptomes.filter(e => e.date === S.date).map(e => ({ time: '', mk: { width: 8, height: 8, borderRadius: 2, flex: 'none', background: 'var(--c-sy)' }, txt: [e.sym, e.int, e.dur].filter(x => x != null).join(' · ') || 'Symptôme', memo: !!(S.memos['sy:' + e.id] || []).length, on: () => this.openFlow('sy', e.id) }))];
+    const nr = S.rdvs.filter(r => r.date && r.date >= S.today && r.date <= addD(S.today, 14)).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const hasData = Object.keys(S.days).length || S.episodes.length || S.symptomes.length;
+    const v = {
+      theme: S.theme, ic: IC, chrome, phoneOn: !P.a4Only, a4Only: !!P.a4Only,
+      rootStyle: P.a4Only ? { display: 'block', background: '#fff', width: 794 } : { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: chrome ? '20px 0' : 0, minHeight: chrome ? '100vh' : 0, boxSizing: 'border-box', background: chrome ? 'var(--desk)' : 'transparent' },
+      themeBtns: [['light', 'Clair'], ['dark', 'Sombre']].map(([k, l]) => ({ label: l, on: () => this.setState({ theme: k }), st: { minHeight: 32, padding: '0 14px', borderRadius: 16, border: '1px solid ' + (S.theme === k ? 'var(--accent)' : 'var(--hairline)'), background: S.theme === k ? 'var(--accent)' : 'transparent', color: S.theme === k ? 'var(--on-accent)' : 'var(--text-2)', fontWeight: S.theme === k ? 600 : 400, fontSize: 13, cursor: 'pointer' } })),
+      resetDemo: () => { try { localStorage.removeItem(KEY); } catch (e) {} this.setState(this.init({ ...P, persist: true })); },
+      clock: nowClock, safari: S.safari, app: !S.safari, bannerOn: S.banner && !S.bannerHidden && !S.flow, reload: () => this.setState({ bannerHidden: true }),
+      guideSteps: [{ n: '1', icon: IC.dots, t: 'Touche « ••• », puis « Partager », puis « Sur l\u2019écran d\u2019accueil ».' }, { n: '2', icon: IC.toggle, t: 'Vérifie que « Ouvrir comme app web » est activé.' }, { n: '3', icon: IC.add, t: 'Touche « Ajouter ».' }],
+      mainRef: this.mainRef, fileRef: this.fileRef, onFile: e => this.onFile(e), pickImport: () => this.fileRef.current && this.fileRef.current.click(),
+      zoomStyle: P.variant === 'large' ? { zoom: 1.35 } : {},
+      tabs, fabOn: scr === 'today' && !S.flow,
+      newEp: () => this.openFlow('ep'), newSy: () => this.openFlow('sy'),
+      // Aujourd'hui
+      sToday: scr === 'today', date: S.date, todayIso: S.today, isTodayDate: isT,
+      head1: isT ? "Aujourd'hui" : fLong(S.date), head2: isT ? fLong(S.date) : '',
+      nextSt: { width: 44, height: 44, flex: 'none', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isT ? 'default' : 'pointer', color: isT ? 'var(--hairline)' : 'var(--text)', padding: 0 },
+      prevDay: () => this.setState({ date: addD(S.date, -1) }), nextDay: () => { if (!isT) this.setState({ date: addD(S.date, 1) }); },
+      pickDate: e => { const x = e.target.value; if (x && x <= S.today) this.setState({ date: x }); }, goToday: () => this.setState({ date: S.today }),
+      savedTxt: S.flash ? 'Enregistré' : '', failOn: S.fail,
+      nightLine: P.variant === 'night' && isT, nightTxt: `Encore ${JOURS[s2d(S.today).getDay()]} jusqu'à 4 h.`, pastLine: !isT,
+      fLieu: this.opts(this.L('lieu'), d.lieu, x => this.tog('lieu', x), { fontSize: 15, c: 'lieu' }),
+      fSommeil: this.opts(this.L('sommeil'), d.sommeil, x => this.tog('sommeil', x), { width: 66, c: 'sommeil' }),
+      fHumeur: this.opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], d.humeur, x => this.tog('humeur', x), { fontSize: 17, c: 'humeur' }),
+      fContact: this.opts(['Oui', 'Non'], d.contact, x => this.tog('contact', x), { flex: 1, c: 'contact' }),
+      fSport: this.opts(['Oui', 'Non'], d.sport, x => this.tog('sport', x), { flex: 1, c: 'sport' }),
+      fExpl: this.opts([0, 1, 2, 3, 4, 5], d.expl, x => this.tog('expl', x), { fontSize: 17, c: 'expl' }),
+      fTrt: this.opts(this.L('trtPris'), d.trt, x => this.tog('trt', x), { width: 66, c: 'trt' }),
+      fReveils: this.opts([0, 1, 2, 3, 4, '5 ou plus'], rev === 5 ? '5 ou plus' : rev, x => this.daySet({ reveils: (x === '5 ou plus' ? 5 : x) === rev ? null : (x === '5 ou plus' ? 5 : x) }), { fontSize: 15, c: 'sommeil' }),
+      dayPos: d.pos || '', setPos: x => this.daySet({ pos: x }), dayNotes: d.notes || '', setNotes: x => this.daySet({ notes: x }),
+      dictDemo: P.dictDemo || '', memoDemo: P.memoDemo || '', memoMode,
+      dayMemos: S.memos[ctx] || [], dayCtx: ctx, addDayMemo: (dt => m => this.memoAdd('day:' + dt, m))(S.date), delDayMemo: (dt => id => this.memoDel('day:' + dt, id))(S.date),
+      foldNuit: S.foldNuit, toggleNuit: () => this.setState({ foldNuit: !S.foldNuit }), nuitChev: { display: 'flex', color: 'var(--text-2)', transform: S.foldNuit ? 'rotate(90deg)' : 'none', transition: this.rm ? 'none' : 'transform 150ms' },
+      nuitSum: S.foldNuit ? '' : nuitSum, dCoucher: d.coucher || '', dLever: d.lever || '',
+      setCoucher: e => this.daySet({ coucher: e.target.value }), setLever: e => this.daySet({ lever: e.target.value }), clrCoucher: () => this.daySet({ coucher: null }), clrLever: () => this.daySet({ lever: null }),
+      foldNotes: S.foldNotes, toggleNotes: () => this.setState({ foldNotes: !S.foldNotes }), notesChev: { display: 'flex', color: 'var(--text-2)', transform: S.foldNotes ? 'rotate(90deg)' : 'none', transition: this.rm ? 'none' : 'transform 150ms' },
+      notesSum: S.foldNotes ? '' : (d.notes || ''),
+      dayEvents, rdvLine: nr ? `Prochain RDV : ${nr.pro} · ${fShort(nr.date)}${nr.time ? ' ' + nr.time : ''}` : '', goSoins: () => this.setState({ tab: 'soins', push: null, soinsSeg: 'rdv' }),
+      askClearDay: () => this.askClearDay(), importLine: !hasData,
+      // overlays
+      toastOn: !!S.toast, toastMsg: S.toast ? S.toast.msg : '', toastUndo: !!(S.toast && S.toast.undo), undo: () => { const u = S.toast && S.toast.undo; clearTimeout(this.tt); this.setState({ toast: null }); if (u) u(); },
+      confirmOn: !!S.confirm, cTitle: S.confirm ? S.confirm.title : '', cBody: S.confirm ? S.confirm.body : '', cOk: S.confirm ? S.confirm.ok : '',
+      cNo: () => this.setState({ confirm: null }), cYes: () => { const c = S.confirm; this.setState({ confirm: null }); if (c && c.on) c.on(); },
+      back: () => this.setState(s => s.push === 'liste' ? { push: 'listes', listKey: null } : { push: null, pushId: null })
+    };
+    Object.assign(v, this.flowVals(), this.screenVals(scr));
+    return v;
+  }
+
+  flowVals() {
+    const S = this.state, f = S.flow;
+    if (!f) return { flowOn: false };
+    const it = this.fitem() || f.draft, steps = STEPS[f.kind], n = steps.length, recap = S.flowStep >= n, st = steps[Math.min(S.flowStep, n - 1)];
+    const dot = i => ({ width: 8, height: 8, borderRadius: 4, boxSizing: 'border-box', border: '1.5px solid var(--c-' + f.kind + ')', background: recap || i <= S.flowStep ? 'var(--c-' + f.kind + ')' : 'transparent' });
+    const dtDate = it.date || S.date;
+    const dtLabel = (dtDate === S.today ? "Aujourd'hui" : fLong(dtDate)) + ' · ' + (it.time || 'heure');
+    const grid = sel => this.chip(sel, { minHeight: 52, justifyContent: 'flex-start', textAlign: 'left', padding: '8px 12px', borderRadius: sel ? 18 : 12, fontSize: 16, gap: 8, c: f.kind });
+    const items = st.scale ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : this.L(st.list);
+    const k = f.kind, mk = (k === 'ep' ? 'ep:' : 'sy:') + f.id;
+    return {
+      flowOn: true, flowName: k === 'ep' ? 'Épisode' : 'Symptôme', flowTint: { width: 10, height: 10, borderRadius: 5, background: 'var(--c-' + k + ')', flex: 'none' }, dots: Array.from({ length: n }, (_, i) => dot(i)), dotsLabel: recap ? 'Récapitulatif' : `Étape ${S.flowStep + 1} sur ${n}`,
+      closeFlow: () => this.fclose(), flowDT: S.flowDT, toggleDT: () => this.setState({ flowDT: !S.flowDT }), dtLabel, showTime: k === 'ep',
+      fDate: dtDate, fTime: it.time || '', setFDate: e => e.target.value && e.target.value <= S.today && this.fpatch({ date: e.target.value }), setFTime: e => this.fpatch({ time: e.target.value }),
+      slideSt: { transform: `translateX(${S.slide.x}px)`, opacity: S.slide.o, transition: S.slide.t ? 'transform 180ms ease-out, opacity 180ms ease-out' : 'none' },
+      isStep: !recap, isRecap: recap, stepTitle: st.title, stepSub: st.sub || '', stepGrid: !st.scale, stepScale: !!st.scale,
+      stepOpts: this.opts(items, it[st.key], x => this.fpick(st.key, x), st.scale ? { minHeight: 56, fontSize: 18, c: f.kind } : grid),
+      noBack: S.flowStep === 0, fBack: () => S.flowStep > 0 && this.fgo(S.flowStep - 1), fSkip: () => this.fgo(S.flowStep + 1),
+      backSt: { minHeight: 44, display: 'flex', alignItems: 'center', gap: 2, padding: '0 12px 0 6px', border: 'none', background: 'none', fontSize: 17, cursor: S.flowStep > 0 ? 'pointer' : 'default', color: S.flowStep > 0 ? 'var(--accent)' : 'var(--hairline)' },
+      recapRows: RECAP[k].map(([key, lab], i) => ({ k: lab, v: it[key] != null ? String(it[key]) : '·', empty: it[key] == null, sep: this.sep(i), vst: { flex: 1, minWidth: 0, color: it[key] != null ? 'var(--text)' : 'var(--text-2)' }, on: () => this.fgo(i) })),
+      recapFields: TXT[k].map(([key, lab, icon]) => ({ label: lab, icon, value: it[key] || '', set: x => this.fpatch({ [key]: x }) })),
+      fMemos: S.memos[mk] || [], fCtx: mk, fAddMemo: m => { if (!this.fitem()) this.fpatch({}); this.memoAdd(mk, m); }, fDelMemo: id => this.memoDel(mk, id),
+      fDelLabel: k === 'ep' ? 'Supprimer cet épisode' : 'Supprimer ce symptôme', fDel: () => this.fdelete(), fDone: () => this.fclose(), fHasItem: !!this.fitem()
+    };
+  }
+
+  seg(items, cur, on) { return this.opts(items.map(x => x[1]), (items.find(x => x[0] === cur) || [])[1], l => on(items.find(x => x[1] === l)[0]), { flex: 1, fontSize: 15, minHeight: 40 }); }
+  hl(text, q) { if (!q) return null; const i = text.toLowerCase().indexOf(q); if (i < 0) return null; const a = Math.max(0, i - 18); return { pre: (a ? '…' : '') + text.slice(a, i), hit: text.slice(i, i + q.length), post: text.slice(i + q.length, i + q.length + 28) }; }
+
+  screenVals(scr) {
+    const S = this.state, v = {};
+    ['historique', 'soins', 'reglages', 'analyse', 'export', 'soignants', 'import', 'listes', 'liste', 'rappel', 'effacer', 'rdv', 'trt'].forEach(k => v['s_' + k] = scr === k);
+    const row = (i, o) => ({ sep: this.sep(i), ...o });
+    // Historique
+    if (scr === 'historique') {
+      const q = S.q.trim().toLowerCase(), F = S.filters, seg = S.histSeg;
+      const G = { jours: [['periode', 'Période', ['7 j', '30 j']], ['lieu', 'Lieu', this.L('lieu')], ['humeur', 'Humeur', ['1-4', '5-6', '7-10']], ['avec', 'Avec', ['Avec explosions', 'Avec notes']]],
+        episodes: [['emo', 'Émotion', this.L('emotion')], ['trig', 'Déclencheur', this.L('declencheur')], ['under', 'En dessous', this.L('dessous')], ['react', 'Réaction', this.L('reaction')], ['int', 'Intensité', ['7 et plus']]],
+        symptomes: [['sym', 'Symptôme', this.L('symptome')], ['periode', 'Période', ['7 j', '30 j']]] }[seg];
+      const per = x => !F.periode || x >= addD(S.today, F.periode === '7 j' ? -6 : -29);
+      let rows = [];
+      if (seg === 'jours') rows = Object.keys(S.days).filter(k => Object.keys(S.days[k]).length).sort().reverse().filter(per).map(k => {
+        const d = S.days[k], eps = S.episodes.filter(e => e.date === k);
+        if (F.lieu && d.lieu !== F.lieu) return null;
+        if (F.humeur) { const [a, b] = F.humeur.split('-').map(Number); if (d.humeur == null || d.humeur < a || d.humeur > b) return null; }
+        if (F.avec === 'Avec explosions' && !(d.expl > 0)) return null;
+        if (F.avec === 'Avec notes' && !d.notes && !d.pos) return null;
+        const l2 = [d.humeur != null && 'Humeur ' + d.humeur, d.sommeil && 'Sommeil ' + d.sommeil.toLowerCase(), d.lieu].filter(Boolean).join(' · ');
+        const l3 = [...eps.map(e => [e.emo, e.int].filter(x => x != null).join(' ')), d.expl > 0 && 'Explosions ' + d.expl, d.pos && '« ' + (d.pos.length > 34 ? d.pos.slice(0, 34) + '…' : d.pos) + ' »'].filter(Boolean).join(' · ');
+        const h = q ? this.hl([d.pos, d.notes].filter(Boolean).join(' · '), q) : null; if (q && !h) return null;
+        return { iso: k, t: fLong(k), l2, l3, memo: !!(S.memos['day:' + k] || []).length, h, on: () => this.setState({ tab: 'today', push: null, date: k }) };
+      }).filter(Boolean);
+      else if (seg === 'episodes') rows = [...S.episodes].sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))).filter(e => (!F.emo || e.emo === F.emo) && (!F.trig || e.trig === F.trig) && (!F.under || e.under === F.under) && (!F.react || e.react === F.react) && (!F.int || e.int >= 7)).map(e => {
+        const h = q ? this.hl([e.situation, e.aide, e.trig, e.emo].filter(Boolean).join(' · '), q) : null; if (q && !h) return null;
+        return { iso: e.date, t: fLong(e.date) + (e.time ? ' · ' + e.time : ''), l2: [e.emo, e.int, e.trig].filter(x => x != null).join(' · ') || 'Épisode', l3: e.react || '', memo: !!(S.memos['ep:' + e.id] || []).length, h, on: () => this.openFlow('ep', e.id) };
+      }).filter(Boolean);
+      else rows = [...S.symptomes].sort((a, b) => b.date.localeCompare(a.date)).filter(e => per(e.date) && (!F.sym || e.sym === F.sym)).map(e => {
+        const h = q ? this.hl([e.sym, e.contexte, e.note].filter(Boolean).join(' · '), q) : null; if (q && !h) return null;
+        return { iso: e.date, t: fLong(e.date), l2: [e.sym, e.int, e.dur].filter(x => x != null).join(' · ') || 'Symptôme', l3: '', memo: !!(S.memos['sy:' + e.id] || []).length, h, on: () => this.openFlow('sy', e.id) };
+      }).filter(Boolean);
+      const groups = []; rows.forEach(r => { const m = monday(r.iso), d = s2d(m), t = 'Semaine du ' + (d.getDate() === 1 ? '1er' : d.getDate()) + ' ' + MOISF[d.getMonth()]; let g = groups[groups.length - 1]; if (!g || g.t !== t) { g = { t, rows: [] }; groups.push(g); } r.sep = this.sep(g.rows.length); r.hasH = !!r.h; r.noH = !r.h; r.hasL3 = !!r.l3 && !r.h; r.h = r.h || {}; g.rows.push(r); });
+      Object.assign(v, {
+        histSegs: this.seg([['jours', 'Jours'], ['episodes', 'Épisodes'], ['symptomes', 'Symptômes']], seg, k => this.setState({ histSeg: k, filters: {} })),
+        search: S.search, q: S.q, setQ: e => this.setState({ q: e.target.value }), toggleSearch: () => this.setState({ search: !S.search, q: '' }),
+        filterOpen: S.filterOpen, toggleFilter: () => this.setState({ filterOpen: !S.filterOpen }),
+        filterSum: Object.values(F).filter(Boolean).join(' · '),
+        fGroups: G.map(([k, t, items]) => ({ t, opts: this.opts(items, F[k], x => this.setState(s => ({ filters: { ...s.filters, [k]: s.filters[k] === x ? null : x } })), { fontSize: 15, padding: '4px 12px' }) })),
+        groups, histEmpty: !groups.length, histEmptyTxt: Object.values(F).some(Boolean) || q ? 'Rien ne correspond.' : seg === 'jours' ? 'Aucune journée notée pour l\u2019instant.' : seg === 'episodes' ? 'Aucun épisode noté pour l\u2019instant.' : 'Aucun symptôme noté pour l\u2019instant.'
+      });
+    }
+    // Soins
+    if (scr === 'soins' || scr === 'rdv' || scr === 'trt') {
+      const up = S.rdvs.filter(r => !r.date || r.date >= S.today).sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+      const past = S.rdvs.filter(r => r.date && r.date < S.today).sort((a, b) => b.date.localeCompare(a.date));
+      const nx = up.find(r => r.date);
+      const rr = (r, i) => row(i, { pro: r.pro || 'Rendez-vous', when: r.date ? fShort(r.date) + (r.time ? ' · ' + r.time : '') : 'Date à fixer', memo: !!(S.memos['rdv:' + r.id] || []).length, on: () => this.push('rdv', r.id) });
+      const patchR = (id, p) => this.setState(s => ({ rdvs: s.rdvs.map(r => r.id === id ? { ...r, ...p } : r) }));
+      const patchT = (id, p) => this.setState(s => ({ trts: s.trts.map(r => r.id === id ? { ...r, ...p } : r) }));
+      const qRows = r => r.questions.map((q, i) => ({ t: q.t, sep: this.sep(i), box: { width: 22, height: 22, flex: 'none', borderRadius: 6, boxSizing: 'border-box', border: '1.5px solid ' + (q.done ? 'var(--accent)' : 'var(--border)'), background: q.done ? 'var(--accent)' : 'transparent', color: 'var(--on-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }, done: q.done, tst: { flex: 1, fontSize: 16, lineHeight: 1.35, color: q.done ? 'var(--text-2)' : 'var(--text)' }, on: () => patchR(r.id, { questions: r.questions.map((x, j) => j === i ? { ...x, done: !x.done } : x) }) }));
+      Object.assign(v, {
+        soinsSegs: this.seg([['rdv', 'Rendez-vous'], ['trt', 'Traitement']], S.soinsSeg, k => this.setState({ soinsSeg: k })),
+        segRdv: S.soinsSeg === 'rdv', segTrt: S.soinsSeg === 'trt',
+        newRdv: () => { const id = 'r' + Date.now(); this.setState(s => ({ rdvs: [...s.rdvs, { id, date: null, time: '', pro: null, questions: [], dit: '', next: '' }], push: 'rdv', pushId: id })); },
+        nextOn: !!nx, nxPro: nx ? nx.pro : '', nxWhen: nx ? fFull(nx.date) + (nx.time ? ' · ' + nx.time : '') : '', nxQs: nx ? qRows(nx) : [], nxAdd: nx ? (t => patchR(nx.id, { questions: [...nx.questions, { t, done: false }] })) : null, nxOpen: nx ? () => this.push('rdv', nx.id) : null,
+        upRows: up.filter(r => r !== nx).map(rr), upOn: up.filter(r => r !== nx).length > 0, pastRows: past.map(rr), pastOn: past.length > 0, rdvEmpty: !S.rdvs.length,
+        trtRows: [...S.trts].sort((a, b) => b.date.localeCompare(a.date)).map((t, i) => row(i, { t: fShort(t.date), d: [t.change || '·', t.ressenti || '·'].join(' · '), memo: !!(S.memos['trt:' + t.id] || []).length, on: () => this.push('trt', t.id) })),
+        trtEmpty: !S.trts.length,
+        newTrt: () => { const id = 't' + Date.now(); this.setState(s => ({ trts: [{ id, date: s.today, change: '', effets: [], ressenti: null, notes: '' }, ...s.trts], push: 'trt', pushId: id })); }
+      });
+      const r = scr === 'rdv' && S.rdvs.find(x => x.id === S.pushId);
+      if (r) Object.assign(v, {
+        rDate: r.date || '', rTime: r.time || '', setRDate: e => patchR(r.id, { date: e.target.value || null }), setRTime: e => patchR(r.id, { time: e.target.value }),
+        rPros: this.opts(this.L('pro'), r.pro, x => patchR(r.id, { pro: r.pro === x ? null : x }), { fontSize: 15, padding: '4px 14px' }),
+        rQs: qRows(r), rQsOn: r.questions.length > 0, rAddQ: t => patchR(r.id, { questions: [...r.questions, { t, done: false }] }),
+        rDit: r.dit || '', setRDit: x => patchR(r.id, { dit: x }), rNext: r.next || '', setRNext: x => patchR(r.id, { next: x }),
+        rMemos: S.memos['rdv:' + r.id] || [], rCtx: 'rdv:' + r.id, rAddMemo: m => this.memoAdd('rdv:' + r.id, m), rDelMemo: id => this.memoDel('rdv:' + r.id, id)
+      });
+      const t = scr === 'trt' && S.trts.find(x => x.id === S.pushId);
+      if (t) Object.assign(v, {
+        tDate: t.date || '', setTDate: e => patchT(t.id, { date: e.target.value || t.date }),
+        tChange: t.change || '', setTChange: x => patchT(t.id, { change: x }), tNotes: t.notes || '', setTNotes: x => patchT(t.id, { notes: x }),
+        tEffets: this.opts(this.L('effets'), t.effets, x => { const c = t.effets || []; let n = c.includes(x) ? c.filter(y => y !== x) : x === 'Aucun' ? ['Aucun'] : [...c.filter(y => y !== 'Aucun'), x]; patchT(t.id, { effets: n }); }, { fontSize: 15, padding: '4px 12px' }, true),
+        tRessenti: this.opts(this.L('ressenti'), t.ressenti, x => patchT(t.id, { ressenti: t.ressenti === x ? null : x }), { flex: 1, fontSize: 15 }),
+        tMemos: S.memos['trt:' + t.id] || [], tCtx: 'trt:' + t.id, tAddMemo: m => this.memoAdd('trt:' + t.id, m), tDelMemo: id => this.memoDel('trt:' + t.id, id)
+      });
+    }
+    // Réglages et écrans poussés
+    if (['reglages', 'import', 'listes', 'liste', 'rappel', 'effacer'].includes(scr)) {
+      const lb = S.lastBackup, d = lb ? s2d(lb) : null;
+      const imp = S.imp || { state: 'preview' }, idata = imp.data;
+      const icount = idata ? `Ce fichier contient ${Object.keys(idata.days || {}).length} journées, ${(idata.episodes || []).length} épisodes… ` : 'Ce fichier contient 142 journées, 38 épisodes… (du 3 mars au 29 sept. 2026).';
+      const lk = S.listKey, L = lk && S.lists[lk];
+      const setL = fn => this.setState(s => ({ lists: { ...s.lists, [lk]: fn({ ...s.lists[lk] }) } }));
+      Object.assign(v, {
+        backupTxt: lb ? `Dernière sauvegarde : ${d.getDate() === 1 ? '1er' : d.getDate()} ${MOISF[d.getMonth()]} ${d.getFullYear()}` : "Aucune sauvegarde pour l'instant. Tes données ne sont que sur cet iPhone.",
+        doExport: () => this.backup(), noRevert: !S.preImport, effNotReady: S.effText.trim().toUpperCase() !== 'EFFACER', revertSt: { minHeight: 48, width: '100%', display: 'flex', alignItems: 'center', padding: '0 16px', border: 'none', background: 'none', fontSize: 17, textAlign: 'left', cursor: S.preImport ? 'pointer' : 'default', color: S.preImport ? 'var(--accent)' : 'var(--text-2)' },
+        revert: () => { const p = S.preImport; if (!p) return; this.setState({ ...p, preImport: null }); this.toast('État d\u2019avant l\u2019import rétabli'); },
+        goListes: () => this.push('listes'), goRappel: () => this.push('rappel'), goEffacer: () => this.setState({ push: 'effacer', eff: 1, effText: '' }),
+        signal: S.signal, toggleSignal: () => this.setState({ signal: !S.signal }),
+        swTrack: { width: 51, height: 31, flex: 'none', borderRadius: 16, boxSizing: 'border-box', border: '1px solid ' + (S.signal ? 'var(--accent)' : 'var(--border)'), background: S.signal ? 'var(--accent)' : 'var(--surface-2)', position: 'relative', cursor: 'pointer', padding: 0, transition: this.rm ? 'none' : 'background 150ms' },
+        swKnob: { position: 'absolute', top: 2, left: S.signal ? 22 : 2, width: 25, height: 25, borderRadius: 13, background: S.signal ? 'var(--on-accent)' : 'var(--border)', transition: this.rm ? 'none' : 'left 150ms' },
+        prenom: S.prenom, setPrenom: e => this.setState({ prenom: e.target.value }),
+        checkUpdate: () => this.toast('Carnet est à jour.'),
+        impPreview: imp.state === 'preview', impIllisible: imp.state === 'illisible', impPasCarnet: imp.state === 'pasCarnet', impCount: icount,
+        impLoss: Object.keys(S.days).length ? '12 journées et 3 épisodes présents ici et absents du fichier seront effacés.' : '', doImport: () => this.doImport(),
+        listRows: Object.entries(S.lists).map(([k, l], i) => row(i, { t: l.name, on: () => this.setState({ push: 'liste', listKey: k }) })),
+        lName: L ? L.name : '', lRo: !!(L && L.ro), lRw: !!(L && !L.ro),
+        lItems: L ? L.items.map((it, i) => ({ t: it, sep: this.sep(i), editing: S.renaming === i, notEditing: S.renaming !== i, rv: S.renameVal,
+          startRename: () => this.setState({ renaming: i, renameVal: it }), setRv: e => this.setState({ renameVal: e.target.value }),
+          endRename: () => { const nv = S.renameVal.trim(); if (nv) setL(l => ({ ...l, items: l.items.map((x, j) => j === i ? nv : x) })); this.setState({ renaming: null }); },
+          rk: e => { if (e.key === 'Enter') e.target.blur(); },
+          up: () => i > 0 && setL(l => { const a = [...l.items];[a[i - 1], a[i]] = [a[i], a[i - 1]]; return { ...l, items: a }; }),
+          down: () => i < L.items.length - 1 && setL(l => { const a = [...l.items];[a[i + 1], a[i]] = [a[i], a[i + 1]]; return { ...l, items: a }; }),
+          archive: () => setL(l => ({ ...l, items: l.items.filter((_, j) => j !== i), archived: [...(l.archived || []), it] })),
+          upSt: { width: 44, height: 44, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: i > 0 ? 'var(--text)' : 'var(--hairline)' },
+          downSt: { width: 44, height: 44, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: i < L.items.length - 1 ? 'var(--text)' : 'var(--hairline)' } })) : [],
+        lArch: L ? (L.archived || []).map((it, i) => ({ t: it, sep: this.sep(i), restore: () => setL(l => ({ ...l, archived: l.archived.filter(x => x !== it), items: [...l.items, it] })) })) : [],
+        lArchOn: !!(L && (L.archived || []).length), newItem: S.newItem, setNewItem: e => this.setState({ newItem: e.target.value }),
+        addItem: () => { const t = S.newItem.trim(); if (t) { setL(l => ({ ...l, items: [...l.items, t] })); this.setState({ newItem: '' }); } },
+        addKey: e => { if (e.key === 'Enter') { const t = S.newItem.trim(); if (t) { setL(l => ({ ...l, items: [...l.items, t] })); this.setState({ newItem: '' }); } } },
+        eff1: S.eff === 1, eff2: S.eff >= 2, effNext: () => this.setState({ eff: 2 }), effText: S.effText, setEffText: e => this.setState({ effText: e.target.value }), effReady: S.effText.trim().toUpperCase() === 'EFFACER',
+        effBtn: { width: '100%', minHeight: 52, border: 'none', borderRadius: 14, fontSize: 17, fontWeight: 600, cursor: S.effText.trim().toUpperCase() === 'EFFACER' ? 'pointer' : 'default', background: S.effText.trim().toUpperCase() === 'EFFACER' ? 'var(--danger)' : 'var(--surface-2)', color: S.effText.trim().toUpperCase() === 'EFFACER' ? 'var(--on-danger)' : 'var(--text-2)' },
+        effGo: () => { if (S.effText.trim().toUpperCase() !== 'EFFACER') return; this.setState({ days: {}, episodes: [], symptomes: [], memos: {}, rdvs: [], trts: [], lastBackup: null, preImport: null, tab: 'today', push: null, date: S.today, eff: 1, effText: '' }); this.toast('Tout est effacé.'); }
+      });
+    }
+    // Analyse
+    if (scr === 'analyse') {
+      const st = this.stats(this.from(S.period)), few = n => n < 3;
+      const T = (k, val, sub, n, c) => { const o = few(n) ? { k, v: '·', s: '(peu de valeurs)' } : { k, v: val, s: sub || '' }; o.vst = { fontSize: 30, fontWeight: 600, lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em', color: few(n) ? 'var(--text-2)' : 'var(--c-' + c + ')' }; o.dot = { width: 8, height: 8, borderRadius: 4, flex: 'none', background: 'var(--c-' + c + ')' }; return o; };
+      const tiles = [
+        T('Humeur moyenne', dec(st.avg), `de ${st.min} à ${st.max}`, st.mo.length, 'humeur'), T('Journées à 7 ou plus', String(st.hi), '', st.mo.length, 'humeur'), T('Journées à 4 ou moins', String(st.lo), '', st.mo.length, 'humeur'),
+        T('Explosions', String(st.ex), '', st.nEx, 'expl'), T('Nuits Mal', String(st.mal), '', st.nSl, 'sommeil'), T('Réveils', st.rv == null ? '·' : dec(st.rv).replace(',0', ''), 'médiane', st.nRv, 'sommeil'),
+        T('Coucher', st.co == null ? '·' : mh(st.co), 'médian', st.nCo, 'sommeil'), T('Lever', st.le == null ? '·' : mh(st.le), 'médian', st.nLe, 'sommeil'), T('Durée de nuit', st.du == null ? '·' : `${Math.floor(st.du / 60)} h ${pad(Math.round(st.du % 60))}`, 'médiane', st.nDu, 'sommeil'),
+        T('Contact humain', `${st.contact} jours`, '', st.nContact, 'contact'), T('Bureau', `${st.bureau} jours`, '', st.nLieu, 'lieu'), T('Sport / mouvement', `${st.sport} jours`, '', st.nSport, 'sport'),
+        T('Traitement pris', `${st.tOui} · ${st.tPar} · ${st.tNon}`, 'Oui · Partiel · Non', st.nTrt, 'trt'), T('Épisodes', String(st.eps.length), st.epsInt != null ? 'intensité moyenne ' + dec(st.epsInt) : '', 3, 'ep'), T('Symptômes', String(st.sys.length), '', 3, 'sy')
+      ];
+      const ch = this.charts(326), cm = this.communs(st), sm = this.sleepMood(st);
+      const trtP = S.trts.filter(x => !this.from(S.period) || x.date >= this.from(S.period));
+      const rk = [['Déclencheur', this.top(st.eps, 'trig', 'épisode')], ['En dessous', this.top(st.eps, 'under', 'épisode')], ['Émotion', this.top(st.eps, 'emo', 'épisode')], ['Réaction', this.top(st.eps, 'react', 'épisode')], ['Symptôme', this.top(st.sys, 'sym', 'fois')], ['Effet secondaire', this.top(trtP, 'effets', 'fiche')]]
+        .map(([k, r], i) => row(i, { k, v: r ? r.s : k === 'Effet secondaire' ? 'Aucun effet noté sur la période' : '·' }));
+      const evo = ch.wk.filter(w => w.st.n).map(w => { const s = w.st, t1 = (a, k) => { const r = this.top(a, k, 'x'); return r ? r.list[0][0] : '·'; }; return { w: fNum(w.a), m: dec(s.avg), fr: s.mo.length < 3 && s.avg != null, solid: s.mo.length >= 3, ex: s.nEx ? String(s.ex) : '·', mal: s.nSl ? String(s.mal) : '·', emo: t1(s.eps, 'emo'), trig: t1(s.eps, 'trig'), sym: t1(s.sys, 'sym'), eff: t1(S.trts.filter(x => x.date >= w.a && x.date <= addD(w.a, 6)), 'effets') }; });
+      const tg = k => () => this.setState(s => ({ tbl: { ...s.tbl, [k]: !s.tbl[k] } }));
+      Object.assign(v, {
+        infoOn: S.signal && !S.infoHidden && Object.keys(S.days).length > 20, hideInfo: () => this.setState({ infoHidden: true }), infoOpen: S.infoOpen, toggleInfo: () => this.setState({ infoOpen: !S.infoOpen }),
+        infoRows: [{ k: 'Humeur moyenne', a: '4,8', b: '4,6', c: '6,1' }, { k: 'Nuits Mal', a: '3 sur 4', b: '2,7 sur 4', c: '1,1 sur 4' }, { k: 'Contact humain', a: '0 sur 4', b: '1,2 sur 4', c: '2,4 sur 4' }],
+        periods: this.seg([['7', '7 j'], ['30', '30 j'], ['all', 'Depuis le début']], S.period, k => { this.setState({ period: k, calc: true }); clearTimeout(this.ct); this.ct = setTimeout(() => this.setState({ calc: false }), 300); }),
+        calc: S.calc, notCalc: !S.calc, tiles, ch, chOk: ch.ok, chNo: !ch.ok,
+        tMood: !!S.tbl.mood, tExpl: !!S.tbl.expl, tSleep: !!S.tbl.sleep, tgMood: tg('mood'), tgExpl: tg('expl'), tgSleep: tg('sleep'),
+        tMoodL: S.tbl.mood ? 'Voir le graphe' : 'Voir en tableau', tExplL: S.tbl.expl ? 'Voir le graphe' : 'Voir en tableau', tSleepL: S.tbl.sleep ? 'Voir le graphe' : 'Voir en tableau',
+        gMood: !S.tbl.mood, gExpl: !S.tbl.expl, gSleep: !S.tbl.sleep,
+        cmOk: cm.ok && cm.items.length > 0, cmNo: !cm.ok, cmNone: cm.ok && !cm.items.length, cmItems: cm.items,
+        why: S.why, toggleWhy: () => this.setState({ why: !S.why }),
+        smOk: sm.ok, smNo: !sm.ok, smT: sm.t || '', smRows: (sm.rows || []).map(r => ({ ...r, dot: { position: 'absolute', top: 4, left: `calc(${r.x}% - 6px)`, width: 12, height: 12, borderRadius: 6, background: 'var(--c-humeur)', display: r.has ? 'block' : 'none' } })),
+        ranks: rk, evo, evoOn: evo.length > 0,
+        showNums: S.showNums, toggleNums: () => this.setState({ showNums: !S.showNums }), numsChev: { display: 'flex', color: 'var(--text-2)', transform: S.showNums ? 'rotate(90deg)' : 'none' },
+        numRows: (cm.all || []).map((x, i) => row(i, { k: x.t, v: `${x.a} sur ${x.H} · ${x.b} sur ${x.L}` })), numsOn: !!(cm.all && cm.all.length),
+        goExport: () => this.push('export'), goSoignants: () => this.push('soignants')
+      });
+    }
+    if (scr === 'export') Object.assign(v, {
+      exportTxt: this.exportText(), copied: S.copied,
+      copy: () => { const t = this.exportText(); const ok = () => this.setState({ copied: true }); try { navigator.clipboard.writeText(t).then(ok, ok); } catch (e) { ok(); } },
+      share: () => { const t = this.exportText(); try { if (navigator.share) navigator.share({ text: t }); else this.toast('Partage indisponible ici.'); } catch (e) {} },
+      doExport: () => this.backup()
+    });
+    if (scr === 'soignants' || this.props.a4Only) Object.assign(v, {
+      pros: this.opts(this.L('pro'), S.pro, x => this.setState({ pro: x }), { fontSize: 15, padding: '4px 14px' }),
+      a4: this.a4data(), printA4: () => { try { window.print(); } catch (e) {} }
+    });
+    return v;
+  }
+}
+</script>
+</body>
+</html>

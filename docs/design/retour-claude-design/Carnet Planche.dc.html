@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#E7E2DA;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif}a{color:#3B4A6B}a:hover{color:#1F1D1A}
+[data-theme="light"]{--bg:#FAF8F5;--surface:#FFFFFF;--surface-2:#F2EEE8;--text:#1F1D1A;--text-2:#6B665E;--border:#8C857B;--hairline:#E4DFD8;--accent:#3B4A6B;--on-accent:#FFFFFF;--info-bg:#EEF1F7;--danger:#9E3B2F;--on-danger:#FFFFFF;--sommeil-1:#A9B5CF;--sommeil-2:#6D7FA6;--sommeil-3:#3B4A6B;--desk:#E7E2DA;--c-lieu:#5F5648;--t-lieu:#EDE8E0;--c-sommeil:#3B4A6B;--t-sommeil:#E6EAF3;--c-humeur:#6E3F6B;--t-humeur:#F1E6F0;--c-contact:#24636A;--t-contact:#DFEEEF;--c-sport:#5E6326;--t-sport:#EEEFDC;--c-expl:#8C5413;--t-expl:#F5E8D6;--c-trt:#5A4E8C;--t-trt:#ECE9F5;--c-pos:#7A6214;--t-pos:#F4EED6;--c-ep:#6E3F6B;--t-ep:#F1E6F0;--c-sy:#24636A;--t-sy:#DFEEEF;--c-day:#3B4A6B;--t-day:#E6EAF3;color-scheme:light}
+[data-theme="dark"]{--bg:#1A1917;--surface:#24221F;--surface-2:#2E2B27;--text:#EDE9E3;--text-2:#A8A29A;--border:#7A746B;--hairline:#3A3632;--accent:#9DB0D9;--on-accent:#1A1917;--info-bg:#262B36;--danger:#E8A195;--on-danger:#1A1917;--sommeil-1:#4A5878;--sommeil-2:#7688B0;--sommeil-3:#AFC0E3;--desk:#0E0D0C;--c-lieu:#CFC3B0;--t-lieu:#2F2B25;--c-sommeil:#9DB0D9;--t-sommeil:#262B36;--c-humeur:#D8B0D4;--t-humeur:#33262F;--c-contact:#8FCCD1;--t-contact:#1F3032;--c-sport:#C9CD8E;--t-sport:#2C2D1E;--c-expl:#E6B47A;--t-expl:#33281B;--c-trt:#B9AEE6;--t-trt:#2A2638;--c-pos:#DCC57A;--t-pos:#312B19;--c-ep:#D8B0D4;--t-ep:#33262F;--c-sy:#8FCCD1;--t-sy:#1F3032;--c-day:#9DB0D9;--t-day:#262B36;color-scheme:dark}</style></helmet>
+<div style="padding:48px 56px 80px;display:flex;flex-direction:column;gap:56px;color:#1F1D1A">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:760px"><h1 style="margin:0;font-size:32px;font-weight:700;letter-spacing:-0.01em">Carnet · planche des états</h1><p style="margin:0;font-size:15px;line-height:1.5;color:#6B665E;text-wrap:pretty">Chaque écran est le prototype réel (Carnet.dc.html), monté avec un état forcé. Palette sable et ardoise du brief, sans retouche, police système, une seule couleur d'accent. Sélection = fond plein, graisse 600 et rayon plein (pastilles) ou coche (grilles). Données fictives.</p></div>
+
+<section style="display:flex;flex-direction:column;gap:20px"><h2 style="margin:0;font-size:22px;font-weight:700">Lot 1 · Aujourd'hui</h2>
+<div style="display:flex;flex-wrap:wrap;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Rempli · clair</span><dc-import name="Carnet" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Rempli · sombre</span><dc-import name="Carnet" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Pas à pas · Humeur</span><dc-import name="Carnet" flow="day" flow-step="{{ 2 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Pas à pas · récapitulatif · sombre</span><dc-import name="Carnet" flow="day" flow-step="{{ 7 }}" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Bas de l'écran · replis ouverts</span><dc-import name="Carnet" persist="{{ false }}" chrome="{{ false }}" fold-nuit="{{ true }}" scroll-to="{{ 560 }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Premier lancement (base vide)</span><dc-import name="Carnet" variant="empty" persist="{{ false }}" chrome="{{ false }}" scroll-to="{{ 400 }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Jour passé</span><dc-import name="Carnet" variant="past" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Entre 0 h et 4 h · sombre</span><dc-import name="Carnet" variant="night" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Échec d'écriture + bandeau</span><dc-import name="Carnet" variant="fail" banner="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Grande taille de texte (défile)</span><dc-import name="Carnet" variant="large" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Dicter actif · mémo en cours</span><dc-import name="Carnet" dict-demo="active" memo-demo="rec" persist="{{ false }}" chrome="{{ false }}" scroll-to="{{ 330 }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Micro non autorisé</span><dc-import name="Carnet" memo-demo="denied" memo-mode="denied" persist="{{ false }}" chrome="{{ false }}" scroll-to="{{ 330 }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Confirmation · journée</span><dc-import name="Carnet" variant="past" overlay="confirmDay" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:20px"><h2 style="margin:0;font-size:22px;font-weight:700">Lot 1 · + Épisode</h2>
+<div style="display:flex;flex-wrap:wrap;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Étape 1 · Déclencheur</span><dc-import name="Carnet" flow="ep" flow-step="{{ 0 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Étape 2 · Émotion choisie · sombre</span><dc-import name="Carnet" flow="ep" flow-existing="{{ true }}" flow-step="{{ 1 }}" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Étape 3 · Intensité</span><dc-import name="Carnet" flow="ep" flow-existing="{{ true }}" flow-step="{{ 2 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Récapitulatif (mémo enregistré)</span><dc-import name="Carnet" flow="ep" flow-existing="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Confirmation · supprimer</span><dc-import name="Carnet" flow="ep" flow-existing="{{ true }}" overlay="confirmEp" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Toast avec Annuler</span><dc-import name="Carnet" overlay="toast" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:20px"><h2 style="margin:0;font-size:22px;font-weight:700">Composants · Dicter et Mémo vocal</h2>
+<div style="display:flex;flex-wrap:wrap;gap:32px">
+<sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+<div data-theme="{{ t.k }}" style="{{ t.st }}">
+<span style="font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--text-2)">{{ t.label }}</span>
+<span style="font-size:13px;color:var(--text-2)">Dicter · au repos</span><dc-import name="Dicter" placeholder="Situation" rows="{{ 2 }}" hint-size="100%,70px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Dicter · actif</span><dc-import name="Dicter" demo="active" rows="{{ 2 }}" hint-size="100%,90px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Dicter · rempli</span><dc-import name="Dicter" value="marche de 20 min, puis déjeuner au calme" rows="{{ 2 }}" hint-size="100%,70px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Mémo vocal · au repos</span><dc-import name="MemoVocal" hint-size="100%,44px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">En cours (onde figée ici)</span><dc-import name="MemoVocal" demo="rec" hint-size="100%,44px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Terminé · puces empilées</span><dc-import name="MemoVocal" memos="{{ demoMemos }}" hint-size="100%,140px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Micro non autorisé</span><dc-import name="MemoVocal" demo="denied" mode="denied" hint-size="100%,90px"></dc-import>
+<span style="font-size:13px;color:var(--text-2)">Micro indisponible</span><dc-import name="MemoVocal" demo="unavail" mode="unavail" hint-size="100%,90px"></dc-import>
+</div>
+</sc-for>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:20px"><h2 style="margin:0;font-size:22px;font-weight:700">Lot 2 · Historique, Soins, + Symptôme, Réglages, guide</h2>
+<div style="display:flex;flex-wrap:wrap;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Historique · jours</span><dc-import name="Carnet" screen="historique" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Recherche + filtres · sombre</span><dc-import name="Carnet" screen="historique" q="calme" filter-open="{{ true }}" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Historique · épisodes</span><dc-import name="Carnet" screen="historique" hist-seg="episodes" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Historique vide</span><dc-import name="Carnet" screen="historique" hist-seg="episodes" variant="empty" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Soins · rendez-vous</span><dc-import name="Carnet" screen="soins" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">En consultation</span><dc-import name="Carnet" screen="soins" consult="r1" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">En consultation · sombre</span><dc-import name="Carnet" screen="soins" consult="r1" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Fiche rendez-vous</span><dc-import name="Carnet" screen="rdv" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Soins · traitement · sombre</span><dc-import name="Carnet" screen="soins" soins-seg="trt" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Fiche traitement</span><dc-import name="Carnet" screen="trt" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">+ Symptôme · étape 1</span><dc-import name="Carnet" flow="sy" flow-step="{{ 0 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">+ Symptôme · récapitulatif</span><dc-import name="Carnet" flow="sy" flow-existing="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Réglages</span><dc-import name="Carnet" screen="reglages" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Réglages · bas · sombre</span><dc-import name="Carnet" screen="reglages" theme="dark" scroll-to="{{ 420 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Import · aperçu</span><dc-import name="Carnet" screen="import" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Import · fichier illisible</span><dc-import name="Carnet" screen="import" import-state="illisible" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Liste · Émotions</span><dc-import name="Carnet" screen="liste" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Rappel du soir</span><dc-import name="Carnet" screen="rappel" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Tout effacer · 1</span><dc-import name="Carnet" screen="effacer" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Tout effacer · 2 et 3</span><dc-import name="Carnet" screen="effacer" eff-step="{{ 3 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Guide d'installation (Safari)</span><dc-import name="Carnet" safari="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:20px"><h2 style="margin:0;font-size:22px;font-weight:700">Lot 3 · Analyse, Export PSY, Vue soignants</h2>
+<div style="display:flex;flex-wrap:wrap;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Analyse · haut</span><dc-import name="Carnet" screen="analyse" info-open="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Analyse · graphes</span><dc-import name="Carnet" screen="analyse" scroll-to="{{ 900 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Analyse · constats · sombre</span><dc-import name="Carnet" screen="analyse" theme="dark" scroll-to="{{ 1650 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Analyse · classements, évolution</span><dc-import name="Carnet" screen="analyse" scroll-to="{{ 2300 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Analyse sans assez de données</span><dc-import name="Carnet" screen="analyse" variant="empty" why="{{ true }}" scroll-to="{{ 700 }}" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Export PSY</span><dc-import name="Carnet" screen="export" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Vue soignants · sombre (la page reste claire)</span><dc-import name="Carnet" screen="soignants" theme="dark" persist="{{ false }}" chrome="{{ false }}" hint-size="414px,868px"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B665E">Page A4 · taille réelle</span><div style="box-shadow:0 2px 12px rgba(0,0,0,.12)"><dc-import name="Carnet" a4-only="{{ true }}" persist="{{ false }}" chrome="{{ false }}" hint-size="794px,1123px"></dc-import></div></div>
+</div></section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const st = { width: 358, padding: 20, borderRadius: 20, background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 8, fontFamily: '-apple-system,BlinkMacSystemFont,system-ui,sans-serif' };
+    return {
+      themes: [{ k: 'light', label: 'CLAIR', st }, { k: 'dark', label: 'SOMBRE', st }],
+      demoMemos: [{ id: 'a', dur: 24 }, { id: 'b', dur: 71 }]
+    };
+  }
+}
+</script>
+</body>
+</html>
