@@ -62,6 +62,16 @@ export function formaterJour(cle, { annee = false } = {}) {
   const [a, m, j] = cle.split('-').map(Number);
   return `${JOURS[jourSemaine(cle)]} ${j} ${MOIS_COURTS[m - 1]}${annee ? ` ${a}` : ''}`;
 }
+// « mercredi 14 octobre », « jeudi 1er octobre » (sans année).
+export function formaterJourComplet(cle) {
+  const [, m, j] = cle.split('-').map(Number);
+  return `${JOURS[jourSemaine(cle)]} ${j}${j === 1 ? 'er' : ''} ${MOIS[m - 1]}`;
+}
+// « mer. 16 sept. »
+export function formaterJourAbrege(cle) {
+  const [, m, j] = cle.split('-').map(Number);
+  return `${JOURS_COURTS[jourSemaine(cle)]}. ${j} ${MOIS_COURTS[m - 1]}`;
+}
 export function formaterJourCourt(cle) {
   const [, m, j] = cle.split('-').map(Number);
   return `${JOURS_COURTS[jourSemaine(cle)]} ${pad(j)}/${pad(m)}`;

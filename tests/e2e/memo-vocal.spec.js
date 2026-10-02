@@ -38,7 +38,7 @@ test('passage en arrière-plan : l\'enregistrement s\'arrête et le mémo est ga
 
 test('mémo dans un épisode : la fiche est créée si besoin', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
-  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Passer ›' }).click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Passer', exact: true }).click();
   await page.getByRole('button', { name: 'Mémo vocal' }).click();
   await page.waitForTimeout(1200);
   await page.getByRole('button', { name: /Arrêter/ }).click();
@@ -46,4 +46,13 @@ test('mémo dans un épisode : la fiche est créée si besoin', async ({ page })
   const [a] = await audios(page);
   expect(a.parentStore).toBe('episodes');
   expect(await page.evaluate((id) => window.__carnet.repo.episodes.lire(id), a.parentId)).not.toBeNull();
+  // Le toast passe au-dessus du parcours (toBeVisible ne voit pas un recouvrement).
+  await page.getByRole('button', { name: 'Supprimer le mémo' }).click();
+  const toast = page.getByRole('status').filter({ hasText: 'Mémo supprimé' });
+  await expect(toast).toBeVisible();
+  const auPremierPlan = await toast.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+  });
+  expect(auPremierPlan).toBe(true);
 });

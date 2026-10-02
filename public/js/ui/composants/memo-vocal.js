@@ -10,8 +10,12 @@ import { afficherToast } from './toast.js';
 
 let lecteurActif = null;
 
+// Onde décorative de 26 barres (hauteurs dans composants.css, sans style en ligne : CSP).
+const ONDE = Array.from({ length: 26 }, (_, i) => i);
+
 function Puce({ audio, surSupprimer }) {
   const [lecture, setLecture] = useState(false);
+  const [position, setPosition] = useState(0);
   const lecteur = useRef(null);
   const url = useRef(null);
   // La source est détachée avant de révoquer l'adresse, qui ne l'est qu'un peu plus tard :
@@ -29,6 +33,7 @@ function Puce({ audio, surSupprimer }) {
     url.current = null;
     if (u) setTimeout(() => URL.revokeObjectURL(u), 1000);
     setLecture(false);
+    setPosition(0);
   };
   useEffect(() => arreter, []);
   const basculer = async () => {
@@ -41,6 +46,8 @@ function Puce({ audio, surSupprimer }) {
     lecteur.current = a;
     a.onended = arreter;
     a.onerror = arreter;
+    // La durée d'un mp4 de MediaRecorder peut valoir Infinity sur iOS : le total vient de dureeMs.
+    a.ontimeupdate = () => setPosition(Math.min(a.currentTime * 1000, audio.dureeMs || 0));
     lecteurActif = arreter;
     setLecture(true);
     try { await a.play(); } catch { arreter(); }
@@ -48,8 +55,8 @@ function Puce({ audio, surSupprimer }) {
   return html`<div class="puce-memo">
     <button type="button" class="puce-lecture" aria-label=${lecture ? 'Pause' : 'Écouter le mémo'} onClick=${basculer}>
       ${lecture ? Icones.pause() : Icones.lecture()}</button>
-    <span>Mémo vocal · ${formaterDuree(audio.dureeMs)}</span>
-    <button type="button" class="effacer" aria-label="Supprimer le mémo" onClick=${() => { arreter(); surSupprimer(audio); }}>✕</button>
+    <span class="puce-texte">Mémo vocal · ${lecture ? `${formaterDuree(position)} / ` : ''}${formaterDuree(audio.dureeMs)}</span>
+    <button type="button" class="effacer" aria-label="Supprimer le mémo" onClick=${() => { arreter(); surSupprimer(audio); }}>${Icones.fermer()}</button>
   </div>`;
 }
 
@@ -86,7 +93,10 @@ export function MemoVocal({ parentStore, parentId, date, assurerParent }) {
   };
 
   const demarrer = async () => {
+    if (etat.mode === 'ouverture') return;
     if (lecteurActif) lecteurActif();
+    // Bouton inactif pendant la demande d'autorisation : un double toucher n'ouvre pas deux flux.
+    setEtat({ mode: 'ouverture' });
     let flux;
     try {
       flux = await ouvrirMicro();
@@ -130,14 +140,17 @@ export function MemoVocal({ parentStore, parentId, date, assurerParent }) {
 
   if (!microDisponible() && memos.length === 0) return null;
   const enCours = etat.mode === 'enregistrement';
+  const ouverture = etat.mode === 'ouverture';
   return html`<div class="memo-vocal">
     ${memos.map((m) => html`<${Puce} key=${m.id} audio=${m} surSupprimer=${supprimer} />`)}
-    ${microDisponible() && html`<button type="button" class=${enCours ? 'btn-memo en-cours' : 'btn-memo'} aria-pressed=${enCours ? 'true' : 'false'}
-      onClick=${() => (enCours ? enreg.current && enreg.current.arreter('utilisateur') : demarrer())}>
-      ${enCours ? Icones.stop() : Icones.onde()}
-      <span>${enCours ? 'Arrêter' : 'Mémo vocal'}</span>
-      ${enCours && html`<span class="duree" aria-live="off">${formaterDuree(duree)}</span><span class="onde" aria-hidden="true"></span>`}
-    </button>`}
-    ${etat.mode === 'erreur' && html`<p class="discret" role="status">${etat.message}</p>`}
+    ${microDisponible() && (enCours
+    ? html`<div class="memo-en-cours">
+        <button type="button" class="btn-arreter" onClick=${() => enreg.current && enreg.current.arreter('utilisateur')}>${Icones.stop()}Arrêter</button>
+        <span class="duree" role="timer" aria-live="off">${formaterDuree(duree)}</span>
+        <span class="onde-memo" aria-hidden="true">${ONDE.map((i) => html`<i key=${i}></i>`)}</span>
+      </div>`
+    : html`<button type="button" class="btn-memo" disabled=${ouverture} aria-busy=${ouverture ? 'true' : null} onClick=${demarrer}>
+        ${Icones.onde()}<span>Mémo vocal</span></button>`)}
+    ${etat.mode === 'erreur' && html`<p class="memo-erreur" role="status">${etat.message}</p>`}
   </div>`;
 }

@@ -1,30 +1,19 @@
 // Fiche d'un rendez-vous : enregistrement automatique, questions à cocher, mémo vocal.
-import { html, useEffect, useRef, useState } from '../lib.js';
+import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { ChampTexte } from '../composants/texte.js';
-import { ChampHeure } from '../composants/heure.js';
-import { BoutonDicter } from '../composants/dicter.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
+import { Confirmation } from '../composants/confirmation.js';
+import { QuestionsACocher, AjoutQuestion, BoutonConsultation } from '../composants/questions.js';
+import { Icones } from '../icones.js';
+import { LibelleChamp } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
 import { useFiche } from '../fiche.js';
+import { versHash } from '../../routeur.js';
 import { options } from './aujourdhui.js';
 
-export function AjoutQuestion({ surAjouter }) {
-  const zone = useRef(null);
-  const ajouter = () => {
-    const t = zone.current && zone.current.value.trim();
-    if (!t) return;
-    surAjouter(t);
-    zone.current.value = '';
-    zone.current.focus();
-  };
-  return html`<div class="champ-avec-dicter ajout-question">
-    <input ref=${zone} class="champ-ligne" enterkeyhint="done" aria-label="Une question pour ce rendez-vous" placeholder="Une question pour ce rendez-vous…"
-      onKeyDown=${(e) => { if (e.key === 'Enter') { e.preventDefault(); ajouter(); } }} onBlur=${ajouter} />
-    <${BoutonDicter} cible=${zone} />
-  </div>`;
-}
+export { AjoutQuestion };
 
 export function Rdv({ id: idRoute }) {
   const [items, setItems] = useState(null);
@@ -33,48 +22,52 @@ export function Rdv({ id: idRoute }) {
   const { fiche, id, ecrire, assurer, supprimer, indicateur } = useFiche({
     store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({ date: null, heure: null }),
   });
-  if (!fiche || !items) return html`<main class="ecran"><${Entete} titre="Rendez-vous" retour=${() => { location.hash = '#/soins'; }} /></main>`;
+  const retour = () => { location.hash = '#/soins'; };
+  if (!fiche || !items) return html`<main class="ecran fiche"><${Entete} titre="Rendez-vous" retour=${retour} /></main>`;
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
+  const enConsultation = async () => { const i = await assurer(); if (i) location.hash = versHash('consultation', { id: i }); };
   return html`<main class="ecran fiche">
-    <${Entete} titre="Rendez-vous" retour=${() => { location.hash = '#/soins'; }}
-      droite=${html`<span class="indicateur-fiche discret" role="status">${indicateur === 'ok' ? 'Enregistré' : ''}</span>`} />
-    <div class="deux-colonnes">
-      <div class="champ-heure">
-        <label class="etiquette" for="rdv-date">Date</label>
+    <${Entete} titre="Rendez-vous" retour=${retour}
+      droite=${html`<span class="indicateur-fiche" role="status">${indicateur === 'ok' ? 'Enregistré' : ''}</span>`} />
+    ${id ? html`<${BoutonConsultation} href=${versHash('consultation', { id })} />`
+      : html`<button type="button" class="pilule teintee teinte-trt btn-consultation" onClick=${enConsultation}>${Icones.bulle()}En consultation</button>`}
+    <div class="ligne-date-heure">
+      <div class="champ-date">
+        <${LibelleChamp} icone="soins" pour="rdv-date">Date</${LibelleChamp}>
         <div class="ligne-heure">
           <input id="rdv-date" type="date" class="champ-ligne" value=${fiche.date || ''} onChange=${(e) => ecrire({ date: e.target.value || null })} />
-          ${fiche.date && html`<button type="button" class="effacer" aria-label="Effacer la date" onClick=${() => ecrire({ date: null })}>✕</button>`}
+          ${fiche.date && html`<button type="button" class="effacer" aria-label="Effacer la date" onClick=${() => ecrire({ date: null })}>${Icones.fermer()}</button>`}
         </div>
-        ${!fiche.date && html`<span class="discret">Date à fixer</span>`}
+        ${!fiche.date && html`<span class="note-champ">Date à fixer</span>`}
       </div>
-      <${ChampHeure} id="rdv-heure" etiquette="Heure" valeur=${fiche.heure} surChoix=${(v) => ecrire({ heure: v })} />
+      <div class="champ-date champ-heure-rdv">
+        <${LibelleChamp} icone="historique" pour="rdv-heure">Heure</${LibelleChamp}>
+        <div class="ligne-heure">
+          <input id="rdv-heure" type="time" class="champ-ligne" value=${fiche.heure || ''} onChange=${(e) => ecrire({ heure: e.target.value || null })} />
+          ${fiche.heure && html`<button type="button" class="effacer" aria-label="Effacer Heure" onClick=${() => ecrire({ heure: null })}>${Icones.fermer()}</button>`}
+        </div>
+      </div>
     </div>
-    <div class="champ">
-      <span class="etiquette">Professionnel</span>
+    <div class="champ-fiche">
+      <${LibelleChamp} icone="personne">Professionnel</${LibelleChamp}>
       <${Pastilles} etiquette="Professionnel" options=${options(items, 'professionnel', fiche.professionnel)} valeur=${fiche.professionnel}
-        surChoix=${(v) => ecrire({ professionnel: v })} colonnes=${2} classe="grille-choix"
+        surChoix=${(v) => ecrire({ professionnel: v })} classe="souples larges"
         surAjouter=${async (t) => { const it = await repo.listes.creer('professionnel', t); setItems(await repo.listes.items('professionnel')); ecrire({ professionnel: it.id }); }} />
     </div>
-    <div class="champ">
-      <span class="etiquette">Questions à poser</span>
-      <ul class="liste questions">${questions.map((q, i) => html`<li class="ligne">
-        <label class="case"><input type="checkbox" checked=${q.abordee}
-          onChange=${(e) => majQuestions(questions.map((x, k) => (k === i ? { ...x, abordee: e.target.checked } : x)))} />
-          <span class=${q.abordee ? 'abordee' : ''}>${q.texte}</span></label>
-        <button type="button" class="effacer" aria-label=${`Retirer la question ${q.texte}`} onClick=${() => majQuestions(questions.filter((_, k) => k !== i))}>✕</button>
-      </li>`)}</ul>
-      <${AjoutQuestion} surAjouter=${(t) => majQuestions([...questions, { texte: t, abordee: false }])} />
+    <div class="champ-fiche">
+      <${LibelleChamp} icone="bulle">Questions</${LibelleChamp}>
+      ${questions.length > 0 && html`<div class="carte-questions"><${QuestionsACocher} questions=${questions} surChanger=${majQuestions}
+        surRetirer=${(i) => majQuestions(questions.filter((_, k) => k !== i))} /></div>`}
+      <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />
     </div>
-    <div class="champ"><${ChampTexte} key=${`cr-${idRoute}`} id="rdv-compte-rendu" etiquette="Ce qui a été dit / décidé" valeur=${fiche.compteRendu}
+    <div class="champ-fiche"><${ChampTexte} key=${`cr-${idRoute}`} id="rdv-compte-rendu" etiquette="Ce qui a été dit / décidé" icone="note" valeur=${fiche.compteRendu}
       cleBrouillon=${id ? `carnet:brouillon:${id}:compteRendu` : null} surEnregistrer=${(v) => ecrire({ compteRendu: v })} /></div>
-    <div class="champ"><${ChampTexte} key=${`pe-${idRoute}`} id="rdv-prochaine-etape" etiquette="Prochaine étape" valeur=${fiche.prochaineEtape} lignes=${2}
+    <div class="champ-fiche"><${ChampTexte} key=${`pe-${idRoute}`} id="rdv-prochaine-etape" etiquette="Prochaine étape" icone="etape" valeur=${fiche.prochaineEtape} lignes=${2}
       cleBrouillon=${id ? `carnet:brouillon:${id}:prochaineEtape` : null} surEnregistrer=${(v) => ecrire({ prochaineEtape: v })} /></div>
     <${MemoVocal} parentStore="rdv" parentId=${id} assurerParent=${assurer} />
-    ${id && (confirmer
-      ? html`<div class="confirmation" role="alert"><p>Supprimer ce rendez-vous ?</p>
-          <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmer(false)}>Garder</button>
-          <button type="button" class="btn btn-effacer" onClick=${() => supprimer('Rendez-vous')}>Supprimer</button></div></div>`
-      : html`<button type="button" class="btn-lien supprimer" onClick=${() => setConfirmer(true)}>Supprimer ce rendez-vous</button>`)}
+    ${id && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ce rendez-vous</button>`}
+    ${confirmer && html`<${Confirmation} titre="Supprimer ce rendez-vous ?" texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"
+      surAnnuler=${() => setConfirmer(false)} surConfirmer=${() => { setConfirmer(false); supprimer('Rendez-vous'); }} />`}
   </main>`;
 }

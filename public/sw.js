@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = 'b037ab65a699';
+const VERSION = '92bd88545c01';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -39,6 +39,7 @@ const FICHIERS = [
   "./js/domain/ids.js",
   "./js/domain/libelles.js",
   "./js/domain/listes-def.js",
+  "./js/domain/phrase.js",
   "./js/domain/soins.js",
   "./js/domain/vocabulaire.js",
   "./js/donnees.js",
@@ -58,6 +59,7 @@ const FICHIERS = [
   "./js/store.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
+  "./js/ui/composants/confirmation.js",
   "./js/ui/composants/dicter.js",
   "./js/ui/composants/entete-jour.js",
   "./js/ui/composants/entete.js",
@@ -67,13 +69,16 @@ const FICHIERS = [
   "./js/ui/composants/oui-non.js",
   "./js/ui/composants/parcours.js",
   "./js/ui/composants/pastilles.js",
+  "./js/ui/composants/questions.js",
   "./js/ui/composants/repli.js",
+  "./js/ui/composants/rubrique.js",
   "./js/ui/composants/segmente.js",
   "./js/ui/composants/texte.js",
   "./js/ui/composants/toast.js",
   "./js/ui/ecrans/analyse.js",
   "./js/ui/ecrans/attente.js",
   "./js/ui/ecrans/aujourdhui.js",
+  "./js/ui/ecrans/consultation.js",
   "./js/ui/ecrans/diagnostic.js",
   "./js/ui/ecrans/effacer.js",
   "./js/ui/ecrans/episode.js",
@@ -82,6 +87,7 @@ const FICHIERS = [
   "./js/ui/ecrans/historique.js",
   "./js/ui/ecrans/listes.js",
   "./js/ui/ecrans/parcours-fiche.js",
+  "./js/ui/ecrans/parcours-jour.js",
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
   "./js/ui/ecrans/reglages.js",

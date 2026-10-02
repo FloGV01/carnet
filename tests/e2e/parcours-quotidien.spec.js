@@ -13,9 +13,12 @@ test('les 7 champs en 7 touchers, sans frappe, sans défilement, sans bouton Enr
   await toucher(page, 'Explosions', '0');
   await toucher(page, 'Traitement pris', 'Oui');
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  // Les 7 champs et « Mes points positifs » tiennent au-dessus des boutons flottants.
   const zone = await page.locator('#points-positifs').boundingBox();
+  const flottants = await page.locator('.actions-flottantes').boundingBox();
   const onglets = await page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox();
-  expect(zone.y + zone.height).toBeLessThanOrEqual(onglets.y);
+  expect(flottants.y + flottants.height).toBeLessThanOrEqual(onglets.y + 1);
+  expect(zone.y + zone.height).toBeLessThanOrEqual(flottants.y);
   await expect(page.getByRole('button', { name: /enregistrer/i })).toHaveCount(0);
   await expect(page.getByText('Enregistré')).toBeVisible();
   await expect.poll(() => entreeDuJour(page)).toMatchObject({

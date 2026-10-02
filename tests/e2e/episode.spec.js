@@ -22,7 +22,7 @@ test('un épisode en 7 touchers après l\'icône : créé au premier choix, réc
   await grille(page).getByRole('button', { name: 'Intensité 7' }).click();
   await grille(page).getByRole('button', { name: 'Injustice' }).click();
   await grille(page).getByRole('button', { name: 'Retrait / isolement' }).click();
-  await expect(grille(page).getByText('Récapitulatif').or(grille(page).getByLabel('Récapitulatif'))).toBeVisible();
+  await expect(grille(page).getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
   await grille(page).getByRole('button', { name: 'Terminer' }).click();
   await expect(page.getByText('Épisode enregistré')).toBeVisible();
   await expect(page.getByRole('link', { name: /18:42\s+Colère · 7 · Me sentir pris pour un con/ })).toBeVisible();
@@ -35,7 +35,7 @@ test('Fermer à l\'étape 2 garde le choix ; Annuler retire l\'épisode', async 
   await page.getByRole('link', { name: 'Épisode' }).click();
   await grille(page).getByRole('button', { name: 'Conflit' }).click();
   await expect(page.getByRole('heading', { name: 'Ça ressemblait plutôt à…' })).toBeVisible();
-  await grille(page).getByRole('button', { name: '✕ Fermer' }).click();
+  await grille(page).getByRole('button', { name: 'Fermer', exact: true }).click();
   await expect.poll(async () => (await episodes(page)).map((e) => e.declencheur)).toEqual(['declencheur:conflit']);
   await page.getByRole('button', { name: 'Annuler' }).click();
   await expect.poll(async () => (await episodes(page)).length).toBe(0);
@@ -43,14 +43,14 @@ test('Fermer à l\'étape 2 garde le choix ; Annuler retire l\'épisode', async 
 
 test('fermer sans rien choisir ne crée rien', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
-  await grille(page).getByRole('button', { name: '✕ Fermer' }).click();
+  await grille(page).getByRole('button', { name: 'Fermer', exact: true }).click();
   await expect(page.getByText('Épisode enregistré')).toHaveCount(0);
   expect((await episodes(page)).length).toBe(0);
 });
 
 test('Passer, textes facultatifs, modification depuis le récapitulatif', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
-  for (let i = 0; i < 5; i++) await grille(page).getByRole('button', { name: 'Passer ›' }).click();
+  for (let i = 0; i < 5; i++) await grille(page).getByRole('button', { name: 'Passer', exact: true }).click();
   await expect(grille(page).getByRole('button', { name: 'Terminer' })).toBeVisible();
   await page.locator('#episodes-situation').fill('remarque en réunion');
   await expect.poll(async () => (await episodes(page))[0]?.situation).toBe('remarque en réunion');

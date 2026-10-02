@@ -20,7 +20,8 @@ export function Toast({ toast }) {
   }, [toast && toast.id]);
   if (!toast) return null;
   return html`<div class="toast" role="status" aria-live="polite">
-    <span>${toast.texte}</span>
-    ${toast.action && html`<button type="button" onClick=${() => { fermerToast(toast.id); toast.action.faire(); }}>${toast.action.libelle}</button>`}
+    <span class="toast-texte">${toast.texte}</span>
+    ${toast.action && html`<span aria-hidden="true">·</span>
+      <button type="button" onClick=${() => { fermerToast(toast.id); toast.action.faire(); }}>${toast.action.libelle}</button>`}
   </div>`;
 }

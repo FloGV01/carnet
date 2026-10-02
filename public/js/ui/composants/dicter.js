@@ -11,6 +11,7 @@ export function BoutonDicter({ cible, surActive }) {
     try { const n = zone.value.length; zone.setSelectionRange(n, n); } catch { /* champ sans sélection */ }
     if (surActive) surActive();
   };
-  return html`<button type="button" class="dicter" aria-label="Dicter" onClick=${toucher}>${Icones.micro()}</button>`;
+  return html`<button type="button" class="dicter" aria-label="Dicter"
+    onMouseDown=${(e) => e.preventDefault()} onClick=${toucher}>${Icones.micro()}</button>`;
 }
 export const AIDE_DICTER = 'Touche le micro du clavier pour parler.';

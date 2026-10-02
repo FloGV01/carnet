@@ -18,26 +18,31 @@ test.beforeEach(async ({ page }) => {
 test('jours groupés par semaine, sans jour vide ni décompte', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Semaine du 28 septembre' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Semaine du 21 septembre' })).toBeVisible();
-  await expect(page.getByText('Humeur 4 · Sommeil mal · Bureau')).toBeVisible();
-  await expect(page.getByText('1 épisode · 1 explosion · « déjeuner au calme »')).toBeVisible();
+  const lundi = page.getByRole('link', { name: /lundi 21 sept\./ });
+  await expect(lundi.locator('.puce')).toHaveText(['Bureau', 'nuit mal', 'humeur 4', 'explosions 1']);
+  await expect(lundi.getByText('Colère 8 · « déjeuner au calme »')).toBeVisible();
   await expect(page.getByText('mardi 22 sept.')).toHaveCount(0);
   await expect(page.locator('.historique')).not.toContainText(/jours? (remplis|notés)|\d+\/7/);
 });
 
 test('recherche dans les textes et filtres', async ({ page }) => {
+  await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
   await page.getByLabel('Rechercher dans les textes').fill('reunion');
   await expect(page.locator('mark')).toHaveText('réunion');
-  await expect(page.getByText('Humeur 4 · Sommeil mal · Bureau')).toHaveCount(0);
-  await page.getByLabel('Rechercher dans les textes').fill('');
-  await page.getByRole('button', { name: 'Filtrer ▾' }).click();
-  await page.getByLabel('Humeur').selectOption('haut');
-  await expect(page.getByText(/Humeur 7/)).toBeVisible();
-  await expect(page.getByText(/Humeur 4/)).toHaveCount(0);
+  await expect(page.getByText('humeur 4', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+  await expect(page.getByLabel('Rechercher dans les textes')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filtrer' }).click();
+  await page.getByRole('group', { name: 'Humeur' }).getByRole('button', { name: '7-10' }).click();
+  await expect(page.getByText('humeur 7-10')).toBeVisible();
+  await expect(page.getByText('humeur 7', { exact: true })).toBeVisible();
+  await expect(page.getByText('humeur 4', { exact: true })).toHaveCount(0);
 });
 
 test('épisodes et modification d\'un jour passé', async ({ page }) => {
   await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Épisodes/ }).click();
   await expect(page.getByText('Colère · 8 · Me sentir pris pour un con')).toBeVisible();
+  await expect(page.getByRole('link', { name: /lundi 21 sept\. · 14:30/ })).toBeVisible();
   await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Jours/ }).click();
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
   await expect(page.getByRole('heading', { name: 'lundi 21 sept.' })).toBeVisible();
@@ -47,8 +52,9 @@ test('épisodes et modification d\'un jour passé', async ({ page }) => {
 test('effacer une journée : confirmation, épisodes conservés, Annuler', async ({ page }) => {
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
   await page.getByRole('button', { name: 'Effacer cette journée' }).click();
-  await expect(page.getByText('Effacer la journée du lundi 21 sept. ? Les épisodes et symptômes de ce jour sont conservés.')).toBeVisible();
-  await page.getByRole('button', { name: 'Effacer', exact: true }).click();
+  const boite = page.getByRole('alertdialog', { name: 'Effacer la journée du lundi 21 sept. ?' });
+  await expect(boite.getByText('Les épisodes et symptômes de ce jour sont conservés.')).toBeVisible();
+  await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Humeur', exact: true }).getByRole('button', { name: 'Humeur 4' })).toHaveAttribute('aria-pressed', 'false');
   expect((await page.evaluate(() => window.__carnet.repo.episodes.tous())).length).toBe(1);

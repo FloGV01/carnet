@@ -5,7 +5,7 @@ test('symptôme : parcours en 3 étapes depuis Aujourd\'hui, listé sous le jour
   await page.clock.install({ time: new Date(2026, 9, 1, 20, 0) });
   await page.goto('/');
   await viderBase(page);
-  await page.getByRole('link', { name: '+ Symptôme' }).click();
+  await page.getByRole('link', { name: 'Symptôme', exact: true }).click();
   const d = page.getByRole('dialog');
   await d.getByRole('button', { name: 'Ruminations' }).click();
   await d.getByRole('button', { name: 'Intensité 6' }).click();

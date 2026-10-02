@@ -1,48 +1,51 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
 // n'existent pas ici : ni ligne vide, ni décompte.
-import { html, useState } from '../lib.js';
+import { html, useState, useRef } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
+import { Pastilles } from '../composants/pastilles.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useDonnees } from '../hooks.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
-import { formaterSemaine, formaterJour, formaterJourCourt, jourEvenement, addDays } from '../../domain/dates.js';
-import { grouperParSemaine, filtrerJours, filtrerEpisodes, chercher } from '../../domain/historique.js';
+import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
+import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
+import { phraseResume } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { options } from './aujourdhui.js';
 
 const SEGMENTS = [{ valeur: 'jours', libelle: 'Jours' }, { valeur: 'episodes', libelle: 'Épisodes' }, { valeur: 'symptomes', libelle: 'Symptômes' }];
-
-function faitsDuJour(j, carte) {
-  const f = [];
-  if (j.humeur != null) f.push(`Humeur ${j.humeur}`);
-  if (j.sommeilRessenti) f.push(`Sommeil ${libelle(carte, j.sommeilRessenti).toLowerCase()}`);
-  if (j.lieu) f.push(libelle(carte, j.lieu));
-  if (j.contactHumain === true) f.push('contact');
-  if (j.sportMouvement === true) f.push('mouvement');
-  return f.join(' · ');
-}
+const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }];
+const HUMEURS = [{ valeur: 'bas', libelle: '1-4' }, { valeur: 'moyen', libelle: '5-6' }, { valeur: 'haut', libelle: '7-10' }];
+const AVANT_EXTRAIT = 18;
+const APRES_EXTRAIT = 28;
 
 function Extrait({ ex }) {
   if (!ex) return null;
-  return html`<p class="extrait discret">${ex.avant}<mark>${ex.trouve}</mark>${ex.apres}</p>`;
+  return html`<span class="hist-note extrait">${ex.avant}<mark>${ex.trouve}</mark>${ex.apres}</span>`;
+}
+const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`;
+
+// Bascule indépendante dans un groupe de pastilles (« Avec explosions », « Avec notes »).
+function Bascules({ etiquette, choix, f, majF }) {
+  return html`<div class="pastilles souples" role="group" aria-label=${etiquette}>
+    ${choix.map((c) => html`<button type="button" class="pastille" aria-pressed=${f[c.cle] ? 'true' : 'false'}
+      onClick=${() => majF(c.cle)(!f[c.cle])}><span class="texte-pastille"><span>${c.libelle}</span></span></button>`)}
+  </div>`;
 }
 
-function Selecteur({ etiquette, valeur, choix, surChoix }) {
-  return html`<label class="filtre"><span class="etiquette">${etiquette}</span>
-    <select class="champ-ligne" value=${valeur || ''} onChange=${(e) => surChoix(e.target.value || null)}>
-      <option value="">Tous</option>
-      ${choix.map((c) => html`<option value=${c.valeur}>${c.libelle}</option>`)}
-    </select></label>`;
+function GroupeFiltre({ titre, children }) {
+  return html`<div class="groupe-filtre"><span class="titre-filtre">${titre}</span>${children}</div>`;
 }
 
 export function Historique() {
   const [segment, setSegment] = useState('jours');
   const [requete, setRequete] = useState('');
+  const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [filtresOuverts, setFiltresOuverts] = useState(false);
   const [f, setF] = useState({});
-  const majF = (cle) => (v) => setF((x) => ({ ...x, [cle]: v }));
+  const champRecherche = useRef(null);
+  const majF = (cle) => (v) => setF((x) => ({ ...x, [cle]: v || null }));
 
   const { donnees } = useDonnees(async () => {
     const [journal, episodes, symptomes, items, audios] = await Promise.all([
@@ -56,37 +59,47 @@ export function Historique() {
   const { carte, items, avecMemo, aujourdhui } = donnees;
   const periode = f.periode === '7' ? addDays(aujourdhui, -6) : f.periode === '30' ? addDays(aujourdhui, -29) : null;
   const q = requete.trim();
+  const filtre = q || Object.values(f).some(Boolean);
+  const optionsListe = (liste) => options(items, liste, null);
 
   let contenu;
   if (segment === 'jours') {
     let jours = filtrerJours(donnees.journal, { du: periode, lieu: f.lieu, humeur: f.humeur, avecExplosions: f.avecExplosions, avecNotes: f.avecNotes });
-    const nbEpisodes = new Map();
-    for (const e of donnees.episodes) { const j = jourEvenement(e.date, e.heure); nbEpisodes.set(j, (nbEpisodes.get(j) || 0) + 1); }
-    const trouves = q ? new Map(jours.map((j) => [j.date, chercher(j, 'journal', q)])) : null;
+    const episodesDuJour = new Map();
+    for (const e of donnees.episodes) {
+      const j = jourEvenement(e.date, e.heure);
+      if (!episodesDuJour.has(j)) episodesDuJour.set(j, []);
+      episodesDuJour.get(j).push(e);
+    }
+    const trouves = q ? new Map(jours.map((j) => [j.date, chercher(j, 'journal', q, AVANT_EXTRAIT, APRES_EXTRAIT)])) : null;
     if (q) jours = jours.filter((j) => trouves.get(j.date));
     contenu = jours.length === 0
-      ? html`<p class="discret vide">${q || Object.values(f).some(Boolean) ? 'Rien ne correspond.' : "Aucune journée notée pour l'instant."}</p>`
-      : grouperParSemaine(jours, (j) => j.date).map((g) => html`<section class="section">
-        <h2>${formaterSemaine(g.lundi)}</h2>
-        <ul class="liste carte">${g.elements.map((j) => {
-          const second = [];
-          const n = nbEpisodes.get(j.date);
-          if (n) second.push(`${n} épisode${n > 1 ? 's' : ''}`);
-          if (j.explosions > 0) second.push(`${j.explosions} explosion${j.explosions > 1 ? 's' : ''}`);
-          if (j.pointsPositifs && !q) second.push(`« ${j.pointsPositifs.slice(0, 40)}${j.pointsPositifs.length > 40 ? '…' : ''} »`);
-          return html`<li><a class="ligne-hist lien-ligne" href=${j.date === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: j.date })}>
-            <span class="hist-date">${formaterJour(j.date)}</span>
-            <span class="hist-faits">${faitsDuJour(j, carte) || '·'}${avecMemo.has(`journal:${j.date}`) ? html` <span class="icone-memo" aria-label="avec mémo vocal">${Icones.onde()}</span>` : ''}</span>
-            ${second.length > 0 && html`<span class="hist-second discret">${second.join(' · ')}</span>`}
-            ${q && html`<${Extrait} ex=${trouves.get(j.date)} />`}
+      ? html`<p class="vide">${filtre ? 'Rien ne correspond.' : "Aucune journée notée pour l'instant."}</p>`
+      : grouperParSemaine(jours, (j) => j.date).map((g) => html`<section class="semaine">
+        <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
+        <ul class="liste carte carte-groupe">${g.elements.map((j) => {
+          const puces = phraseResume('jour', j, carte).filter((s) => s.valeur);
+          const note = [];
+          for (const e of (episodesDuJour.get(j.date) || []).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''))) {
+            const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
+            if (t) note.push(t);
+          }
+          if (j.pointsPositifs) note.push(`« ${debutTexte(j.pointsPositifs, 34)} »`);
+          return html`<li><a class="ligne-carte ligne-hist" href=${j.date === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: j.date })}>
+            <span class="hist-corps">
+              <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
+              ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<span class=${`puce teinte-${p.rubrique}`}>${p.texte}</span>`)}</span>`}
+              ${q ? html`<${Extrait} ex=${trouves.get(j.date)} />` : note.length > 0 && html`<span class="hist-note">${note.join(' · ')}</span>`}
+            </span>
+            ${Icones.chevron({ trait: 2 })}
           </a></li>`;
         })}</ul></section>`);
   } else {
     const store = segment;
     let liste = store === 'episodes'
       ? filtrerEpisodes(donnees.episodes, { du: periode, emotion: f.emotion, declencheur: f.declencheur, dessous: f.dessous, reaction: f.reaction, intenseSeulement: f.intenseSeulement })
-      : donnees.symptomes.filter((s) => !periode || s.date >= periode);
-    const trouves = q ? new Map(liste.map((e) => [e.id, chercher(e, store, q)])) : null;
+      : filtrerSymptomes(donnees.symptomes, { du: periode, symptome: f.symptome });
+    const trouves = q ? new Map(liste.map((e) => [e.id, chercher(e, store, q, AVANT_EXTRAIT, APRES_EXTRAIT)])) : null;
     if (q) liste = liste.filter((e) => trouves.get(e.id));
     const jourDe = (e) => jourEvenement(e.date, e.heure);
     const route = store === 'episodes' ? 'episode' : 'symptome';
@@ -94,39 +107,61 @@ export function Historique() {
       ? [libelle(carte, e.emotion), e.intensite, libelle(carte, e.declencheur)]
       : [libelle(carte, e.symptome), e.intensite, libelle(carte, e.duree)]).filter((x) => x != null).join(' · ');
     contenu = liste.length === 0
-      ? html`<p class="discret vide">${q || Object.values(f).some(Boolean) ? 'Rien ne correspond.' : store === 'episodes' ? "Aucun épisode noté pour l'instant." : "Aucun symptôme noté pour l'instant."}</p>`
-      : grouperParSemaine(liste, jourDe).map((g) => html`<section class="section">
-        <h2>${formaterSemaine(g.lundi)}</h2>
-        <ul class="liste carte">${g.elements.map((e) => html`<li><a class="ligne-hist lien-ligne" href=${versHash(route, { id: e.id })}>
-          <span class="hist-date">${formaterJourCourt(jourDe(e))}${e.heure ? ` ${e.heure}` : ''}</span>
-          <span class="hist-faits">${resume(e) || (store === 'episodes' ? 'Épisode' : 'Symptôme')}${avecMemo.has(`${store}:${e.id}`) ? html` <span class="icone-memo" aria-label="avec mémo vocal">${Icones.onde()}</span>` : ''}</span>
-          ${q && html`<${Extrait} ex=${trouves.get(e.id)} />`}
+      ? html`<p class="vide">${filtre ? 'Rien ne correspond.' : store === 'episodes' ? "Aucun épisode noté pour l'instant." : "Aucun symptôme noté pour l'instant."}</p>`
+      : grouperParSemaine(liste, jourDe).map((g) => html`<section class="semaine">
+        <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
+        <ul class="liste carte carte-groupe">${g.elements.map((e) => html`<li><a class="ligne-carte ligne-hist" href=${versHash(route, { id: e.id })}>
+          <span class="hist-corps">
+            <span class="hist-date">${formaterJour(jourDe(e))}${e.heure ? ` · ${e.heure}` : ''}${avecMemo.has(`${store}:${e.id}`) && html`<${IconeMemo} />`}</span>
+            <span class="hist-resume">${resume(e) || (store === 'episodes' ? 'Épisode' : 'Symptôme')}</span>
+            ${q ? html`<${Extrait} ex=${trouves.get(e.id)} />` : store === 'episodes' && e.reaction && html`<span class="hist-note">${libelle(carte, e.reaction)}</span>`}
+          </span>
+          ${Icones.chevron({ trait: 2 })}
         </a></li>`)}</ul></section>`);
   }
 
-  const optionsListe = (liste) => options(items, liste, null);
+  // Résumé des filtres actifs, visible même panneau fermé.
+  const resumeFiltres = [
+    f.periode && PERIODES.find((p) => p.valeur === f.periode).libelle,
+    f.lieu && libelle(carte, f.lieu),
+    f.humeur && `humeur ${HUMEURS.find((h) => h.valeur === f.humeur).libelle}`,
+    f.avecExplosions && 'avec explosions',
+    f.avecNotes && 'avec notes',
+    ...['emotion', 'declencheur', 'dessous', 'reaction', 'symptome'].map((c) => f[c] && libelle(carte, f[c])),
+    f.intenseSeulement && 'intensité 7 et plus',
+  ].filter(Boolean);
+
+  const basculerRecherche = () => {
+    if (rechercheOuverte) { setRechercheOuverte(false); setRequete(''); return; }
+    setRechercheOuverte(true);
+    setTimeout(() => champRecherche.current && champRecherche.current.focus(), 0);
+  };
+
   return html`<main class="ecran historique">
     <${Entete} titre="Historique" />
-    <${Segmente} etiquette="Afficher" options=${SEGMENTS} valeur=${segment} surChoix=${(v) => { if (v) { setSegment(v); setF({}); } }} />
+    <${Segmente} etiquette="Afficher" options=${SEGMENTS} valeur=${segment} classe="large" sansVide=${true}
+      surChoix=${(v) => { if (v && v !== segment) { setSegment(v); setF({}); } }} />
     <div class="barre-recherche">
-      <span class="loupe" aria-hidden="true">${Icones.loupe()}</span>
-      <input type="search" class="champ-ligne" aria-label="Rechercher dans les textes" placeholder="Rechercher" value=${requete} onInput=${(e) => setRequete(e.target.value)} />
-      <button type="button" class="btn-lien" aria-expanded=${filtresOuverts ? 'true' : 'false'} onClick=${() => setFiltresOuverts(!filtresOuverts)}>Filtrer ▾</button>
+      <button type="button" class="bouton-loupe" aria-label="Rechercher" aria-expanded=${rechercheOuverte ? 'true' : 'false'} onClick=${basculerRecherche}>${Icones.loupe()}</button>
+      ${rechercheOuverte && html`<input ref=${champRecherche} type="search" class="champ-recherche" aria-label="Rechercher dans les textes" placeholder="Rechercher"
+        value=${requete} onInput=${(e) => setRequete(e.target.value)} />`}
+      <button type="button" class="btn-lien bouton-filtrer" aria-expanded=${filtresOuverts ? 'true' : 'false'} onClick=${() => setFiltresOuverts(!filtresOuverts)}>
+        Filtrer${Icones.chevronBas({ trait: 2 })}</button>
     </div>
-    ${filtresOuverts && html`<div class="filtres carte">
-      <${Selecteur} etiquette="Période" valeur=${f.periode} choix=${[{ valeur: '7', libelle: '7 derniers jours' }, { valeur: '30', libelle: '30 derniers jours' }]} surChoix=${majF('periode')} />
+    ${resumeFiltres.length > 0 && html`<p class="resume-filtres">${resumeFiltres.join(' · ')}</p>`}
+    ${filtresOuverts && html`<div class="filtres">
+      <${GroupeFiltre} titre="Période"><${Pastilles} etiquette="Période" options=${PERIODES} valeur=${f.periode ?? null} surChoix=${majF('periode')} classe="souples" /></${GroupeFiltre}>
       ${segment === 'jours' && html`
-        <${Selecteur} etiquette="Lieu" valeur=${f.lieu} choix=${optionsListe('lieu')} surChoix=${majF('lieu')} />
-        <${Selecteur} etiquette="Humeur" valeur=${f.humeur} choix=${[{ valeur: 'bas', libelle: '1 à 4' }, { valeur: 'moyen', libelle: '5 à 6' }, { valeur: 'haut', libelle: '7 à 10' }]} surChoix=${majF('humeur')} />
-        <label class="case"><input type="checkbox" checked=${Boolean(f.avecExplosions)} onChange=${(e) => majF('avecExplosions')(e.target.checked)} /> Avec explosions</label>
-        <label class="case"><input type="checkbox" checked=${Boolean(f.avecNotes)} onChange=${(e) => majF('avecNotes')(e.target.checked)} /> Avec notes</label>`}
+        <${GroupeFiltre} titre="Lieu"><${Pastilles} etiquette="Lieu" options=${optionsListe('lieu')} valeur=${f.lieu ?? null} surChoix=${majF('lieu')} classe="souples" /></${GroupeFiltre}>
+        <${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>
+        <${GroupeFiltre} titre="Avec"><${Bascules} etiquette="Avec" f=${f} majF=${majF}
+          choix=${[{ cle: 'avecExplosions', libelle: 'Avec explosions' }, { cle: 'avecNotes', libelle: 'Avec notes' }]} /></${GroupeFiltre}>`}
       ${segment === 'episodes' && html`
-        <${Selecteur} etiquette="Émotion" valeur=${f.emotion} choix=${optionsListe('emotion')} surChoix=${majF('emotion')} />
-        <${Selecteur} etiquette="Déclencheur" valeur=${f.declencheur} choix=${optionsListe('declencheur')} surChoix=${majF('declencheur')} />
-        <${Selecteur} etiquette="En dessous" valeur=${f.dessous} choix=${optionsListe('dessous')} surChoix=${majF('dessous')} />
-        <${Selecteur} etiquette="Réaction" valeur=${f.reaction} choix=${optionsListe('reaction')} surChoix=${majF('reaction')} />
-        <label class="case"><input type="checkbox" checked=${Boolean(f.intenseSeulement)} onChange=${(e) => majF('intenseSeulement')(e.target.checked)} /> Intensité 7 et plus</label>`}
-      <button type="button" class="btn-lien" onClick=${() => setF({})}>Tout afficher</button>
+        ${[['emotion', 'Émotion'], ['declencheur', 'Déclencheur'], ['dessous', 'En dessous'], ['reaction', 'Réaction']].map(([cle, titre]) => html`
+          <${GroupeFiltre} titre=${titre}><${Pastilles} etiquette=${titre} options=${optionsListe(cle)} valeur=${f[cle] ?? null} surChoix=${majF(cle)} classe="souples" /></${GroupeFiltre}>`)}
+        <${GroupeFiltre} titre="Intensité"><${Bascules} etiquette="Intensité" f=${f} majF=${majF} choix=${[{ cle: 'intenseSeulement', libelle: '7 et plus' }]} /></${GroupeFiltre}>`}
+      ${segment === 'symptomes' && html`
+        <${GroupeFiltre} titre="Symptôme"><${Pastilles} etiquette="Symptôme" options=${optionsListe('symptome')} valeur=${f.symptome ?? null} surChoix=${majF('symptome')} classe="souples" /></${GroupeFiltre}>`}
     </div>`}
     ${contenu}
   </main>`;

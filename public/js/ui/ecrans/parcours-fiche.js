@@ -6,12 +6,15 @@ import { etatApp } from '../../store.js';
 import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { cleLocale, heureLocale, addDays, formaterJour } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { phraseResume } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { nouvelId } from '../../domain/ids.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { ChampTexte } from '../composants/texte.js';
 import { afficherToast } from '../composants/toast.js';
+import { Confirmation } from '../composants/confirmation.js';
+import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -26,10 +29,10 @@ export function libelleDate(date, maintenant) {
 
 function revenir() {
   const precedente = etatApp.lire().routePrecedente;
-  location.hash = precedente && !/#\/(episode|symptome)\//.test(precedente) ? precedente : '#/aujourdhui';
+  location.hash = precedente && !/#\/(episode|symptome|pas-a-pas)\//.test(precedente) ? precedente : '#/aujourdhui';
 }
 
-export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo }) {
+export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte }) {
   const [items, setItems] = useState(null);
   const [fiche, setFiche] = useState(null);
   const [etape, setEtape] = useState(0);
@@ -41,6 +44,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const instantane = useRef(null);
   const file = useRef(Promise.resolve());
   const suivant = useRef(null);
+  const glisse = useRef({ etape: null, classe: '' });
   const maintenant = repo.maintenant();
 
   useEffect(() => {
@@ -123,9 +127,12 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   if (!items || !fiche) return html`<div class="parcours"></div>`;
   const carte = carteLibelles(items);
 
+  const phrase = phraseResume(store === 'episodes' ? 'episode' : 'symptome', fiche, carte);
+  const rendrePhrase = (classe) => phrase.length > 0 && html`<p class=${classe}>${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>`;
+
   const ligneDate = html`<div class="ligne-date">
     <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => setEditionDate(!editionDate)}>
-      ${libelleDate(fiche.date, maintenant)}${avecHeure && fiche.heure ? ` · ${fiche.heure}` : ''} ▾</button>
+      ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
     ${editionDate && html`<div class="edition-date">
       <input type="date" class="champ-ligne" aria-label="Date" value=${fiche.date} max=${cleLocale(maintenant)}
         onChange=${(e) => { const v = e.target.value; if (v && v <= cleLocale(maintenant)) { setFiche((f) => ({ ...f, date: v })); ecrire({ date: v }); } }} />
@@ -139,39 +146,50 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       const v = fiche[et.champ];
       const texte = v == null ? '·' : et.type === 'intensite' ? String(v) : libelle(carte, v);
       return html`<li><button type="button" class="ligne-recap" onClick=${() => { setVersRecap(true); setEtape(i); }}>
-        <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span><span aria-hidden="true">›</span>
+        <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
-    return html`<${CadreParcours} titre=${titre} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
-      pied=${html`<button type="button" class="btn-lien" onClick=${() => { setVersRecap(false); setEtape(etapes.length - 1); }}>‹ Retour</button>
-        <button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+      pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+      <div class="etape-recap">
+      <h2 class="titre-question">Récapitulatif</h2>
+      ${rendrePhrase('phrase-recap')}
       <ul class="liste recap">${lignes}</ul>
-      ${textes.map((t) => html`<div class="champ"><${ChampTexte} key=${t.champ} id=${`${store}-${t.champ}`}
-        etiquette=${`${t.etiquette} (facultatif)`} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
+      ${textes.map((t) => html`<div class="champ-recap"><${ChampTexte} key=${t.champ} id=${`${store}-${t.champ}`}
+        etiquette=${t.etiquette} icone=${t.icone} facultatif=${true} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrire({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
-      ${idRef.current && (confirmer
-        ? html`<div class="confirmation" role="alert"><p>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?</p>
-            <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmer(false)}>Garder</button>
-            <button type="button" class="btn btn-effacer" onClick=${supprimer}>Supprimer</button></div></div>`
-        : html`<button type="button" class="btn-lien supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`)}
+      ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
+      ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
+        texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"
+        surAnnuler=${() => setConfirmer(false)} surConfirmer=${() => { setConfirmer(false); supprimer(); }} />`}
+      </div>
     </${CadreParcours}>`;
   }
 
   const et = etapes[etape];
+  // Glissement à l'arrivée d'une étape : depuis la droite quand on avance, depuis la gauche quand
+  // on recule. Rien à l'ouverture. La classe reste la même tant que l'étape ne change pas.
+  if (glisse.current.etape !== etape) {
+    const avant = glisse.current.etape;
+    glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
+  }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
-  return html`<${CadreParcours} titre=${titre} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${etape === 0 ? ligneDate : null}
-    pied=${html`${etape > 0 ? html`<button type="button" class="btn-lien" onClick=${() => setEtape(etape - 1)}>‹ Retour</button>` : html`<span></span>`}
-      <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer ›</button>`}>
-    <h2 class="question">${et.question}</h2>
+  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+    pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
+      <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
+    <div class=${`etape ${glisse.current.classe}`} key=${etape}>
+    ${rendrePhrase('phrase-resume')}
+    <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
     <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
       colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
-      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null}
+      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} teinte=${teinte}
       surAjouter=${et.type === 'intensite' ? null : async (texte) => {
         const item = await repo.listes.creer(et.liste, texte);
         setItems(await repo.listes.items());
         choisir(etape, et.champ)(item.id);
       }} />
+    </div>
   </${CadreParcours}>`;
 }

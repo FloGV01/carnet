@@ -1,4 +1,5 @@
-/* Jetons de design (plan §6.8). Provisoires jusqu'au retour de Claude Design (J2.0). */
+/* Jetons de design : reprise de Claude Design (docs/design/retour-claude-design/Carnet.dc.html).
+   Clair par défaut, sombre selon le réglage de l'iPhone (prefers-color-scheme). */
 :root {
   color-scheme: light dark;
   --bg: #FAF8F5;
@@ -10,15 +11,49 @@
   --hairline: #E4DFD8;
   --accent: #3B4A6B;
   --accent-texte: #FFFFFF;
+  --on-accent: var(--accent-texte);
   --info-bg: #EEF1F7;
   --danger: #9E3B2F;
+  --danger-texte: #FFFFFF;
   --sommeil-1: #A9B5CF;
   --sommeil-2: #6D7FA6;
   --sommeil-3: #3B4A6B;
 
+  /* Couleurs de rubrique : repère visuel constant, jamais une valeur bonne ou mauvaise.
+     --c-* plein (texte, icône, choix), --t-* teinte (fond). Toutes ≥ 5:1 sur leur teinte. */
+  --c-lieu: #5F5648; --t-lieu: #EDE8E0;
+  --c-sommeil: #3B4A6B; --t-sommeil: #E6EAF3;
+  --c-humeur: #6E3F6B; --t-humeur: #F1E6F0;
+  --c-contact: #24636A; --t-contact: #DFEEEF;
+  --c-sport: #5E6326; --t-sport: #EEEFDC;
+  --c-expl: #8C5413; --t-expl: #F5E8D6;
+  --c-trt: #5A4E8C; --t-trt: #ECE9F5;
+  --c-pos: #7A6214; --t-pos: #F4EED6;
+
+  --texture: radial-gradient(rgba(128, 118, 104, .10) 0.7px, transparent 0.8px),
+             radial-gradient(rgba(128, 118, 104, .07) 0.6px, transparent 0.7px);
+
+  /* Typographie : polices système uniquement (aucune police web). */
+  --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --police-titre: ui-serif, "New York", Georgia, serif;
+  --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --t-corps: 1rem;
+  --t-pastille: 0.941rem;
+  --t-sous: 0.882rem;
+  --t-note: 0.765rem;
+  --t-etiquette: 0.735rem;
+  --t-legende: 0.706rem;
+  --t-chiffre: 1.647rem;
+
+  /* Rayons */
+  --r-icone: 6px;
   --r-petit: 10px;
-  --r-moyen: 14px;
-  --r-grand: 20px;
+  --r-moyen: 12px;
+  --r-bouton: 14px;
+  --r-carte: 16px;
+  --r-plein: 22px;
+
+  /* Espacements et cibles */
   --esp-1: 4px;
   --esp-2: 8px;
   --esp-3: 12px;
@@ -27,8 +62,13 @@
   --esp-6: 32px;
   --cible: 44px;
   --cible-grille: 48px;
-  --duree: 200ms;
+  --cible-bouton: 52px;
   --marge: 16px;
+
+  /* Durées */
+  --duree: 150ms;
+  --duree-glisse: 180ms;
+  --delai-avance: 250ms;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -43,11 +83,33 @@
     --accent-texte: #1A1917;
     --info-bg: #262B36;
     --danger: #E8A195;
+    --danger-texte: #1A1917;
     --sommeil-1: #4A5878;
     --sommeil-2: #7688B0;
     --sommeil-3: #AFC0E3;
+    --c-lieu: #CFC3B0; --t-lieu: #2F2B25;
+    --c-sommeil: #9DB0D9; --t-sommeil: #262B36;
+    --c-humeur: #D8B0D4; --t-humeur: #33262F;
+    --c-contact: #8FCCD1; --t-contact: #1F3032;
+    --c-sport: #C9CD8E; --t-sport: #2C2D1E;
+    --c-expl: #E6B47A; --t-expl: #33281B;
+    --c-trt: #B9AEE6; --t-trt: #2A2638;
+    --c-pos: #DCC57A; --t-pos: #312B19;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { --duree: 0ms; }
+  :root { --duree: 0ms; --duree-glisse: 0ms; }
 }
+
+/* Teinte locale par rubrique : les composants lisent var(--c) et var(--t), sans style en ligne. */
+.teinte-lieu { --c: var(--c-lieu); --t: var(--t-lieu); }
+.teinte-sommeil { --c: var(--c-sommeil); --t: var(--t-sommeil); }
+.teinte-humeur { --c: var(--c-humeur); --t: var(--t-humeur); }
+.teinte-contact { --c: var(--c-contact); --t: var(--t-contact); }
+.teinte-sport { --c: var(--c-sport); --t: var(--t-sport); }
+.teinte-expl { --c: var(--c-expl); --t: var(--t-expl); }
+.teinte-trt { --c: var(--c-trt); --t: var(--t-trt); }
+.teinte-pos { --c: var(--c-pos); --t: var(--t-pos); }
+.teinte-ep { --c: var(--c-humeur); --t: var(--t-humeur); }
+.teinte-sy { --c: var(--c-contact); --t: var(--t-contact); }
+.teinte-jour { --c: var(--c-sommeil); --t: var(--t-sommeil); }

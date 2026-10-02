@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { grouperParSemaine, filtrerJours, filtrerEpisodes, extrait, chercher } from '../../public/js/domain/historique.js';
+import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, extrait, chercher } from '../../public/js/domain/historique.js';
 
 const jours = [
   { date: '2026-09-21', humeur: 4, lieu: 'lieu:bureau', explosions: 1, notes: null },
@@ -34,4 +34,18 @@ test('recherche sans accents ni casse, avec extrait', () => {
   assert.match(ex.avant, /puis $/);
   assert.equal(extrait('rien', 'absent'), null);
   assert.equal(chercher({ notes: 'Café avec Léo' }, 'journal', 'leo').champ, 'notes');
+});
+
+test('symptômes filtrés par période et par symptôme', () => {
+  const sy = [{ date: '2026-09-20', symptome: 'symptome:ruminations' }, { date: '2026-09-29', symptome: 'symptome:hyperfocus' }];
+  assert.deepEqual(filtrerSymptomes(sy, { du: '2026-09-25' }).map((s) => s.date), ['2026-09-29']);
+  assert.deepEqual(filtrerSymptomes(sy, { symptome: 'symptome:ruminations' }).map((s) => s.date), ['2026-09-20']);
+});
+
+test('extrait court et début de texte coupé au mot', () => {
+  const ex = extrait('Une longue journée de travail puis une réunion qui a débordé sur la soirée entière', 'reunion', 18, 28);
+  assert.equal(ex.avant, '… travail puis une ');
+  assert.equal(ex.apres, ' qui a débordé sur la soirée…');
+  assert.equal(debutTexte('déjeuner au calme', 34), 'déjeuner au calme');
+  assert.equal(debutTexte('marche de vingt minutes au soleil après le travail', 34), 'marche de vingt minutes au soleil…');
 });

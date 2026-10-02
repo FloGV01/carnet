@@ -32,9 +32,9 @@ test('archiver : disparaît des choix, reste lisible ; restaurer', async ({ page
   await page.getByRole('link', { name: "Aujourd'hui" }).click();
   await expect(page.getByRole('link', { name: /10:00\s+Honte/ })).toBeVisible();
   await page.getByRole('link', { name: 'Épisode', exact: true }).click();
-  await page.getByRole('button', { name: 'Passer ›' }).click();
+  await page.getByRole('button', { name: 'Passer', exact: true }).click();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Honte' })).toHaveCount(0);
-  await page.getByRole('button', { name: '✕ Fermer' }).click();
+  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
   await aller(page, '#/reglages/listes/emotion');
   await page.getByRole('listitem').filter({ hasText: 'Honte' }).getByRole('button', { name: 'Restaurer' }).click();
   await expect(page.getByRole('heading', { name: 'Archivés' })).toHaveCount(0);
