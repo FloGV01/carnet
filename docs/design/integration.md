@@ -51,15 +51,17 @@ d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
 - `-apple-system-body` vaut 13 px sur Mac : les tests WebKit tournaient avec un texte plus petit que
   sur l'iPhone. La base de 17 px ne suit Dynamic Type que sur iOS.
 
-## À valider
+## Validé le 2 octobre 2026
+
+Tous les points ci-dessous sont validés tels qu'intégrés.
 
 1. Les couleurs de rubrique, surtout sport (olive, proche du vert) et explosions (ambre).
 2. Le mode « En consultation » : c'est une fonction nouvelle, absente du cahier des charges.
 3. Le parcours « Pas à pas » : c'est un mode de saisie de plus, avec 9 touchers au lieu de 7.
 4. Les intitulés du symptôme : la maquette dit « Symptôme » et « Durée », l'app garde « Quel symptôme ? »
    et « Combien de temps ? », comme les questions de l'épisode.
-5. Les noms des listes dans Réglages : la maquette les met au pluriel (« Émotions », « Déclencheurs »).
-   L'app garde ceux de `listes-def.js`.
+5. Les noms des listes dans Réglages restent ceux de `listes-def.js`, au singulier (la maquette les mettait
+   au pluriel).
 
 ## Vérification
 
