@@ -11,6 +11,7 @@ import { formaterJour, formaterJourComplet, formaterJourAbrege } from '../../dom
 import { trierRdv } from '../../domain/soins.js';
 import { versHash } from '../../routeur.js';
 import { PIED_TRAITEMENT } from './traitement.js';
+import { CarteTraitementActuel } from '../composants/traitement-actuel.js';
 
 const ONGLETS = [{ valeur: 'rdv', libelle: 'Rendez-vous' }, { valeur: 'traitement', libelle: 'Traitement' }];
 
@@ -66,9 +67,11 @@ export function Soins() {
   } else {
     const liste = [...donnees.traitements].sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`));
     contenu = html`
-      <a class="btn-lien action ajout-lien" href="#/traitement/nouveau">${Icones.plus({ trait: 2 })}Traitement</a>
+      <${CarteTraitementActuel} />
+      <h2 class="libelle-section">Changements</h2>
+      <a class="btn-lien action ajout-lien" href="#/traitement/nouveau">${Icones.plus({ trait: 2 })}Changement</a>
       ${liste.length === 0
-        ? html`<p class="vide">Aucune fiche de traitement pour l'instant.</p>`
+        ? html`<p class="vide">Aucun changement noté pour l'instant.</p>`
         : html`<ul class="liste carte carte-groupe">${liste.map((t) => html`<li><a class="ligne-carte ligne-hist" href=${versHash('traitement', { id: t.id })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJourAbrege(t.date)}${avecMemo.has(`traitements:${t.id}`) && html`<${IconeMemo} />`}</span>

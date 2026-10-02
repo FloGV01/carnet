@@ -15,6 +15,7 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { indicateurs } from '../../analyse/fenetres.js';
 import { uneDecimale } from '../../analyse/textes.js';
 import { nomRdv, quandRdv } from './soins.js';
+import { TableauTraitement, lireTraitementActuel } from '../composants/traitement-actuel.js';
 
 function revenir() {
   const precedente = etatApp.lire().routePrecedente;
@@ -24,12 +25,12 @@ function revenir() {
 export function Consultation({ id: idRoute }) {
   const { fiche, id, ecrire, assurer } = useFiche({ store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({}) });
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items] = await Promise.all([repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items()]);
+    const [journal, episodes, symptomes, items, traitement] = await Promise.all([repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), lireTraitementActuel()]);
     const au = repo.aujourdhui();
-    return { ind: indicateurs({ journal, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items) };
+    return { ind: indicateurs({ journal, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement };
   }, []);
   if (!fiche || !donnees) return html`<div class="parcours"></div>`;
-  const { ind, carte } = donnees;
+  const { ind, carte, traitement } = donnees;
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const cellules = [
@@ -51,6 +52,8 @@ export function Consultation({ id: idRoute }) {
           <span class=${c.valeur == null ? 'valeur-chiffre vide-chiffre' : `valeur-chiffre teinte-${c.teinte}`}>${c.valeur ?? '·'}</span>
           <span class="libelle-chiffre">${c.libelle}</span></div>`)}</div>
       </section>
+      ${traitement.lignes.length > 0 && html`<section class="carte bloc-consultation" aria-label="Traitement actuel">
+        <h2 class="titre-carte">Traitement actuel</h2><${TableauTraitement} traitement=${traitement} /></section>`}
       <section class="bloc-consultation">
         <h2 class="titre-carte">Mes questions</h2>
         <${QuestionsACocher} questions=${questions} surChanger=${majQuestions} grand=${true} />

@@ -357,3 +357,22 @@
 .statut-centre { font-size: var(--t-sous); text-align: center; margin-top: -4px; }
 .lien-centre { align-self: center; font-size: var(--t-sous); }
 .soignants .apercu-page { box-shadow: 0 1px 6px rgba(0, 0, 0, .08); }
+
+/* Traitement actuel */
+.carte-traitement { display: flex; flex-direction: column; gap: 10px; }
+.carte-traitement .carte-entete { margin: 0; }
+.tableau-traitement { border-collapse: collapse; width: 100%; font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
+.tableau-traitement th, .tableau-traitement td { text-align: center; padding: 6px 4px; border-top: 1px solid var(--hairline); }
+.tableau-traitement thead th { border-top: 0; font-size: var(--t-note); font-weight: 600; color: var(--text-2); }
+.tableau-traitement tbody th { text-align: left; font-weight: 600; padding-left: 0; }
+.nom-medicament { border: 0; background: none; padding: 0; min-height: var(--cible); font: inherit; font-weight: 600; color: var(--accent); text-align: left; text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 3px; }
+.edition-traitement { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: var(--r-moyen); background: var(--surface-2); }
+.doses-moments { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 4px; }
+.doses-moments { align-items: end; }
+.dose-moment { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: var(--t-legende); line-height: 1.15; color: var(--text-2); }
+.dose-moment input { padding: 0 4px; text-align: center; min-width: 0; }
+.actions-ligne { display: flex; justify-content: space-between; align-items: center; }
+.ajout-medicament { align-self: flex-start; font-size: var(--t-corps); }
+.ligne-depuis { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ligne-depuis input { width: auto; }
+.consultation .tableau-traitement { font-size: var(--t-corps); }

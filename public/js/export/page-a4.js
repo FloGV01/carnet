@@ -75,8 +75,15 @@ export function mettreEnPage(m) {
   titreSection('Repères');
   for (const r of m.reperes) texte(`· ${r}`, { taille: 8 });
 
-  if (m.traitement.length) {
-    titreSection('Traitement (90 jours)');
+  // Traitement : l'actuel en deux colonnes, puis les changements datés des 90 derniers jours.
+  const actuel = m.traitementActuel || [];
+  if (actuel.length || m.traitement.length) {
+    titreSection('Traitement');
+    for (let i = 0; i < actuel.length; i += 2) {
+      const yLigne = y;
+      texte(actuel[i], { taille: 7.5, uneLigne: true, l: largeur / 2 - 2 });
+      if (actuel[i + 1]) { const yApres = y; y = yLigne; texte(actuel[i + 1], { taille: 7.5, uneLigne: true, x: x0 + largeur / 2, l: largeur / 2 - 2 }); y = yApres; }
+    }
     for (const t of m.traitement) texte(t, { taille: 8, uneLigne: true });
   }
 

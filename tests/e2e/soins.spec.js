@@ -55,7 +55,7 @@ test('question ajoutée depuis la carte du prochain rendez-vous', async ({ page 
 test('traitement : « Aucun » exclusif, effet ressenti, pied de page', async ({ page }) => {
   await page.getByRole('group', { name: 'Soins' }).getByRole('button', { name: /Traitement/ }).click();
   await expect(page.getByText('Ce journal sert à préparer tes échanges avec ton psychiatre.')).toBeVisible();
-  await page.getByRole('link', { name: 'Traitement' }).click();
+  await page.getByRole('link', { name: 'Changement', exact: true }).click();
   const effets = page.getByRole('group', { name: 'Effets secondaires' });
   await effets.getByRole('button', { name: 'Somnolence' }).click();
   await effets.getByRole('button', { name: 'Vertiges' }).click();
@@ -88,4 +88,36 @@ test('en consultation : chiffres des 30 jours, questions cochées, compte rendu,
   await expect.poll(async () => (await page.evaluate((id) => window.__carnet.repo.rdv.lire(id), r.id)).compteRendu).toBe('garder le même rythme');
   await vue.getByRole('button', { name: 'Terminer' }).click();
   await expect(page.getByRole('heading', { name: 'Soins' })).toBeVisible();
+});
+
+test('traitement actuel : première saisie sans fiche, puis une fiche datée par jour de changement', async ({ page }) => {
+  const fiches = () => page.evaluate(() => window.__carnet.repo.traitements.tous());
+  await page.getByRole('group', { name: 'Soins' }).getByRole('button', { name: /Traitement/ }).click();
+  const carte = page.getByRole('region', { name: 'Mon traitement actuel' });
+  await carte.getByRole('button', { name: 'Ajouter un médicament' }).click();
+  await carte.getByLabel('Médicament', { exact: true }).fill('Médicament A');
+  await carte.getByLabel('Dose, Matin').fill('½');
+  await carte.getByLabel('Dose, Soir').fill('1');
+  await carte.getByRole('button', { name: 'Fermer' }).click();
+  await expect(carte.getByRole('columnheader', { name: 'Soir' })).toBeVisible();
+  await expect(carte.getByRole('row', { name: /Médicament A\s*½\s*1/ })).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await fiches()).toEqual([]);
+  // Le lendemain : un changement crée une fiche datée, un second changement du jour la complète.
+  await page.clock.setSystemTime(new Date(2026, 9, 2, 20, 0));
+  await page.reload();
+  await page.getByRole('link', { name: 'Soins' }).click();
+  await carte.getByRole('button', { name: 'Modifier Médicament A' }).click();
+  await carte.getByLabel('Dose, Soir').fill('1½');
+  await carte.getByLabel('Dose, Coucher').fill('1');
+  await carte.getByRole('button', { name: 'Fermer' }).click();
+  await expect.poll(async () => (await fiches()).map((f) => f.changement)).toEqual(['Médicament A : soir 1 → 1½, coucher · → 1']);
+  expect((await fiches())[0].date).toBe('2026-10-02');
+  await carte.getByRole('button', { name: 'Modifier Médicament A' }).click();
+  await carte.getByLabel('Dose, Matin').fill('1');
+  await carte.getByRole('button', { name: 'Fermer' }).click();
+  await expect.poll(async () => (await fiches()).map((f) => f.changement)).toEqual(['Médicament A : matin ½ → 1, soir 1 → 1½, coucher · → 1']);
+  await page.reload();
+  await page.getByRole('link', { name: 'Soins' }).click();
+  await expect(page.getByRole('region', { name: 'Mon traitement actuel' }).getByRole('columnheader', { name: 'Coucher' })).toBeVisible();
 });

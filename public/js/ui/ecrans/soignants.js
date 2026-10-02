@@ -31,11 +31,11 @@ export function Soignants() {
     let actif = true;
     setFichier(null);
     (async () => {
-      const [{ resultat, carte }, journal, episodes, symptomes, traitements, rdvs, prenom] = await Promise.all([
-        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.rdv.tous(), repo.meta.lire('prenomSoignants'),
+      const [{ resultat, carte }, journal, episodes, symptomes, traitements, rdvs, prenom, traitementActuel] = await Promise.all([
+        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.rdv.tous(), repo.meta.lire('prenomSoignants'), repo.meta.lire('traitementActuel'),
       ]);
       const aujourdhui = repo.aujourdhui();
-      const modele = modeleSoignants({ journal, episodes, symptomes, traitements }, { aujourdhui, carte, analyse: resultat, professionnel: pro, prenom: prenom || '', rdvs, traitements });
+      const modele = modeleSoignants({ journal, episodes, symptomes, traitements }, { aujourdhui, carte, analyse: resultat, professionnel: pro, prenom: prenom || '', rdvs, traitements, traitementActuel });
       if (!actif || !toile.current) return;
       dessinerPage(toile.current, mettreEnPage(modele));
       const blob = await new Promise((ok) => toile.current.toBlob(ok, 'image/jpeg', 0.85));
