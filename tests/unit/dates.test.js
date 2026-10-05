@@ -44,6 +44,9 @@ test('validité des dates et des heures', () => {
 
 test('formats français', () => {
   assert.equal(D.formaterJour('2026-09-30'), 'mercredi 30 sept.');
+  assert.equal(D.formaterJourComplet('2026-10-14'), 'mercredi 14 octobre');
+  assert.equal(D.formaterJourComplet('2026-10-01'), 'jeudi 1er octobre');
+  assert.equal(D.formaterJourAbrege('2026-09-16'), 'mer. 16 sept.');
   assert.equal(D.formaterJourCourt('2026-09-21'), 'lun 21/09');
   assert.equal(D.formaterDateLongue('2026-10-01'), '1er octobre 2026');
   assert.equal(D.formaterSemaine('2026-09-21'), 'Semaine du 21 septembre');

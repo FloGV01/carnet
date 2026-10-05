@@ -26,10 +26,27 @@ export function filtrerJours(jours, f = {}) {
     if (f.au && j.date > f.au) return false;
     if (f.lieu && j.lieu !== f.lieu) return false;
     if (f.humeur) { const [a, b] = TRANCHES_HUMEUR[f.humeur]; if (j.humeur == null || j.humeur < a || j.humeur > b) return false; }
-    if (f.avecExplosions && !(j.explosions > 0)) return false;
+    // explosionsDe (v4) : valeur affichée du jour, épisodes « Explosion » compris (domain/explosions.js).
+    if (f.avecExplosions && !((f.explosionsDe ? f.explosionsDe(j) : j.explosions) > 0)) return false;
     if (f.avecNotes && !j.notes) return false;
     return true;
   });
+}
+
+export function filtrerSymptomes(symptomes, f = {}) {
+  return symptomes.filter((s) => {
+    if (f.du && s.date < f.du) return false;
+    if (f.symptome && s.symptome !== f.symptome) return false;
+    return true;
+  });
+}
+
+// Début d'un texte, coupé au mot quand c'est possible.
+export function debutTexte(texte, max) {
+  if (!texte || texte.length <= max) return texte || '';
+  const coupe = texte.slice(0, max);
+  const espace = coupe.lastIndexOf(' ');
+  return `${(espace > max * 0.6 ? coupe.slice(0, espace) : coupe).trimEnd()}…`;
 }
 
 export function filtrerEpisodes(episodes, f = {}) {
@@ -44,14 +61,14 @@ export function filtrerEpisodes(episodes, f = {}) {
 }
 
 // Recherche dans les textes libres ; rend l'extrait autour de la première occurrence.
-export function extrait(texte, requete, rayon = 40) {
+export function extrait(texte, requete, avant = 40, apres = avant) {
   const q = normaliserRecherche(requete);
   if (!q || !texte) return null;
   const norm = normaliserRecherche(texte);
   const i = norm.indexOf(q);
   if (i < 0) return null;
-  const debut = Math.max(0, i - rayon);
-  const fin = Math.min(texte.length, i + q.length + rayon);
+  const debut = Math.max(0, i - avant);
+  const fin = Math.min(texte.length, i + q.length + apres);
   return { avant: `${debut > 0 ? '…' : ''}${texte.slice(debut, i)}`, trouve: texte.slice(i, i + q.length), apres: `${texte.slice(i + q.length, fin)}${fin < texte.length ? '…' : ''}` };
 }
 
@@ -59,9 +76,9 @@ export const CHAMPS_TEXTE = {
   journal: ['pointsPositifs', 'notes'], episodes: ['situation', 'ceQuiAAide'], symptomes: ['contexte', 'note'],
 };
 
-export function chercher(element, store, requete) {
+export function chercher(element, store, requete, avant, apres) {
   for (const champ of CHAMPS_TEXTE[store] || []) {
-    const ex = extrait(element[champ], requete);
+    const ex = extrait(element[champ], requete, avant, apres);
     if (ex) return { champ, ...ex };
   }
   return null;

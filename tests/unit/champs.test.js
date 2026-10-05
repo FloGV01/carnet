@@ -59,3 +59,32 @@ test('estVide et « Aucun » exclusif', () => {
   assert.deepEqual(basculerMultiple(['effetSecondaire:aucun'], 'effetSecondaire:fatigue', ex), ['effetSecondaire:fatigue']);
   assert.equal(basculerMultiple(['effetSecondaire:fatigue'], 'effetSecondaire:fatigue', ex), null);
 });
+
+test('v4 : activités du jour, lignes vides retirées, références imbriquées', () => {
+  const { valeur, erreurs } = normaliser('journal', { date: '2026-10-05', activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: null, duree: '' }, { type: 'typeSport:velo' }], contactAvec: ['contactAvec:famille', 'contactAvec:famille'], contactEffet: 'contactEffet:ressourcant' });
+  assert.deepEqual(erreurs, []);
+  assert.deepEqual(valeur.activites, [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: null }]);
+  assert.deepEqual(valeur.contactAvec, ['contactAvec:famille']);
+  assert.deepEqual(referencesDe('journal', valeur).sort(), ['contactAvec:famille', 'contactEffet:ressourcant', 'dureeSport:de_30_a_60', 'typeSport:marche', 'typeSport:velo']);
+  assert.equal(normaliser('journal', { date: '2026-10-05', activites: [{}] }).valeur.activites, null);
+  assert.ok(normaliser('journal', { date: '2026-10-05', activites: [{ type: 'lieu:bureau' }] }).erreurs.length > 0);
+});
+
+test('v4 : après coup facultatif champ par champ, vide → null, bornes vérifiées', () => {
+  const ok = normaliser('episodes', { id: 'e1', date: '2026-10-05', reaction: 'reaction:explosion', apresCoup: { types: ['typeExplosion:colere'], repereA: 6, siJe: ' je sens la chaleur ', alorsJe: 'je sors 5 min' } });
+  assert.deepEqual(ok.erreurs, []);
+  assert.equal(ok.valeur.apresCoup.siJe, 'je sens la chaleur');
+  assert.equal(ok.valeur.apresCoup.pensees, null);
+  assert.ok(referencesDe('episodes', ok.valeur).includes('typeExplosion:colere'));
+  assert.equal(normaliser('episodes', { id: 'e1', date: '2026-10-05', apresCoup: { pensees: '  ' } }).valeur.apresCoup, null);
+  assert.equal(normaliser('episodes', { id: 'e1', date: '2026-10-05', apresCoup: { jour: '2026-10-06' } }).valeur.apresCoup, null, 'le jour seul ne garde pas l\'après coup');
+  assert.equal(normaliser('episodes', { id: 'e1', date: '2026-10-05', apresCoup: { jour: '2026-10-06', siJe: 'x' } }).valeur.apresCoup.jour, '2026-10-06');
+  assert.ok(normaliser('episodes', { id: 'e1', date: '2026-10-05', apresCoup: { repereA: 11 } }).erreurs.length > 0);
+});
+
+test('v4 : humeur du moment, l\'heure seule ne suffit pas à garder un relevé', () => {
+  const { valeur, erreurs } = normaliser('humeurs', { id: 'h1', date: '2026-10-05', heure: '10:05', humeur: 6, energie: 'energie:basse' });
+  assert.deepEqual(erreurs, []);
+  assert.equal(valeur.energie, 'energie:basse');
+  assert.equal(estVide('humeurs', normaliser('humeurs', { id: 'h1', date: '2026-10-05', heure: '10:05' }).valeur), true);
+});

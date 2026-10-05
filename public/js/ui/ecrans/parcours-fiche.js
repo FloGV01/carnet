@@ -6,12 +6,17 @@ import { etatApp } from '../../store.js';
 import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { cleLocale, heureLocale, addDays, formaterJour } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { phraseResume } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { nouvelId } from '../../domain/ids.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { ChampTexte } from '../composants/texte.js';
 import { afficherToast } from '../composants/toast.js';
+import { Confirmation } from '../composants/confirmation.js';
+import { Icones } from '../icones.js';
+import { FeuillePlan } from '../composants/mon-plan.js';
+import { estExplosion } from '../../domain/explosions.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -24,23 +29,35 @@ export function libelleDate(date, maintenant) {
   return formaterJour(date);
 }
 
-function revenir() {
-  const precedente = etatApp.lire().routePrecedente;
-  location.hash = precedente && !/#\/(episode|symptome)\//.test(precedente) ? precedente : '#/aujourdhui';
+// Résumé d'un Après coup sur la ligne du récapitulatif (le contenu, jamais un état « fait »).
+function resumeApresCoup(a, carte) {
+  if (!a) return null;
+  return [(a.types || []).map((id) => libelle(carte, id)).join(', '), a.repereA != null && `remarqué à ${a.repereA}/10`,
+    (a.siJe || a.alorsJe) && `si ${a.siJe || '…'}, alors ${a.alorsJe || '…'}`].filter(Boolean).join(' · ') || null;
 }
 
-export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo }) {
+// origine : écran d'où l'épisode a été ouvert, gardé pendant un passage par Après coup.
+function revenir(origine) {
+  const precedente = origine || etatApp.lire().routePrecedente;
+  location.hash = precedente && !/#\/(episode|symptome|pas-a-pas|apres-coup)\//.test(precedente) && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
+}
+
+export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte, avecPlan = false }) {
   const [items, setItems] = useState(null);
   const [fiche, setFiche] = useState(null);
   const [etape, setEtape] = useState(0);
   const [versRecap, setVersRecap] = useState(false);
   const [editionDate, setEditionDate] = useState(false);
   const [confirmer, setConfirmer] = useState(false);
+  const [voirPlan, setVoirPlan] = useState(false);
+  const boutonPlan = useRef(null);
   const [, signaler] = useIndicateur();
   const idRef = useRef(null);
   const instantane = useRef(null);
+  const origine = useRef(null);
   const file = useRef(Promise.resolve());
   const suivant = useRef(null);
+  const glisse = useRef({ etape: null, classe: '' });
   const maintenant = repo.maintenant();
 
   useEffect(() => {
@@ -54,7 +71,13 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         if (!actif) return;
         if (!lue) { location.hash = '#/aujourdhui'; return; }
         idRef.current = lue.id;
-        instantane.current = lue;
+        // Retour d'Après coup : même origine et même état de départ (Annuler reste juste).
+        const retour = etatApp.lire().retourEpisode;
+        if (retour && retour.id === lue.id) {
+          origine.current = retour.origine;
+          instantane.current = retour.instantane;
+          etatApp.maj({ retourEpisode: null });
+        } else instantane.current = lue;
         setFiche(lue);
         setEtape('recap');
         return;
@@ -67,9 +90,10 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     return () => { actif = false; clearTimeout(suivant.current); };
   }, [idRoute]);
 
-  // Écritures en file : jamais deux créations pour une même fiche.
-  const ecrire = (changements) => {
-    file.current = file.current.then(async () => {
+  // Écritures en file : jamais deux créations pour une même fiche. ecrireTexte rejette si
+  // l'écriture échoue (ChampTexte garde alors son brouillon) ; ecrire ignore l'échec, déjà signalé.
+  const ecrireTexte = (changements) => {
+    const travail = file.current.then(async () => {
       if (!idRef.current) {
         const base = { date: fiche.date, ...(avecHeure ? { heure: fiche.heure ?? null } : {}) };
         const id = nouvelId(store === 'episodes' ? 'ep' : 'sy');
@@ -79,9 +103,11 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       }
       const res = await ecrireAvecEssais(() => repo[store].modifier(idRef.current, changements), signaler);
       if (res === null) { idRef.current = null; history.replaceState(null, '', versHash(route, { id: 'nouveau' })); }
-    }).catch(() => {});
-    return file.current;
+    });
+    file.current = travail.catch(() => {});
+    return travail;
   };
+  const ecrire = (changements) => ecrireTexte(changements).catch(() => {});
 
   const avancer = (depuis) => {
     if (versRecap) { setVersRecap(false); setEtape('recap'); return; }
@@ -100,7 +126,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     await file.current;
     const id = idRef.current;
     const avant = instantane.current;
-    revenir();
+    revenir(origine.current);
     if (!id) return;
     afficherToast(`${nomFiche} enregistré`, {
       libelle: 'Annuler',
@@ -114,7 +140,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const supprimer = async () => {
     await file.current;
     const id = idRef.current;
-    revenir();
+    revenir(origine.current);
     if (!id) return;
     const sauve = await repo[store].supprimer(id);
     afficherToast(`${nomFiche} supprimé`, { libelle: 'Annuler', faire: () => repo[store].restaurer(sauve) });
@@ -123,9 +149,15 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   if (!items || !fiche) return html`<div class="parcours"></div>`;
   const carte = carteLibelles(items);
 
+  const phrase = phraseResume(store === 'episodes' ? 'episode' : 'symptome', fiche, carte);
+  const rendrePhrase = (classe) => phrase.length > 0 && html`<p class=${classe}>${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>`;
+
+  // « Mon plan » : une ligne fixe sous la date, à chaque étape et au récapitulatif (épisodes).
+  const lignePlan = avecPlan && html`<div class="ligne-plan"><button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => setVoirPlan(true)}>${Icones.listes()}Mon plan</button></div>`;
+  const feuillePlan = voirPlan && html`<${FeuillePlan} surFermer=${() => setVoirPlan(false)} retourFocus=${boutonPlan} />`;
   const ligneDate = html`<div class="ligne-date">
     <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => setEditionDate(!editionDate)}>
-      ${libelleDate(fiche.date, maintenant)}${avecHeure && fiche.heure ? ` · ${fiche.heure}` : ''} ▾</button>
+      ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
     ${editionDate && html`<div class="edition-date">
       <input type="date" class="champ-ligne" aria-label="Date" value=${fiche.date} max=${cleLocale(maintenant)}
         onChange=${(e) => { const v = e.target.value; if (v && v <= cleLocale(maintenant)) { setFiche((f) => ({ ...f, date: v })); ecrire({ date: v }); } }} />
@@ -139,39 +171,62 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       const v = fiche[et.champ];
       const texte = v == null ? '·' : et.type === 'intensite' ? String(v) : libelle(carte, v);
       return html`<li><button type="button" class="ligne-recap" onClick=${() => { setVersRecap(true); setEtape(i); }}>
-        <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span><span aria-hidden="true">›</span>
+        <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
-    return html`<${CadreParcours} titre=${titre} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
-      pied=${html`<button type="button" class="btn-lien" onClick=${() => { setVersRecap(false); setEtape(etapes.length - 1); }}>‹ Retour</button>
-        <button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
+      pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+      <div class="etape-recap">
+      <h2 class="titre-question">Récapitulatif</h2>
+      ${rendrePhrase('phrase-recap')}
       <ul class="liste recap">${lignes}</ul>
-      ${textes.map((t) => html`<div class="champ"><${ChampTexte} key=${t.champ} id=${`${store}-${t.champ}`}
-        etiquette=${`${t.etiquette} (facultatif)`} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
+      ${textes.map((t) => html`<div class="champ-recap"><${ChampTexte} key=${t.champ} id=${`${store}-${t.champ}`}
+        etiquette=${t.etiquette} icone=${t.icone} facultatif=${true} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
-        surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrire({ [t.champ]: v }); }} /></div>`)}
+        surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrireTexte({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
-      ${idRef.current && (confirmer
-        ? html`<div class="confirmation" role="alert"><p>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?</p>
-            <div class="ligne"><button type="button" class="btn" onClick=${() => setConfirmer(false)}>Garder</button>
-            <button type="button" class="btn btn-effacer" onClick=${supprimer}>Supprimer</button></div></div>`
-        : html`<button type="button" class="btn-lien supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`)}
+      ${avecPlan && (estExplosion(fiche) || fiche.apresCoup) && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
+        onClick=${async (e) => {
+          const garder = () => etatApp.maj({ retourEpisode: { id: idRef.current, origine: origine.current || etatApp.lire().routePrecedente, instantane: instantane.current } });
+          if (idRef.current) { garder(); return; }
+          e.preventDefault(); await ecrire({}); await file.current;
+          if (idRef.current) { garder(); location.hash = versHash('apres-coup', { id: idRef.current }); }
+        }}>
+        <span class="ligne-libelle"><span class="titre-apres-coup">Après coup</span>
+          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid sur cet épisode, étape par étape.'}</span></span>
+        ${Icones.chevron({ trait: 2 })}</a>`}
+      ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
+      ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
+        texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"
+        surAnnuler=${() => setConfirmer(false)} surConfirmer=${() => { setConfirmer(false); supprimer(); }} />`}
+      </div>
+      ${feuillePlan}
     </${CadreParcours}>`;
   }
 
   const et = etapes[etape];
+  // Glissement à l'arrivée d'une étape : depuis la droite quand on avance, depuis la gauche quand
+  // on recule. Rien à l'ouverture. La classe reste la même tant que l'étape ne change pas.
+  if (glisse.current.etape !== etape) {
+    const avant = glisse.current.etape;
+    glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
+  }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
-  return html`<${CadreParcours} titre=${titre} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${etape === 0 ? ligneDate : null}
-    pied=${html`${etape > 0 ? html`<button type="button" class="btn-lien" onClick=${() => setEtape(etape - 1)}>‹ Retour</button>` : html`<span></span>`}
-      <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer ›</button>`}>
-    <h2 class="question">${et.question}</h2>
+  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
+    pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
+      <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
+    <div class=${`etape ${glisse.current.classe}`} key=${etape}>
+    ${rendrePhrase('phrase-resume')}
+    <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
     <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
       colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
-      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null}
+      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} teinte=${teinte}
       surAjouter=${et.type === 'intensite' ? null : async (texte) => {
         const item = await repo.listes.creer(et.liste, texte);
         setItems(await repo.listes.items());
         choisir(etape, et.champ)(item.id);
       }} />
+    </div>
+    ${feuillePlan}
   </${CadreParcours}>`;
 }

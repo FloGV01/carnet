@@ -17,9 +17,11 @@ test('avec 3 jours : « Pas encore assez de données pour le dire. » et sa règ
   await page.getByRole('link', { name: 'Analyse' }).click();
   await expect(page.getByRole('heading', { name: 'Ce que tes journées à 7 ou plus ont en commun' })).toBeVisible();
   await expect(page.getByText('Pas encore assez de données pour le dire.').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Pourquoi ?' }).first().click();
+  const constats = page.locator('section', { has: page.getByRole('heading', { name: 'Ce que tes journées à 7 ou plus ont en commun' }) });
+  await constats.getByRole('button', { name: 'Pourquoi ?' }).click();
   await expect(page.getByText(/La règle : au moins 5 journées à 7 ou plus/)).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
+  await expect(page.getByRole('region', { name: 'Ma semaine' })).toContainText('5,0');
 });
 
 test('avec 180 jours synthétiques : constats, graphes, tableau, sans débordement horizontal', async ({ page }) => {

@@ -13,3 +13,12 @@
 - [ ] La notification Raccourcis arrive à 21:00, y compris iPhone verrouillé.
 - [ ] v2 : copier puis coller dans PSY donne le texte complet. v3 : le PDF des soignants s'imprime ou s'enregistre.
 - [ ] Aucun texte de l'app ne parle d'un jour manqué, d'une série ou d'un score.
+
+## Design (J2.0)
+
+- [ ] Les titres s'affichent en serif (New York), en clair et en sombre.
+- [ ] Réglages iOS › Luminosité et affichage › Taille du texte au plus grand : l'app reste lisible et défile, rien n'est coupé.
+- [ ] « Pas à pas » : la journée se remplit une question par écran ; Fermer garde tout.
+- [ ] Toucher le micro « Dicter » quand le clavier est déjà ouvert ne le referme pas.
+- [ ] « En consultation » : chiffres des 30 jours, questions cochées au doigt, compte rendu dicté ; Terminer revient à Soins.
+- [ ] Les boutons « Pas à pas » et « + Épisode » ne recouvrent ni « Mes points positifs » ni « Mémo vocal ».

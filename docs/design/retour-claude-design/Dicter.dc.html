@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;gap:6px;width:100%">
+<div style="position:relative;display:flex">
+<sc-if value="{{ multi }}" hint-placeholder-val="{{ true }}"><textarea ref="{{ ref }}" value="{{ val }}" onChange="{{ change }}" onFocus="{{ focus }}" onBlur="{{ blur }}" onKeyDown="{{ key }}" placeholder="{{ placeholder }}" rows="{{ rows }}" aria-label="{{ aria }}" style="{{ fieldStyle }}"></textarea></sc-if>
+<sc-if value="{{ single }}"><input ref="{{ ref }}" value="{{ val }}" onChange="{{ change }}" onFocus="{{ focus }}" onBlur="{{ blur }}" onKeyDown="{{ key }}" placeholder="{{ placeholder }}" aria-label="{{ aria }}" enterkeyhint="done" style="{{ fieldStyle }}"></sc-if>
+<button type="button" aria-label="Dicter" onMouseDown="{{ keep }}" onClick="{{ dict }}" style="{{ micStyle }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5.5 11a6.5 6.5 0 0 0 13 0 M12 17.5V21"></path></svg></button>
+</div>
+<sc-if value="{{ help }}"><div style="font-size:13px;line-height:1.3;color:var(--text-2);padding-left:2px">Touche le micro du clavier pour parler.</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:358,&quot;height&quot;:110},&quot;value&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;placeholder&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rows&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;tsType&quot;:&quot;number&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;active&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(v:string)=&gt;void&quot;},&quot;onEnter&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(v:string)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { v: this.props.value ?? '', focus: false, help: this.props.demo === 'active' };
+  ref = React.createRef();
+  val() { return this.props.onChange ? (this.props.value ?? '') : this.state.v; }
+  set(v) { if (this.props.onChange) this.props.onChange(v); else this.setState({ v }); }
+  renderVals() {
+    const p = this.props, demoA = p.demo === 'active';
+    const active = this.state.focus || demoA, multi = (p.rows ?? 2) > 1;
+    return {
+      multi, single: !multi, rows: p.rows ?? 2, placeholder: p.placeholder || '', aria: p.label || p.placeholder || 'Texte',
+      val: this.val(), help: this.state.help || demoA, ref: this.ref,
+      fieldStyle: { width: '100%', boxSizing: 'border-box', minHeight: 46, padding: '9px 46px 9px 14px', borderRadius: 12, border: '1px solid ' + (active ? 'var(--accent)' : 'var(--border)'), boxShadow: active ? '0 0 0 1px var(--accent)' : 'none', background: 'var(--surface)', color: 'var(--text)', fontSize: 17, lineHeight: 1.35, resize: 'none', outline: 'none', fontFamily: 'inherit', display: 'block' },
+      micStyle: { position: 'absolute', right: 1, top: 1, width: 44, height: 44, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--text-2)', padding: 0 },
+      change: e => this.set(e.target.value),
+      focus: () => this.setState({ focus: true }),
+      blur: () => this.setState({ focus: false, help: false }),
+      keep: e => e.preventDefault(),
+      dict: () => { const el = this.ref.current; if (!el) return; el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} this.setState({ help: true, focus: true }); },
+      key: e => { if (p.onEnter && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const v = this.val().trim(); if (v) { p.onEnter(v); this.set(''); } } }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ test('l\'appui long sur la version ouvre le diagnostic', async ({ page }) => {
   await page.goto('/');
   await page.goto('/#/reglages');
   const version = page.locator('.version-app');
+  await version.scrollIntoViewIfNeeded();
   const boite = await version.boundingBox();
   await page.mouse.move(boite.x + 5, boite.y + 5);
   await page.mouse.down();
@@ -33,4 +34,10 @@ test('une route inconnue ramène sur Aujourd\'hui', async ({ page }) => {
   await page.goto('/');
   await aller(page, '#/nimporte');
   await expect(page).toHaveURL(/#\/aujourdhui$/);
+});
+
+test('le texte d\'attente disparaît une fois l\'app affichée', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Aujourd'hui/ })).toBeVisible();
+  await expect(page.locator('.chargement')).toHaveCount(0);
 });

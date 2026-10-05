@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieHumeur, geometrieExplosions, geometrieSommeil, DIM } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieHumeur, geometrieExplosions, geometrieSommeil, DIM, MIN_ECHELLE_EXPLOSIONS, NUITS_SEMAINE } from '../../public/js/ui/graphes/geometrie.js';
 
 const semaines = [
   { lundi: '2026-09-07', humeur: 10, fragile: false, explosions: 0, sommeil: { mal: 1, moyen: 2, bien: 3 } },
@@ -32,4 +32,19 @@ test('sommeil : piles sans NaN, sans morceau vide', () => {
   assert.equal(g.piles.length, 2);
   assert.deepEqual(g.piles[1].morceaux.map((m) => m.cle), ['mal']);
   assert.ok(JSON.stringify(g).indexOf('NaN') < 0);
+});
+
+test('explosions : échelle d\'au moins 4, une semaine à 1 ne remplit pas le graphe', () => {
+  const g = geometrieExplosions([{ lundi: '2026-09-28', explosions: 1 }]);
+  assert.equal(g.max, MIN_ECHELLE_EXPLOSIONS);
+  assert.ok(g.barres[0].h < (DIM.hauteur - DIM.haut - DIM.bas) / 3);
+});
+
+test('sommeil : échelle fixe de 7 nuits, liseré entre les morceaux', () => {
+  const g = geometrieSommeil([{ lundi: '2026-09-28', sommeil: { mal: 2, moyen: 0, bien: 1 } }]);
+  assert.equal(g.max, NUITS_SEMAINE);
+  const h = DIM.hauteur - DIM.haut - DIM.bas;
+  const [mal, bien] = g.piles[0].morceaux;
+  assert.equal(mal.h, Math.round(((2 / 7) * h - 1) * 10) / 10);
+  assert.ok(bien.y + bien.h < mal.y, 'un pixel de fond entre les morceaux');
 });

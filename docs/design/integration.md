@@ -1,0 +1,74 @@
+# Intégration du design Claude Design (J2.0)
+
+Source : `docs/design/retour-claude-design/` (prototype `Carnet.dc.html`, jetons `carnet-tokens.css`).
+On reprend le rendu, jamais le JS du prototype : la logique de l'app reste celle du code (moteur
+d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
+
+## Ce qui est repris
+
+- **Jetons** (`public/css/tokens.css`) : palette sable et ardoise, plus une couleur par rubrique
+  (`--c-*` plein, `--t-*` teinte). Ce sont des repères, jamais une valeur bonne ou mauvaise. Contrastes
+  plein sur teinte de 5,1:1 à 8,4:1. Le sombre suit le réglage de l'iPhone.
+- **Typographie** : titres en serif système (New York), texte en SF Pro. Les tailles sont en rem sur
+  une base de 17 px. Sur iPhone seulement, cette base suit la taille du texte d'iOS (Dynamic Type).
+- **Icônes** : une seule famille au trait (`public/js/ui/icones.js`), tracés de la maquette.
+- **Sélection** : fond plein de la rubrique, graisse 600 et rayon qui passe de 12 à 22. La sélection
+  ne repose jamais sur la couleur seule.
+- **Écrans** : Aujourd'hui (rubriques teintées, résumé dans l'en-tête), parcours Épisode et Symptôme
+  (phrase résumé, question en serif, glissement entre étapes, récapitulatif en carte), Historique
+  (puces par rubrique, loupe, filtres en pastilles), Soins (carte du prochain rendez-vous, questions
+  à cocher), Réglages (sauvegarde intégrée, interrupteur, « Tout effacer » en trois temps), Analyse
+  (Ma semaine, tuiles et graphes teintés, étiquette au toucher), Export PSY, Vue soignants, guide.
+- **Nouveautés venues du prototype** : le parcours « Pas à pas » (`#/pas-a-pas/:date`) et le mode
+  « En consultation » (`#/consultation/:id`). Les deux masquent la barre d'onglets, comme un parcours.
+
+## Écarts volontaires au prototype
+
+| Prototype | App | Raison |
+|---|---|---|
+| Bouton flottant « Pas à pas » posé sur le Mémo vocal | Les deux boutons flottants sont sur une bande au fond de l'écran, et la page défile au-dessus | Ne jamais recouvrir un contrôle |
+| Confirmation de suppression en ligne, en rouge | Boîte de confirmation en accent | Le rouge est réservé à « Effacer définitivement » (plan §6.8) |
+| Toast sous le parcours | Toast au-dessus du parcours (z-index 45) | « Mémo supprimé · Annuler » restait intouchable dans le récapitulatif |
+| « Il faut au moins… » | « La règle : au moins… » | « il faut » est un mot interdit |
+| Phrase sommeil de Ma semaine dès 3 valeurs | Seulement si le moteur a un constat | Rien affirmer sans test |
+| Réveils « médiane » | « moyenne » | Le moteur calcule une moyenne (plan §7.1) |
+| Constats recalculés selon la période | Tout l'historique, avec le test de stabilité | Moteur inchangé |
+| Tuiles à « · » sous 3 valeurs | « · » seulement sans valeur ; « (peu de valeurs) » pour les moyennes fragiles | Les comptes restent exacts |
+| Export PSY avec « traitement oui » | Texte du moteur inchangé | Le plan §7.8 exclut le traitement |
+| Page A4 au tutoiement | Voix neutre | Plan §7.9 |
+| Textarea contrôlé dans Dicter | Textarea non contrôlé, composition gérée | Ne pas casser la dictée iOS (plan §6.9) |
+| Modifier depuis le récapitulatif enchaîne les étapes | Retour au récapitulatif | Comportement de l'app, plus prévisible |
+| Questions abordées barrées ou masquées | Gris, jamais barrées, toujours visibles ; ajout aussi à la sortie du champ | Ne pas perdre une question |
+| Pas de suppression, ni de ✕ sur les heures, ni de « + Ajouter » | Gardés, en style discret | Fonctions du plan |
+| « Revenir à l'état d'avant l'import » toujours visible, grisé | Visible seulement si une copie existe | Plan §6.6 |
+| Légende A4 « du plus foncé au plus clair » (bug du code) | « du plus clair au plus foncé : Mal · Moyen · Bien » | Mal est la teinte la plus claire |
+
+## Défauts corrigés au passage
+
+- Le texte d'attente « Carnet » du HTML restait affiché sous l'app sur les écrans courts.
+- Un double toucher sur « Mémo vocal » pendant la demande d'autorisation pouvait ouvrir deux flux :
+  le bouton est inactif jusqu'à la réponse.
+- `-apple-system-body` vaut 13 px sur Mac : les tests WebKit tournaient avec un texte plus petit que
+  sur l'iPhone. La base de 17 px ne suit Dynamic Type que sur iOS.
+
+## Validé le 2 octobre 2026
+
+Tous les points ci-dessous sont validés tels qu'intégrés.
+
+1. Les couleurs de rubrique, surtout sport (olive, proche du vert) et explosions (ambre).
+2. Le mode « En consultation » : c'est une fonction nouvelle, absente du cahier des charges.
+3. Le parcours « Pas à pas » : c'est un mode de saisie de plus, avec 9 touchers au lieu de 7.
+4. Les intitulés du symptôme : la maquette dit « Symptôme » et « Durée », l'app garde « Quel symptôme ? »
+   et « Combien de temps ? », comme les questions de l'épisode.
+5. Les noms des listes dans Réglages restent ceux de `listes-def.js`, au singulier (la maquette les mettait
+   au pluriel).
+
+## Vérification
+
+- Captures Playwright (WebKit, 390 × 844, clair et sombre) comparées côte à côte aux captures du
+  prototype : Aujourd'hui, Pas à pas, Épisode (étapes, récapitulatif, mémo, confirmation), Historique,
+  Soins, consultation, fiches, Réglages, import, Listes, Analyse, Export PSY, Vue soignants.
+- `npm test` : tests unitaires (Paris et UTC) et e2e verts, dont les nouveaux tests du Pas à pas, de la
+  consultation, du toast au premier plan et du texte d'attente.
+- À faire sur l'iPhone (recette) : Dynamic Type aux grandes tailles, Dicter (le micro garde le focus),
+  mode consultation, Pas à pas chronométré.

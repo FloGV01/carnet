@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { nouveauRepo } from '../aides/repo.js';
 import { ErreurValidation } from '../../public/js/domain/champs.js';
 
-test('base neuve : 97 éléments de liste, aujourd\'hui suit le jour logique', async () => {
+test('base neuve : 173 éléments de liste (v1 et v4), aujourd\'hui suit le jour logique', async () => {
   const { repo, horloge } = nouveauRepo();
-  assert.equal((await repo.listes.items()).length, 97);
+  assert.equal((await repo.listes.items()).length, 173);
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 1);
+  assert.equal(await repo.meta.lire('schema'), 2);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {
@@ -258,4 +258,27 @@ test('une écriture non attendue qui échoue rejette avec sa vraie cause', async
   const { repo } = nouveauRepo();
   await repo.journal.patch('2026-09-30', { humeur: 5 });
   await assert.rejects(repo.tx(['journal'], 'readwrite', (t) => { t.objectStore('journal').add({ date: '2026-09-30' }); }), (e) => e && e.name === 'ConstraintError');
+});
+
+test('v4 : humeurs du moment par jour logique, références vérifiées, suppression puis Annuler', async () => {
+  const { repo } = nouveauRepo();
+  const a = await repo.humeurs.creer({ date: '2026-10-01', heure: '01:30', humeur: 4, energie: 'energie:basse' });
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', humeur: 6 });
+  assert.deepEqual((await repo.humeurs.parJour('2026-09-30', '2026-09-30')).map((h) => h.heure), ['14:00', '01:30']);
+  await assert.rejects(repo.humeurs.creer({ date: '2026-09-30', heure: '15:00', humeur: 5, energie: 'lieu:bureau' }), ErreurValidation);
+  const sauve = await repo.humeurs.supprimer(a.id);
+  assert.equal(await repo.humeurs.lire(a.id), null);
+  await repo.humeurs.restaurer(sauve);
+  assert.equal((await repo.humeurs.lire(a.id)).humeur, 4);
+});
+
+test('v4 : activités, contact et après coup enregistrés, références imbriquées refusées si inconnues', async () => {
+  const { repo } = nouveauRepo();
+  const j = await repo.journal.patch('2026-09-30', { sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }] });
+  assert.equal(j.activites[0].type, 'typeSport:marche');
+  await assert.rejects(repo.journal.patch('2026-09-30', { activites: [{ type: 'typeSport:inconnu' }] }), ErreurValidation);
+  const e = await repo.episodes.creer({ date: '2026-09-30', heure: '18:00', reaction: 'reaction:explosion' });
+  const m = await repo.episodes.modifier(e.id, { apresCoup: { types: ['typeExplosion:surcharge'], tropDe: ['sourceSurcharge:bruit'], repereA: 7 } });
+  assert.deepEqual(m.apresCoup.tropDe, ['sourceSurcharge:bruit']);
+  await assert.rejects(repo.episodes.modifier(e.id, { apresCoup: { signes: ['signe:nexistepas'] } }), ErreurValidation);
 });

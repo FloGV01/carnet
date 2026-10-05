@@ -5,6 +5,8 @@ import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
 import { trierRdv } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
+import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
+import { journalAvecExplosions } from '../domain/explosions.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -29,9 +31,10 @@ function lignesIndicateurs(colonnes, lib) {
   return defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }));
 }
 
-export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [] }) {
+export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
   const lib = (id) => (carte && carte.get(id)) || id;
   const premier = premiereDate(data, aujourdhui);
+  data = { ...data, journal: journalAvecExplosions(data.journal, data.episodes || [], { zeroDepuis }) };
   const { aVenir, passes } = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui);
   const dernierRdv = passes[0] || null;
   const prochain = aVenir[0] || null;
@@ -61,6 +64,7 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     .map((t) => [formaterJourCourt(t.date), couper(t.changement, 80), t.effetRessenti && lib(t.effetRessenti),
       (t.effetsSecondaires || []).map(lib).join(', ')].filter(Boolean).join(' · '));
 
+  const actuel = normaliserTraitement(traitementActuel).lignes.slice(0, 4).map((l) => couper(`${l.nom || '·'} : ${resumeLigne(l) || '·'}`, 70));
   return {
     entete: `Suivi quotidien${prenom ? ` · ${prenom}` : ''} · édité le ${formaterDateNumerique(aujourdhui)}${premier ? ` · données depuis le ${formaterDateNumerique(premier)}` : ''}`,
     sousTitre: 'Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.',
@@ -70,7 +74,8 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     reperes,
-    traitement: lignesTraitement,
+    traitement: actuel.length ? lignesTraitement.slice(0, 3) : lignesTraitement,
+    traitementActuel: actuel,
     rdv: {
       professionnel: professionnel ? lib(professionnel) : null,
       prochain: prochain ? `${prochain.date ? formaterDateNumerique(prochain.date) : 'date à fixer'}${prochain.heure ? ` à ${prochain.heure}` : ''}` : null,

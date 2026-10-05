@@ -36,7 +36,18 @@ survivreAuCycle({
   },
 });
 
+// v4 : jour à partir duquel un compteur d'explosions vide vaut 0 (domain/explosions.js).
+// Écrit une seule fois, au premier lancement de cette version ; les jours d'avant restent inconnus.
+if (!guide) {
+  repo.meta.lire('explosionsDepuis')
+    .then((v) => (v ? null : repo.meta.ecrire('explosionsDepuis', repo.aujourdhui())))
+    .catch(() => {});
+}
+
 // Accès de test, uniquement en local.
 if (estLocal(location)) window.__carnet = { repo, etatApp };
 
-render(html`<${App} guide=${guide} />`, document.getElementById('app'));
+// Le texte d'attente « Carnet » du HTML est retiré : Preact ne le remplace pas de lui-même.
+const racine = document.getElementById('app');
+racine.textContent = '';
+render(html`<${App} guide=${guide} />`, racine);

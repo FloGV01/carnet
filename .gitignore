@@ -9,4 +9,15 @@ carnet-*.json
 carnet-*.zip
 carnet-*.pdf
 .DS_Store
-!tests/fixtures/**
+# Contenu d'une sauvegarde, même décompressée ou renommée
+*sauvegarde*.json
+sauvegarde.json
+audios/
+*.m4a
+carnet-*.txt
+# Secrets
+.env*
+*.pem
+*.key
+# Fixtures : seulement le code générateur (données synthétiques)
+!tests/fixtures/*.js

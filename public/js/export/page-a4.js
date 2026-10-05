@@ -55,7 +55,8 @@ export function mettreEnPage(m) {
   ['Humeur', 'Explosions', 'Sommeil'].forEach((t, i) => ops.push({ type: 'texte', x: x0 + i * (lg + 4), y: y + 2.5, taille: 7.5, gras: true, texte: t, couleur: 'texte' }));
   ops.push({ type: 'graphes', y: y + 4, hauteur: 30, largeur: lg, x: x0, ecart: 4, semaines: m.semaines });
   y += 4 + 30 + 3;
-  texte(`Sommeil : ${m.libellesSommeil.join(' · ')} (du plus foncé au plus clair).`, { taille: 6.5, couleur: 'secondaire' });
+  const [mal, moyen, bien] = m.libellesSommeil;
+  texte(`Sommeil, du plus clair au plus foncé : ${mal} · ${moyen} · ${bien}.`, { taille: 6.5, couleur: 'secondaire' });
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;
@@ -74,8 +75,15 @@ export function mettreEnPage(m) {
   titreSection('Repères');
   for (const r of m.reperes) texte(`· ${r}`, { taille: 8 });
 
-  if (m.traitement.length) {
-    titreSection('Traitement (90 jours)');
+  // Traitement : l'actuel en deux colonnes, puis les changements datés des 90 derniers jours.
+  const actuel = m.traitementActuel || [];
+  if (actuel.length || m.traitement.length) {
+    titreSection('Traitement');
+    for (let i = 0; i < actuel.length; i += 2) {
+      const yLigne = y;
+      texte(actuel[i], { taille: 7.5, uneLigne: true, l: largeur / 2 - 2 });
+      if (actuel[i + 1]) { const yApres = y; y = yLigne; texte(actuel[i + 1], { taille: 7.5, uneLigne: true, x: x0 + largeur / 2, l: largeur / 2 - 2 }); y = yApres; }
+    }
     for (const t of m.traitement) texte(t, { taille: 8, uneLigne: true });
   }
 

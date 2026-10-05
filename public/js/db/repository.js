@@ -12,12 +12,12 @@ import { carteLibelles } from '../domain/libelles.js';
 
 export { DataError };
 
-const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au' };
-const AVEC_HEURE = new Set(['episodes']);
+const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au', humeurs: 'hu' };
+const AVEC_HEURE = new Set(['episodes', 'humeurs']);
 const ERREURS_CONNEXION = new Set(['InvalidStateError', 'UnknownError', 'TransactionInactiveError']);
 const PARENTS_AUDIO = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv'];
 // Méta qui ne comptent pas comme une saisie (pas de mise à jour de derniereEcriture).
-const META_SANS_MARQUE = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde', 'constatsAffiches', 'signalMasque']);
+const META_SANS_MARQUE = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde', 'constatsAffiches', 'signalMasque', 'explosionsDepuis']);
 const nonNuls = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined));
 
 export function creerRepository({
@@ -415,6 +415,20 @@ export function creerRepository({
       });
       signaler('meta', cle);
     },
+    // Lecture et écriture dans la même transaction (transformer est pur et synchrone) : deux écrans
+    // qui changent la même clé (Mon plan) ne s'écrasent pas.
+    modifier: async (cle, transformer) => {
+      const valeur = await tx(['meta'], 'readwrite', async (t) => {
+        const os = t.objectStore('meta');
+        const r = await req(os.get(cle));
+        const v = transformer(r ? r.valeur : null);
+        os.put({ cle, valeur: v });
+        if (!META_SANS_MARQUE.has(cle)) marquer(t);
+        return v;
+      });
+      signaler('meta', cle);
+      return valeur;
+    },
   };
 
   return {
@@ -425,6 +439,7 @@ export function creerRepository({
     symptomes: evenements('symptomes'),
     traitements: evenements('traitements'),
     rdv: evenements('rdv'),
+    humeurs: evenements('humeurs'),
     listes,
     audios,
     meta,

@@ -25,7 +25,11 @@ function cas({ extreme = false } = {}) {
   ];
   const data = { journal, episodes, symptomes, traitements };
   const analyse = analyze(data, { aujourdhui, items });
-  return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: 'professionnel:psychiatre', prenom: '', rdvs, traitements });
+  // Noms fictifs : jamais de vrai médicament dans les tests.
+  const traitementActuel = { depuis: '2026-09-01', lignes: Array.from({ length: extreme ? 8 : 2 }, (_, i) => ({
+    id: `m${i}`, nom: extreme ? `Médicament fictif numéro ${i} au nom vraiment très long` : `Médicament ${i}`,
+    doses: { matin: '½', midi: extreme ? '1' : null, apresMidi: '½', soir: '1', coucher: extreme ? '2 gouttes' : null } })) };
+  return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: 'professionnel:psychiatre', prenom: '', rdvs, traitements, traitementActuel });
 }
 
 test('le modèle exclut tout texte libre privé et le signal', () => {
@@ -51,4 +55,19 @@ test('coupure des lignes sans perte de mots', () => {
   const lignes = couperLignes('un deux trois quatre cinq six sept huit neuf dix onze douze', 9, 30);
   assert.equal(lignes.join(' '), 'un deux trois quatre cinq six sept huit neuf dix onze douze');
   assert.ok(lignes.length > 1);
+});
+
+test('légende du sommeil : Mal est la teinte la plus claire', () => {
+  const { ops } = mettreEnPage(cas({ extreme: false }));
+  const legende = ops.find((o) => o.type === 'texte' && /^Sommeil, /.test(o.texte));
+  assert.ok(legende, 'légende présente');
+  assert.match(legende.texte, /du plus clair au plus foncé : Mal · Moyen · Bien\.$/);
+});
+
+test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements', () => {
+  const m = cas({ extreme: false });
+  assert.deepEqual(m.traitementActuel, ['Médicament 0 : matin ½ · après-midi ½ · soir 1', 'Médicament 1 : matin ½ · après-midi ½ · soir 1']);
+  const ex = cas({ extreme: true });
+  assert.equal(ex.traitementActuel.length, 4);
+  assert.equal(ex.traitement.length, 3);
 });

@@ -74,6 +74,37 @@ test('signal : au plus 2 affichages par an sur des données sans signature (hume
   assert.ok(parAn <= 2, `${parAn.toFixed(1)} jours par an`);
 });
 
+// v4 : compteur du soir masqué, explosions notées en épisodes (règle de domain/explosions.js, comme
+// dans analyze). « rupture » : compteur jusqu'au jour 300, puis la moitié des explosions en épisodes.
+test('signal v4 : compteur masqué, puis rupture compteur → épisodes, toujours au plus 2 jours par an', async () => {
+  const { ressemblance } = await import('../../public/js/analyse/ressemblance.js');
+  const { journalAvecExplosions } = await import('../../public/js/domain/explosions.js');
+  const { addDays } = await import('../../public/js/domain/dates.js');
+  const items = seedItems(SEED_V1, 'x');
+  for (const mode of ['masque', 'rupture']) {
+    let parle = 0; let evaluations = 0;
+    for (const seed of [41, 42, 43]) {
+      const brut = generer({ jours: 500, seed, scenario: 'ar1', trous: mode === 'masque' ? 0.2 : 0 });
+      const episodes = [];
+      const journal = brut.map((j, i) => {
+        if (mode === 'rupture' && i < 300) return j;
+        if (j.explosions > 0 && (mode === 'masque' || i % 2 === 0)) episodes.push({ id: `e${i}`, date: j.date, heure: '18:00', reaction: 'reaction:explosion' });
+        return { ...j, explosions: null };
+      });
+      const regle = journalAvecExplosions(journal, episodes, { zeroDepuis: brut[0].date, ajouterJours: false });
+      const debut = brut[135].date;
+      for (let k = 0; k < 365; k += 3) {
+        const r = ressemblance({ journal: regle }, { aujourdhui: addDays(debut, k), items });
+        evaluations++;
+        if (r.ressemble) parle++;
+      }
+    }
+    const parAn = (parle / evaluations) * 365;
+    console.log(`  signal v4 (${mode}) : ${parle}/${evaluations} évaluations, soit ${parAn.toFixed(1)} jours par an`);
+    assert.ok(parAn <= 2, `${mode} : ${parAn.toFixed(1)} jours par an`);
+  }
+});
+
 test('bonnes journées : au plus 8 % de faux constats, humeur φ = 0,9 et lieu par plages hors grille', () => {
   let faux = 0;
   for (let seed = 1000; seed < 1000 + N; seed++) {

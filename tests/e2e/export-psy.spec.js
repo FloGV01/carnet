@@ -27,5 +27,5 @@ test('export PSY : aperçu complet, copie dans le geste, mémos et traitement ex
   await page.getByRole('button', { name: 'Copier les 7 derniers jours pour PSY' }).click();
   await expect(page.getByText('Copié. Prêt à coller dans PSY.')).toBeVisible();
   expect(await page.evaluate(() => window.__copie)).toContain('mer 30/09 · humeur 7 · explosions 0');
-  await expect(page.getByRole('link', { name: 'Faire aussi une sauvegarde' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Faire aussi une sauvegarde' })).toBeEnabled();
 });

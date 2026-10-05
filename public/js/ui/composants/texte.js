@@ -1,12 +1,13 @@
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { BoutonDicter, AIDE_DICTER } from './dicter.js';
+import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { vidanges } from '../../store.js';
 
 // Champ de texte libre, non contrôlé (la dictée iOS n'est jamais réécrite pendant la saisie).
 // Enregistré 500 ms après la frappe, à la sortie du champ et quand l'app passe en arrière-plan.
 // Le brouillon est doublé dans localStorage jusqu'à confirmation de l'écriture.
-export function ChampTexte({ id, etiquette, ariaLabel, valeur, placeholder, surEnregistrer, cleBrouillon, lignes = 3, dicter = true }) {
+export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur, placeholder, surEnregistrer, cleBrouillon, lignes = 3, dicter = true }) {
   const zone = useRef(null);
   const minuteur = useRef(null);
   const enCours = useRef(false);
@@ -52,7 +53,8 @@ export function ChampTexte({ id, etiquette, ariaLabel, valeur, placeholder, surE
   };
 
   return html`<div class="champ-zone">
-    ${etiquette && html`<label class="etiquette" for=${id}>${etiquette}</label>`}
+    ${etiquette && html`<label class=${icone || facultatif ? 'etiquette etiquette-icone' : 'etiquette'} for=${id}>
+      ${icone && Icones[icone] && Icones[icone]()}${etiquette}${facultatif && html` <span class="facultatif">(facultatif)</span>`}</label>`}
     <div class="champ-avec-dicter">
       <textarea id=${id} ref=${zone} class="champ-texte" rows=${lignes} placeholder=${placeholder || ''} defaultValue=${valeur ?? ''}
         aria-label=${etiquette ? null : ariaLabel || null}

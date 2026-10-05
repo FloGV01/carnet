@@ -32,9 +32,9 @@ test('archiver : disparaît des choix, reste lisible ; restaurer', async ({ page
   await page.getByRole('link', { name: "Aujourd'hui" }).click();
   await expect(page.getByRole('link', { name: /10:00\s+Honte/ })).toBeVisible();
   await page.getByRole('link', { name: 'Épisode', exact: true }).click();
-  await page.getByRole('button', { name: 'Passer ›' }).click();
+  await page.getByRole('button', { name: 'Passer', exact: true }).click();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Honte' })).toHaveCount(0);
-  await page.getByRole('button', { name: '✕ Fermer' }).click();
+  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
   await aller(page, '#/reglages/listes/emotion');
   await page.getByRole('listitem').filter({ hasText: 'Honte' }).getByRole('button', { name: 'Restaurer' }).click();
   await expect(page.getByRole('heading', { name: 'Archivés' })).toHaveCount(0);
@@ -51,7 +51,7 @@ test('réordonner, ajouter, refuser un doublon ; sens fixe = renommer seulement'
   await page.getByRole('button', { name: 'Ajouter' }).click();
   expect((await page.evaluate(() => window.__carnet.repo.listes.items('lieu'))).length).toBe(7);
   await aller(page, '#/reglages/listes/sommeil');
-  await expect(page.getByText(/on peut les renommer/)).toBeVisible();
+  await expect(page.getByText('Cette liste se renomme seulement.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Archiver' })).toHaveCount(0);
   await expect(page.getByLabel('Nouvel élément')).toHaveCount(0);
 });
