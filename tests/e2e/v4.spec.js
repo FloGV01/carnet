@@ -137,3 +137,18 @@ test('Analyse : avant tes explosions et profil de ta journée, avec tes notes se
   await expect(profil).toContainText('humeur 5,0 · énergie : basse 3');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
+
+test('après coup ouvert depuis l\'Historique : Terminer ramène à l\'Historique', async ({ page }) => {
+  const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-03', heure: '20:00', emotion: 'emotion:colere', reaction: 'reaction:explosion' })).id);
+  await aller(page, '#/historique');
+  await expect(page.getByRole('heading', { name: 'Historique' })).toBeVisible();
+  await page.evaluate((i) => { location.hash = `#/episode/${i}`; }, id);
+  await page.getByRole('link', { name: /Après coup/ }).click();
+  const vue = page.getByRole('dialog', { name: 'Après coup' });
+  await vue.getByRole('button', { name: 'Colère' }).click();
+  await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+  const episode = page.getByRole('dialog', { name: 'Épisode' });
+  await expect(episode.getByRole('link', { name: /Après coup/ })).toContainText('Colère');
+  await episode.getByRole('button', { name: 'Terminer' }).click();
+  await expect(page).toHaveURL(/#\/historique$/);
+});

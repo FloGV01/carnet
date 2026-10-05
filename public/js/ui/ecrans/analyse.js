@@ -175,7 +175,7 @@ function ProfilJournee({ p, carte }) {
     const energies = Object.entries(c.energie).filter(([, n]) => n > 0).map(([id, n]) => `${lib(id)} ${n}`).join(', ');
     return html`<li class="ligne-classement">
       <span class="nom-classement">${c.debut} h – ${c.fin} h</span>
-      <span>humeur ${uneDecimale(c.moyenne)}${energies ? ` · énergie : ${energies}` : ''}</span></li>`;
+      <span>${[c.moyenne != null && `humeur ${uneDecimale(c.moyenne)}`, energies && `énergie : ${energies}`].filter(Boolean).join(' · ')}</span></li>`;
   })}</ul>
   <p class="pied-section">Moyenne de chaque jour, puis moyenne de ces jours.</p>`;
 }

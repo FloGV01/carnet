@@ -53,7 +53,7 @@ export function versHash(nom, params = {}) {
 
 // Onglet actif pour une route donnée.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'pas-a-pas', 'moment', 'mon-plan', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['aujourdhui', 'jour', 'pas-a-pas', 'moment', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
   if (nom === 'historique') return 'historique';
   if (['soins', 'rdv', 'consultation', 'traitement'].includes(nom)) return 'soins';

@@ -122,9 +122,12 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;
   // Jours listés : ceux du journal, et ceux qui n'ont que des humeurs du moment (ligne de date
-  // seule, puis les relevés). Les explosions suivent la règle v4 (épisodes « Explosion »).
+  // seule, puis les relevés). Explosions (v4) : sur une ligne de jour, la règle d'affichage (le
+  // compteur s'il est noté, sinon les épisodes « Explosion », jamais un 0 non saisi) ; dans les
+  // COMPTEURS, la règle de l'analyse (0 pour un jour noté depuis la v4).
   const notes = new Set(journal.map((j) => j.date));
   const journalExpl = journalAvecExplosions(journal, episodes, { zeroDepuis });
+  const journalAffiche = journalAvecExplosions(journal, episodes, { zeroSiNote: false, ajouterJours: false });
   const momentsDu = new Map();
   for (const h of humeurs) {
     const j = jourEvenement(h.date, h.heure);
@@ -134,7 +137,7 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   }
   for (const liste of momentsDu.values()) liste.sort((a, b) => `${a.date} ${a.heure || ''}`.localeCompare(`${b.date} ${b.heure || ''}`));
   const jours = [
-    ...journalExpl.filter((j) => dans(j.date) && notes.has(j.date)),
+    ...journalAffiche.filter((j) => dans(j.date)),
     ...[...momentsDu.keys()].filter((d) => !notes.has(d)).map((date) => ({ date })),
   ].sort((a, b) => a.date.localeCompare(b.date));
   const parHeure = (a, b) => `${a.date} ${a.heure || ''}`.localeCompare(`${b.date} ${b.heure || ''}`);

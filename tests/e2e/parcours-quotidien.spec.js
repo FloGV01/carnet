@@ -12,6 +12,12 @@ async function sansDefilement(page, dernier = '#points-positifs') {
   expect(flottants.y + flottants.height).toBeLessThanOrEqual(onglets.y + 1);
   expect(zone.y + zone.height).toBeLessThanOrEqual(flottants.y);
   expect(await page.locator('.actions-flottantes').evaluate((b) => b.scrollWidth <= b.clientWidth)).toBe(true);
+  // Chaque action reste dans la marge de droite (la bande ne déborde pas sous le bord de l'écran).
+  const droite = await page.locator('.actions-flottantes').evaluate((b) => {
+    const marge = parseFloat(getComputedStyle(b).paddingRight);
+    return [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5);
+  });
+  expect(droite).toBe(true);
   for (const h of await page.locator('.actions-flottantes > *').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))) {
     expect(h).toBeGreaterThanOrEqual(44);
     expect(h).toBeLessThan(60);
@@ -53,6 +59,20 @@ test('pire cas : 8 champs, Contact et Sport séparés, toujours sans défilement
   }
   await toucher(page, 'Explosions', '0');
   await expect.poll(async () => (await entreeDuJour(page))?.explosions).toBe(0);
+});
+
+test('grand texte iOS : la bande garde ses trois actions sur une ligne, icônes seules', async ({ page }) => {
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 797 });
+    await page.evaluate(() => { document.documentElement.style.fontSize = '21px'; document.body.style.fontSize = '21px'; });
+    const bande = page.locator('.actions-flottantes');
+    await expect(bande.locator('.libelle-action').first()).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Humeur du moment' })).toBeVisible();
+    expect(await bande.evaluate((b) => {
+      const marge = parseFloat(getComputedStyle(b).paddingRight);
+      return [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5);
+    })).toBe(true);
+  }
 });
 
 test('un champ masqué qui porte une valeur reste affiché, et un second toucher l\'efface', async ({ page }) => {

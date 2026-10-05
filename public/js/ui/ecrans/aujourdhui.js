@@ -28,9 +28,12 @@ const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: 
 const EXPLOSIONS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: String(i) }));
 const REVEILS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: i === 5 ? '5 ou plus' : String(i) }));
 
+// actuel : la valeur choisie, ou les valeurs d'un choix multiple. Un élément archivé encore choisi
+// reste proposé (en dernier) pour pouvoir être vu et retiré.
 export function options(items, liste, actuel) {
+  const choisi = (id) => (Array.isArray(actuel) ? actuel.includes(id) : id === actuel);
   return items
-    .filter((i) => i.liste === liste && (!i.archive || i.id === actuel))
+    .filter((i) => i.liste === liste && (!i.archive || choisi(i.id)))
     .sort((a, b) => Number(a.archive) - Number(b.archive) || a.ordre - b.ordre)
     .map((i) => ({ valeur: i.id, libelle: i.libelle }));
 }
@@ -215,7 +218,7 @@ export function Aujourdhui({ date: dateRoute }) {
       ${visibles.includes('contact') && html`<${Repli} cle="contact" titre="Contact en détail" resume=${resumeContact(entree, carte)} memoriser=${false}>
         <div class="champ-jour">
           <span class="etiquette">Avec qui</span>
-          <${PastillesMultiples} etiquette="Avec qui" options=${options(items, 'contactAvec', null)} valeurs=${entree.contactAvec}
+          <${PastillesMultiples} etiquette="Avec qui" options=${options(items, 'contactAvec', entree.contactAvec)} valeurs=${entree.contactAvec}
             exclusifs=${new Set()} surChoix=${(v) => ecrireContact({ contactAvec: v })} teinte="contact" />
         </div>
         <div class="champ-jour">
@@ -252,8 +255,8 @@ export function Aujourdhui({ date: dateRoute }) {
       texte=${`Les épisodes et symptômes de ce jour sont conservés.${evenements && evenements.avecMemo.has(`journal:${date}`) ? ' Le mémo vocal de cette journée est effacé aussi.' : ''}`}
       action="Effacer" surAnnuler=${() => setConfirmerEffacer(false)} surConfirmer=${effacerJournee} />`}
     <div class="actions-flottantes">
-      <a class="pilule pas-a-pas" href=${versHash('pas-a-pas', { date })}>${Icones.pasAPas()}Pas à pas</a>
-      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}Moment</a>`}
+      <a class="pilule pas-a-pas" href=${versHash('pas-a-pas', { date })} aria-label="Pas à pas">${Icones.pasAPas()}<span class="libelle-action">Pas à pas</span></a>
+      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}<span class="libelle-action">Moment</span></a>`}
       <a class="fab" href="#/episode/nouveau">${Icones.plus({ trait: 2.2 })}<span>Épisode</span></a>
     </div>
   </main>`;

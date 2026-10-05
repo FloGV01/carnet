@@ -36,6 +36,18 @@ export function phrasePerte(p) {
   return `${enumerer(m)} ${total > 1 ? 'présents' : 'présent'} ici et ${total > 1 ? 'absents' : 'absent'} du fichier ${total > 1 ? 'seront effacés' : 'sera effacé'}.`;
 }
 
+// « Mon plan et les réglages de Ma journée seront remplacés par ceux du fichier. »
+const NOMS_META = {
+  monPlan: 'Mon plan', journee: 'les réglages de Ma journée', traitementActuel: 'ton traitement actuel',
+  reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
+};
+export function phraseMeta(cles) {
+  const noms = (cles || []).map((c) => NOMS_META[c]).filter(Boolean);
+  if (!noms.length) return null;
+  const t = `${enumerer(noms)} ${noms.length > 1 ? 'seront remplacés' : 'sera remplacé'} par ce que contient le fichier.`;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 export function Sauvegarde() {
   const [etat, setEtat] = useState(() => lireImportEnAttente());
   const entree = useRef(null);
@@ -56,6 +68,7 @@ export function Sauvegarde() {
   const s = sauvegarde.infos;
   const a = etat && etat.analyse;
   const perte = etat && etat.perte && phrasePerte(etat.perte);
+  const meta = etat && phraseMeta(etat.metaRemplacee);
   const plusAncien = a && s && s.ecriture && a.resume.exportedAt < s.ecriture;
   const boutonFichier = (texte) => html`<button type="button" class="btn" onClick=${() => entree.current && entree.current.click()}>${texte}</button>`;
 
@@ -68,6 +81,7 @@ export function Sauvegarde() {
     ${a && html`<section class="apercu-import" aria-label="Aperçu de l'import">
       <p class="texte-import">${phraseContenu(a.resume)}</p>
       ${perte && html`<p class="encadre-perte">${perte}</p>`}
+      ${meta && html`<p class="encadre-perte">${meta}</p>`}
       ${a.manquants > 0 && html`<p class="note-import">${pluriel(a.manquants, 'mémo vocal n\'est', 'mémos vocaux ne sont')} pas dans les fichiers choisis.</p>`}
       ${plusAncien && html`<p class="note-import">Ce fichier date du ${dateIso(a.resume.exportedAt)}. La dernière saisie ici date du ${dateIso(s.ecriture)}.</p>`}
       ${a.erreurs.length > 0 && html`<details class="note-import"><summary>${pluriel(a.erreurs.length, 'élément illisible sera ignoré', 'éléments illisibles seront ignorés')}</summary>

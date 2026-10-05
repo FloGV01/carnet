@@ -36,8 +36,9 @@ function resumeApresCoup(a, carte) {
     (a.siJe || a.alorsJe) && `si ${a.siJe || '…'}, alors ${a.alorsJe || '…'}`].filter(Boolean).join(' · ') || null;
 }
 
-function revenir() {
-  const precedente = etatApp.lire().routePrecedente;
+// origine : écran d'où l'épisode a été ouvert, gardé pendant un passage par Après coup.
+function revenir(origine) {
+  const precedente = origine || etatApp.lire().routePrecedente;
   location.hash = precedente && !/#\/(episode|symptome|pas-a-pas|apres-coup)\//.test(precedente) && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
 }
 
@@ -53,6 +54,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const [, signaler] = useIndicateur();
   const idRef = useRef(null);
   const instantane = useRef(null);
+  const origine = useRef(null);
   const file = useRef(Promise.resolve());
   const suivant = useRef(null);
   const glisse = useRef({ etape: null, classe: '' });
@@ -69,7 +71,13 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         if (!actif) return;
         if (!lue) { location.hash = '#/aujourdhui'; return; }
         idRef.current = lue.id;
-        instantane.current = lue;
+        // Retour d'Après coup : même origine et même état de départ (Annuler reste juste).
+        const retour = etatApp.lire().retourEpisode;
+        if (retour && retour.id === lue.id) {
+          origine.current = retour.origine;
+          instantane.current = retour.instantane;
+          etatApp.maj({ retourEpisode: null });
+        } else instantane.current = lue;
         setFiche(lue);
         setEtape('recap');
         return;
@@ -82,9 +90,10 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     return () => { actif = false; clearTimeout(suivant.current); };
   }, [idRoute]);
 
-  // Écritures en file : jamais deux créations pour une même fiche.
-  const ecrire = (changements) => {
-    file.current = file.current.then(async () => {
+  // Écritures en file : jamais deux créations pour une même fiche. ecrireTexte rejette si
+  // l'écriture échoue (ChampTexte garde alors son brouillon) ; ecrire ignore l'échec, déjà signalé.
+  const ecrireTexte = (changements) => {
+    const travail = file.current.then(async () => {
       if (!idRef.current) {
         const base = { date: fiche.date, ...(avecHeure ? { heure: fiche.heure ?? null } : {}) };
         const id = nouvelId(store === 'episodes' ? 'ep' : 'sy');
@@ -94,9 +103,11 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       }
       const res = await ecrireAvecEssais(() => repo[store].modifier(idRef.current, changements), signaler);
       if (res === null) { idRef.current = null; history.replaceState(null, '', versHash(route, { id: 'nouveau' })); }
-    }).catch(() => {});
-    return file.current;
+    });
+    file.current = travail.catch(() => {});
+    return travail;
   };
+  const ecrire = (changements) => ecrireTexte(changements).catch(() => {});
 
   const avancer = (depuis) => {
     if (versRecap) { setVersRecap(false); setEtape('recap'); return; }
@@ -115,7 +126,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     await file.current;
     const id = idRef.current;
     const avant = instantane.current;
-    revenir();
+    revenir(origine.current);
     if (!id) return;
     afficherToast(`${nomFiche} enregistré`, {
       libelle: 'Annuler',
@@ -129,7 +140,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const supprimer = async () => {
     await file.current;
     const id = idRef.current;
-    revenir();
+    revenir(origine.current);
     if (!id) return;
     const sauve = await repo[store].supprimer(id);
     afficherToast(`${nomFiche} supprimé`, { libelle: 'Annuler', faire: () => repo[store].restaurer(sauve) });
@@ -172,10 +183,15 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       ${textes.map((t) => html`<div class="champ-recap"><${ChampTexte} key=${t.champ} id=${`${store}-${t.champ}`}
         etiquette=${t.etiquette} icone=${t.icone} facultatif=${true} valeur=${fiche[t.champ]} placeholder=${t.placeholder || ''} lignes=${2}
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
-        surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrire({ [t.champ]: v }); }} /></div>`)}
+        surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrireTexte({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
       ${avecPlan && (estExplosion(fiche) || fiche.apresCoup) && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
-        onClick=${async (e) => { if (!idRef.current) { e.preventDefault(); await ecrire({}); await file.current; if (idRef.current) location.hash = versHash('apres-coup', { id: idRef.current }); } }}>
+        onClick=${async (e) => {
+          const garder = () => etatApp.maj({ retourEpisode: { id: idRef.current, origine: origine.current || etatApp.lire().routePrecedente, instantane: instantane.current } });
+          if (idRef.current) { garder(); return; }
+          e.preventDefault(); await ecrire({}); await file.current;
+          if (idRef.current) { garder(); location.hash = versHash('apres-coup', { id: idRef.current }); }
+        }}>
         <span class="ligne-libelle"><span class="titre-apres-coup">Après coup</span>
           <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid sur cet épisode, étape par étape.'}</span></span>
         ${Icones.chevron({ trait: 2 })}</a>`}

@@ -4,7 +4,7 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee,
 } from '../../public/js/db/sauvegarde.js';
 
 const octetsDe = (f) => concatener(f.morceaux);
@@ -113,8 +113,12 @@ test('une panne pendant l\'application n\'écrit rien ; 3 copies au maximum ; re
 test('tout effacer : données vidées, listes par défaut recréées', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);
+  await a.repo.meta.ecrire('explosionsDepuis', '2026-09-15');
+  await a.repo.meta.ecrire('monPlan', { quandCaMonte: 'je sors' });
   await toutEffacer(a.repo);
   const tout = await lireTout(a.repo);
+  assert.equal(await a.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'date de la v4 gardée');
+  assert.equal(await a.repo.meta.lire('monPlan'), null);
   assert.equal(tout.journal.length, 0);
   assert.equal(tout.episodes.length, 0);
   assert.equal(tout.listes.length, 173);
@@ -135,6 +139,7 @@ test('v4 : une sauvegarde v1 se met à niveau (listes v4 ajoutées, aucune humeu
   assert.equal(a.valides.listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
   assert.ok(a.valides.listes.find((i) => i.id === 'typeExplosion:colere'));
   assert.throws(() => analyserFichiers(json({ ...v1, counts: { journal: 1, listes: 2 } })), (e) => e.code === 'BACKUP_INCOMPLET', 'troncature toujours repérée');
+  assert.throws(() => analyserFichiers(json({ ...v1, data: { ...v1.data, listes: {} } })), (e) => e.code === 'BACKUP_INCOMPLET', 'listes illisibles : abîmé, pas illisible');
 
   const { repo } = nouveauRepo();
   await repo.humeurs.creer({ date: '2026-09-30', heure: '10:00', humeur: 5, energie: 'energie:haute' });
@@ -167,6 +172,8 @@ test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les resta
   assert.equal(await b.repo.meta.lire('schema'), 2);
 
   await revenirAvantImport(b.repo);
+  assert.deepEqual(metaRemplacee([{ cle: 'monPlan', valeur: { a: 1 } }, { cle: 'journee', valeur: { b: 2 } }, { cle: 'schema', valeur: 2 }, { cle: 'explosionsDepuis', valeur: 'x' }],
+    [{ cle: 'journee', valeur: { b: 2 } }]), ['monPlan'], 'aperçu : seul ce qui change est annoncé');
   assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
   assert.equal(await b.repo.meta.lire('schema'), 2);

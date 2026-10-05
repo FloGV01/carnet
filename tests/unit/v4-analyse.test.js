@@ -20,6 +20,10 @@ test('profil de journée : créneaux de 2 h, au moins 3 relevés, rattachement a
   assert.deepEqual(p.creneaux.map((c) => [c.debut, c.n, c.jours, c.moyenne]), [[10, 4, 3, 5.666666666666667], [22, 3, 3, 6], [0, 4, 3, 2.5]],
     'moyenne des moyennes par jour ; créneaux de 4 h à 4 h ; 14 h avec 2 jours seulement : absent');
   assert.equal(p.creneaux[0].energie['energie:basse'], 2);
+  // Relevés avec seulement l'énergie : comptés pour le créneau et pour l'énergie, pas pour l'humeur.
+  const energieSeule = ['2026-10-01', '2026-10-02', '2026-10-03'].map((d) => h(d, '16:30', null, 'energie:haute'));
+  const q = profilJournee(energieSeule, '2026-10-01', '2026-10-03');
+  assert.deepEqual(q.creneaux.map((c) => [c.debut, c.jours, c.moyenne, c.energie['energie:haute']]), [[16, 3, null, 3]]);
   assert.equal(profilJournee([], '2026-10-01', '2026-10-03').statut, 'insuffisant');
 });
 
@@ -84,6 +88,11 @@ test('export PSY v4 : après coup tardif sur un épisode ancien, jour avec seule
   assert.doesNotMatch(t, /ÉPISODES/);
   const tard = exportPsy({ journal: [], episodes, symptomes: [], humeurs: [] }, { aujourdhui: '2026-09-20', carte });
   assert.doesNotMatch(tard, /APRÈS COUP/);
+  // Un jour noté sans compteur ni épisode : pas de « explosions 0 » sur sa ligne (rien n'a été saisi),
+  // mais la semaine compte bien 0 explosion depuis la v4.
+  const sansRien = exportPsy({ journal: [{ date: '2026-09-11', humeur: 6 }], episodes: [], symptomes: [], humeurs: [] }, { aujourdhui: '2026-09-12', carte, zeroDepuis: '2026-09-01' });
+  assert.match(sansRien, /\nven 11\/09 · humeur 6\n/);
+  assert.match(sansRien, /cette semaine : humeur moyenne 6 \(de 6 à 6\) · explosions 0/);
 });
 
 test('mon plan : textes propres, si… alors… sans doublon, plan vide reconnu', async () => {

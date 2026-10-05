@@ -33,6 +33,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('episode'), 'aujourdhui');
   assert.equal(ongletDe('pas-a-pas'), 'aujourdhui');
   assert.equal(ongletDe('apres-coup'), 'aujourdhui');
+  assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');

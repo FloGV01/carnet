@@ -3,7 +3,7 @@
 import { useEffect, useState } from './lib.js';
 import { repo } from '../donnees.js';
 import { VERSION_APP } from '../version.js';
-import { exporter, analyserFichiers, lireTout, copieAvantImport, chiffrerPerte } from '../db/sauvegarde.js';
+import { exporter, analyserFichiers, lireTout, copieAvantImport, chiffrerPerte, metaRemplacee } from '../db/sauvegarde.js';
 import { partagerPlusieurs, variantesTexte, premierPartageable, partager } from '../plateforme/partage.js';
 import { copier } from '../plateforme/presse-papier.js';
 import { estModeApp } from '../plateforme/mode.js';
@@ -20,7 +20,7 @@ export async function analyserChoix(fichiers) {
     const analyse = analyserFichiers(lus);
     const actuel = await lireTout(repo);
     const base = actuel.journal.length + actuel.episodes.length + actuel.symptomes.length + actuel.traitements.length + actuel.rdv.length + actuel.humeurs.length;
-    importEnAttente = { analyse, perte: base ? chiffrerPerte(actuel, analyse) : null };
+    importEnAttente = { analyse, perte: base ? chiffrerPerte(actuel, analyse) : null, metaRemplacee: metaRemplacee(actuel.meta, analyse.valides.meta) };
   } catch (err) {
     importEnAttente = { erreur: err && err.code ? err.message : 'Ce fichier est illisible.' };
   }

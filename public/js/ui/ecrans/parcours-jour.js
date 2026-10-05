@@ -14,6 +14,7 @@ import { MemoVocal } from '../composants/memo-vocal.js';
 import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
 import { normaliserJournee, champsVisibles } from '../../domain/journee.js';
+import { estExplosion } from '../../domain/explosions.js';
 
 const DELAI_SUIVANT_MS = 250;
 const NOMBRES = (n, debut) => Array.from({ length: n }, (_, i) => ({ valeur: i + debut, libelle: String(i + debut) }));
@@ -40,6 +41,7 @@ export function ParcoursJour({ date }) {
   const [items, setItems] = useState(null);
   const [etapes, setEtapes] = useState(ETAPES_JOUR);
   const [avecPositifs, setAvecPositifs] = useState(true);
+  const [nExplosions, setNExplosions] = useState(0);
   const [entree, setEntree] = useState(null);
   const [etape, setEtape] = useState(0);
   const [versRecap, setVersRecap] = useState(false);
@@ -52,8 +54,9 @@ export function ParcoursJour({ date }) {
   useEffect(() => {
     let actif = true;
     (async () => {
-      const [liste, lue, journee] = await Promise.all([repo.listes.items(), repo.journal.lire(jour), repo.meta.lire('journee')]);
+      const [liste, lue, journee, episodes] = await Promise.all([repo.listes.items(), repo.journal.lire(jour), repo.meta.lire('journee'), repo.episodes.parJour(jour, jour)]);
       if (!actif) return;
+      setNExplosions(episodes.filter(estExplosion).length);
       // Les étapes suivent l'ordre et les champs affichés de Réglages › Ma journée ; sans aucune
       // étape, le parcours s'ouvre directement sur le récapitulatif.
       const visibles = champsVisibles(normaliserJournee(journee));
@@ -85,7 +88,7 @@ export function ParcoursJour({ date }) {
 
   if (!items || !entree) return html`<div class="parcours"></div>`;
   const carte = carteLibelles(items);
-  const phrase = phraseResume('jour', entree, carte);
+  const phrase = phraseResume('jour', entree, carte, { nExplosions });
   const rendrePhrase = (classe) => phrase.length > 0 && html`<p class=${classe}>${phrase.map((s) => (s.valeur
     ? html`<span class=${`valeur teinte-${s.rubrique}`}>${s.texte}</span>` : s.texte))}</p>`;
   const ligneDate = html`<p class="ligne-date ligne-date-fixe">${jour === aujourdhui ? `Aujourd'hui · ${formaterJour(jour)}` : formaterJour(jour)}</p>`;

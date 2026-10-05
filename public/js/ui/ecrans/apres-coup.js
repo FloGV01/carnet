@@ -9,6 +9,7 @@ import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { formaterJour, jourEvenement } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { phraseResume } from '../../domain/phrase.js';
+import { estExplosion } from '../../domain/explosions.js';
 import { ajouterSiAlors, retirerSiAlors, normaliserPlan } from '../../domain/mon-plan.js';
 import { versHash } from '../../routeur.js';
 import { CadreParcours } from '../composants/parcours.js';
@@ -72,16 +73,23 @@ export function ApresCoup({ id }) {
       setItems(liste);
       acRef.current = lu.apresCoup || {};
       setEp(lu);
-      setJour(await repo.journal.lire(jourEvenement(lu.date, lu.heure)));
+      const j = jourEvenement(lu.date, lu.heure);
+      const [entree, duJour] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j)]);
+      if (!actif) return;
+      setJour({ entree: entree || { date: j }, nExplosions: duJour.filter(estExplosion).length });
       if (lu.apresCoup) setEtape('recap');
     })();
     return () => { actif = false; clearTimeout(suivant.current); };
   }, [id]);
 
+  // Écritures en file. La promesse rendue rejette si l'écriture échoue : un champ texte garde
+  // alors son brouillon local. Les choix (pastilles) ignorent l'échec, déjà signalé.
   const ecrire = (changements) => {
-    file.current = file.current.then(() => ecrireAvecEssais(() => repo.episodes.modifier(id, changements), signaler)).catch(() => {});
-    return file.current;
+    const travail = file.current.then(() => ecrireAvecEssais(() => repo.episodes.modifier(id, changements), signaler));
+    file.current = travail.catch(() => {});
+    return travail;
   };
+  const sansErreur = (p) => p.catch(() => {});
   // La version courante vit dans une référence : deux touchers rapprochés ne s'écrasent pas.
   // jour : jour logique de la dernière écriture (un Après coup tardif part dans l'export PSY).
   const ecrireAC = (champ, v) => {
@@ -127,17 +135,18 @@ export function ApresCoup({ id }) {
   }
 
   const et = etapes[etape];
+  const phraseJour = jour && phraseResume('jour', jour.entree, carte, { nExplosions: jour.nExplosions }).map((s) => s.texte).join('');
   const remplie = et.blocs.some((b) => (b.type === 'declencheur' ? ep.declencheur : b.type === 'siAlors' ? ac.siJe || ac.alorsJe : ac[b.champ]) != null);
   const bloc = (b, i) => {
     if (b.type === 'multi') {
       return html`<div class="bloc-etape" key=${`${et.cle}-${i}`}>${b.titre && html`<h3 class="sous-titre-etape">${b.titre}</h3>`}
-        <${PastillesMultiples} etiquette=${b.titre || et.question} options=${options(items, b.liste, null)} valeurs=${ac[b.champ]} surChoix=${(v) => ecrireAC(b.champ, v)} teinte="ep"
+        <${PastillesMultiples} etiquette=${b.titre || et.question} options=${options(items, b.liste, ac[b.champ])} valeurs=${ac[b.champ]} surChoix=${(v) => sansErreur(ecrireAC(b.champ, v))} teinte="ep"
           exclusifs=${new Set(items.filter((x) => x.liste === b.liste && x.exclusif).map((x) => x.id))} />
       </div>`;
     }
     if (b.type === 'echelle') {
       return html`<${Pastilles} key=${et.cle} etiquette=${et.question} ariaPrefixe="Sur 10 :" options=${ECHELLE} valeur=${ac[b.champ] ?? null} colonnes=${5} classe="chiffres grille-choix" teinte="ep"
-        surChoix=${(v) => { ecrireAC(b.champ, v); clearTimeout(suivant.current); if (v != null) suivant.current = setTimeout(() => avancer(etape), DELAI_SUIVANT_MS); }} />`;
+        surChoix=${(v) => { sansErreur(ecrireAC(b.champ, v)); clearTimeout(suivant.current); if (v != null) suivant.current = setTimeout(() => avancer(etape), DELAI_SUIVANT_MS); }} />`;
     }
     if (b.type === 'texte') {
       return html`<div class="bloc-etape" key=${`${et.cle}-${b.champ}`}><${ChampTexte} id=${`ac-${b.champ}`} etiquette=${b.etiquette} valeur=${ac[b.champ]} lignes=${b.lignes || 2}
@@ -146,7 +155,7 @@ export function ApresCoup({ id }) {
     if (b.type === 'declencheur') {
       return html`<div class="bloc-etape" key="declencheur">
         <${Pastilles} etiquette="Déclencheur" options=${options(items, 'declencheur', ep.declencheur)} valeur=${ep.declencheur ?? null} colonnes=${2} classe="grille-choix" teinte="ep"
-          surChoix=${(v) => { setEp((e) => ({ ...e, declencheur: v })); ecrire({ declencheur: v }); }} />
+          surChoix=${(v) => { setEp((e) => ({ ...e, declencheur: v })); sansErreur(ecrire({ declencheur: v })); }} />
         <${ChampTexte} id="ac-situation" etiquette="Ce qui s'est passé" valeur=${ep.situation} lignes=${2}
           cleBrouillon=${`carnet:brouillon:${id}:situation`} surEnregistrer=${(v) => { setEp((e) => ({ ...e, situation: v })); return ecrire({ situation: v }); }} />
       </div>`;
@@ -174,7 +183,7 @@ export function ApresCoup({ id }) {
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>${remplie ? 'Suivant' : 'Passer'}${Icones.chevron({ trait: 2 })}</button>`}>
     <div class="etape" key=${et.cle}>
       <div><h2 class="titre-question">${et.question}</h2>${et.sous && html`<p class="sous-question">${et.sous}</p>`}</div>
-      ${et.contexte && jour && html`<p class="phrase-resume">Ce jour-là : ${phraseResume('jour', jour, carte).map((s) => s.texte).join('') || '·'}</p>`}
+      ${et.contexte && phraseJour && html`<p class="phrase-resume">Ce jour-là : ${phraseJour}</p>`}
       ${et.blocs.map(bloc)}
     </div>
   </${CadreParcours}>`;

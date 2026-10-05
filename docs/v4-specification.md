@@ -98,8 +98,8 @@ est un déclencheur et un « dessous » du vocabulaire propre de l'utilisateur, 
 - Nouveau tableau `data.humeurs`, compté dans `counts`.
 - `MISES_A_NIVEAU[1]` (pure) : ajoute `humeurs: []` et les éléments de `SEED_V2_AJOUTS` absents, et augmente `counts.listes` d'autant (la détection de troncature reste active).
 - Import : références imbriquées (`activites`, `apresCoup`) vérifiées comme les autres ; un id inconnu crée un élément archivé.
-- Méta : `schema`, `installation`, `derniereEcriture`, `derniereSauvegarde` ne sont ni exportées ni importées. `explosionsDepuis` est gardée si le fichier ne l'a pas. Toutes les autres clés (Mon plan, Ma journée, traitement actuel, réglages…) sont remplacées par celles du fichier, et une clé absente du fichier est retirée. « Revenir à l'état d'avant l'import » les restaure.
-- `toutEffacer` recrée SEED_V1 et SEED_V2_AJOUTS.
+- Méta : `schema`, `installation`, `derniereEcriture`, `derniereSauvegarde` ne sont ni exportées ni importées. L'aperçu d'import annonce ce qui sera remplacé (« Mon plan sera remplacé par ce que contient le fichier. »). `explosionsDepuis` est gardée si le fichier ne l'a pas. Toutes les autres clés (Mon plan, Ma journée, traitement actuel, réglages…) sont remplacées par celles du fichier, et une clé absente du fichier est retirée. « Revenir à l'état d'avant l'import » les restaure.
+- `toutEffacer` recrée SEED_V1 et SEED_V2_AJOUTS, et garde `installation` et `explosionsDepuis`.
 
 ## 2. Règle des explosions (pure, `domain/explosions.js`)
 
@@ -108,25 +108,25 @@ Pour un jour d : `n` = nombre d'épisodes rattachés à d (par `jourEvenement`) 
 - `c` renseigné → `max(c, n)`. Jamais d'addition entre sources (plan §7.1 inchangé).
 - `c` vide, `n > 0` → `n`.
 - `c` vide, `n = 0` : dans l'analyse, 0 si le jour a une entrée de journal **et** d ≥ `explosionsDepuis` ; sinon inconnu. Un compteur laissé vide avant la v4 reste inconnu.
-- Affichage (phrase du jour, Historique et son filtre « Avec explosions ») : `max(c, n)` ou `n` s'il est positif, sinon rien. La valeur calculée n'est jamais enregistrée ; le champ du soir montre `c` tel quel.
+- Affichage (phrase du jour partout, Historique et son filtre « Avec explosions », lignes de jour de l'export PSY) : `max(c, n)` ou `n` s'il est positif, sinon rien. La valeur calculée n'est jamais enregistrée ; le champ du soir montre `c` tel quel.
 - Les jours qui n'ont qu'un épisode d'explosion entrent dans les comptes d'explosions (fenêtres, semaines) avec ce seul champ ; jamais dans le calendrier, les bonnes journées, le sommeil ni le signal.
 
 Remplace, pour ce seul champ, la règle du plan §5.3 « aucune saisie n'est déduite de l'autre ».
 
 ## 3. Écrans
 
-- **Aujourd'hui** : champs dans l'ordre de `journee.ordre`, sans les masqués, sauf un champ masqué qui porte une valeur ce jour-là (il reste affiché pour être vu et effacé). Contact et Sport côte à côte s'ils se suivent ; seul, chacun s'affiche en ligne (rubrique à gauche, Oui · Non à droite). Replis « Sport en détail » et « Contact en détail » (fermés, suivent le masque de leur champ). Bande flottante sur une ligne : « Pas à pas » · « Moment » (aujourd'hui seulement) · « + Épisode ».
+- **Aujourd'hui** : champs dans l'ordre de `journee.ordre`, sans les masqués, sauf un champ masqué qui porte une valeur ce jour-là (il reste affiché pour être vu et effacé). Contact et Sport côte à côte s'ils se suivent ; seul, chacun s'affiche en ligne (rubrique à gauche, Oui · Non à droite). Replis « Sport en détail » et « Contact en détail » (fermés, suivent le masque de leur champ). Bande flottante sur une ligne : « Pas à pas » · « Moment » (aujourd'hui seulement) · « + Épisode ». Ses dimensions sont en em ; quand elle ne tient plus (grand texte iOS, écran étroit), « Pas à pas » et « Moment » perdent leur libellé et gardent leur icône et leur nom accessible.
 - **Humeur du moment** (`#/moment`) : humeur puis énergie sur un écran. Une ouverture = un relevé au plus, créé au premier toucher, l'écran se referme une fois les deux choisis. Liste des relevés du jour avec suppression et Annuler, rien si elle est vide, jamais de nombre.
 - **Pas à pas** : suit l'ordre et les masques de `journee`. Aucune étape → directement le récapitulatif. Points positifs masqués → pas de zone de texte (le mémo reste).
 - **Épisode** : ligne « Mon plan » sous la date, à chaque étape et au récapitulatif ; feuille en lecture seule, sans lien, fermée sur la même étape (Échap, Fermer, focus rendu à la ligne). Plan vide : « Rien d'écrit pour l'instant. » Au récapitulatif, ligne « Après coup » seulement si la réaction est Explosion ou si un après coup existe, avec son résumé ; jamais de verbe d'action ni de mention d'absence.
-- **Après coup** (`#/apres-coup/:id`) : une étape par écran, toutes passables ; récapitulatif ; « Ajouter à Mon plan » à l'étape 9 (sans doublon, « Ajouté à Mon plan » avec Annuler). Fermer et Terminer reviennent à l'épisode.
+- **Après coup** (`#/apres-coup/:id`) : une étape par écran, toutes passables ; récapitulatif ; « Ajouter à Mon plan » à l'étape 9 (sans doublon, « Ajouté à Mon plan » avec Annuler). Fermer et Terminer reviennent à l'épisode, qui garde son écran d'origine et son « Annuler ».
 - **Mon plan** (`#/mon-plan`, depuis Réglages) : 5 champs Dicter (Mes premiers signes, Quand ça monte, je…, Si c'est trop, je…, Pour récupérer, je…, Qui prévenir), liste des « si… alors… » avec retrait.
 - **Réglages › Ma journée** (`#/reglages/journee`) : interrupteur par champ, flèches d'ordre (focus qui suit le champ, `aria-disabled` en bout de liste), heures de l'humeur du moment (6 h-23 h). **Rappels** : un pas-à-pas Raccourcis, « à refaire pour : 10 h, 14 h… ». Les heures ne servent qu'à ce pas-à-pas ; rien ne compare les heures aux relevés.
 - **Analyse** :
   - « Avant tes explosions » : au moins 3 explosions sur la période (sinon PAS_ASSEZ et sa règle). Par liste, les éléments notés au moins 2 fois, hors « Je ne sais pas », sous la forme « Fatigue (3 sur 4) » où 4 est le nombre de fois où l'étape a été remplie, jamais le nombre d'explosions. Valeur du milieu du repère, « si… alors… », ce qui a aidé d'autres fois. Pied : « Ce sont tes notes, rassemblées : pas des causes. »
-  - « Profil de ta journée » : créneaux de 2 h de 4 h à 4 h, affichés avec des relevés d'au moins 3 jours ; humeur = moyenne des moyennes de chaque jour, énergie en nombres. Aucun rang ni superlatif.
+  - « Profil de ta journée » : créneaux de 2 h de 4 h à 4 h, affichés avec des relevés (humeur ou énergie) d'au moins 3 jours ; humeur = moyenne des moyennes de chaque jour où elle est notée, énergie en nombres sur tous les relevés. Aucun rang ni superlatif.
   - Tuiles Sport et Contact avec le détail en jours (« Marche 4 j · Vélo 2 j »), tuile « Comment c'était ». Aucun pourcentage.
-- **Export PSY** : ligne du jour complétée (activités, contact), humeurs du moment sous le jour (un jour qui n'a que des relevés a une ligne de date seule), après coup sous chaque épisode, et rubrique « APRÈS COUP (épisodes plus anciens) » pour un après coup écrit dans la semaine (`apresCoup.jour`) sur un épisode plus ancien. COMPTEURS et REPÈRES n'utilisent que l'humeur du soir. Mon plan n'est pas exporté.
+- **Export PSY** : ligne du jour complétée (activités, contact ; explosions selon la règle d'affichage, jamais un 0 non saisi), humeurs du moment sous le jour (un jour qui n'a que des relevés a une ligne de date seule), après coup sous chaque épisode, et rubrique « APRÈS COUP (épisodes plus anciens) » pour un après coup écrit dans la semaine (`apresCoup.jour`) sur un épisode plus ancien. COMPTEURS et REPÈRES n'utilisent que l'humeur du soir. Mon plan n'est pas exporté.
 
 ## 4. Ton
 

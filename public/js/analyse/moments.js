@@ -9,7 +9,9 @@ const S = SEUILS.moments;
 const ENERGIES = ['energie:basse', 'energie:moyenne', 'energie:haute'];
 
 export function profilJournee(humeurs, du, au) {
-  const dans = (humeurs || []).filter((h) => h && h.heure && h.humeur != null && (() => { const j = jourEvenement(h.date, h.heure); return j >= du && j <= au; })());
+  // Humeur et énergie sont facultatives : un relevé compte dès qu'il porte l'une des deux.
+  const dans = (humeurs || []).filter((h) => h && h.heure && (h.humeur != null || h.energie != null)
+    && (() => { const j = jourEvenement(h.date, h.heure); return j >= du && j <= au; })());
   const parCreneau = new Map();
   for (const h of dans) {
     const debut = Math.floor(Number(h.heure.slice(0, 2)) / S.largeurCreneau) * S.largeurCreneau;
@@ -19,16 +21,18 @@ export function profilJournee(humeurs, du, au) {
   const rang = (debut) => (debut - BASCULE_HEURE + 24) % 24;
   const creneaux = [...parCreneau.entries()]
     .map(([debut, l]) => {
+      const jours = new Set(l.map((h) => jourEvenement(h.date, h.heure)));
       const parJour = new Map();
-      for (const h of l) {
+      for (const h of l.filter((x) => x.humeur != null)) {
         const j = jourEvenement(h.date, h.heure);
         if (!parJour.has(j)) parJour.set(j, []);
         parJour.get(j).push(h.humeur);
       }
       const moyennes = [...parJour.values()].map((xs) => xs.reduce((s, x) => s + x, 0) / xs.length);
       return {
-        debut, fin: (debut + S.largeurCreneau) % 24, n: l.length, jours: parJour.size,
-        moyenne: moyennes.reduce((s, x) => s + x, 0) / moyennes.length,
+        debut, fin: (debut + S.largeurCreneau) % 24, n: l.length, jours: jours.size,
+        // Humeur : sur les jours où elle est notée (null si aucun) ; énergie : sur tous les relevés.
+        moyenne: moyennes.length ? moyennes.reduce((s, x) => s + x, 0) / moyennes.length : null,
         energie: Object.fromEntries(ENERGIES.map((e) => [e, l.filter((h) => h.energie === e).length])),
       };
     })

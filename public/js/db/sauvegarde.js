@@ -24,6 +24,12 @@ const META_GARDEES_SI_ABSENTES = new Set(['explosionsDepuis']);
 // le fichier les remplace toutes, et une clé absente du fichier est retirée.
 const estMetaUtilisateur = (cle) => !META_NON_EXPORTEES.has(cle) && !META_GARDEES_SI_ABSENTES.has(cle);
 
+// Aperçu : clés de l'utilisateur présentes ici que l'import retirerait ou changerait.
+export function metaRemplacee(actuelles, duFichier) {
+  const fichier = new Map((duFichier || []).filter((m) => m && typeof m.cle === 'string').map((m) => [m.cle, JSON.stringify(m.valeur)]));
+  return (actuelles || []).filter((m) => estMetaUtilisateur(m.cle) && m.valeur != null && fichier.get(m.cle) !== JSON.stringify(m.valeur)).map((m) => m.cle);
+}
+
 // Dans la même transaction : la méta de l'utilisateur devient exactement celle de `source`.
 function remplacerMeta(store, actuelles, source) {
   const gardees = new Set((source || []).map((m) => m.cle));
@@ -111,7 +117,7 @@ const estZip = (o) => o.length > 4 && o[0] === 0x50 && o[1] === 0x4b && o[2] ===
 
 // Éléments de liste par défaut absents d'un ensemble (ajouts v4) : jamais d'écrasement.
 export function listesManquantes(items, horodatage) {
-  const ids = new Set((items || []).map((i) => i && i.id));
+  const ids = new Set((Array.isArray(items) ? items : []).map((i) => i && i.id));
   return seedItems(SEED_V2_AJOUTS, horodatage).filter((i) => !ids.has(i.id));
 }
 
@@ -121,11 +127,14 @@ export const MISES_A_NIVEAU = {
   1(s) {
     const data = { ...(s.data || {}) };
     data.humeurs = [];
-    const ajouts = listesManquantes(data.listes, s.exportedAt);
-    data.listes = [...(Array.isArray(data.listes) ? data.listes : []), ...ajouts];
-    // Les comptes annoncés restent vérifiés : on ajoute seulement ce qu'on vient d'ajouter.
+    // Les comptes annoncés restent vérifiés : on ajoute seulement ce qu'on vient d'ajouter. Des
+    // listes illisibles (pas un tableau) restent telles quelles : le contrôle des comptes les refuse.
     const counts = { ...(s.counts || {}), humeurs: 0 };
-    if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
+    if (Array.isArray(data.listes)) {
+      const ajouts = listesManquantes(data.listes, s.exportedAt);
+      data.listes = [...data.listes, ...ajouts];
+      if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
+    }
     return { ...s, formatVersion: 2, counts, data };
   },
 };
@@ -286,16 +295,20 @@ export async function revenirAvantImport(repo) {
   });
 }
 
-// Tout effacer : données et copies de secours ; les listes par défaut sont recréées.
+// Tout effacer : données et copies de secours ; les listes par défaut sont recréées. La date
+// d'installation et celle de la v4 (explosionsDepuis, domain/explosions.js) sont gardées.
 export async function toutEffacer(repo) {
   const h = repo.maintenant().toISOString();
+  const aujourdhui = repo.aujourdhui();
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
     const installation = await req(t.objectStore('meta').get('installation'));
+    const depuis = await req(t.objectStore('meta').get('explosionsDepuis'));
     for (const s of [...STORES_DONNEES, 'snapshots']) t.objectStore(s).clear();
     for (const it of [...seedItems(SEED_V1, h), ...seedItems(SEED_V2_AJOUTS, h)]) t.objectStore('listes').put(it);
     const meta = t.objectStore('meta');
     meta.put({ cle: 'schema', valeur: DB_VERSION });
     meta.put(installation || { cle: 'installation', valeur: h });
+    meta.put(depuis || { cle: 'explosionsDepuis', valeur: aujourdhui });
     meta.put({ cle: 'derniereEcriture', valeur: h });
   });
 }
