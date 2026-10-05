@@ -36,6 +36,19 @@ export function bornesFenetre(fenetre, aujourdhui, premier) {
 const dans = (d, du, au) => d >= du && d <= au;
 const compte = (xs, f) => xs.reduce((n, x) => n + (f(x) ? 1 : 0), 0);
 
+// Détails du soir (v4), comptés en jours : un jour compte une fois par élément, quel que soit
+// le nombre d'activités. Ordre : du plus fréquent au moins fréquent (égalités par id).
+function joursPar(jours, extraire) {
+  const n = {};
+  let total = 0;
+  for (const j of jours) {
+    const ids = [...new Set(extraire(j).filter(Boolean))];
+    if (ids.length) total += 1;
+    for (const id of ids) n[id] = (n[id] || 0) + 1;
+  }
+  return { jours: total, par: Object.entries(n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([id, nb]) => ({ id, n: nb })) };
+}
+
 export function indicateurs({ journal, episodes, symptomes }, du, au) {
   const jours = journal.filter((j) => dans(j.date, du, au));
   const val = (champ) => jours.map((j) => j[champ]).filter((v) => v !== null && v !== undefined);
@@ -72,6 +85,14 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     },
     contact: { n: val('contactHumain').length, oui: compte(val('contactHumain'), (x) => x === true) },
     sport: { n: val('sportMouvement').length, oui: compte(val('sportMouvement'), (x) => x === true) },
+    sportDetail: {
+      types: joursPar(jours, (j) => (j.activites || []).map((a) => a.type)),
+      durees: joursPar(jours, (j) => (j.activites || []).map((a) => a.duree)),
+    },
+    contactDetail: {
+      avec: joursPar(jours, (j) => j.contactAvec || []),
+      effet: joursPar(jours, (j) => (j.contactEffet ? [j.contactEffet] : [])),
+    },
     lieux: { n: lieux.length, parLieu, bureau: parLieu['lieu:bureau'] || 0, teletravail: parLieu['lieu:teletravail'] || 0 },
     traitement: { n: tp.length, oui: compte(tp, (x) => x === 'traitementPris:oui'), partiel: compte(tp, (x) => x === 'traitementPris:partiel'), non: compte(tp, (x) => x === 'traitementPris:non') },
     episodes: { nombre: eps.length, intensite: moyenne(intensites), nIntensite: intensites.length, fragile: intensites.length < SEUILS.moyenne.peuDeValeurs },

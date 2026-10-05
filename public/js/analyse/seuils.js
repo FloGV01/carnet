@@ -24,4 +24,9 @@ export const SEUILS = Object.freeze({
     signatureAccord: 2 / 3, minCaracs: 2, sdPlancher: 0.05, couvertureCarac: 0.5,
   },
   export: { maxTexteLibre: 280 },
+  // v4 : humeurs du moment par créneau de 2 h ; notes réunies avant les explosions.
+  // Profil : un créneau s'affiche avec des relevés d'au moins 3 jours différents.
+  // Avant tes explosions : une liste montre ses éléments notés au moins 2 fois.
+  moments: { minJours: 3, largeurCreneau: 2 },
+  explosions: { minExplosions: 3, maxElements: 3, maxTextes: 5, minTete: 2 },
 });

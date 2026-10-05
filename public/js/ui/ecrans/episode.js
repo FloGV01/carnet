@@ -19,5 +19,5 @@ const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="epi
 
 export function Episode({ id }) {
   return html`<${ParcoursFiche} store="episodes" route="episode" titre="Épisode" nomFiche="Épisode" etapes=${ETAPES_EPISODE}
-    textes=${TEXTES} avecHeure=${true} id=${id} memo=${memo} teinte="ep" />`;
+    textes=${TEXTES} avecHeure=${true} id=${id} memo=${memo} teinte="ep" avecPlan=${true} />`;
 }

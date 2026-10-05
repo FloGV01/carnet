@@ -13,19 +13,20 @@ import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
 import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
+import { normaliserJournee, champsVisibles } from '../../domain/journee.js';
 
 const DELAI_SUIVANT_MS = 250;
 const NOMBRES = (n, debut) => Array.from({ length: n }, (_, i) => ({ valeur: i + debut, libelle: String(i + debut) }));
 const OUI_NON = [{ valeur: true, libelle: 'Oui' }, { valeur: false, libelle: 'Non' }];
 
 export const ETAPES_JOUR = [
-  { champ: 'lieu', liste: 'lieu', question: 'Lieu', teinte: 'lieu' },
-  { champ: 'sommeilRessenti', liste: 'sommeil', question: 'Sommeil', sousQuestion: 'nuit dernière', teinte: 'sommeil' },
-  { champ: 'humeur', choix: NOMBRES(10, 1), echelle: true, question: 'Humeur', teinte: 'humeur' },
-  { champ: 'contactHumain', choix: OUI_NON, question: 'Contact humain', teinte: 'contact' },
-  { champ: 'sportMouvement', choix: OUI_NON, question: 'Sport / mouvement', teinte: 'sport' },
-  { champ: 'explosions', choix: NOMBRES(6, 0), echelle: true, question: 'Explosions', teinte: 'expl' },
-  { champ: 'traitementPris', liste: 'traitementPris', question: 'Traitement pris', teinte: 'trt' },
+  { cle: 'lieu', champ: 'lieu', liste: 'lieu', question: 'Lieu', teinte: 'lieu' },
+  { cle: 'sommeil', champ: 'sommeilRessenti', liste: 'sommeil', question: 'Sommeil', sousQuestion: 'nuit dernière', teinte: 'sommeil' },
+  { cle: 'humeur', champ: 'humeur', choix: NOMBRES(10, 1), echelle: true, question: 'Humeur', teinte: 'humeur' },
+  { cle: 'contact', champ: 'contactHumain', choix: OUI_NON, question: 'Contact humain', teinte: 'contact' },
+  { cle: 'sport', champ: 'sportMouvement', choix: OUI_NON, question: 'Sport / mouvement', teinte: 'sport' },
+  { cle: 'explosions', champ: 'explosions', choix: NOMBRES(6, 0), echelle: true, question: 'Explosions', teinte: 'expl' },
+  { cle: 'traitement', champ: 'traitementPris', liste: 'traitementPris', question: 'Traitement pris', teinte: 'trt' },
 ];
 
 function texteValeur(et, v, carte) {
@@ -37,6 +38,8 @@ function texteValeur(et, v, carte) {
 
 export function ParcoursJour({ date }) {
   const [items, setItems] = useState(null);
+  const [etapes, setEtapes] = useState(ETAPES_JOUR);
+  const [avecPositifs, setAvecPositifs] = useState(true);
   const [entree, setEntree] = useState(null);
   const [etape, setEtape] = useState(0);
   const [versRecap, setVersRecap] = useState(false);
@@ -49,8 +52,15 @@ export function ParcoursJour({ date }) {
   useEffect(() => {
     let actif = true;
     (async () => {
-      const [liste, lue] = await Promise.all([repo.listes.items(), repo.journal.lire(jour)]);
+      const [liste, lue, journee] = await Promise.all([repo.listes.items(), repo.journal.lire(jour), repo.meta.lire('journee')]);
       if (!actif) return;
+      // Les étapes suivent l'ordre et les champs affichés de Réglages › Ma journée ; sans aucune
+      // étape, le parcours s'ouvre directement sur le récapitulatif.
+      const visibles = champsVisibles(normaliserJournee(journee));
+      const retenues = visibles.map((c) => ETAPES_JOUR.find((et) => et.cle === c)).filter(Boolean);
+      setEtapes(retenues);
+      setAvecPositifs(visibles.includes('positifs'));
+      if (retenues.length === 0) setEtape('recap');
       setItems(liste);
       setEntree(lue || { date: jour });
     })();
@@ -64,7 +74,7 @@ export function ParcoursJour({ date }) {
   const ecrire = (changements) => ecrireAvecEssais(() => repo.journal.patch(jour, changements), signaler);
   const avancer = (depuis) => {
     if (versRecap) { setVersRecap(false); setEtape('recap'); return; }
-    setEtape(depuis + 1 < ETAPES_JOUR.length ? depuis + 1 : 'recap');
+    setEtape(depuis + 1 < etapes.length ? depuis + 1 : 'recap');
   };
   const choisir = (i, champ) => (valeur) => {
     setEntree((e) => ({ ...e, [champ]: valeur }));
@@ -81,33 +91,33 @@ export function ParcoursJour({ date }) {
   const ligneDate = html`<p class="ligne-date ligne-date-fixe">${jour === aujourdhui ? `Aujourd'hui · ${formaterJour(jour)}` : formaterJour(jour)}</p>`;
 
   if (etape === 'recap') {
-    return html`<${CadreParcours} titre="Ma journée" teinte="jour" etape="recap" nbEtapes=${ETAPES_JOUR.length} surFermer=${fermer} sousTitre=${ligneDate}
+    return html`<${CadreParcours} titre="Ma journée" teinte="jour" etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
       pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
         <h2 class="titre-question">Récapitulatif</h2>
         ${rendrePhrase('phrase-recap')}
-        <ul class="liste recap">${ETAPES_JOUR.map((et, i) => {
+        <ul class="liste recap">${etapes.map((et, i) => {
           const v = entree[et.champ];
           return html`<li><button type="button" class="ligne-recap" onClick=${() => { setVersRecap(true); setEtape(i); }}>
             <span class="recap-nom">${et.question}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texteValeur(et, v, carte)}</span>${Icones.chevron({ trait: 2 })}
           </button></li>`;
         })}</ul>
-        <div class="champ-recap"><${ChampTexte} id="pas-a-pas-positifs" etiquette="Mes points positifs" icone="positifs" valeur=${entree.pointsPositifs}
+        ${avecPositifs && html`<div class="champ-recap"><${ChampTexte} id="pas-a-pas-positifs" etiquette="Mes points positifs" icone="positifs" valeur=${entree.pointsPositifs}
           placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2} cleBrouillon=${`carnet:brouillon:${jour}:pointsPositifs`}
-          surEnregistrer=${(v) => ecrire({ pointsPositifs: v }).then((r) => { setEntree((e) => ({ ...e, pointsPositifs: v })); return r; })} /></div>
+          surEnregistrer=${(v) => ecrire({ pointsPositifs: v }).then((r) => { setEntree((e) => ({ ...e, pointsPositifs: v })); return r; })} /></div>`}
         <${MemoVocal} parentStore="journal" parentId=${jour} date=${jour} />
       </div>
     </${CadreParcours}>`;
   }
 
-  const et = ETAPES_JOUR[etape];
+  const et = etapes[etape];
   if (glisse.current.etape !== etape) {
     const avant = glisse.current.etape;
     glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
   }
   const opts = et.liste ? options(items, et.liste, entree[et.champ]) : et.choix;
   const nombres = et.choix && et.champ !== 'contactHumain' && et.champ !== 'sportMouvement';
-  return html`<${CadreParcours} titre="Ma journée" teinte="jour" etape=${etape} nbEtapes=${ETAPES_JOUR.length} surFermer=${fermer} sousTitre=${ligneDate}
+  return html`<${CadreParcours} titre="Ma journée" teinte="jour" etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
     <div class=${`etape ${glisse.current.classe}`} key=${etape}>

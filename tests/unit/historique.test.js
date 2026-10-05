@@ -18,6 +18,7 @@ test('filtres des jours : humeur absente jamais comptée comme basse', () => {
   assert.deepEqual(filtrerJours(jours, { humeur: 'bas' }).map((j) => j.date), ['2026-09-21']);
   assert.deepEqual(filtrerJours(jours, { lieu: 'lieu:bureau' }).map((j) => j.date), ['2026-09-21', '2026-09-29']);
   assert.deepEqual(filtrerJours(jours, { avecExplosions: true }).map((j) => j.date), ['2026-09-21']);
+  assert.deepEqual(filtrerJours(jours, { avecExplosions: true, explosionsDe: (j) => (j.date === '2026-09-29' ? 2 : j.explosions) }).map((j) => j.date), ['2026-09-21', '2026-09-29'], 'v4 : épisodes « Explosion » comptés');
   assert.deepEqual(filtrerJours(jours, { avecNotes: true, du: '2026-09-22' }).map((j) => j.date), ['2026-09-23']);
 });
 

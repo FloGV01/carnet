@@ -36,6 +36,14 @@ survivreAuCycle({
   },
 });
 
+// v4 : jour à partir duquel un compteur d'explosions vide vaut 0 (domain/explosions.js).
+// Écrit une seule fois, au premier lancement de cette version ; les jours d'avant restent inconnus.
+if (!guide) {
+  repo.meta.lire('explosionsDepuis')
+    .then((v) => (v ? null : repo.meta.ecrire('explosionsDepuis', repo.aujourdhui())))
+    .catch(() => {});
+}
+
 // Accès de test, uniquement en local.
 if (estLocal(location)) window.__carnet = { repo, etatApp };
 

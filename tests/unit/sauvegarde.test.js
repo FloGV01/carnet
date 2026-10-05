@@ -117,7 +117,57 @@ test('tout effacer : données vidées, listes par défaut recréées', async () 
   const tout = await lireTout(a.repo);
   assert.equal(tout.journal.length, 0);
   assert.equal(tout.episodes.length, 0);
-  assert.equal(tout.listes.length, 97);
+  assert.equal(tout.listes.length, 173);
   assert.equal(tout.listes.find((i) => i.id === 'lieu:bureau').libelle, 'Bureau');
   assert.ok(await a.repo.meta.lire('installation'));
+});
+
+test('v4 : une sauvegarde v1 se met à niveau (listes v4 ajoutées, aucune humeur), une v2 garde ses humeurs', async () => {
+  const json = (o) => [{ nom: 'x.json', octets: enc.encode(JSON.stringify(o)) }];
+  const v1 = {
+    format: 'carnet-sauvegarde', formatVersion: 1, exportedAt: '2026-09-30T19:00:00.000Z',
+    counts: { journal: 1, listes: 1 },
+    data: { journal: [{ date: '2026-09-30', humeur: 6 }], listes: [{ id: 'lieu:bureau', liste: 'lieu', libelle: 'Au bureau', ordre: 10, archive: false, alias: [] }] },
+  };
+  const a = analyserFichiers(json(v1));
+  assert.equal(a.sauvegarde.formatVersion, 2);
+  assert.deepEqual(a.valides.humeurs, []);
+  assert.equal(a.valides.listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
+  assert.ok(a.valides.listes.find((i) => i.id === 'typeExplosion:colere'));
+  assert.throws(() => analyserFichiers(json({ ...v1, counts: { journal: 1, listes: 2 } })), (e) => e.code === 'BACKUP_INCOMPLET', 'troncature toujours repérée');
+
+  const { repo } = nouveauRepo();
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '10:00', humeur: 5, energie: 'energie:haute' });
+  await repo.journal.patch('2026-09-30', { activites: [{ type: 'typeSport:velo', duree: 'dureeSport:plus_60' }] });
+  const [f] = await exporter(repo, { versionApp: 'test' });
+  const contenu = JSON.parse(new TextDecoder().decode(concatener(f.morceaux)));
+  assert.equal(contenu.formatVersion, 2);
+  assert.equal(contenu.counts.humeurs, 1);
+  const b = analyserFichiers([{ nom: f.nom, octets: concatener(f.morceaux) }]);
+  assert.equal(b.valides.humeurs[0].energie, 'energie:haute');
+  assert.equal(b.valides.journal[0].activites[0].duree, 'dureeSport:plus_60');
+});
+
+test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les restaure, la date des explosions reste', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  await a.repo.meta.ecrire('monPlan', { quandCaMonte: 'je sors' });
+  const [f] = await exporter(a.repo, { versionApp: '1' });
+  const contenu = JSON.parse(new TextDecoder().decode(concatener(f.morceaux)));
+  assert.equal(contenu.data.meta.find((m) => m.cle === 'schema'), undefined, 'clé technique non exportée');
+
+  const b = nouveauRepo();
+  await b.repo.meta.ecrire('journee', { masques: [] });
+  await b.repo.meta.ecrire('monPlan', { quandCaMonte: 'je respire' });
+  await b.repo.meta.ecrire('explosionsDepuis', '2026-09-15');
+  await remplacer(b.repo, analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]));
+  assert.equal(await b.repo.meta.lire('journee'), null, 'absente du fichier : retirée');
+  assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je sors' });
+  assert.equal(await b.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'absente du fichier : gardée');
+  assert.equal(await b.repo.meta.lire('schema'), 2);
+
+  await revenirAvantImport(b.repo);
+  assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
+  assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
+  assert.equal(await b.repo.meta.lire('schema'), 2);
 });

@@ -125,7 +125,7 @@ Ne pas commencer une phase avant que la précédente soit utilisée en vrai pend
 ## 10. Ce qu'il ne faut PAS faire
 
 - Pas de compte, pas de connexion, pas de cloud, pas de synchronisation.
-- Pas de notifications autres qu'un unique rappel du soir, désactivable.
+- Pas de notifications autres que les rappels que l'utilisateur crée lui-même dans Raccourcis : le rappel du soir et, s'il le veut, ceux de l'humeur du moment. Tous désactivables. (Changement du 5 octobre 2026, v4 : voir `docs/decisions.md`.)
 - Pas de contenu éditorial, pas de conseils automatiques, pas de méditations.
 - Pas de fonctionnalité sociale.
 - **L'app ne donne aucun avis clinique et ne remplace aucun soignant.** Elle observe et restitue, rien de plus.

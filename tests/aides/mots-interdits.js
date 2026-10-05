@@ -8,6 +8,8 @@ export const MOTS_INTERDITS = [
   'oubli*', 'manque', 'manques', 'manquee', 'manquees', 'rattrap*', 'en retard', 'incomplet*',
   'bonne journee', 'mauvaise journee', 'journees difficiles', 'emotions positives', 'emotions negatives',
   'que ressens-tu', 'comment te sens-tu', 'pourquoi as-tu reagi',
+  // v4 (Après coup, Analyse) : jamais de conseil rétrospectif.
+  'aurait fallu', 'tu aurais pu', 'tu aurais du',
 ];
 
 export function normaliser(texte) {

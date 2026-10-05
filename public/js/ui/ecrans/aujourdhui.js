@@ -16,6 +16,9 @@ import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Rubrique } from '../composants/rubrique.js';
 import { phraseResume } from '../../domain/phrase.js';
+import { normaliserJournee, champsAffiches } from '../../domain/journee.js';
+import { estExplosion } from '../../domain/explosions.js';
+import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { prochainRdv } from '../../domain/soins.js';
@@ -30,6 +33,36 @@ export function options(items, liste, actuel) {
     .filter((i) => i.liste === liste && (!i.archive || i.id === actuel))
     .sort((a, b) => Number(a.archive) - Number(b.archive) || a.ordre - b.ordre)
     .map((i) => ({ valeur: i.id, libelle: i.libelle }));
+}
+
+// Détails du soir (v4) : « Marche 30 à 60 min · Vélo » ; « Famille, Collègues · Coûteux ».
+function resumeSport(e, carte) {
+  return (e.activites || []).map((a) => [a.type && libelle(carte, a.type), a.duree && libelle(carte, a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(' · ');
+}
+function resumeContact(e, carte) {
+  return [(e.contactAvec || []).map((id) => libelle(carte, id)).join(', '), e.contactEffet && libelle(carte, e.contactEffet)].filter(Boolean).join(' · ');
+}
+
+// Plusieurs activités : une ligne par activité (type, durée), une ligne vide en attente d'un choix.
+function DetailSport({ entree, items, surChanger }) {
+  const [enPlus, setEnPlus] = useState(false);
+  const lignes = entree.activites || [];
+  const affichees = enPlus || lignes.length === 0 ? [...lignes, { type: null, duree: null }] : lignes;
+  const changer = (i, champ) => (v) => {
+    const nouvelles = affichees.map((l, k) => (k === i ? { ...l, [champ]: v } : l)).filter((l) => l.type || l.duree);
+    setEnPlus(false);
+    surChanger(nouvelles.length ? nouvelles : null);
+  };
+  return html`<div class="detail-sport">
+    ${affichees.map((l, i) => html`<div class="activite" key=${i}>
+      <div class="activite-tete"><span class="etiquette">Activité ${i + 1}</span>
+        ${(l.type || l.duree) && html`<button type="button" class="effacer" aria-label=${`Retirer l'activité ${i + 1}`}
+          onClick=${() => { const n = lignes.filter((_, k) => k !== i); surChanger(n.length ? n : null); }}>${Icones.fermer()}</button>`}</div>
+      <${Pastilles} etiquette=${`Activité ${i + 1} : type`} options=${options(items, 'typeSport', l.type)} valeur=${l.type ?? null} surChoix=${changer(i, 'type')} classe="souples" teinte="sport" />
+      <${Pastilles} etiquette=${`Activité ${i + 1} : durée`} options=${options(items, 'dureeSport', l.duree)} valeur=${l.duree ?? null} surChoix=${changer(i, 'duree')} classe="souples" teinte="sport" />
+    </div>`)}
+    ${lignes.length > 0 && !enPlus && html`<button type="button" class="btn-lien action" onClick=${() => setEnPlus(true)}>${Icones.plus({ trait: 2 })}Une autre activité</button>`}
+  </div>`;
 }
 
 function resumeNuit(e) {
@@ -50,8 +83,8 @@ export function Aujourdhui({ date: dateRoute }) {
   const [confirmerEffacer, setConfirmerEffacer] = useState(false);
 
   const { donnees } = useDonnees(async () => {
-    const [lue, items, dates] = await Promise.all([repo.journal.lire(date), repo.listes.items(), repo.journal.dates()]);
-    return { entree: lue || { date }, items, baseVide: dates.length === 0 };
+    const [lue, items, dates, journee] = await Promise.all([repo.journal.lire(date), repo.listes.items(), repo.journal.dates(), repo.meta.lire('journee')]);
+    return { entree: lue || { date }, items, baseVide: dates.length === 0, journee: normaliserJournee(journee) };
   }, [date, generation], { suivre: false });
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
@@ -75,7 +108,7 @@ export function Aujourdhui({ date: dateRoute }) {
     return html`<main class="ecran aujourdhui"><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" /></main>`;
   }
 
-  const { items, baseVide } = donnees;
+  const { items, baseVide, journee } = donnees;
   const ecrire = (champ) => (valeur) => {
     setEntree((e) => ({ ...e, [champ]: valeur }));
     return ecrireAvecEssais(() => repo.journal.patch(date, { [champ]: valeur }), signaler);
@@ -91,7 +124,67 @@ export function Aujourdhui({ date: dateRoute }) {
   const vide = Object.entries(entree).every(([k, v]) => ['date', 'createdAt', 'updatedAt'].includes(k) || v == null);
   const enVeille = date === aujourdhui && estAvantBascule(maintenant);
 
-  const resume = phraseResume('jour', entree, carteLibelles(items)).map((x) => x.texte).join('');
+  const carte = carteLibelles(items);
+  const nExplosions = evenements ? evenements.episodes.filter(estExplosion).length : 0;
+  const resume = phraseResume('jour', entree, carte, { nExplosions }).map((x) => x.texte).join('');
+  const visibles = champsAffiches(journee, entree);
+  // Un détail renseigné vaut aussi « Oui » quand le Oui / Non n'était pas encore choisi.
+  const ecrireActivites = (activites) => {
+    const changements = { activites };
+    if (activites && activites.some((x) => x.type || x.duree) && entree.sportMouvement == null) changements.sportMouvement = true;
+    setEntree((e) => ({ ...e, ...changements }));
+    return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
+  };
+  const ecrireContact = (champs) => {
+    const changements = { ...champs };
+    if (Object.values(champs).some((v) => v != null) && entree.contactHumain == null) changements.contactHumain = true;
+    setEntree((e) => ({ ...e, ...changements }));
+    return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
+  };
+  const CHAMPS = {
+    lieu: () => html`<div class="champ-jour">
+      <${Rubrique} teinte="lieu" icone="lieu" libelle="Lieu" />
+      <${Pastilles} etiquette="Lieu" options=${options(items, 'lieu', entree.lieu)} valeur=${entree.lieu} surChoix=${ecrire('lieu')} colonnes=${3} teinte="lieu" />
+    </div>`,
+    sommeil: () => html`<div class="champ-jour ligne-champ">
+      <${Rubrique} teinte="sommeil" icone="sommeil" libelle="Sommeil" sous="nuit dernière" dessous=${true} />
+      <${Segmente} etiquette="Sommeil" options=${options(items, 'sommeil', entree.sommeilRessenti)} valeur=${entree.sommeilRessenti} surChoix=${ecrire('sommeilRessenti')} teinte="sommeil" />
+    </div>`,
+    humeur: () => html`<div class="champ-jour">
+      <${Rubrique} teinte="humeur" icone="humeur" libelle="Humeur" />
+      <${Pastilles} etiquette="Humeur" ariaPrefixe="Humeur" options=${HUMEURS} valeur=${entree.humeur} surChoix=${ecrire('humeur')} colonnes=${5} classe="chiffres" teinte="humeur" />
+    </div>`,
+    // Seul sur sa ligne (l'autre est masqué ou ailleurs dans l'ordre) : libellé à gauche, Oui / Non à droite.
+    contact: (seul) => html`<div class=${seul ? 'champ-jour ligne-champ' : 'champ-jour'}><${Rubrique} teinte="contact" icone="contact" libelle="Contact humain" /><${OuiNon} etiquette="Contact humain" valeur=${entree.contactHumain} surChoix=${ecrire('contactHumain')} teinte="contact" /></div>`,
+    sport: (seul) => html`<div class=${seul ? 'champ-jour ligne-champ' : 'champ-jour'}><${Rubrique} teinte="sport" icone="sport" libelle="Sport / mouvement" /><${OuiNon} etiquette="Sport / mouvement" valeur=${entree.sportMouvement} surChoix=${ecrire('sportMouvement')} teinte="sport" /></div>`,
+    explosions: () => html`<div class="champ-jour">
+      <${Rubrique} teinte="expl" icone="explosions" libelle="Explosions" />
+      <${Pastilles} etiquette="Explosions" ariaPrefixe="Explosions" options=${EXPLOSIONS} valeur=${entree.explosions} surChoix=${ecrire('explosions')} colonnes=${6} classe="chiffres" teinte="expl" />
+    </div>`,
+    traitement: () => html`<div class="champ-jour ligne-champ">
+      <${Rubrique} teinte="trt" icone="traitement" libelle="Traitement pris" />
+      <${Segmente} etiquette="Traitement pris" options=${options(items, 'traitementPris', entree.traitementPris)} valeur=${entree.traitementPris} surChoix=${ecrire('traitementPris')} teinte="trt" />
+    </div>`,
+    positifs: () => html`<div class="champ-jour">
+      <${Rubrique} teinte="pos" icone="positifs" libelle="Mes points positifs" />
+      <${ChampTexte} key=${`${date}-pp-${generation}`} id="points-positifs" etiquette=${null} ariaLabel="Mes points positifs" valeur=${entree.pointsPositifs}
+        placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
+        cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />
+    </div>`,
+  };
+  // Champs dans l'ordre choisi ; Contact et Sport côte à côte quand ils se suivent.
+  const rendreChamps = () => {
+    const blocs = [];
+    for (let i = 0; i < visibles.length; i++) {
+      const c = visibles[i];
+      const suivant = visibles[i + 1];
+      if ((c === 'contact' && suivant === 'sport') || (c === 'sport' && suivant === 'contact')) {
+        blocs.push(html`<div class="champ-jour deux-colonnes">${CHAMPS[c](false)}${CHAMPS[suivant](false)}</div>`);
+        i += 1;
+      } else blocs.push(CHAMPS[c](true));
+    }
+    return blocs;
+  };
   const ligneEvenement = (href, heure, texte, teinte, memo) => html`<li><a class="ligne-evenement" href=${href}>
     <span class=${`point-evenement teinte-${teinte}`} aria-hidden="true"></span>
     <span class="heure">${heure || ''}</span>
@@ -104,47 +197,33 @@ export function Aujourdhui({ date: dateRoute }) {
     ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
-    <div class="champ-jour">
-      <${Rubrique} teinte="lieu" icone="lieu" libelle="Lieu" />
-      <${Pastilles} etiquette="Lieu" options=${options(items, 'lieu', entree.lieu)} valeur=${entree.lieu} surChoix=${ecrire('lieu')} colonnes=${3} teinte="lieu" />
-    </div>
-    <div class="champ-jour ligne-champ">
-      <${Rubrique} teinte="sommeil" icone="sommeil" libelle="Sommeil" sous="nuit dernière" dessous=${true} />
-      <${Segmente} etiquette="Sommeil" options=${options(items, 'sommeil', entree.sommeilRessenti)} valeur=${entree.sommeilRessenti} surChoix=${ecrire('sommeilRessenti')} teinte="sommeil" />
-    </div>
-    <div class="champ-jour">
-      <${Rubrique} teinte="humeur" icone="humeur" libelle="Humeur" />
-      <${Pastilles} etiquette="Humeur" ariaPrefixe="Humeur" options=${HUMEURS} valeur=${entree.humeur} surChoix=${ecrire('humeur')} colonnes=${5} classe="chiffres" teinte="humeur" />
-    </div>
-    <div class="champ-jour deux-colonnes">
-      <div class="champ-jour"><${Rubrique} teinte="contact" icone="contact" libelle="Contact humain" /><${OuiNon} etiquette="Contact humain" valeur=${entree.contactHumain} surChoix=${ecrire('contactHumain')} teinte="contact" /></div>
-      <div class="champ-jour"><${Rubrique} teinte="sport" icone="sport" libelle="Sport / mouvement" /><${OuiNon} etiquette="Sport / mouvement" valeur=${entree.sportMouvement} surChoix=${ecrire('sportMouvement')} teinte="sport" /></div>
-    </div>
-    <div class="champ-jour">
-      <${Rubrique} teinte="expl" icone="explosions" libelle="Explosions" />
-      <${Pastilles} etiquette="Explosions" ariaPrefixe="Explosions" options=${EXPLOSIONS} valeur=${entree.explosions} surChoix=${ecrire('explosions')} colonnes=${6} classe="chiffres" teinte="expl" />
-    </div>
-    <div class="champ-jour ligne-champ">
-      <${Rubrique} teinte="trt" icone="traitement" libelle="Traitement pris" />
-      <${Segmente} etiquette="Traitement pris" options=${options(items, 'traitementPris', entree.traitementPris)} valeur=${entree.traitementPris} surChoix=${ecrire('traitementPris')} teinte="trt" />
-    </div>
-    <div class="champ-jour">
-      <${Rubrique} teinte="pos" icone="positifs" libelle="Mes points positifs" />
-      <${ChampTexte} key=${`${date}-pp-${generation}`} id="points-positifs" etiquette=${null} ariaLabel="Mes points positifs" valeur=${entree.pointsPositifs}
-        placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
-        cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />
-    </div>
+    ${rendreChamps()}
     <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} />
 
     <div class="replis">
-      <${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)}>
+      ${(visibles.includes('sommeil') || resumeNuit(entree)) && html`<${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)}>
         <${ChampHeure} id="coucher" etiquette="Coucher" sous="la veille" valeur=${entree.heureCoucher} surChoix=${ecrire('heureCoucher')} />
         <${ChampHeure} id="lever" etiquette="Lever" valeur=${entree.heureLever} surChoix=${ecrire('heureLever')} />
         <div class="champ-jour">
           <span class="etiquette">Réveils</span>
           <${Pastilles} etiquette="Réveils" ariaPrefixe="Réveils" options=${REVEILS} valeur=${entree.reveilsNocturnes} surChoix=${ecrire('reveilsNocturnes')} colonnes=${6} classe="chiffres reveils" teinte="sommeil" />
         </div>
-      </${Repli}>
+      </${Repli}>`}
+      ${visibles.includes('sport') && html`<${Repli} cle="sport" titre="Sport en détail" resume=${resumeSport(entree, carte)} memoriser=${false}>
+        <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
+      </${Repli}>`}
+      ${visibles.includes('contact') && html`<${Repli} cle="contact" titre="Contact en détail" resume=${resumeContact(entree, carte)} memoriser=${false}>
+        <div class="champ-jour">
+          <span class="etiquette">Avec qui</span>
+          <${PastillesMultiples} etiquette="Avec qui" options=${options(items, 'contactAvec', null)} valeurs=${entree.contactAvec}
+            exclusifs=${new Set()} surChoix=${(v) => ecrireContact({ contactAvec: v })} teinte="contact" />
+        </div>
+        <div class="champ-jour">
+          <span class="etiquette">Comment c'était</span>
+          <${Segmente} etiquette="Comment c'était" options=${options(items, 'contactEffet', entree.contactEffet)} valeur=${entree.contactEffet}
+            surChoix=${(v) => ecrireContact({ contactEffet: v })} teinte="contact" classe="large" />
+        </div>
+      </${Repli}>`}
       <${Repli} cle="notes" titre="Notes libres" resume=${entree.notes ? entree.notes.slice(0, 40) : null}>
         <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${3}
           cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
@@ -174,6 +253,7 @@ export function Aujourdhui({ date: dateRoute }) {
       action="Effacer" surAnnuler=${() => setConfirmerEffacer(false)} surConfirmer=${effacerJournee} />`}
     <div class="actions-flottantes">
       <a class="pilule pas-a-pas" href=${versHash('pas-a-pas', { date })}>${Icones.pasAPas()}Pas à pas</a>
+      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}Moment</a>`}
       <a class="fab" href="#/episode/nouveau">${Icones.plus({ trait: 2.2 })}<span>Épisode</span></a>
     </div>
   </main>`;

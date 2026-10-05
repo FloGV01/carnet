@@ -11,6 +11,7 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
 import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
 import { phraseResume } from '../../domain/phrase.js';
+import { estExplosion, valeurExplosions } from '../../domain/explosions.js';
 import { versHash } from '../../routeur.js';
 import { options } from './aujourdhui.js';
 
@@ -64,13 +65,15 @@ export function Historique() {
 
   let contenu;
   if (segment === 'jours') {
-    let jours = filtrerJours(donnees.journal, { du: periode, lieu: f.lieu, humeur: f.humeur, avecExplosions: f.avecExplosions, avecNotes: f.avecNotes });
     const episodesDuJour = new Map();
     for (const e of donnees.episodes) {
       const j = jourEvenement(e.date, e.heure);
       if (!episodesDuJour.has(j)) episodesDuJour.set(j, []);
       episodesDuJour.get(j).push(e);
     }
+    const nExplosions = (date) => (episodesDuJour.get(date) || []).filter(estExplosion).length;
+    const explosionsDe = (j) => valeurExplosions(j.explosions ?? null, nExplosions(j.date));
+    let jours = filtrerJours(donnees.journal, { du: periode, lieu: f.lieu, humeur: f.humeur, avecExplosions: f.avecExplosions, avecNotes: f.avecNotes, explosionsDe });
     const trouves = q ? new Map(jours.map((j) => [j.date, chercher(j, 'journal', q, AVANT_EXTRAIT, APRES_EXTRAIT)])) : null;
     if (q) jours = jours.filter((j) => trouves.get(j.date));
     contenu = jours.length === 0
@@ -78,7 +81,7 @@ export function Historique() {
       : grouperParSemaine(jours, (j) => j.date).map((g) => html`<section class="semaine">
         <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
         <ul class="liste carte carte-groupe">${g.elements.map((j) => {
-          const puces = phraseResume('jour', j, carte).filter((s) => s.valeur);
+          const puces = phraseResume('jour', j, carte, { nExplosions: nExplosions(j.date) }).filter((s) => s.valeur);
           const note = [];
           for (const e of (episodesDuJour.get(j.date) || []).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''))) {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');

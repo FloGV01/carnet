@@ -15,6 +15,8 @@ import { ChampTexte } from '../composants/texte.js';
 import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Icones } from '../icones.js';
+import { FeuillePlan } from '../composants/mon-plan.js';
+import { estExplosion } from '../../domain/explosions.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -27,18 +29,27 @@ export function libelleDate(date, maintenant) {
   return formaterJour(date);
 }
 
-function revenir() {
-  const precedente = etatApp.lire().routePrecedente;
-  location.hash = precedente && !/#\/(episode|symptome|pas-a-pas)\//.test(precedente) ? precedente : '#/aujourdhui';
+// Résumé d'un Après coup sur la ligne du récapitulatif (le contenu, jamais un état « fait »).
+function resumeApresCoup(a, carte) {
+  if (!a) return null;
+  return [(a.types || []).map((id) => libelle(carte, id)).join(', '), a.repereA != null && `remarqué à ${a.repereA}/10`,
+    (a.siJe || a.alorsJe) && `si ${a.siJe || '…'}, alors ${a.alorsJe || '…'}`].filter(Boolean).join(' · ') || null;
 }
 
-export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte }) {
+function revenir() {
+  const precedente = etatApp.lire().routePrecedente;
+  location.hash = precedente && !/#\/(episode|symptome|pas-a-pas|apres-coup)\//.test(precedente) && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
+}
+
+export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte, avecPlan = false }) {
   const [items, setItems] = useState(null);
   const [fiche, setFiche] = useState(null);
   const [etape, setEtape] = useState(0);
   const [versRecap, setVersRecap] = useState(false);
   const [editionDate, setEditionDate] = useState(false);
   const [confirmer, setConfirmer] = useState(false);
+  const [voirPlan, setVoirPlan] = useState(false);
+  const boutonPlan = useRef(null);
   const [, signaler] = useIndicateur();
   const idRef = useRef(null);
   const instantane = useRef(null);
@@ -130,6 +141,9 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const phrase = phraseResume(store === 'episodes' ? 'episode' : 'symptome', fiche, carte);
   const rendrePhrase = (classe) => phrase.length > 0 && html`<p class=${classe}>${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>`;
 
+  // « Mon plan » : une ligne fixe sous la date, à chaque étape et au récapitulatif (épisodes).
+  const lignePlan = avecPlan && html`<div class="ligne-plan"><button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => setVoirPlan(true)}>${Icones.listes()}Mon plan</button></div>`;
+  const feuillePlan = voirPlan && html`<${FeuillePlan} surFermer=${() => setVoirPlan(false)} retourFocus=${boutonPlan} />`;
   const ligneDate = html`<div class="ligne-date">
     <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => setEditionDate(!editionDate)}>
       ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
@@ -149,7 +163,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
-    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
       pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
       <h2 class="titre-question">Récapitulatif</h2>
@@ -160,11 +174,17 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrire({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
+      ${avecPlan && (estExplosion(fiche) || fiche.apresCoup) && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
+        onClick=${async (e) => { if (!idRef.current) { e.preventDefault(); await ecrire({}); await file.current; if (idRef.current) location.hash = versHash('apres-coup', { id: idRef.current }); } }}>
+        <span class="ligne-libelle"><span class="titre-apres-coup">Après coup</span>
+          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid sur cet épisode, étape par étape.'}</span></span>
+        ${Icones.chevron({ trait: 2 })}</a>`}
       ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
       ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
         texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"
         surAnnuler=${() => setConfirmer(false)} surConfirmer=${() => { setConfirmer(false); supprimer(); }} />`}
       </div>
+      ${feuillePlan}
     </${CadreParcours}>`;
   }
 
@@ -176,7 +196,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
   }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
-  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
     <div class=${`etape ${glisse.current.classe}`} key=${etape}>
@@ -191,5 +211,6 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         choisir(etape, et.champ)(item.id);
       }} />
     </div>
+    ${feuillePlan}
   </${CadreParcours}>`;
 }

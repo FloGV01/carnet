@@ -6,16 +6,30 @@ import { req } from './idb.js';
 import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
 import { creerZip, lireZip } from './zip.js';
-import { normaliser, SCHEMAS } from '../domain/champs.js';
-import { SEED_V1, seedItems } from '../domain/vocabulaire.js';
+import { normaliser, SCHEMAS, refsDuChamp } from '../domain/champs.js';
+import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
-const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'audios'];
-const META_NON_EXPORTEES = new Set(['installation', 'derniereEcriture', 'derniereSauvegarde']);
+const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'listes', 'meta', 'audios'];
+// Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
+const META_NON_EXPORTEES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
+// Gardée telle quelle si le fichier (ou la copie) ne l'a pas : date de la mise à jour v4,
+// à partir de laquelle un compteur d'explosions vide vaut 0 (domain/explosions.js).
+const META_GARDEES_SI_ABSENTES = new Set(['explosionsDepuis']);
+// Les autres clés (Mon plan, Ma journée, traitement actuel, réglages…) sont celles de l'utilisateur :
+// le fichier les remplace toutes, et une clé absente du fichier est retirée.
+const estMetaUtilisateur = (cle) => !META_NON_EXPORTEES.has(cle) && !META_GARDEES_SI_ABSENTES.has(cle);
+
+// Dans la même transaction : la méta de l'utilisateur devient exactement celle de `source`.
+function remplacerMeta(store, actuelles, source) {
+  const gardees = new Set((source || []).map((m) => m.cle));
+  for (const m of actuelles || []) if (estMetaUtilisateur(m.cle) && !gardees.has(m.cle)) store.delete(m.cle);
+  for (const m of source || []) if (m && typeof m.cle === 'string' && !META_NON_EXPORTEES.has(m.cle)) store.put(m);
+}
 const enc = new TextEncoder();
 const dec = new TextDecoder('utf-8');
 const pad = (n) => String(n).padStart(2, '0');
@@ -47,7 +61,7 @@ export function construireSauvegarde(donnees, { maintenant, versionApp, seuil = 
   const metaAudios = audios.map(({ data, ...m }) => ({ ...m, fichier: `audios/${m.id}.${extension(m.mime)}` }));
   const data = {
     journal: donnees.journal || [], episodes: donnees.episodes || [], symptomes: donnees.symptomes || [],
-    traitements: donnees.traitements || [], rdv: donnees.rdv || [], listes: donnees.listes || [],
+    traitements: donnees.traitements || [], rdv: donnees.rdv || [], humeurs: donnees.humeurs || [], listes: donnees.listes || [],
     meta: (donnees.meta || []).filter((m) => !META_NON_EXPORTEES.has(m.cle)),
     audios: metaAudios,
   };
@@ -95,8 +109,26 @@ function lireJson(octets) {
 }
 const estZip = (o) => o.length > 4 && o[0] === 0x50 && o[1] === 0x4b && o[2] === 0x03 && o[3] === 0x04;
 
+// Éléments de liste par défaut absents d'un ensemble (ajouts v4) : jamais d'écrasement.
+export function listesManquantes(items, horodatage) {
+  const ids = new Set((items || []).map((i) => i && i.id));
+  return seedItems(SEED_V2_AJOUTS, horodatage).filter((i) => !ids.has(i.id));
+}
+
 // Mises à niveau successives d'une sauvegarde ancienne (v1 -> v2 -> …). Pures.
-export const MISES_A_NIVEAU = {};
+export const MISES_A_NIVEAU = {
+  // v1 -> v2 : humeurs du moment (aucune) et nouvelles listes par défaut.
+  1(s) {
+    const data = { ...(s.data || {}) };
+    data.humeurs = [];
+    const ajouts = listesManquantes(data.listes, s.exportedAt);
+    data.listes = [...(Array.isArray(data.listes) ? data.listes : []), ...ajouts];
+    // Les comptes annoncés restent vérifiés : on ajoute seulement ce qu'on vient d'ajouter.
+    const counts = { ...(s.counts || {}), humeurs: 0 };
+    if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
+    return { ...s, formatVersion: 2, counts, data };
+  },
+};
 export function mettreANiveauSauvegarde(s) {
   let courant = s;
   for (let v = courant.formatVersion; v < FORMAT_VERSION; v++) courant = MISES_A_NIVEAU[v](courant);
@@ -141,8 +173,7 @@ export function analyserFichiers(fichiers) {
       const { valeur, erreurs: errs } = normaliser(store, brut, { origine: 'sauvegarde' });
       if (errs.length) { erreurs.push(`${store} n° ${i + 1} : ${errs.join(', ')}`); return; }
       for (const [champ, def] of Object.entries(SCHEMAS[store].saisis)) {
-        const refs = def.type === 'ref' ? [valeur[champ]] : def.type === 'refs' ? valeur[champ] || [] : [];
-        for (const id of refs) {
+        for (const id of refsDuChamp(def, valeur[champ])) {
           if (id && !idsListes.has(id)) {
             idsListes.add(id);
             ajoutsListes.push({ id, liste: listeDe(id), libelle: `${SANS_LIBELLE} (${id})`, ordre: 9990, archive: true, alias: [],
@@ -171,7 +202,7 @@ export function analyserFichiers(fichiers) {
     manquants,
     resume: {
       journees: valides.journal.length, episodes: valides.episodes.length, symptomes: valides.symptomes.length,
-      traitements: valides.traitements.length, rdv: valides.rdv.length, memos: audios.length,
+      traitements: valides.traitements.length, rdv: valides.rdv.length, humeurs: valides.humeurs.length, memos: audios.length,
       du: dates[0] || null, au: dates[dates.length - 1] || null, exportedAt: s.exportedAt,
     },
   };
@@ -179,7 +210,7 @@ export function analyserFichiers(fichiers) {
 
 // Ce que l'import effacerait : éléments présents ici et absents du fichier.
 export function chiffrerPerte(actuel, analyse) {
-  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', audios: 'id' };
+  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', humeurs: 'id', audios: 'id' };
   const res = {};
   for (const [store, k] of Object.entries(cle)) {
     const dansFichier = new Set((analyse.valides[store] || []).map((x) => x[k]));
@@ -196,7 +227,7 @@ async function prendreCopie(t, type, horodatage, donnees) {
   snaps.put({ id: `${type}-${horodatage}`, type, date: horodatage, schemaVersion: DB_VERSION, data: sansAudios });
 }
 
-const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'audios'];
+const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'listes', 'audios'];
 
 // Remplacement complet, en une seule transaction (copie de secours comprise).
 export async function remplacer(repo, analyse, { panne } = {}) {
@@ -207,9 +238,9 @@ export async function remplacer(repo, analyse, { panne } = {}) {
     await prendreCopie(t, 'avant-import', h, actuel);
     for (const s of STORES_REMPLACES) t.objectStore(s).clear();
     const meta = t.objectStore('meta');
-    for (const m of v.meta) meta.put(m);
-    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'audios']) {
-      for (const x of v[s]) t.objectStore(s).put(x);
+    remplacerMeta(meta, actuel.meta, v.meta);
+    for (const s of STORES_REMPLACES) {
+      for (const x of v[s] || []) t.objectStore(s).put(x);
       if (panne === s) throw new Error('panne simulée');
     }
     meta.put({ cle: 'derniereEcriture', valeur: h });
@@ -232,10 +263,15 @@ export async function revenirAvantImport(repo) {
   const actuel = await lireTout(repo);
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
     await prendreCopie(t, 'avant-retour', h, actuel);
-    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes']) {
+    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'humeurs']) {
+      // Une copie prise avant la v4 n'a pas d'humeurs du moment : on les laisse telles quelles.
+      if (s === 'humeurs' && !Array.isArray(copie.data.humeurs)) continue;
       t.objectStore(s).clear();
       for (const x of copie.data[s] || []) t.objectStore(s).put(x);
     }
+    for (const it of listesManquantes(copie.data.listes, h)) t.objectStore('listes').put(it);
+    // Une copie de la v3 et d'avant n'a pas forcément de méta : on ne touche alors à rien.
+    if (Array.isArray(copie.data.meta)) remplacerMeta(t.objectStore('meta'), actuel.meta, copie.data.meta);
     // Les mémos dont la fiche n'existe plus après le retour sont retirés.
     const parents = {
       journal: new Set((copie.data.journal || []).map((x) => x.date)),
@@ -256,7 +292,7 @@ export async function toutEffacer(repo) {
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
     const installation = await req(t.objectStore('meta').get('installation'));
     for (const s of [...STORES_DONNEES, 'snapshots']) t.objectStore(s).clear();
-    for (const it of seedItems(SEED_V1, h)) t.objectStore('listes').put(it);
+    for (const it of [...seedItems(SEED_V1, h), ...seedItems(SEED_V2_AJOUTS, h)]) t.objectStore('listes').put(it);
     const meta = t.objectStore('meta');
     meta.put({ cle: 'schema', valeur: DB_VERSION });
     meta.put(installation || { cle: 'installation', valeur: h });

@@ -32,6 +32,8 @@ test('aller-retour versHash / lireRoute pour chaque route', () => {
 test('onglet actif', () => {
   assert.equal(ongletDe('episode'), 'aujourdhui');
   assert.equal(ongletDe('pas-a-pas'), 'aujourdhui');
+  assert.equal(ongletDe('apres-coup'), 'aujourdhui');
+  assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');

@@ -83,8 +83,10 @@ export function Reglages() {
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 
     <ul class="liste carte carte-groupe espace-haut">
+      <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Ma journée" />
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
-      <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappel du soir" />
+      <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
+      <${LigneLien} href="#/mon-plan" icone="bulle" titre="Mon plan" />
     </ul>
 
     <h2 class="libelle-section">Analyse</h2>

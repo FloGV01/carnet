@@ -3,6 +3,7 @@
 // Les libellés de declencheur et dessous restent tels quels (ils ne se lissent jamais) ; ailleurs,
 // l'initiale passe en minuscule au fil de la phrase, sauf pour un sigle (« TDAH » reste « TDAH »).
 import { libelle } from './libelles.js';
+import { valeurExplosions } from './explosions.js';
 
 const ESPACE_FINE = ' ';
 
@@ -61,10 +62,12 @@ const JOUR = [
   ['traitementPris', 'trt', (v, c) => `traitement ${minusculeInitiale(libelle(c, v))}`],
 ];
 
-function phraseJour(entree, carte) {
+// nExplosions : épisodes « Explosion » du jour (v4). Règle d'affichage de domain/explosions.js,
+// jamais enregistrée : le compteur s'il est noté (au moins le nombre d'épisodes), sinon les épisodes.
+function phraseJour(entree, carte, nExplosions) {
   const segments = [];
   for (const [champ, rubrique, forme] of JOUR) {
-    const v = entree[champ];
+    const v = champ === 'explosions' ? valeurExplosions(entree.explosions ?? null, nExplosions) : entree[champ];
     if (v == null) continue;
     if (segments.length) segments.push({ texte: ' · ', valeur: false });
     segments.push({ texte: forme(v, carte), valeur: true, rubrique });
@@ -72,10 +75,10 @@ function phraseJour(entree, carte) {
   return segments;
 }
 
-export function phraseResume(type, fiche, carte) {
+export function phraseResume(type, fiche, carte, { nExplosions = 0 } = {}) {
   if (!fiche) return [];
   if (type === 'episode') return phraseFiche(EPISODE, fiche, carte);
   if (type === 'symptome') return phraseFiche(SYMPTOME, fiche, carte);
-  if (type === 'jour') return phraseJour(fiche, carte);
+  if (type === 'jour') return phraseJour(fiche, carte, nExplosions);
   return [];
 }

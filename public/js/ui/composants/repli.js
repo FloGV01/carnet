@@ -3,9 +3,10 @@ import { lireLocal, ecrireLocal } from '../hooks.js';
 import { Icones } from '../icones.js';
 
 // Section repliable ; quand elle contient des données, sa ligne les résume.
-export function Repli({ cle, titre, resume, children }) {
-  const [ouvert, setOuvert] = useState(() => lireLocal(`carnet:repli:${cle}`, false) === true);
-  const basculer = () => { const v = !ouvert; setOuvert(v); ecrireLocal(`carnet:repli:${cle}`, v); };
+// `memoriser` : l'état ouvert ou fermé est gardé d'une ouverture de l'app à l'autre.
+export function Repli({ cle, titre, resume, memoriser = true, children }) {
+  const [ouvert, setOuvert] = useState(() => memoriser && lireLocal(`carnet:repli:${cle}`, false) === true);
+  const basculer = () => { const v = !ouvert; setOuvert(v); if (memoriser) ecrireLocal(`carnet:repli:${cle}`, v); };
   return html`<section class="repli">
     <button type="button" class="repli-tete" aria-expanded=${ouvert ? 'true' : 'false'} onClick=${basculer}>
       <span class="repli-fleche" aria-hidden="true">${Icones.chevron({ trait: 2 })}</span>

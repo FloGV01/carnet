@@ -239,7 +239,7 @@
 .ordre { display: flex; }
 .fleche { width: var(--cible); height: var(--cible); border: 0; background: none; color: var(--text); display: grid; place-items: center; padding: 0; }
 .fleche svg { width: 18px; height: 18px; }
-.fleche[disabled] { color: var(--hairline); cursor: default; }
+.fleche[disabled], .fleche[aria-disabled="true"] { color: var(--hairline); cursor: default; }
 .action-liste { font-size: var(--t-sous); padding: 0 10px; }
 .ajout-element { display: flex; gap: var(--esp-2); }
 .ajout-element input { flex: 1; border-radius: var(--r-moyen); }
@@ -376,3 +376,47 @@
 .ligne-depuis { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ligne-depuis input { width: auto; }
 .consultation .tableau-traitement { font-size: var(--t-corps); }
+
+/* Aujourd'hui v4 : détails sport et contact, pilule « Moment » */
+.detail-sport { display: flex; flex-direction: column; gap: 12px; }
+.activite { display: flex; flex-direction: column; gap: 6px; }
+.activite + .activite { border-top: 1.5px dashed var(--hairline); padding-top: 10px; }
+.activite-tete { display: flex; align-items: center; justify-content: space-between; min-height: var(--cible); }
+.activite-tete .etiquette { margin: 0; }
+.repli-corps .etiquette { font-size: var(--t-sous); margin-bottom: 0; }
+.actions-flottantes .pilule { padding: 0 12px 0 10px; font-size: var(--t-sous); }
+.actions-flottantes .fab { padding: 0 14px 0 12px; }
+.actions-flottantes { flex-wrap: nowrap; }
+.actions-flottantes > * { flex: none; white-space: nowrap; }
+
+/* Réglages › Ma journée, Mon plan, Après coup, Humeur du moment (v4) */
+.ligne-champ-reglage { display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 12px 0 16px; }
+.ligne-champ-reglage .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); }
+.heures-moment .pastille { min-width: 56px; justify-content: center; }
+.ma-journee, .mon-plan { gap: 14px; }
+.ligne-plan { padding: 0 var(--marge); flex: none; }
+.ligne-plan .btn-lien { font-size: var(--t-sous); min-height: 36px; }
+.ligne-plan .btn-lien svg { width: 16px; height: 16px; }
+.voile-feuille { align-items: end; place-items: end center; padding: 0; }
+.feuille {
+  width: 100%; max-width: 34rem; max-height: 85dvh; overflow-y: auto; background: var(--surface);
+  border-radius: var(--r-carte) var(--r-carte) 0 0; padding: 16px var(--marge) calc(20px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px;
+}
+.feuille-tete { display: flex; align-items: center; justify-content: space-between; }
+.feuille-tete .fermer svg { width: 18px; height: 18px; }
+.contenu-plan { display: flex; flex-direction: column; gap: 12px; }
+.rubrique-plan p { font-size: var(--t-corps); line-height: 1.45; white-space: pre-wrap; }
+.liste-si-alors { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
+.lien-apres-coup { padding: 10px 10px 10px 16px; min-height: 56px; }
+.lien-apres-coup .ligne-libelle { display: flex; flex-direction: column; gap: 2px; }
+.titre-apres-coup { font-weight: 600; }
+.bloc-etape { display: flex; flex-direction: column; gap: 8px; }
+.sous-titre-etape { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
+.moments-du-jour { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.heure-moment { font-variant-numeric: tabular-nums; color: var(--text-2); margin-right: 6px; }
+.segmente.energie button { min-height: 52px; }
+/* Analyse v4 : Avant tes explosions, Profil de ta journée */
+.profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
+.mots-utilisateur { margin-top: var(--esp-3); }
+.mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }

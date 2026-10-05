@@ -13,6 +13,7 @@ import { useFiche } from '../fiche.js';
 import { addDays } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { indicateurs } from '../../analyse/fenetres.js';
+import { journalAvecExplosions } from '../../domain/explosions.js';
 import { uneDecimale } from '../../analyse/textes.js';
 import { nomRdv, quandRdv } from './soins.js';
 import { TableauTraitement, lireTraitementActuel } from '../composants/traitement-actuel.js';
@@ -25,9 +26,11 @@ function revenir() {
 export function Consultation({ id: idRoute }) {
   const { fiche, id, ecrire, assurer } = useFiche({ store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({}) });
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, traitement] = await Promise.all([repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), lireTraitementActuel()]);
+    const [journal, episodes, symptomes, items, traitement, zeroDepuis] = await Promise.all([
+      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), lireTraitementActuel(), repo.meta.lire('explosionsDepuis'),
+    ]);
     const au = repo.aujourdhui();
-    return { ind: indicateurs({ journal, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement };
+    return { ind: indicateurs({ journal: journalAvecExplosions(journal, episodes, { zeroDepuis }), episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement };
   }, []);
   if (!fiche || !donnees) return html`<div class="parcours"></div>`;
   const { ind, carte, traitement } = donnees;

@@ -14,6 +14,10 @@ import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
 import { ParcoursJour } from './ui/ecrans/parcours-jour.js';
+import { Moment } from './ui/ecrans/moment.js';
+import { MonPlan } from './ui/ecrans/mon-plan.js';
+import { ApresCoup } from './ui/ecrans/apres-coup.js';
+import { MaJournee } from './ui/ecrans/ma-journee.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
@@ -32,6 +36,10 @@ const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
   'pas-a-pas': (p) => html`<${ParcoursJour} key=${p.date} date=${p.date} />`,
+  moment: () => html`<${Moment} />`,
+  'mon-plan': () => html`<${MonPlan} />`,
+  'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
+  'reglages-journee': () => html`<${MaJournee} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   historique: () => html`<${Historique} />`,
   soins: () => html`<${Soins} />`,

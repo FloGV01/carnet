@@ -43,6 +43,35 @@ export const SEED_V1 = Object.freeze({
     ['equipe_rehab', 'Équipe de réhabilitation'], ['autre', 'Autre']],
 });
 
+// Ajouts de la v4 (DB_VERSION 2), FIGÉS une fois publiés comme SEED_V1. Versés par
+// MIGRATIONS[2] et par la mise à niveau des sauvegardes v1, sans écraser l'existant.
+export const SEED_V2_AJOUTS = Object.freeze({
+  energie: [['basse', 'Basse'], ['moyenne', 'Moyenne'], ['haute', 'Haute']],
+  typeSport: [['marche', 'Marche'], ['velo', 'Vélo'], ['course', 'Course à pied'], ['natation', 'Natation'],
+    ['renforcement', 'Renforcement'], ['yoga', 'Yoga / étirements'], ['autre', 'Autre']],
+  dureeSport: [['moins_15', 'Moins de 15 min'], ['de_15_a_30', '15 à 30 min'], ['de_30_a_60', '30 à 60 min'], ['plus_60', "Plus d'1 h"]],
+  contactAvec: [['famille', 'Famille'], ['amis', 'Amis'], ['collegues', 'Collègues'], ['soignants', 'Soignants'], ['autre', 'Autre']],
+  contactEffet: [['ressourcant', 'Ressourçant'], ['neutre', 'Neutre'], ['couteux', 'Coûteux']],
+  typeExplosion: [['colere', 'Colère'], ['surcharge', 'Surcharge'], ['fige', 'Figé'], ['ne_sais_pas', 'Je ne sais pas', [], { hc: 1, ex: 1 }]],
+  fragilite: [['fatigue', 'Fatigue'], ['mauvaise_nuit', 'Mauvaise nuit'], ['faim', 'Faim'], ['douleur', 'Douleur'],
+    ['imprevu', 'Imprévu'], ['trop_de_choses', 'Trop de choses à la fois'], ['bruit_monde', 'Bruit / monde'], ['tension_deja_la', 'Tension déjà là'],
+    ['ne_sais_pas', 'Je ne sais pas', [], { hc: 1, ex: 1 }]],
+  signe: [['chaleur', 'Chaleur'], ['coeur', "Cœur qui s'accélère"], ['machoire', 'Mâchoire ou poings serrés'],
+    ['respiration', 'Respiration courte'], ['voix', 'Voix qui monte'], ['gestes', 'Gestes brusques'],
+    ['envie_partir', 'Envie de partir'], ['pensees_tournent', 'Pensées qui tournent'], ['bruits_insupportables', 'Bruits insupportables'],
+    ['ne_sais_pas', 'Je ne sais pas', [], { hc: 1, ex: 1 }]],
+  piegePensee: [['expres', 'Il le fait exprès'], ['dois', 'Je dois / il doit'],
+    ['tout_ou_rien', 'Tout ou rien'], ['lecture_pensees', "Je sais ce qu'il pense"], ['mal_finir', 'Ça va mal finir']],
+  sourceSurcharge: [['bruit', 'Bruit'], ['lumiere', 'Lumière'], ['monde', 'Monde'], ['changement', 'Changement'],
+    ['attente', 'Attente'], ['demandes', 'Trop de demandes'], ['fatigue', 'Fatigue']],
+  besoin: [['calme', 'Calme'], ['sortir', 'Sortir'], ['pause', 'Une pause'], ['casque', 'Casque / bouchons'],
+    ['seul', 'Être seul'], ['manger_boire', 'Manger / boire'], ['dormir', 'Dormir'], ['en_parler', 'En parler'],
+    ['ne_sais_pas', 'Je ne sais pas', [], { hc: 1, ex: 1 }]],
+  consequenceCourt: [['soulagement', 'Soulagement'], ['tension_tombee', 'La tension est tombée'], ['rien', 'Rien de spécial'], ['empire', 'Ça a empiré']],
+  consequenceLong: [['regret', 'Regret'], ['honte', 'Honte'], ['conflit', 'Conflit'], ['fatigue', 'Fatigue'],
+    ['rien', 'Rien de spécial'], ['reparer', "J'ai pu réparer"]],
+});
+
 export function seedItems(seed, horodatage) {
   const items = [];
   for (const [liste, entrees] of Object.entries(seed)) {

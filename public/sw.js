@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '3fe43a7126f1';
+const VERSION = '6c2e8b60cbad';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -15,11 +15,13 @@ const FICHIERS = [
   "./icons/icone-maskable-512.png",
   "./icons/icone.svg",
   "./index.html",
+  "./js/analyse/avant-explosions.js",
   "./js/analyse/bonnes-journees.js",
   "./js/analyse/calendrier.js",
   "./js/analyse/classements.js",
   "./js/analyse/fenetres.js",
   "./js/analyse/index.js",
+  "./js/analyse/moments.js",
   "./js/analyse/ressemblance.js",
   "./js/analyse/semaines.js",
   "./js/analyse/seuils.js",
@@ -35,10 +37,13 @@ const FICHIERS = [
   "./js/db/zip.js",
   "./js/domain/champs.js",
   "./js/domain/dates.js",
+  "./js/domain/explosions.js",
   "./js/domain/historique.js",
   "./js/domain/ids.js",
+  "./js/domain/journee.js",
   "./js/domain/libelles.js",
   "./js/domain/listes-def.js",
+  "./js/domain/mon-plan.js",
   "./js/domain/phrase.js",
   "./js/domain/soins.js",
   "./js/domain/traitement-actuel.js",
@@ -67,6 +72,7 @@ const FICHIERS = [
   "./js/ui/composants/heure.js",
   "./js/ui/composants/interrupteur.js",
   "./js/ui/composants/memo-vocal.js",
+  "./js/ui/composants/mon-plan.js",
   "./js/ui/composants/multiples.js",
   "./js/ui/composants/oui-non.js",
   "./js/ui/composants/parcours.js",
@@ -79,6 +85,7 @@ const FICHIERS = [
   "./js/ui/composants/toast.js",
   "./js/ui/composants/traitement-actuel.js",
   "./js/ui/ecrans/analyse.js",
+  "./js/ui/ecrans/apres-coup.js",
   "./js/ui/ecrans/attente.js",
   "./js/ui/ecrans/aujourdhui.js",
   "./js/ui/ecrans/consultation.js",
@@ -89,6 +96,9 @@ const FICHIERS = [
   "./js/ui/ecrans/guide.js",
   "./js/ui/ecrans/historique.js",
   "./js/ui/ecrans/listes.js",
+  "./js/ui/ecrans/ma-journee.js",
+  "./js/ui/ecrans/moment.js",
+  "./js/ui/ecrans/mon-plan.js",
   "./js/ui/ecrans/parcours-fiche.js",
   "./js/ui/ecrans/parcours-jour.js",
   "./js/ui/ecrans/rappel.js",

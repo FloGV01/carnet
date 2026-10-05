@@ -14,11 +14,11 @@ export function ExportPsy() {
   const sauvegarde = useSauvegarde();
   useEffect(() => {
     (async () => {
-      const [{ resultat, carte }, journal, episodes, symptomes] = await Promise.all([
-        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(),
+      const [{ resultat, carte, zeroDepuis }, journal, episodes, symptomes, humeurs] = await Promise.all([
+        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous(),
       ]);
       const signal = resultat.signal && resultat.signal.ressemble ? resultat.signal.phraseExport : null;
-      setTexte(exportPsy({ journal, episodes, symptomes }, { aujourdhui: repo.aujourdhui(), carte, reperes: reperesPsy(resultat, carte), signal }));
+      setTexte(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: repo.aujourdhui(), carte, reperes: reperesPsy(resultat, carte), signal, zeroDepuis }));
     })();
   }, []);
 

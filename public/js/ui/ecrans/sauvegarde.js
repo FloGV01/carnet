@@ -16,6 +16,7 @@ function phraseContenu(r) {
   if (r.symptomes) morceaux.push(pluriel(r.symptomes, 'symptôme', 'symptômes'));
   if (r.traitements) morceaux.push(pluriel(r.traitements, 'fiche de traitement', 'fiches de traitement'));
   if (r.rdv) morceaux.push(pluriel(r.rdv, 'rendez-vous', 'rendez-vous'));
+  if (r.humeurs) morceaux.push(pluriel(r.humeurs, "relevé d'humeur du moment", "relevés d'humeur du moment"));
   if (r.memos) morceaux.push(pluriel(r.memos, 'mémo vocal', 'mémos vocaux'));
   const periode = r.du ? ` (du ${formaterJour(r.du, { annee: true })} au ${formaterJour(r.au, { annee: true })})` : '';
   return `Ce fichier contient ${morceaux.join(', ')}${periode}.`;
@@ -28,6 +29,7 @@ export function phrasePerte(p) {
   if (p.symptomes) m.push(pluriel(p.symptomes, 'symptôme', 'symptômes'));
   if (p.traitements) m.push(pluriel(p.traitements, 'fiche de traitement', 'fiches de traitement'));
   if (p.rdv) m.push(pluriel(p.rdv, 'rendez-vous', 'rendez-vous'));
+  if (p.humeurs) m.push(pluriel(p.humeurs, "relevé d'humeur du moment", "relevés d'humeur du moment"));
   if (p.audios) m.push(pluriel(p.audios, 'mémo vocal', 'mémos vocaux'));
   if (!m.length) return null;
   const total = Object.values(p).reduce((n, x) => n + (Number(x) || 0), 0);

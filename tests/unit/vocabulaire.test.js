@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { SEED_V1, seedItems, normLabel } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, seedItems, normLabel } from '../../public/js/domain/vocabulaire.js';
 import { NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 import { RACINE } from '../aides/fichiers.js';
 
@@ -13,7 +13,15 @@ test('97 éléments, ids uniques et bien préfixés, 12 listes', () => {
   assert.equal(items.length, 97);
   assert.equal(new Set(items.map((i) => i.id)).size, 97);
   for (const it of items) assert.ok(it.id.startsWith(`${it.liste}:`), it.id);
-  assert.deepEqual(Object.keys(SEED_V1).sort(), [...NOMS_LISTES].sort());
+  assert.deepEqual([...Object.keys(SEED_V1), ...Object.keys(SEED_V2_AJOUTS)].sort(), [...NOMS_LISTES].sort());
+});
+
+test('ajouts v4 : ids uniques, listes nouvelles, aucun recouvrement avec SEED_V1', () => {
+  const v2 = seedItems(SEED_V2_AJOUTS, 'x');
+  assert.equal(new Set(v2.map((i) => i.id)).size, v2.length);
+  for (const liste of Object.keys(SEED_V2_AJOUTS)) assert.ok(!(liste in SEED_V1), liste);
+  for (const it of v2) assert.match(it.id, /^[a-zA-Z]+:[a-z0-9_]+$/);
+  assert.ok(v2.find((i) => i.id === 'typeExplosion:ne_sais_pas').horsClassement);
 });
 
 test('instantané des ids : SEED_V1 est figé', () => {

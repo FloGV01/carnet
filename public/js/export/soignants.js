@@ -6,6 +6,7 @@ import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ
 import { trierRdv } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
+import { journalAvecExplosions } from '../domain/explosions.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -30,9 +31,10 @@ function lignesIndicateurs(colonnes, lib) {
   return defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }));
 }
 
-export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null }) {
+export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
   const lib = (id) => (carte && carte.get(id)) || id;
   const premier = premiereDate(data, aujourdhui);
+  data = { ...data, journal: journalAvecExplosions(data.journal, data.episodes || [], { zeroDepuis }) };
   const { aVenir, passes } = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui);
   const dernierRdv = passes[0] || null;
   const prochain = aVenir[0] || null;

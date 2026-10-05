@@ -60,3 +60,4 @@ a { color: var(--accent); }
 @media print {
   body::before { display: none; }
 }
+[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }

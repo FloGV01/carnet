@@ -11,7 +11,7 @@ import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
 import { semainesAvecDonnees } from '../../analyse/semaines.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES } from '../../analyse/textes.js';
+import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { formaterDateNumerique } from '../../domain/dates.js';
 import { GrapheHumeur, GrapheExplosions, GrapheSommeil } from '../graphes/graphes.js';
@@ -23,21 +23,22 @@ const NOMS_CLASSEMENT = { declencheur: 'Déclencheur', dessous: 'En dessous', em
 let cache = null;
 
 export async function calculerAnalyse() {
-  const [journal, episodes, symptomes, traitements, items, ecriture, affiches, reglages, masque] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.listes.items(),
+  const [journal, episodes, symptomes, traitements, humeurs, items, ecriture, affiches, reglages, masque, zeroDepuis] = await Promise.all([
+    repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.humeurs.tous(), repo.listes.items(),
     repo.meta.lire('derniereEcriture'), repo.meta.lire('constatsAffiches'), repo.meta.lire('reglages'), repo.meta.lire('signalMasque'),
+    repo.meta.lire('explosionsDepuis'),
   ]);
   const aujourdhui = repo.aujourdhui();
-  const cle = `${ecriture}|${aujourdhui}|${JSON.stringify(reglages)}|${masque}`;
+  const cle = `${ecriture}|${aujourdhui}|${JSON.stringify(reglages)}|${masque}|${zeroDepuis}`;
   if (cache && cache.cle === cle) return cache.valeur;
   await new Promise((ok) => setTimeout(ok, 0));
-  const resultat = analyze({ journal, episodes, symptomes, traitements }, { aujourdhui, items, constatsAffiches: affiches || [], reglages: reglages || {} });
+  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs }, { aujourdhui, items, constatsAffiches: affiches || [], reglages: reglages || {}, zeroDepuis });
   // « Masquer » ne vaut que tant que la ressemblance dure : elle repartie, le masque tombe.
   let signalMasque = Boolean(masque);
   if (signalMasque && !resultat.signal.ressemble) { await repo.meta.ecrire('signalMasque', false); signalMasque = false; }
-  const valeur = { resultat, items, carte: carteLibelles(items), signalMasque };
+  const valeur = { resultat, items, carte: carteLibelles(items), signalMasque, zeroDepuis };
   if (JSON.stringify(resultat.constatsAffiches) !== JSON.stringify(affiches || [])) await repo.meta.ecrire('constatsAffiches', resultat.constatsAffiches);
-  cache = { cle: `${(await repo.meta.lire('derniereEcriture'))}|${aujourdhui}|${JSON.stringify(reglages)}|${signalMasque}`, valeur };
+  cache = { cle: `${(await repo.meta.lire('derniereEcriture'))}|${aujourdhui}|${JSON.stringify(reglages)}|${signalMasque}|${zeroDepuis}`, valeur };
   return valeur;
 }
 
@@ -127,14 +128,56 @@ function Tuiles({ f, carte }) {
     <${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />
     <${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />
     <${Tuile} rubrique="sommeil" titre="Durée de nuit" valeur=${f.nuits.duree ? duree(f.nuits.duree) : '·'} detail=${f.nuits.duree ? 'médiane' : ''} />
-    <${Tuile} rubrique="contact" titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} />
+    <${Tuile} rubrique="contact" titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} detail=${detailJours(f.contactDetail.avec, lib)} />
+    ${f.contactDetail.effet.jours > 0 && html`<${Tuile} rubrique="contact" titre="Comment c'était" valeur=${jours(f.contactDetail.effet.jours)} detail=${detailJours(f.contactDetail.effet, lib)} />`}
     <${Tuile} rubrique="lieu" titre=${lib('lieu:bureau')} valeur=${f.lieux.n ? jours(f.lieux.bureau) : '·'} detail=${f.lieux.n ? `${lib('lieu:teletravail').toLowerCase()} ${f.lieux.teletravail}` : ''} />
-    <${Tuile} rubrique="sport" titre="Sport / mouvement" valeur=${f.sport.n ? jours(f.sport.oui) : '·'} />
+    <${Tuile} rubrique="sport" titre="Sport / mouvement" valeur=${f.sport.n ? jours(f.sport.oui) : '·'} detail=${detailJours(f.sportDetail.types, lib)} />
     <${Tuile} rubrique="trt" titre="Traitement pris" valeur=${f.traitement.n ? `${f.traitement.oui} · ${f.traitement.partiel} · ${f.traitement.non}` : '·'}
       detail=${f.traitement.n ? `${lib('traitementPris:oui')} · ${lib('traitementPris:partiel')} · ${lib('traitementPris:non')}` : ''} />
     <${Tuile} rubrique="ep" titre="Épisodes" valeur=${String(f.episodes.nombre)} detail=${f.episodes.nIntensite ? `intensité moyenne ${nombre(f.episodes.intensite)}` : ''} fragile=${f.episodes.nIntensite > 0 && f.episodes.fragile} />
     <${Tuile} rubrique="sy" titre="Symptômes" valeur=${String(f.symptomes.nombre)} />
   </div>`;
+}
+
+// Détails du soir (v4) : « Marche 4 j · Vélo 2 j » (en jours, les 3 premiers).
+const detailJours = (d, lib) => d.par.slice(0, 3).map((x) => `${lib(x.id)} ${x.n} j`).join(' · ');
+
+// « Avant tes explosions » (v4) : comptes « 3 sur 4 », où 4 est le nombre d'explosions dont
+// l'étape a été notée. Les mots de l'utilisateur, jamais une cause ni un conseil.
+const LISTES_EXPLOSIONS = [
+  ['declencheurs', 'Ça a démarré avec'], ['dessous', 'En dessous'], ['types', 'C\'était plutôt'],
+  ['fragilites', 'Ce qui fragilisait déjà'], ['signes', 'Premiers signes'],
+];
+function AvantExplosions({ a, carte }) {
+  const lib = (id) => carte.get(id) || id;
+  if (a.statut !== 'ok') return html`<${Pourquoi} regle=${REGLES.explosions} />`;
+  const lignes = LISTES_EXPLOSIONS.filter(([cle]) => a[cle].elements.length > 0);
+  const vide = lignes.length === 0 && a.repere == null && a.siAlors.length === 0 && a.aide.length === 0;
+  return html`${vide
+    ? html`<p class="texte-secondaire">Rien n'est encore noté au moins 2 fois autour de tes explosions.</p>`
+    : html`<p class="texte-secondaire">Avant tes explosions, ce qui revient le plus :</p>
+      ${lignes.length > 0 && html`<ul class="liste carte carte-groupe classements">${lignes.map(([cle, nom]) => html`<li class="ligne-classement">
+        <span class="nom-classement">${nom}</span>
+        <span>${a[cle].elements.map((x) => `${lib(x.id)} (${x.n} sur ${a[cle].n})`).join(' · ')}</span></li>`)}</ul>`}
+      ${a.repere != null && html`<p class="phrase">Tu as remarqué que ça montait vers ${nombre(a.repere)} sur 10 (valeur du milieu).</p>`}
+      ${a.siAlors.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Tes « si… alors… »</h3>
+        <ul>${a.siAlors.map((x) => html`<li>Si ${x.si || '…'}, alors ${x.alors || '…'}</li>`)}</ul></div>`}
+      ${a.aide.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Ce qui a aidé, d'autres fois</h3>
+        <ul>${a.aide.map((t) => html`<li>« ${t} »</li>`)}</ul></div>`}`}
+    <p class="pied-section">${PIED_EXPLOSIONS}</p>`;
+}
+
+// Profil de ta journée (v4) : un créneau par ligne, de 4 h à 4 h.
+function ProfilJournee({ p, carte }) {
+  if (p.statut !== 'ok') return html`<${Pourquoi} regle=${REGLES.moments} />`;
+  const lib = (id) => (carte.get(id) || id).toLowerCase();
+  return html`<ul class="liste carte carte-groupe profil-journee">${p.creneaux.map((c) => {
+    const energies = Object.entries(c.energie).filter(([, n]) => n > 0).map(([id, n]) => `${lib(id)} ${n}`).join(', ');
+    return html`<li class="ligne-classement">
+      <span class="nom-classement">${c.debut} h – ${c.fin} h</span>
+      <span>humeur ${uneDecimale(c.moyenne)}${energies ? ` · énergie : ${energies}` : ''}</span></li>`;
+  })}</ul>
+  <p class="pied-section">Moyenne de chaque jour, puis moyenne de ces jours.</p>`;
 }
 
 function Chiffres({ f }) {
@@ -197,6 +240,16 @@ export function Analyse() {
         : r.bonnesJournees.statut === 'insuffisant'
           ? html`<${Pourquoi} regle=${REGLES.bonnesJournees} />`
           : html`<p class="texte-secondaire">Pas d'écart net pour l'instant.</p><p class="pied-section">${piedObservations('tu')}</p>`}
+    </section>
+
+    <section class="section-analyse">
+      <h2 class="titre-section">Avant tes explosions</h2>
+      <${AvantExplosions} a=${r.avantExplosions[fenetre]} carte=${carte} />
+    </section>
+
+    <section class="section-analyse">
+      <h2 class="titre-section">Profil de ta journée</h2>
+      <${ProfilJournee} p=${r.moments[fenetre]} carte=${carte} />
     </section>
 
     <section class="section-analyse">

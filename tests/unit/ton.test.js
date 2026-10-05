@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { RACINE, lister, rel, lire, chainesJs } from '../aides/fichiers.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
+import { SEED_V2_AJOUTS } from '../../public/js/domain/vocabulaire.js';
 
 // Les libellés des listes (vocabulaire clinique) sont exemptés : ils ne se lissent pas.
 const EXEMPTES = new Set(['public/js/domain/vocabulaire.js']);
@@ -20,6 +21,12 @@ test('aucune formulation interdite dans l\'app', () => {
   assert.deepEqual(fautes, []);
 });
 
+// Les listes v4 ont été écrites pour l'app (pas reprises du Numbers) : elles suivent la règle.
+test('aucune formulation interdite dans les listes v4', () => {
+  const fautes = Object.values(SEED_V2_AJOUTS).flat().map(([, libelle]) => [libelle, trouverInterdits(libelle)]).filter(([, t]) => t.length);
+  assert.deepEqual(fautes, []);
+});
+
 test('aucune formulation interdite dans le pas-à-pas du rappel', () => {
   const doc = join(RACINE, 'docs', 'rappel-du-soir.md');
   if (!existsSync(doc)) return;
@@ -30,6 +37,7 @@ test('le détecteur repère bien les formulations visées', () => {
   assert.deepEqual(trouverInterdits('Bravo, 3 jours d\'affilée !'), ['bravo', "jours d'affilee"]);
   assert.deepEqual(trouverInterdits('Tu n\'as pas rempli hier'), ["tu n'as pas"]);
   assert.deepEqual(trouverInterdits('Il y a 3 jours'), ['il y a N jours']);
+  assert.deepEqual(trouverInterdits('Il aurait fallu sortir'), ['aurait fallu']);
   assert.deepEqual(trouverInterdits('Défilement, définir, MediaRecorder, serieHebdo'), []);
 });
 

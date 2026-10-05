@@ -7,7 +7,10 @@ export const REGLES = {
   bonnesJournees: 'La règle : au moins 5 journées à 7 ou plus et 5 journées à 4 ou moins, et assez de « oui » et de « non » pour chaque facteur.',
   sommeil: 'La règle : au moins 14 jours où la nuit et l\'humeur sont notées, avec au moins 4 jours pour deux qualités de nuit différentes.',
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
+  explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
+  moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
 };
+export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 
 const POSSESSIF = { tu: 'tes', je: 'mes', neutre: 'les' };
 

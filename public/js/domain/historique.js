@@ -26,7 +26,8 @@ export function filtrerJours(jours, f = {}) {
     if (f.au && j.date > f.au) return false;
     if (f.lieu && j.lieu !== f.lieu) return false;
     if (f.humeur) { const [a, b] = TRANCHES_HUMEUR[f.humeur]; if (j.humeur == null || j.humeur < a || j.humeur > b) return false; }
-    if (f.avecExplosions && !(j.explosions > 0)) return false;
+    // explosionsDe (v4) : valeur affichée du jour, épisodes « Explosion » compris (domain/explosions.js).
+    if (f.avecExplosions && !((f.explosionsDe ? f.explosionsDe(j) : j.explosions) > 0)) return false;
     if (f.avecNotes && !j.notes) return false;
     return true;
   });

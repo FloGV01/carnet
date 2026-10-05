@@ -49,6 +49,23 @@ test('journée : faits connus seulement, 0 et false sont des valeurs', () => {
   assert.deepEqual(s.filter((x) => x.valeur).map((x) => x.rubrique), ['lieu', 'sommeil', 'humeur', 'contact', 'expl', 'trt']);
 });
 
+test('journée v4 : les épisodes « Explosion » s\'affichent sans jamais s\'additionner au compteur', () => {
+  assert.equal(texte(phraseResume('jour', { humeur: 6 }, carte, { nExplosions: 2 })), 'humeur 6 · explosions 2');
+  assert.equal(texte(phraseResume('jour', { humeur: 6, explosions: 1 }, carte, { nExplosions: 2 })), 'humeur 6 · explosions 2');
+  assert.equal(texte(phraseResume('jour', { humeur: 6, explosions: 3 }, carte, { nExplosions: 2 })), 'humeur 6 · explosions 3');
+  assert.equal(texte(phraseResume('jour', { humeur: 6 }, carte, { nExplosions: 0 })), 'humeur 6', 'rien à montrer sans compteur ni épisode');
+});
+
+test('réglages du soir : un champ masqué reste affiché tant qu\'il porte une valeur', async () => {
+  const { normaliserJournee, champsAffiches, champsVisibles } = await import('../../public/js/domain/journee.js');
+  const j = normaliserJournee({ masques: ['explosions', 'sport'] });
+  assert.ok(!champsVisibles(j).includes('explosions'));
+  assert.ok(!champsAffiches(j, { humeur: 5 }).includes('explosions'));
+  assert.ok(champsAffiches(j, { explosions: 0 }).includes('explosions'), '0 est une valeur');
+  assert.ok(champsAffiches(j, { activites: [{ type: 'typeSport:marche', duree: null }] }).includes('sport'));
+  assert.equal(normaliserJournee(null).masques[0], 'explosions');
+});
+
 test('élément inconnu : libellé de repli, jamais undefined', () => {
   const s = phraseResume('episode', { declencheur: 'declencheur:disparu' }, carte);
   assert.ok(!texte(s).includes('undefined'));
