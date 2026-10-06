@@ -215,7 +215,8 @@ test('budget de bout en bout : au plus 10 % de journaux avec une fausse phrase e
     let journaux = 0;
     const n = 30;
     for (let seed = 100; seed < 100 + n; seed++) {
-      const j = generer({ jours: 760, seed, scenario, trous: 0.18 });
+      // emploiDuTemps sans effet (effet: 0) : la structure de la semaine seule, aucun vrai écart.
+      const j = generer({ jours: 760, seed, scenario, trous: 0.18, effet: 0 });
       let deja = new Set();
       let parle = false;
       for (let k = 0; k < 365 && !parle; k += 3) {
