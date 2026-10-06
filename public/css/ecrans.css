@@ -386,20 +386,27 @@
 /* Bande flottante : tout est en em, pour que sa largeur suive la taille du texte iOS. Quand elle ne
    tient plus sur une ligne (grand texte, écran étroit), les libellés « Moment difficile » et « Humeur »
    s'effacent : restent les icônes, avec leur nom accessible. */
-.actions-flottantes { flex-wrap: nowrap; gap: .4em; container: bande / inline-size; }
+.actions-flottantes { flex-wrap: nowrap; gap: .3em; container: bande / inline-size; }
 .actions-flottantes > * { flex: none; white-space: nowrap; }
-.actions-flottantes .pilule { padding: 0 .65em 0 .55em; gap: .4em; font-size: var(--t-sous); }
+.actions-flottantes .pilule { padding: 0 .6em 0 .5em; gap: .4em; font-size: var(--t-sous); }
 .actions-flottantes .pilule svg { width: 1.2em; height: 1.2em; }
-.actions-flottantes .fab { padding: 0 .75em 0 .6em; gap: .35em; }
+.actions-flottantes .fab { padding: 0 .7em 0 .55em; gap: .35em; }
 .actions-flottantes .fab svg { width: 1.15em; height: 1.15em; }
-/* Largeurs mesurées dans WebKit : 22,75 em avec les trois libellés, 19,03 em sans « Humeur ». */
-@container bande (max-width: 22.85em) {
-  .actions-flottantes .moment .libelle-action { display: none; }
-  .actions-flottantes .moment { padding: 0 .75em; }
+/* Paliers mesurés dans WebKit (e2e « sans défilement » et « grand texte ») : d'abord « Humeur »
+   perd son icône (seule, elle se lirait comme un signe moins), puis « Moment difficile » son
+   libellé, puis « Humeur » le sien (icône et nom accessible gardés). */
+/* Mesures (em de la bande) : 22,28 tout ; 20,87 palier 1 ; 13,69 palier 2 ; 11,37 palier 3. */
+@container bande (max-width: 22.3em) {
+  .actions-flottantes .moment svg { display: none; }
+  .actions-flottantes .moment { padding: 0 .55em; }
 }
-@container bande (max-width: 19.1em) {
-  .actions-flottantes .libelle-action { display: none; }
-  .actions-flottantes .pilule { padding: 0 .75em; }
+@container bande (max-width: 20.9em) {
+  .actions-flottantes .moment-difficile .libelle-action { display: none; }
+  .actions-flottantes .moment-difficile { padding: 0 .75em; }
+}
+@container bande (max-width: 13.8em) {
+  .actions-flottantes .moment svg { display: inline; }
+  .actions-flottantes .moment .libelle-action { display: none; }
 }
 
 /* Réglages › Ma journée, Mon plan, Après coup, Humeur du moment (v4) */

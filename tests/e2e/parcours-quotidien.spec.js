@@ -35,6 +35,9 @@ test('les 6 champs du soir en 6 touchers, sans frappe, sans défilement, sans bo
   // Le compteur d'explosions est masqué par défaut : les épisodes « Explosion » font foi.
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
   await sansDefilement(page);
+  // À 390 px : « Moment difficile » en toutes lettres, « Humeur » en texte (sans son icône).
+  await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
+  await expect(page.locator('.actions-flottantes .moment .libelle-action')).toBeVisible();
   await expect(page.getByRole('button', { name: /enregistrer/i })).toHaveCount(0);
   await expect(page.getByText('Enregistré')).toBeVisible();
   const entree = await entreeDuJour(page);
