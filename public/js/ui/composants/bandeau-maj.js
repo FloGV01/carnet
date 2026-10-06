@@ -9,5 +9,6 @@ export function BandeauMaj({ surRecharger }) {
     <span>Nouvelle version prête</span>
     <button type="button" disabled=${!sauvegarde.fichiers} onClick=${sauvegarde.exporterMaintenant}>Sauvegarder d'abord</button>
     <button type="button" onClick=${surRecharger}>Recharger</button>
+    ${sauvegarde.message && html`<span class="bandeau-message">${sauvegarde.message}</span>`}
   </div>`;
 }

@@ -140,8 +140,11 @@ export function Barres({ titre, rubrique, lignes, precisions, lib, pied }) {
   return html`<figure class=${`graphe barres teinte-${rubrique}`}>
     <figcaption><span class="graphe-tete"><span class="graphe-titre"><span class="point-rubrique" aria-hidden="true"></span>${titre}</span></span></figcaption>
     <ul class="liste-barres">${lignes.map((l) => {
+      // Longueur : les jours distincts ; segments : la part de chaque précision dans cette longueur.
       let x = 0;
-      const segments = precisions.filter((p) => l.par[p.id]).map((p) => { const w = (l.par[p.id] / max) * L; const s = { x, w, classe: p.classe }; x += w; return s; });
+      const somme = precisions.reduce((n, p) => n + (l.par[p.id] || 0), 0) || 1;
+      const longueur = (l.total / max) * L;
+      const segments = precisions.filter((p) => l.par[p.id]).map((p) => { const w = (l.par[p.id] / somme) * longueur; const s = { x, w, classe: p.classe }; x += w; return s; });
       return html`<li class="ligne-barre">
         <span class="barre-nom">${l.nom}</span>
         <svg class="barre-svg" viewBox=${`0 0 ${L} 10`} preserveAspectRatio="none" aria-hidden="true">${segments.map((s) => html`<rect class=${`g-${s.classe}`} x=${s.x.toFixed(1)} y="0" width=${Math.max(1, s.w - 1).toFixed(1)} height="10" />`)}</svg>

@@ -46,7 +46,9 @@ export function frise({ journal = [], episodes = [] }, du, au) {
         explosions: j && j.explosions != null ? j.explosions : null,
         autres: autres.get(d) || 0,
       };
-      col.aDonnee = col.humeur != null || col.nuit != null || col.explosions > 0 || col.autres > 0;
+      // Un jour se touche dès qu'il porte une saisie que le détail sait montrer (sans rangée oui / non).
+      col.aDonnee = col.humeur != null || col.nuit != null || col.explosions > 0 || col.autres > 0
+        || Boolean(j && (j.reveilsNocturnes != null || j.lieu || (j.contacts || []).length || (j.activites || []).length));
       colonnes.push(col);
     }
     return { pas, colonnes };

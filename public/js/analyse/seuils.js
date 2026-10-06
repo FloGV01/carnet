@@ -40,6 +40,6 @@ export const SEUILS = Object.freeze({
   tendances: {
     recent: 28, avant: 56, lot: 28, pasLots: 7, historique: 365, minLotHumeurs: 16, minLots: 6,
     varPlancher: 0.04, facteur: 1.5, minRecent: 10, minAvant: 20, tauxSaisie: 0.6, minJoursHistoire: 84,
-    zEntree: 3.25, zSortie: 2, ecartMin: 1, ecartSortie: 0.7, joursStables: 7,
+    zEntree: 3.5, zSortie: 2, ecartMin: 1, ecartSortie: 0.7, joursStables: 7,
   },
 });

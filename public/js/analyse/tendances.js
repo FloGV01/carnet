@@ -28,7 +28,8 @@ export function ecartTendance(parDate, J) {
   const finB = addDays(J, -S.recent);
   const R = valeurs(parDate, addDays(J, -(S.recent - 1)), J);
   const B = valeurs(parDate, addDays(J, -(S.recent + S.avant - 1)), finB);
-  if (R.length < S.minRecent || B.length < S.minAvant) return { calculable: false };
+  // Trop peu de soirs notés dans R ou B : on ne compare rien et on ne dit rien.
+  if (R.length < S.minRecent || B.length < S.minAvant) return { calculable: false, peu: true };
   // Garde silencieuse : un rythme de saisie très différent entre R et B fausserait les moyennes.
   const tauxR = R.length / S.recent;
   const tauxB = B.length / S.avant;
@@ -56,6 +57,7 @@ export function tendances(journal, aujourdhui, deja = new Set()) {
   if (!dates.length || diffDays(dates[0], aujourdhui) + 1 < S.minJoursHistoire) return { statut: 'insuffisant', constat: null };
   const e = ecartTendance(parDate, aujourdhui);
   if (e.historique === false) return { statut: 'insuffisant', constat: null };
+  if (e.peu) return { statut: 'muet', constat: null };
   if (!e.calculable) return { statut: 'ok', constat: null };
   const sens = signe(e.d);
   const cle = `tendance:humeur:${sens}`;

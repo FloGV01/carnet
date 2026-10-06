@@ -67,9 +67,10 @@ test('tendances : rien avant 12 semaines, écart net dans les deux sens, jamais 
   const p = tendances(plat, addDays('2025-01-01', 399));
   assert.equal(p.statut, 'ok');
   assert.equal(p.constat, null);
-  // Garde silencieuse : 4 dernières semaines presque vides → aucune phrase.
+  // 4 dernières semaines presque vides : on ne compare rien et on ne dit rien (statut muet).
   const rare = serie(400, (i) => (i >= 372 ? (i % 6 === 0 ? 2 : null) : 5 + (i % 3)));
   assert.equal(ecartTendance(new Map(rare.map((j) => [j.date, j.humeur])), addDays('2025-01-01', 399)).calculable, false);
+  assert.deepEqual(tendances(rare, addDays('2025-01-01', 399)), { statut: 'muet', constat: null });
 });
 
 test('tendances : une phrase déjà affichée reste tant que l\'écart tient (pas de clignotement)', () => {
@@ -107,10 +108,15 @@ test('détails en jours : paires (avec qui, effet) et (activité, durée)', () =
     { date: '2026-10-02', contacts: [{ avec: null, effet: 'contactEffet:couteux' }] },
   ];
   const f = indicateurs({ journal, episodes: [], symptomes: [] }, '2026-10-01', '2026-10-02');
-  assert.deepEqual(f.contactDetail.paires, {
-    'contactAvec:famille': { 'contactEffet:ressourcant': 1 }, 'contactAvec:amis': { 'contactEffet:ressourcant': 1 }, sans: { 'contactEffet:couteux': 1 },
+  // « Famille, Amis · Ressourçant » : l'effet n'est jamais recopié sur chacun (rangée « À plusieurs ») ;
+  // la seconde ligne « Famille · Ressourçant » le porte, elle, pour la famille.
+  assert.deepEqual(f.contactDetail.paires.par, {
+    'contactAvec:famille': { aucun: 1, 'contactEffet:ressourcant': 1 }, 'contactAvec:amis': { aucun: 1 },
+    plusieurs: { 'contactEffet:ressourcant': 1 }, sans: { 'contactEffet:couteux': 1 },
   });
-  assert.deepEqual(f.sportDetail.paires, { 'typeSport:marche': { 'dureeSport:de_15_a_30': 1, aucun: 1 } });
+  assert.equal(f.contactDetail.paires.jours['contactAvec:famille'], 1, 'longueur de barre : jours distincts, pas une somme de paires');
+  assert.deepEqual(f.sportDetail.paires.par, { 'typeSport:marche': { 'dureeSport:de_15_a_30': 1, aucun: 1 } });
+  assert.equal(f.sportDetail.paires.jours['typeSport:marche'], 1);
 });
 
 test('ta journée : énergie en jours, anneau sous 5 jours', () => {

@@ -11,7 +11,7 @@ import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
+import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, POURQUOI_TENDANCE, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { JOURS, jourSemaine } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
@@ -98,12 +98,13 @@ function MaSemaine({ f, frise7, positifs, sommeil, carte, sansPhrase }) {
 // Tendances (v5) : une phrase quand l'écart est net, sinon une ligne neutre. Repliée quand la
 // carte « Pour info » est visible (pas plus de deux phrases d'observation en tête d'écran).
 function Tendances({ t, replie }) {
-  if (t.statut === 'desactive') return null;
+  if (t.statut === 'desactive' || t.statut === 'muet') return null;
   const contenu = t.statut === 'insuffisant'
     ? html`<${Pourquoi} regle=${REGLES.tendances} />`
     : t.constat
       ? html`<div class="constat"><p>${phraseTendance(t.constat, 'tu')}</p><${HaltereMoyennes} c=${t.constat} />
-          <p class="pied-section">Creux : les 8 semaines d'avant · plein : les 4 dernières. ${PIED_TENDANCES}</p></div>`
+          <p class="pied-section">Creux : les 8 semaines d'avant · plein : les 4 dernières. ${PIED_TENDANCES}</p>
+          <${Pourquoi} texte="" regle=${POURQUOI_TENDANCE} /></div>`
       : html`<p class="texte-secondaire">${SANS_ECART}</p>`;
   return html`<section class="section-analyse">
     ${replie ? html`<${Repli} cle="tendances" titre="Tendances" memoriser=${false}>${contenu}</${Repli}>`
@@ -154,8 +155,9 @@ function TesMoments({ m, carte }) {
 function DetailsBarres({ f, items, carte }) {
   const lib = (id) => carte.get(id) || id;
   const ordre = (liste) => items.filter((i) => i.liste === liste).sort((a, b) => a.ordre - b.ordre).map((i) => i.id);
-  const ligne = (paires, id, nom) => paires[id] && { nom, par: paires[id], total: Object.values(paires[id]).reduce((s, x) => s + x, 0) };
-  const contacts = [...ordre('contactAvec').map((id) => ligne(f.contactDetail.paires, id, lib(id))), ligne(f.contactDetail.paires, 'sans', 'Sans précision')].filter(Boolean);
+  const ligne = (p, id, nom) => p.par[id] && { nom, par: p.par[id], total: p.jours[id] };
+  const contacts = [...ordre('contactAvec').map((id) => ligne(f.contactDetail.paires, id, lib(id))),
+    ligne(f.contactDetail.paires, 'plusieurs', 'À plusieurs'), ligne(f.contactDetail.paires, 'sans', 'Sans précision')].filter(Boolean);
   const sport = [...ordre('typeSport').map((id) => ligne(f.sportDetail.paires, id, lib(id))), ligne(f.sportDetail.paires, 'sans', 'Sans précision')].filter(Boolean);
   const effets = [
     { id: 'contactEffet:ressourcant', classe: 'rampe-3' }, { id: 'contactEffet:neutre', classe: 'rampe-2' },

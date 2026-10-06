@@ -9,12 +9,15 @@ const COULEURS = { texte: '#1F1D1A', secondaire: '#6B665E', filet: '#E4DFD8', tr
 const POLICE = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 // Frise « Mes jours » (semaines ou mois) : même géométrie qu'à l'écran, mise à l'échelle du cadre.
+// Échelle uniforme : la géométrie est calculée sur une largeur qui suit le rapport du cadre
+// (sinon points et textes seraient écrasés).
 function dessinerFrise(ctx, op, k) {
-  const d = DIM_FRISE;
-  const geo = geometrieFrise(op.frise);
+  const d = { ...DIM_FRISE, largeur: (DIM_FRISE.hauteur * op.largeur) / op.hauteur };
+  const geo = geometrieFrise(op.frise, d);
+  const echelle = (op.hauteur * k) / d.hauteur;
   ctx.save();
   ctx.translate(op.x * k, op.y * k);
-  ctx.scale((op.largeur * k) / d.largeur, (op.hauteur * k) / d.hauteur);
+  ctx.scale(echelle, echelle);
   ctx.strokeStyle = COULEURS.filet; ctx.lineWidth = 1;
   for (const f of geo.filets) { ctx.beginPath(); ctx.moveTo(d.gauche, f.y); ctx.lineTo(d.largeur - d.droite, f.y); ctx.stroke(); }
   ctx.fillStyle = COULEURS.secondaire; ctx.font = `8px ${POLICE}`;

@@ -42,7 +42,7 @@ function groupe(cle, episodes, autres, hc, max) {
     repere: reperes.length >= S.minExplosions ? mediane(reperes) : null,
     siAlors: [...new Map(ac.filter((a) => a.siJe || a.alorsJe).map((a) => [`${a.siJe}|${a.alorsJe}`, { si: a.siJe, alors: a.alorsJe }])).values()].slice(0, max),
     // « Ce qui a aidé, d'autres fois » : les mots des épisodes qui n'ont pas été des explosions.
-    aide: autres.slice(0, max).map((e) => ({ texte: e.ceQuiAAide, date: formaterDateNumerique(e.date).slice(0, 5) })),
+    aide: autres.slice(0, max).map((e) => ({ texte: e.ceQuiAAide, date: formaterDateNumerique(jourEvenement(e.date, e.heure)).slice(0, 5) })),
   };
 }
 
