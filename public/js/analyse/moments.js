@@ -33,7 +33,9 @@ export function profilJournee(humeurs, du, au) {
         debut, fin: (debut + S.largeurCreneau) % 24, n: l.length, jours: jours.size,
         // Humeur : sur les jours où elle est notée (null si aucun) ; énergie : sur tous les relevés.
         moyenne: moyennes.length ? moyennes.reduce((s, x) => s + x, 0) / moyennes.length : null,
-        energie: Object.fromEntries(ENERGIES.map((e) => [e, l.filter((h) => h.energie === e).length])),
+        // Énergie en jours : un jour compte une fois par niveau noté dans le créneau.
+        energie: Object.fromEntries(ENERGIES.map((e) => [e, new Set(l.filter((h) => h.energie === e).map((h) => jourEvenement(h.date, h.heure))).size])),
+        fragile: parJour.size < SEUILS.journee.minJoursPlein,
       };
     })
     .filter((c) => c.jours >= S.minJours)

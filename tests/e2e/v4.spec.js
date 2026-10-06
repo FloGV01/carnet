@@ -119,7 +119,7 @@ test('Réglages › Ma journée : afficher le compteur, changer l\'ordre ; Aujou
   expect(groupes.slice(0, 2)).toEqual(['Humeur', 'Lieu']);
 });
 
-test('Analyse : avant tes explosions et profil de ta journée, avec tes notes seulement', async ({ page }) => {
+test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure, avec tes notes seulement', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     for (const [d, f] of [['2026-10-01', ['fragilite:fatigue']], ['2026-10-02', ['fragilite:fatigue', 'fragilite:faim']], ['2026-10-03', null]]) {
@@ -128,14 +128,14 @@ test('Analyse : avant tes explosions et profil de ta journée, avec tes notes se
     }
   });
   await page.getByRole('link', { name: 'Analyse' }).click();
-  const avant = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Avant tes explosions' }) });
+  const avant = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Tes moments, étape par étape' }) });
   await expect(avant).toContainText('Conflit (3 sur 3)');
   await expect(avant).toContainText('Fatigue (2 sur 2)');
   await expect(avant).not.toContainText('Faim');
   await expect(avant).toContainText('Ce sont tes notes, rassemblées : pas des causes.');
-  const profil = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Profil de ta journée' }) });
-  await expect(profil).toContainText('10 h – 12 h');
-  await expect(profil).toContainText('humeur 5,0 · énergie : basse 3');
+  const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
+  await journee.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('humeur du moment 5,0 (peu de jours) · énergie : basse 3 jours');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
 

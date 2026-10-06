@@ -57,11 +57,16 @@ test('coupure des lignes sans perte de mots', () => {
   assert.ok(lignes.length > 1);
 });
 
-test('légende du sommeil : Mal est la teinte la plus claire', () => {
-  const { ops } = mettreEnPage(cas({ extreme: false }));
-  const legende = ops.find((o) => o.type === 'texte' && /^Sommeil, /.test(o.texte));
-  assert.ok(legende, 'légende présente');
-  assert.match(legende.texte, /du plus clair au plus foncé : Mal · Moyen · Bien\.$/);
+test('évolution (v5) : la frise par semaine, ou par mois sur un long historique ; légende du sommeil', () => {
+  const m = cas({ extreme: false });
+  assert.equal(m.titreEvolution, 'Évolution sur 12 semaines');
+  assert.equal(m.frise.pas, 'semaine');
+  assert.ok(m.frise.colonnes.length >= 12 && m.frise.colonnes.length <= 13);
+  assert.ok(m.frise.colonnes.every((c) => !('entree' in c)), 'jamais le détail jour par jour');
+  const { ops } = mettreEnPage(m);
+  assert.ok(ops.some((o) => o.type === 'frise'));
+  const texte = ops.filter((o) => o.type === 'texte').map((o) => o.texte).join(' ');
+  assert.match(texte, /nuits Mal, Moyen, Bien, du plus clair au plus foncé/);
 });
 
 test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements', () => {

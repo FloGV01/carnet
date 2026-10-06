@@ -1,50 +1,45 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieHumeur, geometrieExplosions, geometrieSommeil, DIM, MIN_ECHELLE_EXPLOSIONS, NUITS_SEMAINE } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieFrise, geometrieJournee, DIM_FRISE, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
 
-const semaines = [
-  { lundi: '2026-09-07', humeur: 10, fragile: false, explosions: 0, sommeil: { mal: 1, moyen: 2, bien: 3 } },
-  { lundi: '2026-09-14', humeur: null, fragile: false, explosions: null, sommeil: null },
-  { lundi: '2026-09-21', humeur: 4.5, fragile: true, explosions: 3, sommeil: { mal: 3, moyen: 0, bien: 0 } },
-  { lundi: '2026-09-28', humeur: 1, fragile: false, explosions: 1, sommeil: null },
-];
+const jour = (cle, extra = {}) => ({ cle, humeur: null, moyenne7: null, nuit: null, explosions: null, autres: 0, aDonnee: false, ...extra });
 
-test('humeur : y(10) au bord haut, pas de segment au-dessus d\'une semaine vide, anneau si fragile', () => {
-  const g = geometrieHumeur(semaines);
-  assert.equal(g.y(10), DIM.haut);
-  assert.equal(g.y(10), 8);
-  assert.equal(g.y(1), DIM.hauteur - DIM.bas);
-  assert.equal(g.points.length, 3);
-  assert.equal(g.segments.length, 1, 'seul le segment entre les semaines 3 et 4');
-  assert.equal(g.points[1].plein, false);
-  for (const p of g.points) { assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y)); assert.equal(Math.round(p.x * 10) / 10, p.x); }
+test('frise par jour : y(10) au bord haut, colonne vide sans rien, trait de moyenne seulement entre jours voisins', () => {
+  const colonnes = [
+    jour('2026-10-01', { humeur: 10, moyenne7: 6, nuit: 'sommeil:mal', explosions: 2, aDonnee: true }),
+    jour('2026-10-02'),
+    jour('2026-10-03', { humeur: 1, moyenne7: 5, explosions: 0, autres: 1, aDonnee: true }),
+    jour('2026-10-04', { humeur: 4, moyenne7: 5.5, aDonnee: true }),
+  ];
+  const g = geometrieFrise({ pas: 'jour', colonnes });
+  assert.equal(g.points[0].y, DIM_FRISE.haut);
+  assert.equal(g.points[1].y, DIM_FRISE.basHumeur);
+  assert.equal(g.moyenne.length, 1, 'seulement entre le 3 et le 4');
+  assert.equal(g.encoches.length, 1, 'zéro explosion ne dessine rien');
+  assert.equal(g.nuits.length, 1);
+  assert.equal(g.autres.length, 1);
+  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-10-01', '2026-10-03', '2026-10-04'], 'rien à toucher sur un jour vide');
+  assert.ok(!JSON.stringify(g).includes('NaN'));
 });
 
-test('explosions : zéro = trait de 2, semaine vide = rien', () => {
-  const g = geometrieExplosions(semaines);
-  assert.equal(g.barres.length, 3);
-  assert.equal(g.barres[0].h, 2);
-  assert.ok(g.barres.every((b) => Number.isFinite(b.y) && b.h > 0));
+test('frise par semaine : nuits empilées, anneau si fragile, explosions à l\'échelle', () => {
+  const colonnes = [
+    { cle: '2026-09-21', humeur: 5, fragile: true, nuits: { mal: 1, moyen: 0, bien: 2 }, explosions: 3, autres: 0, aDonnee: true },
+    { cle: '2026-09-28', humeur: 6, fragile: false, nuits: null, explosions: 1, autres: 2, aDonnee: true },
+  ];
+  const g = geometrieFrise({ pas: 'semaine', colonnes });
+  assert.equal(g.points[0].plein, false);
+  assert.equal(g.nuits.length, 2);
+  assert.ok(g.encoches[0].h > g.encoches[1].h);
+  assert.equal(g.moyenne.length, 1);
 });
 
-test('sommeil : piles sans NaN, sans morceau vide', () => {
-  const g = geometrieSommeil(semaines);
-  assert.equal(g.piles.length, 2);
-  assert.deepEqual(g.piles[1].morceaux.map((m) => m.cle), ['mal']);
-  assert.ok(JSON.stringify(g).indexOf('NaN') < 0);
-});
-
-test('explosions : échelle d\'au moins 4, une semaine à 1 ne remplit pas le graphe', () => {
-  const g = geometrieExplosions([{ lundi: '2026-09-28', explosions: 1 }]);
-  assert.equal(g.max, MIN_ECHELLE_EXPLOSIONS);
-  assert.ok(g.barres[0].h < (DIM.hauteur - DIM.haut - DIM.bas) / 3);
-});
-
-test('sommeil : échelle fixe de 7 nuits, liseré entre les morceaux', () => {
-  const g = geometrieSommeil([{ lundi: '2026-09-28', sommeil: { mal: 2, moyen: 0, bien: 1 } }]);
-  assert.equal(g.max, NUITS_SEMAINE);
-  const h = DIM.hauteur - DIM.haut - DIM.bas;
-  const [mal, bien] = g.piles[0].morceaux;
-  assert.equal(mal.h, Math.round(((2 / 7) * h - 1) * 10) / 10);
-  assert.ok(bien.y + bien.h < mal.y, 'un pixel de fond entre les morceaux');
+test('ta journée : 12 créneaux de 4 h à 4 h, points sans segments, énergie empilée', () => {
+  assert.deepEqual(CRENEAUX.slice(0, 2), [4, 6]);
+  assert.equal(CRENEAUX[CRENEAUX.length - 1], 2);
+  const g = geometrieJournee([{ debut: 10, fin: 12, moyenne: 6, fragile: false, energie: { 'energie:basse': 2, 'energie:moyenne': 1, 'energie:haute': 0 } }, { debut: 0, fin: 2, moyenne: null, energie: { 'energie:basse': 1 } }]);
+  assert.equal(g.points.length, 1, 'créneau sans humeur : pas de point');
+  assert.equal(g.energies.length, 3);
+  assert.ok(g.zones[1].x > g.zones[0].x, 'minuit après la soirée');
+  assert.ok(!('segments' in g));
 });

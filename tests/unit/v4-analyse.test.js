@@ -43,7 +43,7 @@ test('avant tes explosions : 3 au moins, notes réunies, ce qui a aidé les autr
   assert.equal(r.repere, 7);
   assert.deepEqual(r.declencheurs, { n: 3, elements: [{ id: 'declencheur:conflit', n: 3 }] });
   assert.deepEqual(r.siAlors, [{ si: 'je sens la chaleur', alors: 'je sors' }]);
-  assert.deepEqual(r.aide, ['marcher dix minutes']);
+  assert.deepEqual(r.aide, [{ texte: 'marcher dix minutes', date: '02/10' }]);
 });
 
 test('analyse : les épisodes « Explosion » font foi quand le compteur du soir est masqué', () => {
@@ -52,7 +52,7 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
   const data = { journal, episodes, symptomes: [], traitements: [], humeurs: [] };
   const r = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.deepEqual([r.fenetres['7'].explosions.n, r.fenetres['7'].explosions.total, r.fenetres['7'].explosions.jours], [2, 1, 1]);
-  assert.ok(r.moments['7'] && r.avantExplosions['7']);
+  assert.ok(r.moments['7'] && r.tesMoments['7'] && r.frise['7'] && r.tendances);
   // Avant la mise à jour v4, un compteur vide reste inconnu : seul le jour de l'épisode compte.
   const avant = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-30' });
   assert.deepEqual([avant.fenetres['7'].explosions.n, avant.fenetres['7'].explosions.total], [1, 1]);

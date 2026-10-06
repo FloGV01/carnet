@@ -1,4 +1,5 @@
-// Écran Analyse : Ma semaine, tuiles par fenêtre, graphiques sur 12 semaines, constats et classements.
+// Écran Analyse (v5) : Ma semaine, Tendances, puis, selon la période : Mes jours, ta journée heure
+// par heure, contacts et mouvement, tes moments ; ensuite les constats sur tout l'historique.
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache
 // jusqu'à la prochaine écriture.
 import { html, useEffect, useState } from '../lib.js';
@@ -9,15 +10,14 @@ import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
-import { semainesAvecDonnees } from '../../analyse/semaines.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS } from '../../analyse/textes.js';
+import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
-import { formaterDateNumerique } from '../../domain/dates.js';
-import { GrapheHumeur, GrapheExplosions, GrapheSommeil } from '../graphes/graphes.js';
+import { JOURS, jourSemaine } from '../../domain/dates.js';
+import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
 import { geometrieHaltere } from '../graphes/geometrie.js';
 
-const FENETRES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }, { valeur: 'tout', libelle: 'Depuis le début' }];
+const FENETRES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }, { valeur: '90', libelle: '3 mois' }, { valeur: 'tout', libelle: 'Tout' }];
 const NOMS_CLASSEMENT = { declencheur: 'Déclencheur', dessous: 'En dessous', emotion: 'Émotion', reaction: 'Réaction', symptome: 'Symptôme', effetSecondaire: 'Effet secondaire' };
 
 let cache = null;
@@ -71,21 +71,102 @@ function CartePourInfo({ signal, carte }) {
   </section>`;
 }
 
-// Ma semaine : les 7 derniers jours, quelle que soit la période choisie plus bas.
-function MaSemaine({ f, sommeil, carte }) {
-  const phrase = phraseSommeilSemaine(sommeil, carte);
-  const cellules = [
-    { libelle: 'Humeur moyenne', valeur: f.humeur.n ? uneDecimale(f.humeur.moyenne) : null, teinte: 'humeur', fragile: f.humeur.n > 0 && f.humeur.fragile },
-    { libelle: `Nuits ${carte.get('sommeil:mal') || 'Mal'}`, valeur: f.nuits.n ? String(f.nuits.mal) : null, teinte: 'sommeil' },
-    { libelle: 'Explosions', valeur: f.explosions.n ? String(f.explosions.total) : null, teinte: 'expl' },
-    { libelle: 'Épisodes', valeur: String(f.episodes.nombre), teinte: 'ep' },
-  ];
+// Ma semaine (v5) : trois lignes sur les 7 derniers jours, quelle que soit la période choisie.
+// Jamais de comparaison avec la semaine d'avant ; « Nuits Mal » seules (Mal + Moyen + Bien
+// donnerait le nombre de nuits notées). Les points positifs restent dans un repli fermé.
+function MaSemaine({ f, frise7, positifs, sommeil, carte, sansPhrase }) {
+  const lib = (id) => carte.get(id) || id;
+  const phrase = !sansPhrase && phraseSommeilSemaine(sommeil, carte);
+  const joursExpl = frise7.colonnes.filter((c) => c.explosions > 0).map((c) => JOURS[jourSemaine(c.cle)]);
+  const lignes = [];
+  if (f.humeur.n) lignes.push(`Humeur du soir : ${f.humeur.min === f.humeur.max ? f.humeur.min : `de ${f.humeur.min} à ${f.humeur.max}`}, ${uneDecimale(f.humeur.moyenne)} en moyenne${f.humeur.fragile ? ' (peu de valeurs)' : ''}`);
+  if (f.nuits.n) lignes.push(`Nuits ${lib('sommeil:mal')} : ${f.nuits.mal}`);
+  const expl = f.explosions.n ? `Explosions : ${f.explosions.total}${joursExpl.length && joursExpl.length <= 2 ? ` (${joursExpl.join(', ')})` : ''}` : null;
+  const eps = f.episodes.nombre ? `Épisodes : ${f.episodes.nombre}` : null;
+  if (expl || eps) lignes.push([expl, eps].filter(Boolean).join(' · '));
+  if (!lignes.length && !positifs.length) return null;
   return html`<section class="carte ma-semaine" aria-label="Ma semaine">
     <div class="carte-entete"><h2 class="titre-carte">Ma semaine</h2><span class="note-carte-interne">7 derniers jours</span></div>
-    <div class="grille-chiffres">${cellules.map((c) => html`<div class="cellule-chiffre">
-      <span class=${c.valeur == null ? 'valeur-chiffre vide-chiffre' : `valeur-chiffre teinte-${c.teinte}`}>${c.valeur ?? '·'}</span>
-      <span class="libelle-chiffre">${c.libelle}${c.fragile ? ' (peu de valeurs)' : ''}</span></div>`)}</div>
+    ${lignes.length > 0 && html`<ul class="lignes-semaine">${lignes.map((l) => html`<li>${l}</li>`)}</ul>`}
+    ${positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" memoriser=${false}>
+      <ul class="lignes-semaine">${positifs.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>
+    </${Repli}>`}
     ${phrase && html`<p class="phrase-semaine">${phrase}</p>`}
+  </section>`;
+}
+
+// Tendances (v5) : une phrase quand l'écart est net, sinon une ligne neutre. Repliée quand la
+// carte « Pour info » est visible (pas plus de deux phrases d'observation en tête d'écran).
+function Tendances({ t, replie }) {
+  if (t.statut === 'desactive') return null;
+  const contenu = t.statut === 'insuffisant'
+    ? html`<${Pourquoi} regle=${REGLES.tendances} />`
+    : t.constat
+      ? html`<div class="constat"><p>${phraseTendance(t.constat, 'tu')}</p><${HaltereMoyennes} c=${t.constat} />
+          <p class="pied-section">Creux : les 8 semaines d'avant · plein : les 4 dernières. ${PIED_TENDANCES}</p></div>`
+      : html`<p class="texte-secondaire">${SANS_ECART}</p>`;
+  return html`<section class="section-analyse">
+    ${replie ? html`<${Repli} cle="tendances" titre="Tendances" memoriser=${false}>${contenu}</${Repli}>`
+      : html`<h2 class="titre-section">Tendances</h2>${contenu}`}
+  </section>`;
+}
+
+function HaltereMoyennes({ c }) {
+  const g = geometrieHaltere((c.moyB - 1) / 9, (c.moyR - 1) / 9);
+  return html`<svg class="haltere" viewBox="0 0 306 34" role="img" aria-label=${`${nombre(c.moyR)} sur les 4 dernières semaines, contre ${nombre(c.moyB)} sur les 8 d'avant, sur une échelle de 1 à 10`}>
+    <line class="h-rail" x1="8" x2="298" y1="12" y2="12" />
+    <line class="h-ligne" x1=${Math.min(g.x1, g.x2)} x2=${Math.max(g.x1, g.x2)} y1="12" y2="12" />
+    <circle class="h-creux" cx=${g.x1} cy="12" r="6" /><circle class="h-plein" cx=${g.x2} cy="12" r="6" />
+    <text class="h-texte" x="8" y="32">1</text><text class="h-texte" x="298" y="32" text-anchor="end">10</text>
+  </svg>`;
+}
+
+// Tes moments, étape par étape (v5) : par groupe (Explosions, Colère, Surcharge, Figé), ce que
+// tu as noté, dans l'ordre de l'Après coup. « 3 sur 5 » : sur les épisodes où l'étape est remplie.
+const LISTES_MOMENTS = [
+  ['fragilites', 'Ce qui fragilisait déjà'], ['declencheurs', 'Ça a démarré avec'], ['dessous', 'En dessous'],
+  ['tropDe', 'Ce qui était trop'], ['signes', 'Premiers signes'], ['besoins', 'Ce dont tu avais besoin'],
+];
+const NOMS_GROUPES = { explosions: 'Explosions' };
+function TesMoments({ m, carte }) {
+  const lib = (id) => carte.get(id) || id;
+  const groupes = m.groupes.filter((g) => g.statut === 'ok');
+  const [choix, setChoix] = useState(null);
+  if (!groupes.length) return html`<${Pourquoi} regle=${REGLES.explosions} />`;
+  const g = groupes.find((x) => x.cle === choix) || groupes[0];
+  const lignes = LISTES_MOMENTS.filter(([cle]) => g[cle] && g[cle].elements.length > 0);
+  return html`${groupes.length > 1 && html`<${Segmente} etiquette="Groupe" options=${groupes.map((x) => ({ valeur: x.cle, libelle: NOMS_GROUPES[x.cle] || lib(x.cle) }))}
+      valeur=${g.cle} surChoix=${(v) => v && setChoix(v)} classe="large" sansVide=${true} />`}
+    ${lignes.length > 0
+      ? html`<ul class="liste carte carte-groupe classements">${lignes.map(([cle, nom]) => html`<li class="ligne-classement">
+        <span class="nom-classement">${nom}</span><span>${g[cle].elements.map((x) => `${lib(x.id)} (${x.n} sur ${g[cle].n})`).join(' · ')}</span></li>`)}</ul>`
+      : html`<p class="texte-secondaire">Rien n'est encore noté au moins 2 fois.</p>`}
+    ${g.repere != null && html`<p class="phrase">Tu as remarqué que ça montait vers ${nombre(g.repere)} sur 10 (valeur du milieu).</p>`}
+    ${g.siAlors.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Tes « si… alors… »</h3>
+      <ul>${g.siAlors.map((x) => html`<li>Si ${x.si || '…'}, alors ${x.alors || '…'}</li>`)}</ul></div>`}
+    ${g.aide.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Ce qui a aidé, d'autres fois</h3>
+      <ul>${g.aide.map((a) => html`<li>« ${a.texte} » <span class="note-carte-interne">${a.date}</span></li>`)}</ul></div>`}
+    <a class="lien" href="#/mon-plan">Voir Mon plan</a>
+    <p class="pied-section">${PIED_EXPLOSIONS}</p>`;
+}
+
+// Avec qui, comment c'était · Mouvement (v5) : comptes en jours, ordre fixe des listes.
+function DetailsBarres({ f, items, carte }) {
+  const lib = (id) => carte.get(id) || id;
+  const ordre = (liste) => items.filter((i) => i.liste === liste).sort((a, b) => a.ordre - b.ordre).map((i) => i.id);
+  const ligne = (paires, id, nom) => paires[id] && { nom, par: paires[id], total: Object.values(paires[id]).reduce((s, x) => s + x, 0) };
+  const contacts = [...ordre('contactAvec').map((id) => ligne(f.contactDetail.paires, id, lib(id))), ligne(f.contactDetail.paires, 'sans', 'Sans précision')].filter(Boolean);
+  const sport = [...ordre('typeSport').map((id) => ligne(f.sportDetail.paires, id, lib(id))), ligne(f.sportDetail.paires, 'sans', 'Sans précision')].filter(Boolean);
+  const effets = [
+    { id: 'contactEffet:ressourcant', classe: 'rampe-3' }, { id: 'contactEffet:neutre', classe: 'rampe-2' },
+    { id: 'contactEffet:couteux', classe: 'rampe-1' }, { id: 'aucun', classe: 'rampe-0', nom: 'non précisé' },
+  ].map((p) => ({ ...p, nom: p.nom || lib(p.id).toLowerCase() }));
+  const durees = [...ordre('dureeSport').map((id, i) => ({ id, classe: `rampe-${Math.min(4, i + 1)}`, nom: lib(id).toLowerCase() })), { id: 'aucun', classe: 'rampe-0', nom: 'durée non précisée' }];
+  if (!contacts.length && !sport.length) return null;
+  return html`<section class="section-analyse">
+    <h2 class="titre-section">Avec qui, comment c'était · Mouvement</h2>
+    ${contacts.length > 0 && html`<${Barres} titre="Avec qui, comment c'était" rubrique="contact" lignes=${contacts} precisions=${effets} lib=${lib} pied="En jours, selon tes réponses à « Comment c'était »." />`}
+    ${sport.length > 0 && html`<${Barres} titre="Mouvement" rubrique="sport" lignes=${sport} precisions=${durees} lib=${lib} pied="En jours, par durée notée." />`}
   </section>`;
 }
 
@@ -142,54 +223,14 @@ function Tuiles({ f, carte }) {
 // Détails du soir (v4) : « Marche 4 j · Vélo 2 j » (en jours, les 3 premiers).
 const detailJours = (d, lib) => d.par.slice(0, 3).map((x) => `${lib(x.id)} ${x.n} j`).join(' · ');
 
-// « Avant tes explosions » (v4) : comptes « 3 sur 4 », où 4 est le nombre d'explosions dont
-// l'étape a été notée. Les mots de l'utilisateur, jamais une cause ni un conseil.
-const LISTES_EXPLOSIONS = [
-  ['declencheurs', 'Ça a démarré avec'], ['dessous', 'En dessous'], ['types', 'C\'était plutôt'],
-  ['fragilites', 'Ce qui fragilisait déjà'], ['signes', 'Premiers signes'],
-];
-function AvantExplosions({ a, carte }) {
-  const lib = (id) => carte.get(id) || id;
-  if (a.statut !== 'ok') return html`<${Pourquoi} regle=${REGLES.explosions} />`;
-  const lignes = LISTES_EXPLOSIONS.filter(([cle]) => a[cle].elements.length > 0);
-  const vide = lignes.length === 0 && a.repere == null && a.siAlors.length === 0 && a.aide.length === 0;
-  return html`${vide
-    ? html`<p class="texte-secondaire">Rien n'est encore noté au moins 2 fois autour de tes explosions.</p>`
-    : html`<p class="texte-secondaire">Avant tes explosions, ce qui revient le plus :</p>
-      ${lignes.length > 0 && html`<ul class="liste carte carte-groupe classements">${lignes.map(([cle, nom]) => html`<li class="ligne-classement">
-        <span class="nom-classement">${nom}</span>
-        <span>${a[cle].elements.map((x) => `${lib(x.id)} (${x.n} sur ${a[cle].n})`).join(' · ')}</span></li>`)}</ul>`}
-      ${a.repere != null && html`<p class="phrase">Tu as remarqué que ça montait vers ${nombre(a.repere)} sur 10 (valeur du milieu).</p>`}
-      ${a.siAlors.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Tes « si… alors… »</h3>
-        <ul>${a.siAlors.map((x) => html`<li>Si ${x.si || '…'}, alors ${x.alors || '…'}</li>`)}</ul></div>`}
-      ${a.aide.length > 0 && html`<div class="mots-utilisateur"><h3 class="libelle-section">Ce qui a aidé, d'autres fois</h3>
-        <ul>${a.aide.map((t) => html`<li>« ${t} »</li>`)}</ul></div>`}`}
-    <p class="pied-section">${PIED_EXPLOSIONS}</p>`;
-}
-
-// Profil de ta journée (v4) : un créneau par ligne, de 4 h à 4 h.
-function ProfilJournee({ p, carte }) {
-  if (p.statut !== 'ok') return html`<${Pourquoi} regle=${REGLES.moments} />`;
-  const lib = (id) => (carte.get(id) || id).toLowerCase();
-  return html`<ul class="liste carte carte-groupe profil-journee">${p.creneaux.map((c) => {
-    const energies = Object.entries(c.energie).filter(([, n]) => n > 0).map(([id, n]) => `${lib(id)} ${n}`).join(', ');
-    return html`<li class="ligne-classement">
-      <span class="nom-classement">${c.debut} h – ${c.fin} h</span>
-      <span>${[c.moyenne != null && `humeur ${uneDecimale(c.moyenne)}`, energies && `énergie : ${energies}`].filter(Boolean).join(' · ')}</span></li>`;
-  })}</ul>
-  <p class="pied-section">Moyenne de chaque jour, puis moyenne de ces jours.</p>`;
-}
-
 function Chiffres({ f }) {
   const lignes = [
     ['Humeur', f.humeur.n], ['Explosions', f.explosions.n], ['Nuits', f.nuits.n], ['Réveils', f.nuits.reveils.n],
     ['Coucher', f.nuits.nCoucher], ['Lever', f.nuits.nLever], ['Contact humain', f.contact.n], ['Lieu', f.lieux.n],
     ['Sport / mouvement', f.sport.n], ['Traitement pris', f.traitement.n], ['Intensité des épisodes', f.episodes.nIntensite],
   ];
-  return html`<${Repli} cle="chiffres" titre="Voir les chiffres">
-    <table class="tableau-lignes chiffres-base"><thead><tr><th scope="col">Indicateur</th><th scope="col">Valeurs prises en compte</th></tr></thead>
-    <tbody>${lignes.map(([n, v]) => html`<tr><td>${n}</td><td>${v}</td></tr>`)}</tbody></table>
-  </${Repli}>`;
+  return html`<table class="tableau-lignes chiffres-base"><thead><tr><th scope="col">Indicateur</th><th scope="col">Valeurs prises en compte</th></tr></thead>
+    <tbody>${lignes.map(([n, v]) => html`<tr><td>${n}</td><td>${v}</td></tr>`)}</tbody></table>`;
 }
 
 // Sommeil et humeur : humeur moyenne du jour même selon la nuit, en points sur une échelle de 1 à 10.
@@ -215,25 +256,32 @@ export function Analyse() {
   useEffect(() => { let actif = true; calculerAnalyse().then((v) => { if (actif) setEtat(v); }); return () => { actif = false; }; }, [version]);
 
   if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><p class="texte-secondaire centre">Calcul…</p></main>`;
-  const { resultat: r, carte, signalMasque } = etat;
+  const { resultat: r, carte, items, signalMasque } = etat;
   const f = r.fenetres[fenetre];
   const cl = r.classements[fenetre];
-  const assezSemaines = semainesAvecDonnees(r.semaines) >= SEUILS.semaine.minSemainesGraphe;
-  const semainesTableau = [...r.semaines].reverse().filter((s) => s.nHumeur || s.explosions != null || s.sommeil);
+  const pourInfo = r.signal && r.signal.ressemble && !signalMasque;
 
   return html`<main class="ecran analyse">
     <${Entete} titre="Analyse" />
-    ${r.signal && r.signal.ressemble && !signalMasque && html`<${CartePourInfo} signal=${r.signal} carte=${carte} />`}
-    <${MaSemaine} f=${r.fenetres['7']} sommeil=${r.sommeil} carte=${carte} />
-    <${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} />
-    <${Tuiles} f=${f} carte=${carte} />
+    ${pourInfo && html`<${CartePourInfo} signal=${r.signal} carte=${carte} />`}
+    <${MaSemaine} f=${r.fenetres['7']} frise7=${r.frise['7']} positifs=${r.semaine.positifs} sommeil=${r.sommeil} carte=${carte} sansPhrase=${pourInfo} />
+    <${Tendances} t=${r.tendances} replie=${pourInfo} />
 
-    ${assezSemaines
-      ? html`<${GrapheHumeur} semaines=${r.semaines} /><${GrapheExplosions} semaines=${r.semaines} /><${GrapheSommeil} semaines=${r.semaines} carte=${carte} />`
-      : html`<${Pourquoi} texte="Les graphes apparaissent après 2 semaines de données." regle="La règle : au moins 2 semaines avec des données." />`}
+    <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
+    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
+    ${r.moments[fenetre].statut === 'ok'
+      ? html`<${TaJournee} key=${`journee-${fenetre}`} profil=${r.moments[fenetre]} carte=${carte} />`
+      : r.moments.tout.statut === 'ok' && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.moments} /></section>`}
+    <${DetailsBarres} f=${f} items=${items} carte=${carte} />
+
+    <section class="section-analyse">
+      <h2 class="titre-section">Tes moments, étape par étape</h2>
+      <${TesMoments} key=${`moments-${fenetre}`} m=${r.tesMoments[fenetre]} carte=${carte} />
+    </section>
 
     <section class="section-analyse">
       <h2 class="titre-section">Ce que tes journées à 7 ou plus ont en commun</h2>
+      <p class="note-carte-interne">Sur tout ton historique.</p>
       ${r.bonnesJournees.constats.length
         ? html`${r.bonnesJournees.constats.map((c) => html`<div class="constat"><p>${phraseConstat(c, carte, 'tu')}</p><${Haltere} c=${c} /></div>`)}
             <p class="pied-section">Plein : journées à 7 ou plus · creux : journées à 4 ou moins. ${piedObservations('tu')}</p>`
@@ -243,17 +291,8 @@ export function Analyse() {
     </section>
 
     <section class="section-analyse">
-      <h2 class="titre-section">Avant tes explosions</h2>
-      <${AvantExplosions} a=${r.avantExplosions[fenetre]} carte=${carte} />
-    </section>
-
-    <section class="section-analyse">
-      <h2 class="titre-section">Profil de ta journée</h2>
-      <${ProfilJournee} p=${r.moments[fenetre]} carte=${carte} />
-    </section>
-
-    <section class="section-analyse">
       <h2 class="titre-section">Sommeil et humeur</h2>
+      <p class="note-carte-interne">Sur tout ton historique.</p>
       ${r.sommeil.meme.statut !== 'ok' && r.sommeil.lendemain.statut !== 'ok'
         ? html`<${Pourquoi} regle=${REGLES.sommeil} />`
         : html`${r.sommeil.meme.statut === 'ok' && html`<${PointsSommeil} moyennes=${r.sommeil.meme.moyennes} carte=${carte} />`}
@@ -266,20 +305,10 @@ export function Analyse() {
         <span class="nom-classement">${nom}</span><span>${phraseClassement(liste, cl[liste], carte)}</span></li>`)}</ul>
     </section>
 
-    ${assezSemaines && html`<section class="section-analyse">
-      <h2 class="titre-section">Évolution</h2>
-      <div class="defile-x"><table class="tableau-evolution">
-        <thead><tr><th scope="col">Semaine</th><th scope="col">Humeur</th><th scope="col">Explosions</th><th scope="col">${`Nuits ${carte.get('sommeil:mal')}`}</th><th scope="col">Émotion n°1</th><th scope="col">Déclencheur n°1</th><th scope="col">Symptôme n°1</th><th scope="col">Effet secondaire n°1</th></tr></thead>
-        <tbody>${semainesTableau.map((s) => html`<tr>
-          <td>${formaterDateNumerique(s.lundi).slice(0, 5)}</td>
-          <td>${s.humeur == null ? '·' : html`<span class="humeur-evolution">${s.fragile && html`<svg viewBox="0 0 10 10" role="img" aria-label="moyenne fragile"><circle class="anneau-fragile" cx="5" cy="5" r="4" /></svg>`}${nombre(s.humeur)}</span>`}</td>
-          <td>${s.explosions ?? '·'}</td><td>${s.sommeil ? s.sommeil.mal : '·'}</td>
-          <td>${s.emotion ? carte.get(s.emotion) : '·'}</td><td>${s.declencheur ? carte.get(s.declencheur) : '·'}</td>
-          <td>${s.symptome ? carte.get(s.symptome) : '·'}</td><td>${s.effetSecondaire ? carte.get(s.effetSecondaire) : '·'}</td>
-        </tr>`)}</tbody></table></div>
-    </section>`}
-
-    <${Chiffres} f=${f} />
+    <${Repli} cle="tous-chiffres" titre="Tous les chiffres" memoriser=${false}>
+      <${Tuiles} f=${f} carte=${carte} />
+      <${Chiffres} f=${f} />
+    </${Repli}>
 
     <ul class="liste carte carte-groupe">
       <li><a class="ligne-carte" href="#/export-psy"><span class="ligne-libelle">Export PSY</span>${Icones.chevron({ trait: 2 })}</a></li>

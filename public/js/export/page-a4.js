@@ -49,14 +49,12 @@ export function mettreEnPage(m) {
     ops.push({ type: 'ligne', x1: x0, y1: y + 1.2, x2: x0 + largeur, y2: y + 1.2, fin: true });
   }
 
-  titreSection('Évolution sur 12 semaines');
-  const lg = (largeur - 8) / 3;
-  y += 2;
-  ['Humeur', 'Explosions', 'Sommeil'].forEach((t, i) => ops.push({ type: 'texte', x: x0 + i * (lg + 4), y: y + 2.5, taille: 7.5, gras: true, texte: t, couleur: 'texte' }));
-  ops.push({ type: 'graphes', y: y + 4, hauteur: 30, largeur: lg, x: x0, ecart: 4, semaines: m.semaines });
-  y += 4 + 30 + 3;
+  titreSection(m.titreEvolution);
+  y += 1.5;
+  ops.push({ type: 'frise', y, hauteur: 36, largeur, x: x0, frise: m.frise });
+  y += 36 + 1;
   const [mal, moyen, bien] = m.libellesSommeil;
-  texte(`Sommeil, du plus clair au plus foncé : ${mal} · ${moyen} · ${bien}.`, { taille: 6.5, couleur: 'secondaire' });
+  texte(`Point : humeur moyenne (1 à 10 ; anneau : peu de valeurs) · nuits ${mal}, ${moyen}, ${bien}, du plus clair au plus foncé · barre : explosions · rond : autres épisodes.`, { taille: 6.5, couleur: 'secondaire' });
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;

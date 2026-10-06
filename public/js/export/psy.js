@@ -4,7 +4,7 @@
 import { addDays, formaterJourCourt, formaterDateNumerique, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
-import { nombre, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
+import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
 import { journalAvecExplosions } from '../domain/explosions.js';
 import { resumeContacts } from '../domain/contacts.js';
 
@@ -115,6 +115,8 @@ export function reperesPsy(analyse, carte) {
     const ph = phrasesSommeil(s, carte).join(' ');
     lignes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`);
   } else lignes.push(`Sommeil et humeur : ${PAS_ASSEZ.charAt(0).toLowerCase()}${PAS_ASSEZ.slice(1)}`);
+  // Tendances (v5) : sur leurs propres fenêtres, pas sur tout l'historique, d'où le préfixe.
+  if (analyse.tendances && analyse.tendances.constat) lignes.push(`Tendances (4 dernières semaines contre les 8 d'avant) : ${phraseTendance(analyse.tendances.constat, 'je', { court: true })}`);
   return lignes;
 }
 

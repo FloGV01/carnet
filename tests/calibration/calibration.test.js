@@ -161,3 +161,47 @@ test('bonnes journées : au plus 10 % de journaux avec un faux constat sur un an
   console.log(`  un an de recalcul quotidien : ${touches}/${n}`);
   assert.ok(touches / n <= 0.10, `${touches}/${n}`);
 });
+
+// v5 · Tendances (humeur du soir, 4 semaines contre les 8 d'avant) : recalcul tous les 3 jours
+// pendant un an, avec la mémoire d'affichage, sur des journaux sans aucun changement réel.
+test('tendances : au plus 8 % de journaux avec une fausse phrase en un an (AR(1), φ = 0,9, composante lente)', async () => {
+  const { tendances } = await import('../../public/js/analyse/tendances.js');
+  for (const scenario of ['ar1', 'ar1Long', 'lente']) {
+    let journaux = 0;
+    const n = 40;
+    for (let seed = 100; seed < 100 + n; seed++) {
+      const j = generer({ jours: 760, seed, scenario, trous: 0.18 });
+      let deja = new Set();
+      let parle = false;
+      for (let k = 0; k < 365; k += 3) {
+        const r = tendances(j, j[Math.min(j.length - 1, 370 + k)].date, deja);
+        deja = new Set(r.constat ? [r.constat.cle] : []);
+        if (r.constat) parle = true;
+      }
+      if (parle) journaux++;
+    }
+    console.log(`  tendances ${scenario} : ${journaux}/${n} journaux avec une phrase sur un an`);
+    assert.ok(journaux / n <= 0.08, `${scenario} : ${journaux}/${n}`);
+  }
+});
+
+test('tendances : un changement durable de 3 points est retrouvé au moins une fois sur deux (AR(1))', async () => {
+  const { tendances } = await import('../../public/js/analyse/tendances.js');
+  let trouves = 0;
+  const n = 40;
+  for (let seed = 700; seed < 700 + n; seed++) {
+    const j = generer({ jours: 560, seed, scenario: 'ar1', trous: 0.18 });
+    const debut = j.length - 70;
+    const jj = j.map((e, i) => (i >= debut ? { ...e, humeur: Math.max(1, Math.min(10, Math.round(e.humeur + 3))) } : e));
+    let deja = new Set();
+    let vu = false;
+    for (let i = debut + 14; i < jj.length; i++) {
+      const r = tendances(jj, jj[i].date, deja);
+      deja = new Set(r.constat ? [r.constat.cle] : []);
+      if (r.constat && r.constat.sens === 'haut') vu = true;
+    }
+    if (vu) trouves++;
+  }
+  console.log(`  tendances, changement de +3 : ${trouves}/${n}`);
+  assert.ok(trouves / n >= 0.5, `${trouves}/${n}`);
+});

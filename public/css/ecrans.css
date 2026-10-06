@@ -449,3 +449,27 @@
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .fini-soir .phrase-recap { margin-top: 0; }
 .fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }
+/* Analyse v5 : Ma semaine, sélecteur collant, Mes jours, Ta journée, barres en jours */
+.lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; }
+.ma-semaine .repli { margin: 0; }
+.selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
+.g-moyenne { stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+.g-autre { fill: var(--surface); stroke: var(--c); stroke-width: 1.6; }
+.g-choix { fill: var(--surface-2); }
+.g-energie-1 { fill: var(--c); opacity: .3; }
+.g-energie-2 { fill: var(--c); opacity: .6; }
+.g-energie-3 { fill: var(--c); }
+.g-rampe-0 { fill: var(--hairline); }
+.g-rampe-1 { fill: var(--c); opacity: .3; }
+.g-rampe-2 { fill: var(--c); opacity: .55; }
+.g-rampe-3 { fill: var(--c); opacity: .8; }
+.g-rampe-4 { fill: var(--c); }
+.legende-frise { flex-wrap: wrap; gap: 4px 12px; }
+.legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
+.legende-frise svg { width: 14px; height: 12px; }
+.detail-colonne { font-size: var(--t-sous); line-height: 1.45; text-wrap: pretty; padding: 8px 10px; border-radius: var(--r-moyen); background: var(--surface-2); }
+.liste-barres { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.ligne-barre { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); gap: 2px 10px; align-items: center; }
+.barre-nom { font-size: var(--t-sous); font-weight: 600; overflow-wrap: anywhere; }
+.barre-svg { width: 100%; height: 12px; display: block; }
+.barre-detail { grid-column: 2; font-size: var(--t-note); color: var(--text-2); font-variant-numeric: tabular-nums; }

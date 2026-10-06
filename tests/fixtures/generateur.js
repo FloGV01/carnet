@@ -9,10 +9,12 @@ function normale(alea) { let u = 0; let v = 0; while (u === 0) u = alea(); while
 const borne = (x) => Math.max(1, Math.min(10, Math.round(x)));
 
 // scenario : 'nul' | 'bureau' | 'sommeilJourMeme' | 'sommeilLendemain' | 'ar1' | 'malEnSuite' | 'jourMemeAR' | 'ar1Long' | 'emploiDuTemps'
+//   | 'lente' (composante lente φ = 0,98 + bruit rapide) | 'decalage' (AR(1), puis + effet sur les 28 derniers jours)
 export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario = 'nul', effet = 3, trous = 0 } = {}) {
   const alea = generateur(seed);
   const res = [];
   let ar = 0;
+  let lent = 0;
   let lieuBloc = LIEUX[0];
   let sommeilPrec = 1;
   for (let i = 0; i < jours; i++) {
@@ -33,6 +35,8 @@ export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario 
     if (scenario === 'ar1') { ar = 0.6 * ar + normale(alea) * 1.6; h = 5.5 + ar; }
     if (scenario === 'ar1Long') { ar = 0.9 * ar + normale(alea) * 1.6 * Math.sqrt(1 - 0.81); h = 5.5 + ar; }
     if (scenario === 'jourMemeAR') { ar = 0.7 * ar + normale(alea) * 1.15; h = 5.5 + ar + (s - 1) * 1.5; }
+    if (scenario === 'lente') { lent = 0.98 * lent + normale(alea) * 0.2; ar = 0.5 * ar + normale(alea) * 1.2; h = 5.5 + lent + ar; }
+    if (scenario === 'decalage') { ar = 0.6 * ar + normale(alea) * 1.6; h = 5.5 + ar + (i >= jours - 28 ? effet : 0); }
     sommeilPrec = s;
     if (trous && alea() < trous) continue;
     res.push({

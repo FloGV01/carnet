@@ -88,4 +88,6 @@ test('textes coupés à 280 caractères, rubriques vides omises', () => {
 test('repères : insuffisant et phrases en voix « je »', () => {
   const analyse = { bonnesJournees: { statut: 'insuffisant', constats: [] }, sommeil: { meme: { statut: 'insuffisant' }, lendemain: { statut: 'insuffisant' } } };
   assert.deepEqual(reperesPsy(analyse, carte), ['Bonnes journées : pas encore assez de données.', 'Sommeil et humeur : pas encore assez de données pour le dire.']);
+  const avecTendance = { ...analyse, tendances: { statut: 'ok', constat: { sens: 'bas', moyR: 4.6, moyB: 6.1 } } };
+  assert.equal(reperesPsy(avecTendance, carte)[2], "Tendances (4 dernières semaines contre les 8 d'avant) : mon humeur du soir est plus basse : 4,6 en moyenne, contre 6,1.");
 });

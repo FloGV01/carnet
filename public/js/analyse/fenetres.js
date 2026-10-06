@@ -30,11 +30,25 @@ export function dureeNuit(coucher, lever) {
 export function bornesFenetre(fenetre, aujourdhui, premier) {
   if (fenetre === '7') return [addDays(aujourdhui, -6), aujourdhui];
   if (fenetre === '30') return [addDays(aujourdhui, -29), aujourdhui];
+  if (fenetre === '90') return [addDays(aujourdhui, -89), aujourdhui];
   return [premier && premier < aujourdhui ? premier : aujourdhui, aujourdhui];
 }
 
 const dans = (d, du, au) => d >= du && d <= au;
 const compte = (xs, f) => xs.reduce((n, x) => n + (f(x) ? 1 : 0), 0);
+
+// Paires (élément, précision) comptées en jours : { element: { precision: jours } }.
+function pairesEnJours(jours, extraire) {
+  const res = {};
+  for (const j of jours) {
+    for (const cle of new Set(extraire(j).map(([a, b]) => `${a}|${b}`))) {
+      const [a, b] = cle.split('|');
+      res[a] = res[a] || {};
+      res[a][b] = (res[a][b] || 0) + 1;
+    }
+  }
+  return res;
+}
 
 // Détails du soir (v4), comptés en jours : un jour compte une fois par élément, quel que soit
 // le nombre d'activités. Ordre : du plus fréquent au moins fréquent (égalités par id).
@@ -88,10 +102,14 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     sportDetail: {
       types: joursPar(jours, (j) => (j.activites || []).map((a) => a.type)),
       durees: joursPar(jours, (j) => (j.activites || []).map((a) => a.duree)),
+      paires: pairesEnJours(jours, (j) => (j.activites || []).map((a) => [a.type || 'sans', a.duree || 'aucun'])),
     },
     contactDetail: {
       avec: joursPar(jours, (j) => (j.contacts || []).flatMap((c) => c.avec || [])),
       effet: joursPar(jours, (j) => (j.contacts || []).map((c) => c.effet)),
+      // Pour les barres « Avec qui, comment c'était » : un jour compte une fois par paire
+      // (avec qui, effet) ; « aucun » si l'effet n'est pas précisé, « sans » si personne n'est noté.
+      paires: pairesEnJours(jours, (j) => (j.contacts || []).flatMap((c) => ((c.avec && c.avec.length) ? c.avec : ['sans']).map((a) => [a, c.effet || 'aucun']))),
     },
     lieux: { n: lieux.length, parLieu, bureau: parLieu['lieu:bureau'] || 0, teletravail: parLieu['lieu:teletravail'] || 0 },
     traitement: { n: tp.length, oui: compte(tp, (x) => x === 'traitementPris:oui'), partiel: compte(tp, (x) => x === 'traitementPris:partiel'), non: compte(tp, (x) => x === 'traitementPris:non') },

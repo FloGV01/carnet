@@ -1,49 +1,38 @@
 // Dessine les opérations de la page A4 (mm) sur un canvas de 1654 × 2339 px (200 ppp).
 // Toujours en thème clair : la page doit rester lisible imprimée en noir et blanc.
 import { A4 } from '../../export/page-a4.js';
-import { DIM, geometrieHumeur, geometrieExplosions, geometrieSommeil } from './geometrie.js';
+import { DIM_FRISE, geometrieFrise } from './geometrie.js';
 
 export const TAILLE_PX = { largeur: 1654, hauteur: 2339 };
 const PT = 0.3528;
 const COULEURS = { texte: '#1F1D1A', secondaire: '#6B665E', filet: '#E4DFD8', trait: '#8C857B', accent: '#3B4A6B', fond: '#FFFFFF', sommeil: ['#A9B5CF', '#6D7FA6', '#3B4A6B'] };
 const POLICE = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-function dessinerGraphes(ctx, op, k) {
-  const graphes = [
-    (g) => {
-      const geo = geometrieHumeur(op.semaines);
-      g.strokeStyle = COULEURS.filet; g.lineWidth = 1;
-      for (const f of geo.filets) { g.beginPath(); g.moveTo(DIM.gauche, f.y); g.lineTo(DIM.largeur - DIM.droite, f.y); g.stroke(); }
-      g.fillStyle = COULEURS.secondaire; g.font = `9px ${POLICE}`;
-      for (const t of geo.graduations) g.fillText(String(t.v), 4, t.y + 3);
-      g.strokeStyle = COULEURS.accent; g.lineWidth = 2;
-      for (const s of geo.segments) { g.beginPath(); g.moveTo(s.x1, s.y1); g.lineTo(s.x2, s.y2); g.stroke(); }
-      for (const p of geo.points) {
-        g.beginPath(); g.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-        if (p.plein) { g.fillStyle = COULEURS.accent; g.fill(); } else { g.fillStyle = COULEURS.fond; g.fill(); g.stroke(); }
-      }
-    },
-    (g) => {
-      const geo = geometrieExplosions(op.semaines);
-      g.strokeStyle = COULEURS.filet; g.lineWidth = 1;
-      g.beginPath(); g.moveTo(DIM.gauche, geo.base); g.lineTo(DIM.largeur - DIM.droite, geo.base); g.stroke();
-      g.fillStyle = COULEURS.accent;
-      for (const b of geo.barres) g.fillRect(b.x, b.y, b.l, b.h);
-    },
-    (g) => {
-      const geo = geometrieSommeil(op.semaines);
-      for (const p of geo.piles) for (const m of p.morceaux) { g.fillStyle = COULEURS.sommeil[Number(m.classe.slice(-1)) - 1]; g.fillRect(p.x, m.y, p.l, m.h); }
-    },
-  ];
-  graphes.forEach((dessin, i) => {
-    const x = (op.x + i * (op.largeur + op.ecart)) * k;
-    const y = op.y * k;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale((op.largeur * k) / DIM.largeur, (op.hauteur * k) / DIM.hauteur);
-    dessin(ctx);
-    ctx.restore();
-  });
+// Frise « Mes jours » (semaines ou mois) : même géométrie qu'à l'écran, mise à l'échelle du cadre.
+function dessinerFrise(ctx, op, k) {
+  const d = DIM_FRISE;
+  const geo = geometrieFrise(op.frise);
+  ctx.save();
+  ctx.translate(op.x * k, op.y * k);
+  ctx.scale((op.largeur * k) / d.largeur, (op.hauteur * k) / d.hauteur);
+  ctx.strokeStyle = COULEURS.filet; ctx.lineWidth = 1;
+  for (const f of geo.filets) { ctx.beginPath(); ctx.moveTo(d.gauche, f.y); ctx.lineTo(d.largeur - d.droite, f.y); ctx.stroke(); }
+  ctx.fillStyle = COULEURS.secondaire; ctx.font = `8px ${POLICE}`;
+  for (const t of geo.graduations) ctx.fillText(String(t.v), 4, t.y + 3);
+  ctx.strokeStyle = COULEURS.accent; ctx.lineWidth = 1.6;
+  for (const s of geo.moyenne) { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); }
+  for (const p of geo.points) {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    if (p.plein) { ctx.fillStyle = COULEURS.accent; ctx.fill(); } else { ctx.fillStyle = COULEURS.fond; ctx.fill(); ctx.stroke(); }
+  }
+  for (const n of geo.nuits) { ctx.fillStyle = COULEURS.sommeil[Number(n.classe.slice(-1)) - 1]; ctx.fillRect(n.x, n.y, n.l, n.h); }
+  ctx.fillStyle = COULEURS.texte;
+  for (const e of geo.encoches) ctx.fillRect(e.x, e.y, e.l, e.h);
+  ctx.strokeStyle = COULEURS.secondaire; ctx.lineWidth = 1.2;
+  for (const a of geo.autres) { ctx.beginPath(); ctx.arc(a.x, a.y, 2.2, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = COULEURS.secondaire; ctx.textAlign = 'center';
+  for (const e of geo.etiquettes) ctx.fillText(e.texte, e.x, d.axeY);
+  ctx.restore();
 }
 
 export function dessinerPage(canvas, { ops }) {
@@ -71,8 +60,8 @@ export function dessinerPage(canvas, { ops }) {
       ctx.strokeStyle = op.fin ? COULEURS.filet : COULEURS.trait;
       ctx.lineWidth = op.fin ? 1 : 2;
       ctx.beginPath(); ctx.moveTo(op.x1 * k, op.y1 * k); ctx.lineTo(op.x2 * k, op.y2 * k); ctx.stroke();
-    } else if (op.type === 'graphes') {
-      dessinerGraphes(ctx, op, k);
+    } else if (op.type === 'frise') {
+      dessinerFrise(ctx, op, k);
     }
   }
   return canvas;
