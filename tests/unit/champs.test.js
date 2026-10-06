@@ -60,11 +60,12 @@ test('estVide et « Aucun » exclusif', () => {
   assert.equal(basculerMultiple(['effetSecondaire:fatigue'], 'effetSecondaire:fatigue', ex), null);
 });
 
-test('v4 : activités du jour, lignes vides retirées, références imbriquées', () => {
-  const { valeur, erreurs } = normaliser('journal', { date: '2026-10-05', activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: null, duree: '' }, { type: 'typeSport:velo' }], contactAvec: ['contactAvec:famille', 'contactAvec:famille'], contactEffet: 'contactEffet:ressourcant' });
+test('v4-v5 : activités et contacts du jour, lignes vides retirées, références imbriquées', () => {
+  const { valeur, erreurs } = normaliser('journal', { date: '2026-10-05', activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: null, duree: '' }, { type: 'typeSport:velo' }],
+    contacts: [{ avec: ['contactAvec:famille', 'contactAvec:famille'], effet: 'contactEffet:ressourcant' }, { avec: [], effet: null }] });
   assert.deepEqual(erreurs, []);
   assert.deepEqual(valeur.activites, [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: null }]);
-  assert.deepEqual(valeur.contactAvec, ['contactAvec:famille']);
+  assert.deepEqual(valeur.contacts, [{ avec: ['contactAvec:famille'], effet: 'contactEffet:ressourcant' }], 'doublon retiré, ligne vide retirée');
   assert.deepEqual(referencesDe('journal', valeur).sort(), ['contactAvec:famille', 'contactEffet:ressourcant', 'dureeSport:de_30_a_60', 'typeSport:marche', 'typeSport:velo']);
   assert.equal(normaliser('journal', { date: '2026-10-05', activites: [{}] }).valeur.activites, null);
   assert.ok(normaliser('journal', { date: '2026-10-05', activites: [{ type: 'lieu:bureau' }] }).erreurs.length > 0);
@@ -87,4 +88,16 @@ test('v4 : humeur du moment, l\'heure seule ne suffit pas à garder un relevé',
   assert.deepEqual(erreurs, []);
   assert.equal(valeur.energie, 'energie:basse');
   assert.equal(estVide('humeurs', normaliser('humeurs', { id: 'h1', date: '2026-10-05', heure: '10:05' }).valeur), true);
+});
+
+test('v5 : versContacts transforme le détail v4 en une ligne, sans rien inventer', async () => {
+  const { versContacts, resumeContacts } = await import('../../public/js/domain/contacts.js');
+  assert.deepEqual(versContacts({ date: 'd', contactAvec: ['contactAvec:famille', 'contactAvec:amis'], contactEffet: 'contactEffet:couteux' }),
+    { date: 'd', contacts: [{ avec: ['contactAvec:famille', 'contactAvec:amis'], effet: 'contactEffet:couteux' }] });
+  assert.deepEqual(versContacts({ date: 'd', contactAvec: null, contactEffet: null }), { date: 'd' });
+  const deja = { date: 'd', contacts: [{ avec: ['contactAvec:amis'], effet: null }] };
+  assert.equal(versContacts(deja), deja, 'déjà au format v5 : inchangé');
+  const lib = (id) => ({ 'contactAvec:famille': 'Famille', 'contactAvec:amis': 'Amis', 'contactEffet:couteux': 'Coûteux' })[id];
+  assert.equal(resumeContacts([{ avec: ['contactAvec:famille', 'contactAvec:amis'], effet: 'contactEffet:couteux' }, { avec: ['contactAvec:amis'], effet: null }], lib),
+    'Famille, Amis (Coûteux) · Amis');
 });

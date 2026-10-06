@@ -35,10 +35,15 @@ test('sport et contact en détail : plusieurs activités, avec qui, comment c\'�
   await page.getByRole('button', { name: 'Une autre activité' }).click();
   await toucher(page, 'Activité 2 : type', 'Vélo');
   await page.getByRole('button', { name: /Contact en détail/ }).click();
-  await groupe(page, 'Avec qui').getByRole('button', { name: 'Famille' }).click();
-  await toucher(page, 'Comment c\'était', 'Coûteux');
+  await groupe(page, 'Contact 1 : avec qui').getByRole('button', { name: 'Famille' }).click();
+  await toucher(page, 'Contact 1 : comment c\'était', 'Coûteux');
+  // v5 : plusieurs contacts dans la journée.
+  await page.getByRole('button', { name: 'Un autre contact' }).click();
+  await groupe(page, 'Contact 2 : avec qui').getByRole('button', { name: 'Amis' }).click();
+  await toucher(page, 'Contact 2 : comment c\'était', 'Ressourçant');
   await expect.poll(() => entreeDuJour(page)).toMatchObject({
-    sportMouvement: true, contactHumain: true, contactAvec: ['contactAvec:famille'], contactEffet: 'contactEffet:couteux',
+    sportMouvement: true, contactHumain: true,
+    contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:couteux' }, { avec: ['contactAvec:amis'], effet: 'contactEffet:ressourcant' }],
     activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: null }],
   });
   await expect(groupe(page, 'Sport / mouvement').getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true');

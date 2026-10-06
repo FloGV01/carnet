@@ -6,6 +6,7 @@ import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
 import { nombre, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
 import { journalAvecExplosions } from '../domain/explosions.js';
+import { resumeContacts } from '../domain/contacts.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
 const couper = (t) => {
@@ -16,12 +17,12 @@ const ouiNon = (v) => (v ? 'oui' : 'non');
 const minuscule = (t) => (t && t.length > 1 && t[1] === t[1].toLowerCase() ? t[0].toLowerCase() + t.slice(1) : t);
 const listeLib = (ids, lib) => (ids || []).map((id) => minuscule(lib(id))).join(', ');
 
-// « Marche 30 à 60 min, Vélo » ; « Famille, Collègues · coûteux ».
+// « Marche 30 à 60 min, Vélo » ; « famille, collègues : coûteux ; amis ».
 function detailSport(j, lib) {
   return (j.activites || []).map((a) => [a.type && lib(a.type), a.duree && lib(a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(', ');
 }
 function detailContact(j, lib) {
-  return [listeLib(j.contactAvec, lib), j.contactEffet && minuscule(lib(j.contactEffet))].filter(Boolean).join(' · ');
+  return resumeContacts(j.contacts, lib, { minuscule, pourExport: true });
 }
 
 function ligneJour(j, lib, moments = []) {

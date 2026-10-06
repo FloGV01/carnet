@@ -21,6 +21,7 @@ import { estExplosion } from '../../domain/explosions.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { resumeContacts } from '../../domain/contacts.js';
 import { prochainRdv } from '../../domain/soins.js';
 import { libelleRdv } from './soins.js';
 
@@ -42,8 +43,30 @@ export function options(items, liste, actuel) {
 function resumeSport(e, carte) {
   return (e.activites || []).map((a) => [a.type && libelle(carte, a.type), a.duree && libelle(carte, a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(' · ');
 }
-function resumeContact(e, carte) {
-  return [(e.contactAvec || []).map((id) => libelle(carte, id)).join(', '), e.contactEffet && libelle(carte, e.contactEffet)].filter(Boolean).join(' · ');
+const resumeContact = (e, carte) => resumeContacts(e.contacts, (id) => libelle(carte, id));
+
+// Plusieurs contacts (v5) : une ligne par contact (avec qui, comment c'était), comme les activités.
+function DetailContact({ entree, items, surChanger }) {
+  const [enPlus, setEnPlus] = useState(false);
+  const lignes = entree.contacts || [];
+  const affichees = enPlus || lignes.length === 0 ? [...lignes, { avec: null, effet: null }] : lignes;
+  const changer = (i, champ) => (v) => {
+    const nouvelles = affichees.map((l, k) => (k === i ? { ...l, [champ]: v } : l)).filter((l) => (l.avec && l.avec.length) || l.effet);
+    setEnPlus(false);
+    surChanger(nouvelles.length ? nouvelles : null);
+  };
+  return html`<div class="detail-sport">
+    ${affichees.map((l, i) => html`<div class="activite" key=${i}>
+      <div class="activite-tete"><span class="etiquette">Contact ${i + 1}</span>
+        ${((l.avec && l.avec.length) || l.effet) && html`<button type="button" class="effacer" aria-label=${`Retirer le contact ${i + 1}`}
+          onClick=${() => { const n = lignes.filter((_, k) => k !== i); surChanger(n.length ? n : null); }}>${Icones.fermer()}</button>`}</div>
+      <${PastillesMultiples} etiquette=${`Contact ${i + 1} : avec qui`} options=${options(items, 'contactAvec', l.avec)} valeurs=${l.avec}
+        exclusifs=${new Set()} surChoix=${changer(i, 'avec')} teinte="contact" />
+      <${Segmente} etiquette=${`Contact ${i + 1} : comment c'était`} options=${options(items, 'contactEffet', l.effet)} valeur=${l.effet ?? null}
+        surChoix=${changer(i, 'effet')} teinte="contact" classe="large" />
+    </div>`)}
+    ${lignes.length > 0 && !enPlus && html`<button type="button" class="btn-lien action" onClick=${() => setEnPlus(true)}>${Icones.plus({ trait: 2 })}Un autre contact</button>`}
+  </div>`;
 }
 
 // Plusieurs activités : une ligne par activité (type, durée), une ligne vide en attente d'un choix.
@@ -151,9 +174,9 @@ export function Aujourdhui({ date: dateRoute }) {
     setEntree((e) => ({ ...e, ...changements }));
     return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
   };
-  const ecrireContact = (champs) => {
-    const changements = { ...champs };
-    if (Object.values(champs).some((v) => v != null) && entree.contactHumain == null) changements.contactHumain = true;
+  const ecrireContacts = (contacts) => {
+    const changements = { contacts };
+    if (contacts && contacts.length && entree.contactHumain == null) changements.contactHumain = true;
     setEntree((e) => ({ ...e, ...changements }));
     return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
   };
@@ -234,16 +257,7 @@ export function Aujourdhui({ date: dateRoute }) {
         <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
       </${Repli}>`}
       ${visibles.includes('contact') && html`<${Repli} cle="contact" titre="Contact en détail" resume=${resumeContact(entree, carte)} memoriser=${false}>
-        <div class="champ-jour">
-          <span class="etiquette">Avec qui</span>
-          <${PastillesMultiples} etiquette="Avec qui" options=${options(items, 'contactAvec', entree.contactAvec)} valeurs=${entree.contactAvec}
-            exclusifs=${new Set()} surChoix=${(v) => ecrireContact({ contactAvec: v })} teinte="contact" />
-        </div>
-        <div class="champ-jour">
-          <span class="etiquette">Comment c'était</span>
-          <${Segmente} etiquette="Comment c'était" options=${options(items, 'contactEffet', entree.contactEffet)} valeur=${entree.contactEffet}
-            surChoix=${(v) => ecrireContact({ contactEffet: v })} teinte="contact" classe="large" />
-        </div>
+        <${DetailContact} entree=${entree} items=${items} surChanger=${ecrireContacts} />
       </${Repli}>`}
       <${Repli} cle="notes" titre="Notes libres" resume=${entree.notes ? entree.notes.slice(0, 40) : null}>
         <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${3}

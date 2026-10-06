@@ -10,9 +10,10 @@ import { normaliser, SCHEMAS, refsDuChamp } from '../domain/champs.js';
 import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
+import { versContacts } from '../domain/contacts.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
 const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
@@ -136,6 +137,12 @@ export const MISES_A_NIVEAU = {
       if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
     }
     return { ...s, formatVersion: 2, counts, data };
+  },
+  // v2 -> v3 : plusieurs contacts par jour ; le détail v4 du jour devient une ligne, tel quel.
+  2(s) {
+    const data = { ...(s.data || {}) };
+    if (Array.isArray(data.journal)) data.journal = data.journal.map(versContacts);
+    return { ...s, formatVersion: 3, data };
   },
 };
 export function mettreANiveauSauvegarde(s) {
@@ -276,7 +283,8 @@ export async function revenirAvantImport(repo) {
       // Une copie prise avant la v4 n'a pas d'humeurs du moment : on les laisse telles quelles.
       if (s === 'humeurs' && !Array.isArray(copie.data.humeurs)) continue;
       t.objectStore(s).clear();
-      for (const x of copie.data[s] || []) t.objectStore(s).put(x);
+      // Une copie prise avant la v5 a encore un seul détail de contact par jour.
+      for (const x of copie.data[s] || []) t.objectStore(s).put(s === 'journal' ? versContacts(x) : x);
     }
     for (const it of listesManquantes(copie.data.listes, h)) t.objectStore('listes').put(it);
     // Une copie de la v3 et d'avant n'a pas forcément de méta : on ne touche alors à rien.

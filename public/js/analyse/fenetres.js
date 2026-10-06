@@ -90,8 +90,8 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
       durees: joursPar(jours, (j) => (j.activites || []).map((a) => a.duree)),
     },
     contactDetail: {
-      avec: joursPar(jours, (j) => j.contactAvec || []),
-      effet: joursPar(jours, (j) => (j.contactEffet ? [j.contactEffet] : [])),
+      avec: joursPar(jours, (j) => (j.contacts || []).flatMap((c) => c.avec || [])),
+      effet: joursPar(jours, (j) => (j.contacts || []).map((c) => c.effet)),
     },
     lieux: { n: lieux.length, parLieu, bureau: parLieu['lieu:bureau'] || 0, teletravail: parLieu['lieu:teletravail'] || 0 },
     traitement: { n: tp.length, oui: compte(tp, (x) => x === 'traitementPris:oui'), partiel: compte(tp, (x) => x === 'traitementPris:partiel'), non: compte(tp, (x) => x === 'traitementPris:non') },

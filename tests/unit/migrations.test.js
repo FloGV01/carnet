@@ -19,26 +19,26 @@ async function baseV1(fabrique, remplir) {
 const H = '2026-10-01T10:00:00.000Z';
 const lireTout = (db, store) => new Promise((ok) => { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => ok(r.result); });
 
-test('base neuve : 10 stores, version 2, listes v1 et v4, aucun réglage écrit', async () => {
+test('base neuve : 10 stores, version 3, listes v1 et v4, aucun réglage écrit', async () => {
   const db = await ouvrirBase({ fabrique: new IDBFactory(), horodatage: H });
   assert.equal(db.version, DB_VERSION);
-  assert.equal(DB_VERSION, 2);
+  assert.equal(DB_VERSION, 3);
   assert.deepEqual([...db.objectStoreNames].sort(), [...STORES].sort());
   assert.equal((await lireTout(db, 'listes')).length, NB_V2);
   const meta = await lireTout(db, 'meta');
   assert.equal(meta.find((m) => m.cle === 'journee'), undefined, 'les réglages du soir se lisent par défaut (domain/journee.js)');
-  assert.equal(meta.find((m) => m.cle === 'schema').valeur, 2);
+  assert.equal(meta.find((m) => m.cle === 'schema').valeur, 3);
   db.close();
 });
 
-test('migration 1 → 2 : données gardées, copie prise, libellé renommé respecté, listes ajoutées une fois', async () => {
+test('migration 1 → 3 : données gardées, copie prise, libellé renommé respecté, listes ajoutées une fois', async () => {
   const fabrique = new IDBFactory();
   await baseV1(fabrique, (t) => {
     t.objectStore('journal').put({ date: '2026-09-30', humeur: 6, lieu: 'lieu:bureau' });
     t.objectStore('listes').put({ id: 'lieu:bureau', liste: 'lieu', libelle: 'Au bureau', ordre: 10, archive: false, alias: ['Bureau'] });
   });
   const db = await ouvrirBase({ fabrique, horodatage: H });
-  assert.equal(db.version, 2);
+  assert.equal(db.version, 3);
   assert.equal((await lireTout(db, 'journal'))[0].humeur, 6);
   const listes = await lireTout(db, 'listes');
   assert.equal(listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
@@ -66,27 +66,54 @@ test('réouverture sans nouvel ensemencement', async () => {
   db.close();
 });
 
-test('une v3 fictive garde les données, prend une copie et respecte un libellé renommé', async () => {
+test('migration 2 → 3 : le détail de contact v4 devient une ligne, tel quel ; le reste est intact', async () => {
+  const fabrique = new IDBFactory();
+  const db2 = await ouvrirBase({ fabrique, horodatage: H, version: 2, migrations: { 1: MIGRATIONS[1], 2: MIGRATIONS[2] } });
+  await new Promise((ok, ko) => {
+    const t = db2.transaction('journal', 'readwrite');
+    const j = t.objectStore('journal');
+    j.put({ date: '2026-10-03', humeur: 5, contactHumain: true, contactAvec: ['contactAvec:famille', 'contactAvec:collegues'], contactEffet: 'contactEffet:couteux' });
+    j.put({ date: '2026-10-04', humeur: 6, contactAvec: null, contactEffet: 'contactEffet:neutre' });
+    j.put({ date: '2026-10-05', humeur: 7, contactAvec: null, contactEffet: null });
+    j.put({ date: '2026-10-06', humeur: 8 });
+    t.oncomplete = ok; t.onerror = () => ko(t.error);
+  });
+  db2.close();
+  const db = await ouvrirBase({ fabrique, horodatage: H });
+  assert.equal(db.version, 3);
+  const j = Object.fromEntries((await lireTout(db, 'journal')).map((e) => [e.date, e]));
+  assert.deepEqual(j['2026-10-03'], { date: '2026-10-03', humeur: 5, contactHumain: true, contacts: [{ avec: ['contactAvec:famille', 'contactAvec:collegues'], effet: 'contactEffet:couteux' }] });
+  assert.deepEqual(j['2026-10-04'].contacts, [{ avec: null, effet: 'contactEffet:neutre' }]);
+  assert.deepEqual(j['2026-10-05'], { date: '2026-10-05', humeur: 7 });
+  assert.deepEqual(j['2026-10-06'], { date: '2026-10-06', humeur: 8 });
+  const snaps = await lireTout(db, 'snapshots');
+  assert.equal(snaps[0].id, 'avant-migration-v2');
+  assert.equal(snaps[0].data.journal.find((e) => e.date === '2026-10-03').contactEffet, 'contactEffet:couteux', 'la copie garde l\'ancien format');
+  assert.equal((await lireTout(db, 'meta')).find((m) => m.cle === 'schema').valeur, 3);
+  db.close();
+});
+
+test('une v4 fictive garde les données, prend une copie et respecte un libellé renommé', async () => {
   const fabrique = new IDBFactory();
   const { repo } = nouveauRepo({ fabrique });
   await repo.journal.patch('2026-09-30', { humeur: 6, lieu: 'lieu:bureau' });
   await repo.listes.renommer('lieu:bureau', 'Au bureau');
   await repo.fermer();
-  const v3 = {
+  const v4 = {
     ...MIGRATIONS,
-    3(db, tx) {
+    4(db, tx) {
       db.createObjectStore('nouveau', { keyPath: 'id' });
       const os = tx.objectStore('listes');
       const r = os.get('lieu:bureau');
       r.onsuccess = () => { if (!r.result) os.put({ id: 'lieu:bureau', libelle: 'Bureau' }); };
     },
   };
-  const db = await ouvrirBase({ fabrique, horodatage: H, version: 3, migrations: v3 });
-  assert.equal(db.version, 3);
+  const db = await ouvrirBase({ fabrique, horodatage: H, version: 4, migrations: v4 });
+  assert.equal(db.version, 4);
   assert.equal((await lireTout(db, 'journal'))[0].humeur, 6);
   assert.equal((await lireTout(db, 'listes')).find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
   const snaps = await lireTout(db, 'snapshots');
-  assert.equal(snaps[0].id, 'avant-migration-v2');
+  assert.equal(snaps[0].id, 'avant-migration-v3');
   assert.equal(snaps[0].data.journal[0].humeur, 6);
   db.close();
 });
@@ -126,8 +153,8 @@ test('une autre connexion qui monte de version ferme la nôtre proprement', asyn
   let averti = 0;
   const { repo } = nouveauRepo({ fabrique, surVersionChange: () => { averti += 1; } });
   await repo.journal.patch('2026-09-30', { humeur: 5 });
-  const v3 = { ...MIGRATIONS, 3() {} };
-  const db = await ouvrirBase({ fabrique, horodatage: H, version: 3, migrations: v3 });
+  const v4 = { ...MIGRATIONS, 4() {} };
+  const db = await ouvrirBase({ fabrique, horodatage: H, version: 4, migrations: v4 });
   assert.equal(averti, 1);
   db.close();
   await assert.rejects(repo.journal.lire('2026-09-30'), (e) => e.code === 'VERSION_FUTURE');
