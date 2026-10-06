@@ -1,4 +1,4 @@
-# Carnet v5 : spécification (validée, à construire)
+# Carnet v5 : spécification (construite, version 5.0.0)
 
 Retours après la v4.0.0 (6 octobre 2026), choix faits point par point, puis « go ». L'écran Analyse a été
 conçu par quatre angles (TCC et auto-observation, statistique, lisibilité iPhone, AuDHD), puis relu par deux
@@ -81,3 +81,12 @@ Comparaison semaine / semaine d'avant ; bande « d'habitude » ; nommer le crén
 nuage humeur × activité sans test ; « nuit Mal la veille : 4 sur 5 » sans taux de référence ; bloc « ce que tu as
 écrit » sous le signal ou sous une phrase Tendances ; sélection calculée de besoins ou de « ce qui a aidé » dans
 Moment difficile ; bande horaire de la journée sur Aujourd'hui.
+
+## 5. Ce qui a été construit, et les écarts
+
+- **Base v3** (`MIGRATIONS[3]`, figée) et **sauvegarde formatVersion 3** (`MISES_A_NIVEAU[2]`) : `contactAvec` et `contactEffet` deviennent une ligne `contacts: [{ avec, effet }]`, telle quelle ; `avec` reste un choix multiple par ligne (un effet noté pour « Famille, Collègues » reste attaché aux deux ensemble). « Revenir à l'état d'avant l'import » convertit aussi une copie d'avant la v5.
+- **Tendances** : fenêtres de 28 jours glissant de 7 jours sur l'année avant R (au moins 6, donc environ 13 semaines d'historique) ; entrée à |z| ≥ 3,25 et |d| ≥ 1, net et de même sens sur 7 jours ; maintien à |z| ≥ 2 et |d| ≥ 0,7 ; garde silencieuse sur le rythme de saisie (0,6). Calibration (`tests/calibration`) : 0 à 2 journaux sur 40 avec une fausse phrase en un an (AR(1) φ = 0,6, φ = 0,9, composante lente φ = 0,98) ; un changement durable de 3 points retrouvé 25 fois sur 40, un changement de 2 points rarement. C'est le prix de « rarement à tort ».
+- **Mes jours** : sans l'option « Plus de rangées » (humeur du moment sur la frise), laissée pour plus tard. Le tableau donne le détail de chaque colonne avec une donnée.
+- **Ta journée heure par heure** : points et anneaux, énergie en jours ; pas de trait de dispersion.
+- **Bande du bas** : « Moment difficile » · « Humeur » · « + Épisode » ; en largeur étroite ou en grand texte, « Humeur » puis « Moment difficile » perdent leur libellé (icône et nom accessible gardés).
+- **Réglages › Analyse** : interrupteur « Tendances », comme le signal.

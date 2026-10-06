@@ -72,3 +72,15 @@ Spécification complète : `docs/v4-specification.md`. Décisions qui modifient 
 - **Base v2** : store `humeurs`, 76 éléments de liste ajoutés (`SEED_V2_AJOUTS`, figé avec `MIGRATION_2` et `seedItems` dans le verrou). Aucun réglage écrit par la migration.
 - **Sauvegarde v2** : la méta de l'utilisateur est remplacée à l'import et restaurée par « Revenir ».
 - **TCC** : l'Après coup suit l'analyse en chaîne, le tableau de pensées et les plans « si… alors… », sans aucun contenu proposé par l'app. « C'est injuste » n'est pas une « erreur de pensée » proposée.
+
+## 2026-10-06 : v5, deuxième série de retours
+
+Spécification : `docs/v5-specification.md`. Décisions qui modifient le plan :
+
+- **Pas à pas retiré** (route, écran, bouton). La saisie du soir se fait sur Aujourd'hui.
+- **Moment difficile** : la seule animation longue de l'app (cercle de respiration de 10 s par cycle), parce qu'elle guide la cohérence cardiaque ; coupée par le mouvement réduit (la phase écrite reste). Rien n'y est calculé ni choisi par l'app.
+- **« J'ai fini pour ce soir »** : une préférence d'affichage de l'appareil (localStorage), jamais une donnée ; rien n'est compté.
+- **Contacts multiples** : base v3 et sauvegarde v3 (voir la spécification).
+- **Tendances** (plan §7 étendu) : une seule famille testée, l'humeur du soir ; erreur-type tirée des fenêtres de 28 jours de l'année précédente (la règle AR(1) paramétrique donnait 15 à 60 % de journaux avec une fausse phrase). Seuils calibrés : entrée |z| ≥ 3,25 et |d| ≥ 1, stabilité 7 jours, maintien |z| ≥ 2. Budget : au plus 8 % de journaux avec une fausse phrase en un an ; mesuré 0 à 2 sur 40.
+- **Analyse** : les 3 graphiques hebdomadaires et le tableau Évolution sont remplacés par « Mes jours » (par jour, semaine ou mois) ; la vue soignants reprend cette frise par semaine (par mois au-delà de 26 semaines), sans phrase.
+- **Après coup** proposé sur tous les épisodes.
