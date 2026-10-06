@@ -35,6 +35,9 @@ test('les 6 champs du soir en 6 touchers, sans frappe, sans défilement, sans bo
   // Le compteur d'explosions est masqué par défaut : les épisodes « Explosion » font foi.
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
   await sansDefilement(page);
+  // À 390 px : « Moment difficile » en toutes lettres, « Humeur » en texte (sans son icône).
+  await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
+  await expect(page.locator('.actions-flottantes .moment .libelle-action')).toBeVisible();
   await expect(page.getByRole('button', { name: /enregistrer/i })).toHaveCount(0);
   await expect(page.getByText('Enregistré')).toBeVisible();
   const entree = await entreeDuJour(page);
@@ -134,36 +137,3 @@ test('nuit en détail : heures effaçables, réveils, résumé du repli', async 
   await expect(page.getByText('23:40 → · · 1 réveil')).toBeVisible();
 });
 
-test('pas à pas : une question par écran, enregistrée au toucher, récapitulatif, Terminer', async ({ page }) => {
-  await page.getByRole('link', { name: 'Pas à pas' }).click();
-  const vue = page.getByRole('dialog', { name: 'Ma journée' });
-  await expect(vue.getByRole('heading', { name: 'Lieu' })).toBeVisible();
-  await expect(page.getByRole('navigation')).toHaveCount(0);
-  await vue.getByRole('button', { name: 'Télétravail' }).click();
-  await expect(vue.getByRole('heading', { name: 'Sommeil' })).toBeVisible();
-  await vue.getByRole('button', { name: 'Bien' }).click();
-  await vue.getByRole('button', { name: 'Humeur 7' }).click();
-  await expect(vue.getByRole('heading', { name: 'Contact humain' })).toBeVisible();
-  await expect(vue.locator('.phrase-resume')).toHaveText('Télétravail · nuit bien · humeur 7');
-  // « Passer » jusqu'au récapitulatif : le compteur d'explosions, masqué, n'a pas d'écran.
-  const vus = [];
-  while (await vue.getByRole('heading', { name: 'Récapitulatif' }).count() === 0) {
-    vus.push(await vue.locator('.titre-question').first().textContent());
-    await vue.getByRole('button', { name: 'Passer', exact: true }).click();
-  }
-  expect(vus).toEqual(['Contact humain', 'Sport / mouvement', 'Traitement pris']);
-  await expect.poll(() => entreeDuJour(page)).toMatchObject({ lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:bien', humeur: 7 });
-  await vue.getByRole('button', { name: 'Terminer' }).click();
-  await expect(groupe(page, 'Humeur').getByRole('button', { name: 'Humeur 7' })).toHaveAttribute('aria-pressed', 'true');
-});
-
-test('pas à pas sans aucun champ affiché : directement le récapitulatif, sans zone de texte', async ({ page }) => {
-  await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', {
-    masques: ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'],
-  }));
-  await page.reload();
-  await page.getByRole('link', { name: 'Pas à pas' }).click();
-  const vue = page.getByRole('dialog', { name: 'Ma journée' });
-  await expect(vue.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
-  await expect(vue.locator('#pas-a-pas-positifs')).toHaveCount(0);
-});

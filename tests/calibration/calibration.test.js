@@ -161,3 +161,75 @@ test('bonnes journées : au plus 10 % de journaux avec un faux constat sur un an
   console.log(`  un an de recalcul quotidien : ${touches}/${n}`);
   assert.ok(touches / n <= 0.10, `${touches}/${n}`);
 });
+
+// v5 · Tendances (humeur du soir, 4 semaines contre les 8 d'avant) : recalcul tous les 3 jours
+// pendant un an, avec la mémoire d'affichage, sur des journaux sans aucun changement réel.
+test('tendances : au plus 8 % de journaux avec une fausse phrase en un an (AR(1), φ = 0,9, composante lente)', async () => {
+  const { tendances } = await import('../../public/js/analyse/tendances.js');
+  for (const scenario of ['ar1', 'ar1Long', 'lente']) {
+    let journaux = 0;
+    const n = 40;
+    for (let seed = 100; seed < 100 + n; seed++) {
+      const j = generer({ jours: 760, seed, scenario, trous: 0.18 });
+      let deja = new Set();
+      let parle = false;
+      for (let k = 0; k < 365; k += 3) {
+        const r = tendances(j, j[Math.min(j.length - 1, 370 + k)].date, deja);
+        deja = new Set(r.constat ? [r.constat.cle] : []);
+        if (r.constat) parle = true;
+      }
+      if (parle) journaux++;
+    }
+    console.log(`  tendances ${scenario} : ${journaux}/${n} journaux avec une phrase sur un an`);
+    assert.ok(journaux / n <= 0.08, `${scenario} : ${journaux}/${n}`);
+  }
+});
+
+test('tendances : un changement durable de 3 points est retrouvé au moins une fois sur trois (AR(1))', async () => {
+  const { tendances } = await import('../../public/js/analyse/tendances.js');
+  let trouves = 0;
+  const n = 40;
+  for (let seed = 700; seed < 700 + n; seed++) {
+    const j = generer({ jours: 560, seed, scenario: 'ar1', trous: 0.18 });
+    const debut = j.length - 70;
+    const jj = j.map((e, i) => (i >= debut ? { ...e, humeur: Math.max(1, Math.min(10, Math.round(e.humeur + 3))) } : e));
+    let deja = new Set();
+    let vu = false;
+    for (let i = debut + 14; i < jj.length; i++) {
+      const r = tendances(jj, jj[i].date, deja);
+      deja = new Set(r.constat ? [r.constat.cle] : []);
+      if (r.constat && r.constat.sens === 'haut') vu = true;
+    }
+    if (vu) trouves++;
+  }
+  console.log(`  tendances, changement de +3 : ${trouves}/${n}`);
+  assert.ok(trouves / n >= 1 / 3, `${trouves}/${n}`);
+});
+
+// v5 · Budget de bout en bout : au moins une phrase parmi bonnes journées, sommeil (jour même,
+// lendemain) et Tendances, avec la même mémoire d'affichage que analyze(), recalcul tous les
+// 3 jours pendant un an, 18 % de trous. Plafond : 10 % des journaux, scénario par scénario.
+test('budget de bout en bout : au plus 10 % de journaux avec une fausse phrase en un an', async () => {
+  const { tendances } = await import('../../public/js/analyse/tendances.js');
+  for (const scenario of ['ar1', 'ar1Long', 'lente', 'emploiDuTemps']) {
+    let journaux = 0;
+    const n = 30;
+    for (let seed = 100; seed < 100 + n; seed++) {
+      // emploiDuTemps sans effet (effet: 0) : la structure de la semaine seule, aucun vrai écart.
+      const j = generer({ jours: 760, seed, scenario, trous: 0.18, effet: 0 });
+      let deja = new Set();
+      let parle = false;
+      for (let k = 0; k < 365 && !parle; k += 3) {
+        const J = j[Math.min(j.length - 1, 370 + k)].date;
+        const bj = bonnesJournees(j, J, deja);
+        const so = sommeilHumeur(j, J, deja);
+        const t = tendances(j, J, deja);
+        deja = new Set([...bj.constats.map((c) => `bj:${c.cle}`), ...(so.meme.constat ? ['sommeil:meme'] : []), ...(so.lendemain.constat ? ['sommeil:lendemain'] : []), ...(t.constat ? [t.constat.cle] : [])]);
+        if (deja.size) parle = true;
+      }
+      if (parle) journaux++;
+    }
+    console.log(`  bout en bout ${scenario} : ${journaux}/${n} journaux avec une phrase sur un an`);
+    assert.ok(journaux / n <= 0.10, `${scenario} : ${journaux}/${n}`);
+  }
+});

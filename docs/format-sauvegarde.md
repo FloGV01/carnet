@@ -11,8 +11,8 @@
 ## sauvegarde.json
 
 ```json
-{ "format": "carnet-sauvegarde", "formatVersion": 2, "schemaVersion": 2,
-  "exportedAt": "2026-10-05T19:02:11.412Z", "app": { "version": "4.0.0" },
+{ "format": "carnet-sauvegarde", "formatVersion": 3, "schemaVersion": 3,
+  "exportedAt": "2026-10-06T19:02:11.412Z", "app": { "version": "5.0.0" },
   "partie": { "numero": 1, "total": 2 },
   "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "listes": 173, "meta": 2, "audios": 1 },
   "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "listes": [], "meta": [],
@@ -23,6 +23,7 @@
 - **Champ `partie`** : présent seulement dans un export en plusieurs fichiers.
 - **Enregistrements** : ils suivent le schéma du plan (§5.3). Les références de liste sont des identifiants (`liste:slug`), jamais des libellés.
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
+- **formatVersion 3 (v5)** : plusieurs contacts par jour, `journal.contacts: [{ avec, effet }]`. Une sauvegarde en formatVersion 2 est mise à niveau à l'import : `contactAvec` et `contactEffet` deviennent une ligne, telle quelle.
 - **formatVersion 2 (v4)** : tableau `humeurs` (humeurs du moment), champs `activites`, `contactAvec`, `contactEffet` dans le journal et `apresCoup` dans les épisodes. Une sauvegarde en formatVersion 1 est mise à niveau à l'import : `humeurs: []`, listes v4 ajoutées si absentes, `counts.listes` augmenté d'autant.
 
 ## Import

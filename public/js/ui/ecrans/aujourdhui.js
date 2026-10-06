@@ -1,7 +1,7 @@
 // Écran d'ouverture : l'entrée du jour, saisie en quelques touchers, sans bouton « Enregistrer ».
 import { html, useEffect, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
-import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais } from '../hooks.js';
+import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 import { EnteteJour } from '../composants/entete-jour.js';
@@ -21,6 +21,7 @@ import { estExplosion } from '../../domain/explosions.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { resumeContacts } from '../../domain/contacts.js';
 import { prochainRdv } from '../../domain/soins.js';
 import { libelleRdv } from './soins.js';
 
@@ -42,8 +43,30 @@ export function options(items, liste, actuel) {
 function resumeSport(e, carte) {
   return (e.activites || []).map((a) => [a.type && libelle(carte, a.type), a.duree && libelle(carte, a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(' · ');
 }
-function resumeContact(e, carte) {
-  return [(e.contactAvec || []).map((id) => libelle(carte, id)).join(', '), e.contactEffet && libelle(carte, e.contactEffet)].filter(Boolean).join(' · ');
+const resumeContact = (e, carte) => resumeContacts(e.contacts, (id) => libelle(carte, id));
+
+// Plusieurs contacts (v5) : une ligne par contact (avec qui, comment c'était), comme les activités.
+function DetailContact({ entree, items, surChanger }) {
+  const [enPlus, setEnPlus] = useState(false);
+  const lignes = entree.contacts || [];
+  const affichees = enPlus || lignes.length === 0 ? [...lignes, { avec: null, effet: null }] : lignes;
+  const changer = (i, champ) => (v) => {
+    const nouvelles = affichees.map((l, k) => (k === i ? { ...l, [champ]: v } : l)).filter((l) => (l.avec && l.avec.length) || l.effet);
+    setEnPlus(false);
+    surChanger(nouvelles.length ? nouvelles : null);
+  };
+  return html`<div class="detail-sport">
+    ${affichees.map((l, i) => html`<div class="activite" key=${i}>
+      <div class="activite-tete"><span class="etiquette">Contact ${i + 1}</span>
+        ${((l.avec && l.avec.length) || l.effet) && html`<button type="button" class="effacer" aria-label=${`Retirer le contact ${i + 1}`}
+          onClick=${() => { const n = lignes.filter((_, k) => k !== i); surChanger(n.length ? n : null); }}>${Icones.fermer()}</button>`}</div>
+      <${PastillesMultiples} etiquette=${`Contact ${i + 1} : avec qui`} options=${options(items, 'contactAvec', l.avec)} valeurs=${l.avec}
+        exclusifs=${new Set()} surChoix=${changer(i, 'avec')} teinte="contact" />
+      <${Segmente} etiquette=${`Contact ${i + 1} : comment c'était`} options=${options(items, 'contactEffet', l.effet)} valeur=${l.effet ?? null}
+        surChoix=${changer(i, 'effet')} teinte="contact" classe="large" />
+    </div>`)}
+    ${lignes.length > 0 && !enPlus && html`<button type="button" class="btn-lien action" onClick=${() => setEnPlus(true)}>${Icones.plus({ trait: 2 })}Un autre contact</button>`}
+  </div>`;
 }
 
 // Plusieurs activités : une ligne par activité (type, durée), une ligne vide en attente d'un choix.
@@ -84,6 +107,17 @@ export function Aujourdhui({ date: dateRoute }) {
   const [entree, setEntree] = useState(null);
   const [generation, setGeneration] = useState(0);
   const [confirmerEffacer, setConfirmerEffacer] = useState(false);
+  // « J'ai fini pour ce soir » (v5) : préférence d'affichage de cet appareil, jamais une donnée
+  // (rien n'est compté ni marqué ailleurs). La page repliée montre la phrase du jour.
+  const cleFini = `carnet:fini:${date}`;
+  const [fini, setFini] = useState(() => Boolean(lireLocal(cleFini)));
+  useEffect(() => { setFini(Boolean(lireLocal(cleFini))); }, [cleFini]);
+  const terminer = (oui) => {
+    try { for (const k of Object.keys(localStorage)) if (k.startsWith('carnet:fini:') && k !== cleFini) localStorage.removeItem(k); } catch { /* stockage indisponible */ }
+    ecrireLocal(cleFini, oui ? true : null);
+    setFini(oui);
+    window.scrollTo(0, 0);
+  };
 
   const { donnees } = useDonnees(async () => {
     const [lue, items, dates, journee] = await Promise.all([repo.journal.lire(date), repo.listes.items(), repo.journal.dates(), repo.meta.lire('journee')]);
@@ -129,7 +163,9 @@ export function Aujourdhui({ date: dateRoute }) {
 
   const carte = carteLibelles(items);
   const nExplosions = evenements ? evenements.episodes.filter(estExplosion).length : 0;
-  const resume = phraseResume('jour', entree, carte, { nExplosions }).map((x) => x.texte).join('');
+  const phrase = phraseResume('jour', entree, carte, { nExplosions });
+  const resume = phrase.map((x) => x.texte).join('');
+  const replie = fini && date === aujourdhui && !vide;
   const visibles = champsAffiches(journee, entree);
   // Un détail renseigné vaut aussi « Oui » quand le Oui / Non n'était pas encore choisi.
   const ecrireActivites = (activites) => {
@@ -138,9 +174,9 @@ export function Aujourdhui({ date: dateRoute }) {
     setEntree((e) => ({ ...e, ...changements }));
     return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
   };
-  const ecrireContact = (champs) => {
-    const changements = { ...champs };
-    if (Object.values(champs).some((v) => v != null) && entree.contactHumain == null) changements.contactHumain = true;
+  const ecrireContacts = (contacts) => {
+    const changements = { contacts };
+    if (contacts && contacts.length && entree.contactHumain == null) changements.contactHumain = true;
     setEntree((e) => ({ ...e, ...changements }));
     return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
   };
@@ -200,7 +236,12 @@ export function Aujourdhui({ date: dateRoute }) {
     ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
-    ${rendreChamps()}
+    ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
+      <p class="phrase-recap">${phrase.map((s) => (s.valeur ? html`<span class=${`valeur teinte-${s.rubrique}`}>${s.texte}</span>` : s.texte))}</p>
+      ${entree.pointsPositifs && html`<p class="fini-positifs">« ${entree.pointsPositifs} »</p>`}
+      <button type="button" class="btn-lien action" onClick=${() => terminer(false)}>Rouvrir la saisie</button>
+    </section>`}
+    ${!replie && html`${rendreChamps()}
     <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} />
 
     <div class="replis">
@@ -216,22 +257,14 @@ export function Aujourdhui({ date: dateRoute }) {
         <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
       </${Repli}>`}
       ${visibles.includes('contact') && html`<${Repli} cle="contact" titre="Contact en détail" resume=${resumeContact(entree, carte)} memoriser=${false}>
-        <div class="champ-jour">
-          <span class="etiquette">Avec qui</span>
-          <${PastillesMultiples} etiquette="Avec qui" options=${options(items, 'contactAvec', entree.contactAvec)} valeurs=${entree.contactAvec}
-            exclusifs=${new Set()} surChoix=${(v) => ecrireContact({ contactAvec: v })} teinte="contact" />
-        </div>
-        <div class="champ-jour">
-          <span class="etiquette">Comment c'était</span>
-          <${Segmente} etiquette="Comment c'était" options=${options(items, 'contactEffet', entree.contactEffet)} valeur=${entree.contactEffet}
-            surChoix=${(v) => ecrireContact({ contactEffet: v })} teinte="contact" classe="large" />
-        </div>
+        <${DetailContact} entree=${entree} items=${items} surChanger=${ecrireContacts} />
       </${Repli}>`}
       <${Repli} cle="notes" titre="Notes libres" resume=${entree.notes ? entree.notes.slice(0, 40) : null}>
         <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${3}
           cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
       </${Repli}>
     </div>
+    ${date === aujourdhui && !vide && html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>`}`}
 
     ${evenements && html`<section class="evenements-jour">
       <h2 class="libelle-section">Épisodes et symptômes</h2>
@@ -255,8 +288,8 @@ export function Aujourdhui({ date: dateRoute }) {
       texte=${`Les épisodes et symptômes de ce jour sont conservés.${evenements && evenements.avecMemo.has(`journal:${date}`) ? ' Le mémo vocal de cette journée est effacé aussi.' : ''}`}
       action="Effacer" surAnnuler=${() => setConfirmerEffacer(false)} surConfirmer=${effacerJournee} />`}
     <div class="actions-flottantes">
-      <a class="pilule pas-a-pas" href=${versHash('pas-a-pas', { date })} aria-label="Pas à pas">${Icones.pasAPas()}<span class="libelle-action">Pas à pas</span></a>
-      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}<span class="libelle-action">Moment</span></a>`}
+      <a class="pilule moment-difficile" href="#/moment-difficile" aria-label="Moment difficile">${Icones.respiration()}<span class="libelle-action">Moment difficile</span></a>
+      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}<span class="libelle-action">Humeur</span></a>`}
       <a class="fab" href="#/episode/nouveau">${Icones.plus({ trait: 2.2 })}<span>Épisode</span></a>
     </div>
   </main>`;

@@ -30,11 +30,42 @@ export function dureeNuit(coucher, lever) {
 export function bornesFenetre(fenetre, aujourdhui, premier) {
   if (fenetre === '7') return [addDays(aujourdhui, -6), aujourdhui];
   if (fenetre === '30') return [addDays(aujourdhui, -29), aujourdhui];
+  if (fenetre === '90') return [addDays(aujourdhui, -89), aujourdhui];
   return [premier && premier < aujourdhui ? premier : aujourdhui, aujourdhui];
 }
 
 const dans = (d, du, au) => d >= du && d <= au;
 const compte = (xs, f) => xs.reduce((n, x) => n + (f(x) ? 1 : 0), 0);
+
+// Paires (élément, précision) comptées en jours. par : { element: { precision: jours } } ;
+// jours : { element: jours distincts } (la longueur d'une barre, jamais une somme de paires).
+function pairesEnJours(jours, extraire) {
+  const par = {};
+  const total = {};
+  for (const j of jours) {
+    const paires = extraire(j);
+    for (const a of new Set(paires.map(([x]) => x))) total[a] = (total[a] || 0) + 1;
+    for (const cle of new Set(paires.map(([a, b]) => `${a}|${b}`))) {
+      const [a, b] = cle.split('|');
+      par[a] = par[a] || {};
+      par[a][b] = (par[a][b] || 0) + 1;
+    }
+  }
+  return { par, jours: total };
+}
+
+// Contacts : l'effet n'est accolé à une personne que si elle est seule sur la ligne. Une ligne à
+// plusieurs (« Famille, Collègues · Coûteux ») compte chaque personne sans effet, et son effet va
+// dans la rangée « À plusieurs » : jamais recopié sur chacun (domain/contacts.js).
+function pairesContacts(j) {
+  return (j.contacts || []).flatMap((c) => {
+    const avec = c.avec || [];
+    const effet = c.effet || 'aucun';
+    if (avec.length === 0) return [['sans', effet]];
+    if (avec.length === 1) return [[avec[0], effet]];
+    return [...avec.map((a) => [a, 'aucun']), ['plusieurs', effet]];
+  });
+}
 
 // Détails du soir (v4), comptés en jours : un jour compte une fois par élément, quel que soit
 // le nombre d'activités. Ordre : du plus fréquent au moins fréquent (égalités par id).
@@ -88,10 +119,14 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     sportDetail: {
       types: joursPar(jours, (j) => (j.activites || []).map((a) => a.type)),
       durees: joursPar(jours, (j) => (j.activites || []).map((a) => a.duree)),
+      paires: pairesEnJours(jours, (j) => (j.activites || []).map((a) => [a.type || 'sans', a.duree || 'aucun'])),
     },
     contactDetail: {
-      avec: joursPar(jours, (j) => j.contactAvec || []),
-      effet: joursPar(jours, (j) => (j.contactEffet ? [j.contactEffet] : [])),
+      avec: joursPar(jours, (j) => (j.contacts || []).flatMap((c) => c.avec || [])),
+      effet: joursPar(jours, (j) => (j.contacts || []).map((c) => c.effet)),
+      // Pour les barres « Avec qui, comment c'était » : en jours ; « aucun » : effet non précisé,
+      // « sans » : personne n'est noté, « plusieurs » : effet d'une ligne à plusieurs personnes.
+      paires: pairesEnJours(jours, pairesContacts),
     },
     lieux: { n: lieux.length, parLieu, bureau: parLieu['lieu:bureau'] || 0, teletravail: parLieu['lieu:teletravail'] || 0 },
     traitement: { n: tp.length, oui: compte(tp, (x) => x === 'traitementPris:oui'), partiel: compte(tp, (x) => x === 'traitementPris:partiel'), non: compte(tp, (x) => x === 'traitementPris:non') },

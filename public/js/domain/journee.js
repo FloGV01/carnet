@@ -25,7 +25,7 @@ export const champsVisibles = (j) => j.ordre.filter((c) => !j.masques.includes(c
 
 // Champs du journal portés par chaque champ du soir (détails compris).
 const DONNEES_CHAMP = {
-  lieu: ['lieu'], sommeil: ['sommeilRessenti'], humeur: ['humeur'], contact: ['contactHumain', 'contactAvec', 'contactEffet'],
+  lieu: ['lieu'], sommeil: ['sommeilRessenti'], humeur: ['humeur'], contact: ['contactHumain', 'contacts'],
   sport: ['sportMouvement', 'activites'], explosions: ['explosions'], traitement: ['traitementPris'], positifs: ['pointsPositifs'],
 };
 export const champRenseigne = (champ, entree) => Boolean(entree) && DONNEES_CHAMP[champ].some((k) => entree[k] != null);

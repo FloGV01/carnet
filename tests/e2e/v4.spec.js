@@ -35,10 +35,15 @@ test('sport et contact en détail : plusieurs activités, avec qui, comment c\'�
   await page.getByRole('button', { name: 'Une autre activité' }).click();
   await toucher(page, 'Activité 2 : type', 'Vélo');
   await page.getByRole('button', { name: /Contact en détail/ }).click();
-  await groupe(page, 'Avec qui').getByRole('button', { name: 'Famille' }).click();
-  await toucher(page, 'Comment c\'était', 'Coûteux');
+  await groupe(page, 'Contact 1 : avec qui').getByRole('button', { name: 'Famille' }).click();
+  await toucher(page, 'Contact 1 : comment c\'était', 'Coûteux');
+  // v5 : plusieurs contacts dans la journée.
+  await page.getByRole('button', { name: 'Un autre contact' }).click();
+  await groupe(page, 'Contact 2 : avec qui').getByRole('button', { name: 'Amis' }).click();
+  await toucher(page, 'Contact 2 : comment c\'était', 'Ressourçant');
   await expect.poll(() => entreeDuJour(page)).toMatchObject({
-    sportMouvement: true, contactHumain: true, contactAvec: ['contactAvec:famille'], contactEffet: 'contactEffet:couteux',
+    sportMouvement: true, contactHumain: true,
+    contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:couteux' }, { avec: ['contactAvec:amis'], effet: 'contactEffet:ressourcant' }],
     activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: null }],
   });
   await expect(groupe(page, 'Sport / mouvement').getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true');
@@ -63,14 +68,10 @@ test('Mon plan dans l\'épisode : feuille en lecture seule, fermée sur la même
   await expect(parcours.getByRole('button', { name: 'Mon plan' })).toBeFocused();
 });
 
-test('après coup : seulement pour une explosion, étapes passables, « Je ne sais pas » exclusif, ajout à Mon plan, retour', async ({ page }) => {
+test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas » exclusif, ajout à Mon plan, retour', async ({ page }) => {
   const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-03', heure: '20:00', emotion: 'emotion:colere', reaction: 'reaction:retrait_isolement' })).id);
   await page.evaluate((i) => { location.hash = `#/episode/${i}`; }, id);
   await expect(page.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Après coup/ })).toHaveCount(0);
-  await repo(page, (i) => window.__carnet.repo.episodes.modifier(i, { reaction: 'reaction:explosion' }), id);
-  await page.reload();
-  await aller(page, `#/episode/${id}`);
   await page.getByRole('link', { name: /Après coup/ }).click();
   const vue = page.getByRole('dialog', { name: 'Après coup' });
   await expect(vue.getByRole('heading', { name: 'C\'était plutôt…' })).toBeVisible();
@@ -118,7 +119,7 @@ test('Réglages › Ma journée : afficher le compteur, changer l\'ordre ; Aujou
   expect(groupes.slice(0, 2)).toEqual(['Humeur', 'Lieu']);
 });
 
-test('Analyse : avant tes explosions et profil de ta journée, avec tes notes seulement', async ({ page }) => {
+test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure, avec tes notes seulement', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     for (const [d, f] of [['2026-10-01', ['fragilite:fatigue']], ['2026-10-02', ['fragilite:fatigue', 'fragilite:faim']], ['2026-10-03', null]]) {
@@ -127,14 +128,14 @@ test('Analyse : avant tes explosions et profil de ta journée, avec tes notes se
     }
   });
   await page.getByRole('link', { name: 'Analyse' }).click();
-  const avant = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Avant tes explosions' }) });
+  const avant = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Tes moments, étape par étape' }) });
   await expect(avant).toContainText('Conflit (3 sur 3)');
   await expect(avant).toContainText('Fatigue (2 sur 2)');
   await expect(avant).not.toContainText('Faim');
   await expect(avant).toContainText('Ce sont tes notes, rassemblées : pas des causes.');
-  const profil = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Profil de ta journée' }) });
-  await expect(profil).toContainText('10 h – 12 h');
-  await expect(profil).toContainText('humeur 5,0 · énergie : basse 3');
+  const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
+  await journee.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('humeur du moment 5,0 (peu de jours) · énergie : basse 3 jours');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
 

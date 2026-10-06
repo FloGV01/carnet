@@ -23,6 +23,8 @@ export const APRES_COUP = {
   autreFacon: T.texte, siJe: T.texte, alorsJe: T.texte, tensionApres: T.int(1, 10),
 };
 export const ACTIVITE = { type: T.ref('typeSport'), duree: T.ref('dureeSport') };
+// Un contact de la journée (v5) : avec qui (plusieurs choix), comment c'était.
+export const CONTACT = { avec: T.refs('contactAvec'), effet: T.ref('contactEffet') };
 
 // cles : champs techniques. saisis : champs que l'utilisateur renseigne.
 export const SCHEMAS = {
@@ -32,7 +34,7 @@ export const SCHEMAS = {
       lieu: T.ref('lieu'), sommeilRessenti: T.ref('sommeil'), humeur: T.int(1, 10), contactHumain: T.bool,
       sportMouvement: T.bool, explosions: T.int(0, 5), traitementPris: T.ref('traitementPris'), pointsPositifs: T.texte,
       heureCoucher: T.heure, heureLever: T.heure, reveilsNocturnes: T.int(0, 5), notes: T.texte,
-      activites: T.lignes(ACTIVITE), contactAvec: T.refs('contactAvec'), contactEffet: T.ref('contactEffet'),
+      activites: T.lignes(ACTIVITE), contacts: T.lignes(CONTACT),
     },
   },
   episodes: {

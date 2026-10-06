@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '1337b6f88d24';
+const VERSION = '0c7fb3b2ac25';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -20,6 +20,7 @@ const FICHIERS = [
   "./js/analyse/calendrier.js",
   "./js/analyse/classements.js",
   "./js/analyse/fenetres.js",
+  "./js/analyse/frise.js",
   "./js/analyse/index.js",
   "./js/analyse/moments.js",
   "./js/analyse/ressemblance.js",
@@ -27,6 +28,7 @@ const FICHIERS = [
   "./js/analyse/seuils.js",
   "./js/analyse/sommeil.js",
   "./js/analyse/stats.js",
+  "./js/analyse/tendances.js",
   "./js/analyse/textes.js",
   "./js/app.js",
   "./js/db/erreurs.js",
@@ -36,6 +38,7 @@ const FICHIERS = [
   "./js/db/sauvegarde.js",
   "./js/db/zip.js",
   "./js/domain/champs.js",
+  "./js/domain/contacts.js",
   "./js/domain/dates.js",
   "./js/domain/explosions.js",
   "./js/domain/historique.js",
@@ -97,10 +100,10 @@ const FICHIERS = [
   "./js/ui/ecrans/historique.js",
   "./js/ui/ecrans/listes.js",
   "./js/ui/ecrans/ma-journee.js",
+  "./js/ui/ecrans/moment-difficile.js",
   "./js/ui/ecrans/moment.js",
   "./js/ui/ecrans/mon-plan.js",
   "./js/ui/ecrans/parcours-fiche.js",
-  "./js/ui/ecrans/parcours-jour.js",
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
   "./js/ui/ecrans/reglages.js",

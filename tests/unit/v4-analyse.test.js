@@ -43,7 +43,7 @@ test('avant tes explosions : 3 au moins, notes réunies, ce qui a aidé les autr
   assert.equal(r.repere, 7);
   assert.deepEqual(r.declencheurs, { n: 3, elements: [{ id: 'declencheur:conflit', n: 3 }] });
   assert.deepEqual(r.siAlors, [{ si: 'je sens la chaleur', alors: 'je sors' }]);
-  assert.deepEqual(r.aide, ['marcher dix minutes']);
+  assert.deepEqual(r.aide, [{ texte: 'marcher dix minutes', date: '02/10' }]);
 });
 
 test('analyse : les épisodes « Explosion » font foi quand le compteur du soir est masqué', () => {
@@ -52,7 +52,7 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
   const data = { journal, episodes, symptomes: [], traitements: [], humeurs: [] };
   const r = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.deepEqual([r.fenetres['7'].explosions.n, r.fenetres['7'].explosions.total, r.fenetres['7'].explosions.jours], [2, 1, 1]);
-  assert.ok(r.moments['7'] && r.avantExplosions['7']);
+  assert.ok(r.moments['7'] && r.tesMoments['7'] && r.frise['7'] && r.tendances);
   // Avant la mise à jour v4, un compteur vide reste inconnu : seul le jour de l'épisode compte.
   const avant = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-30' });
   assert.deepEqual([avant.fenetres['7'].explosions.n, avant.fenetres['7'].explosions.total], [1, 1]);
@@ -65,12 +65,12 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
 test('export PSY v4 : détails sport et contact, humeurs du moment, après coup sous l\'épisode', () => {
   const journal = [{ date: '2026-09-30', humeur: 6, sportMouvement: true, contactHumain: true,
     activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: null }],
-    contactAvec: ['contactAvec:famille', 'contactAvec:collegues'], contactEffet: 'contactEffet:couteux' }];
+    contacts: [{ avec: ['contactAvec:famille', 'contactAvec:collegues'], effet: 'contactEffet:couteux' }, { avec: ['contactAvec:amis'], effet: 'contactEffet:ressourcant' }] }];
   const episodes = [{ id: 'e1', date: '2026-09-30', heure: '18:00', emotion: 'emotion:colere', intensite: 8, reaction: 'reaction:explosion',
     apresCoup: { types: ['typeExplosion:colere'], fragilites: ['fragilite:fatigue'], signes: ['signe:chaleur'], repereA: 6, pensees: 'il le fait exprès', siJe: 'je sens la chaleur', alorsJe: 'je sors cinq minutes', tensionApres: 3 } }];
   const humeurs = [{ id: 'h1', date: '2026-09-30', heure: '10:05', humeur: 5, energie: 'energie:basse' }, { id: 'h2', date: '2026-09-30', heure: '14:00', humeur: 7, energie: null }];
   const t = exportPsy({ journal, episodes, symptomes: [], humeurs }, { aujourdhui: '2026-09-30', carte });
-  assert.match(t, /mer 30\/09 · humeur 6 · contact oui \(famille, collègues · coûteux\) · sport oui \(Marche 30 à 60 min, Vélo\) · explosions 1/);
+  assert.match(t, /mer 30\/09 · humeur 6 · contact oui \(famille, collègues : coûteux ; amis : ressourçant\) · sport oui \(Marche 30 à 60 min, Vélo\) · explosions 1/);
   assert.match(t, /\n {2}humeur du moment : 10:05 5 \(énergie basse\) · 14:00 7/);
   assert.match(t, /\n {2}après coup :\n {4}c'était plutôt : colère · ce qui me fragilisait déjà : fatigue\n {4}premiers signes : chaleur · remarqué à 6\/10/);
   assert.match(t, /pour la prochaine fois : si je sens la chaleur, alors je sors cinq minutes/);
@@ -108,8 +108,8 @@ test('mon plan : textes propres, si… alors… sans doublon, plan vide reconnu'
 test('fenêtres v4 : détails sport et contact comptés en jours', async () => {
   const { indicateurs } = await import('../../public/js/analyse/fenetres.js');
   const journal = [
-    { date: '2026-10-01', activites: [{ type: 'typeSport:marche', duree: 'dureeSport:moins_15' }, { type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }], contactAvec: ['contactAvec:famille'], contactEffet: 'contactEffet:ressourcant' },
-    { date: '2026-10-02', activites: [{ type: 'typeSport:velo', duree: null }], contactAvec: ['contactAvec:famille', 'contactAvec:amis'], contactEffet: null },
+    { date: '2026-10-01', activites: [{ type: 'typeSport:marche', duree: 'dureeSport:moins_15' }, { type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }], contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:ressourcant' }] },
+    { date: '2026-10-02', activites: [{ type: 'typeSport:velo', duree: null }], contacts: [{ avec: ['contactAvec:famille', 'contactAvec:amis'], effet: null }] },
     { date: '2026-10-03', humeur: 5 },
   ];
   const f = indicateurs({ journal, episodes: [], symptomes: [] }, '2026-10-01', '2026-10-03');

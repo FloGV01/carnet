@@ -315,7 +315,6 @@
 }
 .actions-flottantes > * { pointer-events: auto; }
 .actions-flottantes .fab { position: static; }
-.pas-a-pas { font-size: var(--t-sous); }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
 
 /* Réglages */
@@ -385,17 +384,29 @@
 .activite-tete .etiquette { margin: 0; }
 .repli-corps .etiquette { font-size: var(--t-sous); margin-bottom: 0; }
 /* Bande flottante : tout est en em, pour que sa largeur suive la taille du texte iOS. Quand elle ne
-   tient plus sur une ligne (grand texte, écran étroit), les libellés « Pas à pas » et « Moment »
+   tient plus sur une ligne (grand texte, écran étroit), les libellés « Moment difficile » et « Humeur »
    s'effacent : restent les icônes, avec leur nom accessible. */
-.actions-flottantes { flex-wrap: nowrap; gap: .4em; container: bande / inline-size; }
+.actions-flottantes { flex-wrap: nowrap; gap: .3em; container: bande / inline-size; }
 .actions-flottantes > * { flex: none; white-space: nowrap; }
-.actions-flottantes .pilule { padding: 0 .65em 0 .55em; gap: .4em; font-size: var(--t-sous); }
+.actions-flottantes .pilule { padding: 0 .6em 0 .5em; gap: .4em; font-size: var(--t-sous); }
 .actions-flottantes .pilule svg { width: 1.2em; height: 1.2em; }
-.actions-flottantes .fab { padding: 0 .75em 0 .6em; gap: .35em; }
+.actions-flottantes .fab { padding: 0 .7em 0 .55em; gap: .35em; }
 .actions-flottantes .fab svg { width: 1.15em; height: 1.15em; }
-@container bande (max-width: 20.1em) {
-  .actions-flottantes .libelle-action { display: none; }
-  .actions-flottantes .pilule { padding: 0 .75em; }
+/* Paliers mesurés dans WebKit (e2e « sans défilement » et « grand texte ») : d'abord « Humeur »
+   perd son icône (seule, elle se lirait comme un signe moins), puis « Moment difficile » son
+   libellé, puis « Humeur » le sien (icône et nom accessible gardés). */
+/* Mesures (em de la bande) : 22,28 tout ; 20,87 palier 1 ; 13,69 palier 2 ; 11,37 palier 3. */
+@container bande (max-width: 22.3em) {
+  .actions-flottantes .moment svg { display: none; }
+  .actions-flottantes .moment { padding: 0 .55em; }
+}
+@container bande (max-width: 20.9em) {
+  .actions-flottantes .moment-difficile .libelle-action { display: none; }
+  .actions-flottantes .moment-difficile { padding: 0 .75em; }
+}
+@container bande (max-width: 13.8em) {
+  .actions-flottantes .moment svg { display: inline; }
+  .actions-flottantes .moment .libelle-action { display: none; }
 }
 
 /* Réglages › Ma journée, Mon plan, Après coup, Humeur du moment (v4) */
@@ -429,3 +440,43 @@
 .profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }
+/* Moment difficile (v5) : cercle de respiration (10 s par cycle, la seule animation longue de
+   l'app, utile au guidage). Mouvement réduit : base.css coupe l'animation, la phase écrite reste. */
+.moment-difficile { gap: 28px; }
+.respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
+.cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
+.cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--info-bg); border: 2px solid var(--accent); transform: scale(.55); }
+.cercle-respiration.en-cours span { animation: respirer 10s ease-in-out infinite; }
+@keyframes respirer { 0% { transform: scale(.55); } 50% { transform: scale(1); } 100% { transform: scale(.55); } }
+.phase-respiration { font: 600 1.35rem/1.3 var(--police-titre); min-height: 1.8em; text-align: center; color: var(--text); }
+.respiration .btn svg { width: 20px; height: 20px; }
+.plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
+/* « J'ai fini pour ce soir » (v5) */
+.fini-bouton { align-self: stretch; margin-top: 4px; }
+.fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.fini-soir .phrase-recap { margin-top: 0; }
+.fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }
+/* Analyse v5 : Ma semaine, sélecteur collant, Mes jours, Ta journée, barres en jours */
+.lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; }
+.ma-semaine .repli { margin: 0; }
+.selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
+.g-moyenne { stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+.g-autre { fill: var(--surface); stroke: var(--c); stroke-width: 1.6; }
+.g-choix { fill: var(--surface-2); }
+.g-energie-1 { fill: var(--c); opacity: .3; }
+.g-energie-2 { fill: var(--c); opacity: .6; }
+.g-energie-3 { fill: var(--c); }
+.g-rampe-0 { fill: var(--hairline); }
+.g-rampe-1 { fill: var(--c); opacity: .3; }
+.g-rampe-2 { fill: var(--c); opacity: .55; }
+.g-rampe-3 { fill: var(--c); opacity: .8; }
+.g-rampe-4 { fill: var(--c); }
+.legende-frise { flex-wrap: wrap; gap: 4px 12px; }
+.legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
+.legende-frise svg { width: 14px; height: 12px; }
+.detail-colonne { font-size: var(--t-sous); line-height: 1.45; text-wrap: pretty; padding: 8px 10px; border-radius: var(--r-moyen); background: var(--surface-2); }
+.liste-barres { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.ligne-barre { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); gap: 2px 10px; align-items: center; }
+.barre-nom { font-size: var(--t-sous); font-weight: 600; overflow-wrap: anywhere; }
+.barre-svg { width: 100%; height: 12px; display: block; }
+.barre-detail { grid-column: 2; font-size: var(--t-note); color: var(--text-2); font-variant-numeric: tabular-nums; }

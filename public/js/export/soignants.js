@@ -1,12 +1,13 @@
 // Modèle de la vue soignants (une page A4, voix neutre). Exclut : situations, notes, points
 // positifs, « ce qui a aidé », détail jour par jour, signal, mémos. Pur.
-import { addDays, diffDays, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
+import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
 import { trierRdv } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
 import { journalAvecExplosions } from '../domain/explosions.js';
+import { frise } from '../analyse/frise.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -58,6 +59,18 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   if (s.meme.statut === 'ok' || s.lendemain.statut === 'ok') { const ph = phrasesSommeil(s, carte).join(' '); reperes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`); }
   if (!reperes.length) reperes.push(PAS_ASSEZ);
 
+  // Évolution (v5) : la frise « Mes jours », par semaine sur 12 semaines, ou par mois sur 12 mois
+  // quand l'historique dépasse 26 semaines. Jamais le détail jour par jour, aucune phrase.
+  const parMois = premier && diffDays(premier, aujourdhui) + 1 > 26 * 7;
+  let duFrise = addDays(lundiDe(aujourdhui), -77);
+  if (parMois) {
+    let [a, m] = aujourdhui.split('-').map(Number);
+    m -= 11;
+    while (m < 1) { m += 12; a -= 1; }
+    duFrise = `${a}-${String(m).padStart(2, '0')}-01`;
+  }
+  const f = frise(data, duFrise, aujourdhui);
+
   const debut90 = addDays(aujourdhui, -89);
   const lignesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
     .sort((a, b) => `${b.date}${b.createdAt || ''}`.localeCompare(`${a.date}${a.createdAt || ''}`)).slice(0, 4)
@@ -70,7 +83,8 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     sousTitre: 'Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.',
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
-    semaines: analyse.semaines,
+    titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, ...c }) => c) },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     reperes,

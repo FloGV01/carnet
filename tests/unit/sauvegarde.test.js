@@ -134,7 +134,7 @@ test('v4 : une sauvegarde v1 se met à niveau (listes v4 ajoutées, aucune humeu
     data: { journal: [{ date: '2026-09-30', humeur: 6 }], listes: [{ id: 'lieu:bureau', liste: 'lieu', libelle: 'Au bureau', ordre: 10, archive: false, alias: [] }] },
   };
   const a = analyserFichiers(json(v1));
-  assert.equal(a.sauvegarde.formatVersion, 2);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(a.valides.humeurs, []);
   assert.equal(a.valides.listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
   assert.ok(a.valides.listes.find((i) => i.id === 'typeExplosion:colere'));
@@ -146,7 +146,7 @@ test('v4 : une sauvegarde v1 se met à niveau (listes v4 ajoutées, aucune humeu
   await repo.journal.patch('2026-09-30', { activites: [{ type: 'typeSport:velo', duree: 'dureeSport:plus_60' }] });
   const [f] = await exporter(repo, { versionApp: 'test' });
   const contenu = JSON.parse(new TextDecoder().decode(concatener(f.morceaux)));
-  assert.equal(contenu.formatVersion, 2);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.counts.humeurs, 1);
   const b = analyserFichiers([{ nom: f.nom, octets: concatener(f.morceaux) }]);
   assert.equal(b.valides.humeurs[0].energie, 'energie:haute');
@@ -169,12 +169,31 @@ test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les resta
   assert.equal(await b.repo.meta.lire('journee'), null, 'absente du fichier : retirée');
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je sors' });
   assert.equal(await b.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'absente du fichier : gardée');
-  assert.equal(await b.repo.meta.lire('schema'), 2);
+  assert.equal(await b.repo.meta.lire('schema'), 3);
 
   await revenirAvantImport(b.repo);
   assert.deepEqual(metaRemplacee([{ cle: 'monPlan', valeur: { a: 1 } }, { cle: 'journee', valeur: { b: 2 } }, { cle: 'schema', valeur: 2 }, { cle: 'explosionsDepuis', valeur: 'x' }],
     [{ cle: 'journee', valeur: { b: 2 } }]), ['monPlan'], 'aperçu : seul ce qui change est annoncé');
   assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
-  assert.equal(await b.repo.meta.lire('schema'), 2);
+  assert.equal(await b.repo.meta.lire('schema'), 3);
+});
+
+test('v5 : une sauvegarde v2 (un détail de contact par jour) devient une ligne de contacts, telle quelle', () => {
+  const json = (o) => [{ nom: 'x.json', octets: enc.encode(JSON.stringify(o)) }];
+  const v2 = {
+    format: 'carnet-sauvegarde', formatVersion: 2, exportedAt: '2026-10-05T19:00:00.000Z',
+    counts: { journal: 3 },
+    data: { journal: [
+      { date: '2026-10-03', contactHumain: true, contactAvec: ['contactAvec:famille', 'contactAvec:collegues'], contactEffet: 'contactEffet:couteux' },
+      { date: '2026-10-04', contactHumain: true, contactAvec: null, contactEffet: 'contactEffet:neutre' },
+      { date: '2026-10-05', humeur: 6, contactAvec: null, contactEffet: null },
+    ] },
+  };
+  const a = analyserFichiers(json(v2));
+  const j = Object.fromEntries(a.valides.journal.map((e) => [e.date, e]));
+  assert.deepEqual(j['2026-10-03'].contacts, [{ avec: ['contactAvec:famille', 'contactAvec:collegues'], effet: 'contactEffet:couteux' }], 'l\'effet reste attaché aux deux ensemble');
+  assert.deepEqual(j['2026-10-04'].contacts, [{ avec: null, effet: 'contactEffet:neutre' }]);
+  assert.equal(j['2026-10-05'].contacts, null);
+  assert.ok(a.valides.journal.every((e) => !('contactAvec' in e) && !('contactEffet' in e)));
 });

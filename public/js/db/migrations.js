@@ -4,7 +4,7 @@
 import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { DataError } from './erreurs.js';
 
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs'];
 export const MAX_SNAPSHOTS = 3;
 
@@ -35,6 +35,27 @@ export const MIGRATIONS = {
     }
     // Les réglages du soir ne sont pas écrits ici : leur valeur par défaut s'applique à la lecture.
     tx.objectStore('meta').put({ cle: 'schema', valeur: 2 });
+  },
+  // v5 : plusieurs contacts par jour. contactAvec et contactEffet (v4, un détail par jour)
+  // deviennent une seule ligne de contacts, telle quelle (domain/contacts.js fait de même pour les
+  // sauvegardes). Règle recopiée ici pour que la migration reste figée. Synchrone (curseur).
+  3(db, tx) {
+    const journal = tx.objectStore('journal');
+    const r = journal.openCursor();
+    r.onsuccess = () => {
+      const c = r.result;
+      if (!c) return;
+      const e = c.value;
+      if ('contactAvec' in e || 'contactEffet' in e) {
+        const { contactAvec, contactEffet, ...reste } = e;
+        const avec = Array.isArray(contactAvec) && contactAvec.length ? contactAvec : null;
+        const effet = typeof contactEffet === 'string' && contactEffet ? contactEffet : null;
+        const contacts = Array.isArray(reste.contacts) ? reste.contacts : [];
+        c.update(avec || effet ? { ...reste, contacts: [...contacts, { avec, effet }] } : reste);
+      }
+      c.continue();
+    };
+    tx.objectStore('meta').put({ cle: 'schema', valeur: 3 });
   },
 };
 

@@ -9,8 +9,20 @@ export const REGLES = {
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
   moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
+  tendances: "La règle : comparer l'humeur du soir des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
+export const PIED_TENDANCES = 'Une observation sur tes chiffres, pas une explication.';
+export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les soirs où une humeur est notée.";
+export const SANS_ECART = "Pas d'écart net entre ces 4 semaines et les 8 d'avant.";
+
+// Tendances (v5) : même tournure dans les deux sens, sans adjectif ni jugement.
+export function phraseTendance(c, voix = 'tu', { court = false } = {}) {
+  const qui = { tu: 'ton humeur du soir est', je: 'mon humeur du soir est', neutre: "l'humeur du soir est" }[voix];
+  const sens = c.sens === 'haut' ? 'plus haute' : 'plus basse';
+  if (court) return `${qui} ${sens} : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
+  return `Ces 4 dernières semaines, ${qui} ${sens} que sur les 8 semaines d'avant : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
+}
 
 const POSSESSIF = { tu: 'tes', je: 'mes', neutre: 'les' };
 

@@ -23,7 +23,7 @@ export function Rappel() {
     <h2 class="libelle-section">Humeur du moment</h2>
     ${heures.length === 0
       ? html`<p class="note-import">Choisis d'abord tes heures dans Réglages › Ma journée.</p>`
-      : html`<p class="note-import">Refais les mêmes étapes pour chaque heure : ${heures.map(pad).join(', ')}. Texte de la notification : « Humeur du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Moment ».</p>`}
+      : html`<p class="note-import">Refais les mêmes étapes pour chaque heure : ${heures.map(pad).join(', ')}. Texte de la notification : « Humeur du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Humeur », en bas.</p>`}
     <p class="note-import">Pas d'action « Ouvrir les URL » : elle ouvrirait Safari, où Carnet est vide. Garde plutôt Carnet dans le Dock.</p>
     <p class="note-import">Pour couper un rappel : désactive son automatisation dans Raccourcis.</p>
   </main>`;

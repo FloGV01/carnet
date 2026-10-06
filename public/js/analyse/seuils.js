@@ -28,5 +28,18 @@ export const SEUILS = Object.freeze({
   // Profil : un créneau s'affiche avec des relevés d'au moins 3 jours différents.
   // Avant tes explosions : une liste montre ses éléments notés au moins 2 fois.
   moments: { minJours: 3, largeurCreneau: 2 },
-  explosions: { minExplosions: 3, maxElements: 3, maxTextes: 5, minTete: 2 },
+  explosions: { minExplosions: 3, maxElements: 3, maxTextes: 5, minTete: 2, maxCitations: 3 },
+  // v5 · Mes jours : une colonne par jour jusqu'à 31 jours, par semaine jusqu'à 26 semaines, par
+  // mois au-delà. Moyenne des 7 jours tracée avec au moins 4 valeurs ; semaine pleine à 3 humeurs ;
+  // mois affiché à partir de 3 humeurs, plein à partir de 10.
+  frise: { joursJusqua: 31, semainesJusqua: 26, minMoyenne7: 4, semainePleine: 3, moisMin: 3, moisPlein: 10 },
+  // v5 · Ta journée heure par heure : anneau (moyenne fragile) sous 5 jours.
+  journee: { minJoursPlein: 5 },
+  // v5 · Tendances (humeur du soir) : R = 28 derniers jours, B = 56 jours d'avant ; échelle tirée
+  // des fenêtres de 28 jours de l'année précédente. zEntree, zSortie calibrés (docs/decisions.md).
+  tendances: {
+    recent: 28, avant: 56, lot: 28, pasLots: 7, historique: 365, minLotHumeurs: 16, minLots: 6,
+    varPlancher: 0.04, facteur: 1.5, minRecent: 10, minAvant: 20, tauxSaisie: 0.6, minJoursHistoire: 84,
+    zEntree: 3.5, zSortie: 2, ecartMin: 1, ecartSortie: 0.7, joursStables: 7,
+  },
 });

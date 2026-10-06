@@ -8,6 +8,6 @@ test('l\'app se relance hors ligne une fois le service worker prêt', async ({ p
   await page.reload();
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
   await page.getByRole('link', { name: 'Réglages' }).click();
-  await expect(page.getByText('prêt')).toBeVisible();
+  await expect(page.getByText('prêt', { exact: true })).toBeVisible();
   await context.setOffline(false);
 });

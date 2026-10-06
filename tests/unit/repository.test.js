@@ -9,7 +9,7 @@ test('base neuve : 173 éléments de liste (v1 et v4), aujourd\'hui suit le jour
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 2);
+  assert.equal(await repo.meta.lire('schema'), 3);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {

@@ -4,8 +4,9 @@
 import { addDays, formaterJourCourt, formaterDateNumerique, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
-import { nombre, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
+import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
 import { journalAvecExplosions } from '../domain/explosions.js';
+import { resumeContacts } from '../domain/contacts.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
 const couper = (t) => {
@@ -16,12 +17,12 @@ const ouiNon = (v) => (v ? 'oui' : 'non');
 const minuscule = (t) => (t && t.length > 1 && t[1] === t[1].toLowerCase() ? t[0].toLowerCase() + t.slice(1) : t);
 const listeLib = (ids, lib) => (ids || []).map((id) => minuscule(lib(id))).join(', ');
 
-// « Marche 30 à 60 min, Vélo » ; « Famille, Collègues · coûteux ».
+// « Marche 30 à 60 min, Vélo » ; « famille, collègues : coûteux ; amis ».
 function detailSport(j, lib) {
   return (j.activites || []).map((a) => [a.type && lib(a.type), a.duree && lib(a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(', ');
 }
 function detailContact(j, lib) {
-  return [listeLib(j.contactAvec, lib), j.contactEffet && minuscule(lib(j.contactEffet))].filter(Boolean).join(' · ');
+  return resumeContacts(j.contacts, lib, { minuscule, pourExport: true });
 }
 
 function ligneJour(j, lib, moments = []) {
@@ -114,6 +115,8 @@ export function reperesPsy(analyse, carte) {
     const ph = phrasesSommeil(s, carte).join(' ');
     lignes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`);
   } else lignes.push(`Sommeil et humeur : ${PAS_ASSEZ.charAt(0).toLowerCase()}${PAS_ASSEZ.slice(1)}`);
+  // Tendances (v5) : sur leurs propres fenêtres, pas sur tout l'historique, d'où le préfixe.
+  if (analyse.tendances && analyse.tendances.constat) lignes.push(`Tendances (4 dernières semaines contre les 8 d'avant) : ${phraseTendance(analyse.tendances.constat, 'je', { court: true })}`);
   return lignes;
 }
 

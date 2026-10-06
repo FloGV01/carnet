@@ -55,11 +55,13 @@ export function Reglages() {
     await sauvegarde.recharger();
   };
   const signal = infos.reglages ? infos.reglages.signal !== false : true;
-  const basculerSignal = (v) => {
-    const reglages = { ...(infos.reglages || {}), signal: v };
+  const tendances = infos.reglages ? infos.reglages.tendances !== false : true;
+  const basculer = (cle) => (v) => {
+    const reglages = { ...(infos.reglages || {}), [cle]: v };
     setInfos((i) => ({ ...i, reglages }));
     repo.meta.ecrire('reglages', reglages);
   };
+  const basculerSignal = basculer('signal');
   const s = sauvegarde.infos;
   const fichiers = sauvegarde.fichiers;
 
@@ -79,6 +81,7 @@ export function Reglages() {
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
     <p class="aide-carte">Enregistrer dans Fichiers, puis iCloud Drive, dossier Carnet.</p>
+    <p class="aide-carte">Supprimer l'icône efface tout ce qui est noté ici. Pour une mise à jour, le bandeau « Nouvelle version prête » suffit.</p>
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 
@@ -96,6 +99,11 @@ export function Reglages() {
         <${Interrupteur} etiquette="Signal de ressemblance" actif=${signal} surChanger=${basculerSignal} />
       </div>
       <p class="note-carte-interne marge-interne">Une ligne « Pour info » dans Analyse quand les derniers jours ressemblent, dans les chiffres, à ceux qui ont précédé des périodes plus basses.</p>
+      <div class="ligne-interrupteur">
+        <span class="ligne-libelle">Tendances</span>
+        <${Interrupteur} etiquette="Tendances" actif=${tendances} surChanger=${basculer('tendances')} />
+      </div>
+      <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur du soir des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
       <div class="champ-carte">
         <label class="libelle-carte" for="prenom-soignants">Prénom pour la vue soignants</label>
         <input id="prenom-soignants" class="champ-ligne" autocomplete="off" defaultValue=${infos.prenom || ''}
