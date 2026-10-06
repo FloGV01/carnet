@@ -47,7 +47,7 @@ const C = {
   rappel: 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z M10 20.5a2 2 0 0 0 4 0',
   monter: 'M12 19V5 M6 11l6-6 6 6',
   descendre: 'M12 5v14 M6 13l6 6 6-6',
-  pasAPas: 'M4 7.5h12v12H4z M8 4.5h12v12',
+  respiration: 'M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0 M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0',
   bulle: 'M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z',
   etape: 'M5 12h12 M13 8l4 4-4 4',
   // Guide

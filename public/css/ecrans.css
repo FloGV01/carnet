@@ -315,7 +315,6 @@
 }
 .actions-flottantes > * { pointer-events: auto; }
 .actions-flottantes .fab { position: static; }
-.pas-a-pas { font-size: var(--t-sous); }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
 
 /* Réglages */
@@ -385,7 +384,7 @@
 .activite-tete .etiquette { margin: 0; }
 .repli-corps .etiquette { font-size: var(--t-sous); margin-bottom: 0; }
 /* Bande flottante : tout est en em, pour que sa largeur suive la taille du texte iOS. Quand elle ne
-   tient plus sur une ligne (grand texte, écran étroit), les libellés « Pas à pas » et « Moment »
+   tient plus sur une ligne (grand texte, écran étroit), les libellés « Moment difficile » et « Humeur »
    s'effacent : restent les icônes, avec leur nom accessible. */
 .actions-flottantes { flex-wrap: nowrap; gap: .4em; container: bande / inline-size; }
 .actions-flottantes > * { flex: none; white-space: nowrap; }
@@ -393,7 +392,12 @@
 .actions-flottantes .pilule svg { width: 1.2em; height: 1.2em; }
 .actions-flottantes .fab { padding: 0 .75em 0 .6em; gap: .35em; }
 .actions-flottantes .fab svg { width: 1.15em; height: 1.15em; }
-@container bande (max-width: 20.1em) {
+/* Largeurs mesurées dans WebKit : 22,75 em avec les trois libellés, 19,03 em sans « Humeur ». */
+@container bande (max-width: 22.85em) {
+  .actions-flottantes .moment .libelle-action { display: none; }
+  .actions-flottantes .moment { padding: 0 .75em; }
+}
+@container bande (max-width: 19.1em) {
   .actions-flottantes .libelle-action { display: none; }
   .actions-flottantes .pilule { padding: 0 .75em; }
 }
@@ -429,3 +433,19 @@
 .profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }
+/* Moment difficile (v5) : cercle de respiration (10 s par cycle, la seule animation longue de
+   l'app, utile au guidage). Mouvement réduit : base.css coupe l'animation, la phase écrite reste. */
+.moment-difficile { gap: 28px; }
+.respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
+.cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
+.cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--info-bg); border: 2px solid var(--accent); transform: scale(.55); }
+.cercle-respiration.en-cours span { animation: respirer 10s ease-in-out infinite; }
+@keyframes respirer { 0% { transform: scale(.55); } 50% { transform: scale(1); } 100% { transform: scale(.55); } }
+.phase-respiration { font: 600 1.35rem/1.3 var(--police-titre); min-height: 1.8em; text-align: center; color: var(--text); }
+.respiration .btn svg { width: 20px; height: 20px; }
+.plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
+/* « J'ai fini pour ce soir » (v5) */
+.fini-bouton { align-self: stretch; margin-top: 4px; }
+.fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.fini-soir .phrase-recap { margin-top: 0; }
+.fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }

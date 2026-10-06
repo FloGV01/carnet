@@ -36,7 +36,7 @@ export function MaJournee() {
   if (!j) return html`<main class="ecran fiche"><${Entete} titre="Ma journée" retour=${retour} /></main>`;
   return html`<main class="ecran fiche ma-journee">
     <${Entete} titre="Ma journée" retour=${retour} />
-    <p class="texte-secondaire">Les champs de la saisie du soir et du Pas à pas. Un champ masqué garde ses données passées.</p>
+    <p class="texte-secondaire">Les champs de la saisie du soir. Un champ masqué garde ses données passées.</p>
     <ul class="liste carte carte-groupe">${j.ordre.map((c, i) => html`<li class="ligne-champ-reglage" key=${c}>
       <span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
       <div class="ordre">

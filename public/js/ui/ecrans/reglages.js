@@ -79,6 +79,7 @@ export function Reglages() {
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
     <p class="aide-carte">Enregistrer dans Fichiers, puis iCloud Drive, dossier Carnet.</p>
+    <p class="aide-carte">Supprimer l'icône efface tout ce qui est noté ici. Pour une mise à jour, le bandeau « Nouvelle version prête » suffit.</p>
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 

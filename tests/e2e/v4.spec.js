@@ -63,14 +63,10 @@ test('Mon plan dans l\'épisode : feuille en lecture seule, fermée sur la même
   await expect(parcours.getByRole('button', { name: 'Mon plan' })).toBeFocused();
 });
 
-test('après coup : seulement pour une explosion, étapes passables, « Je ne sais pas » exclusif, ajout à Mon plan, retour', async ({ page }) => {
+test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas » exclusif, ajout à Mon plan, retour', async ({ page }) => {
   const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-03', heure: '20:00', emotion: 'emotion:colere', reaction: 'reaction:retrait_isolement' })).id);
   await page.evaluate((i) => { location.hash = `#/episode/${i}`; }, id);
   await expect(page.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Après coup/ })).toHaveCount(0);
-  await repo(page, (i) => window.__carnet.repo.episodes.modifier(i, { reaction: 'reaction:explosion' }), id);
-  await page.reload();
-  await aller(page, `#/episode/${id}`);
   await page.getByRole('link', { name: /Après coup/ }).click();
   const vue = page.getByRole('dialog', { name: 'Après coup' });
   await expect(vue.getByRole('heading', { name: 'C\'était plutôt…' })).toBeVisible();

@@ -1,7 +1,7 @@
 // Écran d'ouverture : l'entrée du jour, saisie en quelques touchers, sans bouton « Enregistrer ».
 import { html, useEffect, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
-import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais } from '../hooks.js';
+import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 import { EnteteJour } from '../composants/entete-jour.js';
@@ -84,6 +84,17 @@ export function Aujourdhui({ date: dateRoute }) {
   const [entree, setEntree] = useState(null);
   const [generation, setGeneration] = useState(0);
   const [confirmerEffacer, setConfirmerEffacer] = useState(false);
+  // « J'ai fini pour ce soir » (v5) : préférence d'affichage de cet appareil, jamais une donnée
+  // (rien n'est compté ni marqué ailleurs). La page repliée montre la phrase du jour.
+  const cleFini = `carnet:fini:${date}`;
+  const [fini, setFini] = useState(() => Boolean(lireLocal(cleFini)));
+  useEffect(() => { setFini(Boolean(lireLocal(cleFini))); }, [cleFini]);
+  const terminer = (oui) => {
+    try { for (const k of Object.keys(localStorage)) if (k.startsWith('carnet:fini:') && k !== cleFini) localStorage.removeItem(k); } catch { /* stockage indisponible */ }
+    ecrireLocal(cleFini, oui ? true : null);
+    setFini(oui);
+    window.scrollTo(0, 0);
+  };
 
   const { donnees } = useDonnees(async () => {
     const [lue, items, dates, journee] = await Promise.all([repo.journal.lire(date), repo.listes.items(), repo.journal.dates(), repo.meta.lire('journee')]);
@@ -129,7 +140,9 @@ export function Aujourdhui({ date: dateRoute }) {
 
   const carte = carteLibelles(items);
   const nExplosions = evenements ? evenements.episodes.filter(estExplosion).length : 0;
-  const resume = phraseResume('jour', entree, carte, { nExplosions }).map((x) => x.texte).join('');
+  const phrase = phraseResume('jour', entree, carte, { nExplosions });
+  const resume = phrase.map((x) => x.texte).join('');
+  const replie = fini && date === aujourdhui && !vide;
   const visibles = champsAffiches(journee, entree);
   // Un détail renseigné vaut aussi « Oui » quand le Oui / Non n'était pas encore choisi.
   const ecrireActivites = (activites) => {
@@ -200,7 +213,12 @@ export function Aujourdhui({ date: dateRoute }) {
     ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
-    ${rendreChamps()}
+    ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
+      <p class="phrase-recap">${phrase.map((s) => (s.valeur ? html`<span class=${`valeur teinte-${s.rubrique}`}>${s.texte}</span>` : s.texte))}</p>
+      ${entree.pointsPositifs && html`<p class="fini-positifs">« ${entree.pointsPositifs} »</p>`}
+      <button type="button" class="btn-lien action" onClick=${() => terminer(false)}>Rouvrir la saisie</button>
+    </section>`}
+    ${!replie && html`${rendreChamps()}
     <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} />
 
     <div class="replis">
@@ -232,6 +250,7 @@ export function Aujourdhui({ date: dateRoute }) {
           cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
       </${Repli}>
     </div>
+    ${date === aujourdhui && !vide && html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>`}`}
 
     ${evenements && html`<section class="evenements-jour">
       <h2 class="libelle-section">Épisodes et symptômes</h2>
@@ -255,8 +274,8 @@ export function Aujourdhui({ date: dateRoute }) {
       texte=${`Les épisodes et symptômes de ce jour sont conservés.${evenements && evenements.avecMemo.has(`journal:${date}`) ? ' Le mémo vocal de cette journée est effacé aussi.' : ''}`}
       action="Effacer" surAnnuler=${() => setConfirmerEffacer(false)} surConfirmer=${effacerJournee} />`}
     <div class="actions-flottantes">
-      <a class="pilule pas-a-pas" href=${versHash('pas-a-pas', { date })} aria-label="Pas à pas">${Icones.pasAPas()}<span class="libelle-action">Pas à pas</span></a>
-      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}<span class="libelle-action">Moment</span></a>`}
+      <a class="pilule moment-difficile" href="#/moment-difficile" aria-label="Moment difficile">${Icones.respiration()}<span class="libelle-action">Moment difficile</span></a>
+      ${date === aujourdhui && html`<a class="pilule moment" href="#/moment" aria-label="Humeur du moment">${Icones.humeur()}<span class="libelle-action">Humeur</span></a>`}
       <a class="fab" href="#/episode/nouveau">${Icones.plus({ trait: 2.2 })}<span>Épisode</span></a>
     </div>
   </main>`;

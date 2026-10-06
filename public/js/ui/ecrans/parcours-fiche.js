@@ -16,7 +16,6 @@ import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Icones } from '../icones.js';
 import { FeuillePlan } from '../composants/mon-plan.js';
-import { estExplosion } from '../../domain/explosions.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -39,7 +38,7 @@ function resumeApresCoup(a, carte) {
 // origine : écran d'où l'épisode a été ouvert, gardé pendant un passage par Après coup.
 function revenir(origine) {
   const precedente = origine || etatApp.lire().routePrecedente;
-  location.hash = precedente && !/#\/(episode|symptome|pas-a-pas|apres-coup)\//.test(precedente) && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
+  location.hash = precedente && !/#\/(episode|symptome|apres-coup)\//.test(precedente) && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
 }
 
 export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte, avecPlan = false }) {
@@ -185,7 +184,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrireTexte({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
-      ${avecPlan && (estExplosion(fiche) || fiche.apresCoup) && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
+      ${avecPlan && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
         onClick=${async (e) => {
           const garder = () => etatApp.maj({ retourEpisode: { id: idRef.current, origine: origine.current || etatApp.lire().routePrecedente, instantane: instantane.current } });
           if (idRef.current) { garder(); return; }

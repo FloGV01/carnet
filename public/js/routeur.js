@@ -6,8 +6,8 @@ const DATE = '(\\d{4}-\\d{2}-\\d{2})';
 export const ROUTES = [
   { nom: 'aujourdhui', motif: '/aujourdhui' },
   { nom: 'jour', motif: `/jour/${DATE}`, params: ['date'] },
-  { nom: 'pas-a-pas', motif: `/pas-a-pas/${DATE}`, params: ['date'] },
   { nom: 'moment', motif: '/moment' },
+  { nom: 'moment-difficile', motif: '/moment-difficile' },
   { nom: 'mon-plan', motif: '/mon-plan' },
   { nom: 'apres-coup', motif: `/apres-coup/${ID}`, params: ['id'] },
   { nom: 'episode', motif: `/episode/${ID}`, params: ['id'] },
@@ -53,7 +53,7 @@ export function versHash(nom, params = {}) {
 
 // Onglet actif pour une route donnée.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'pas-a-pas', 'moment', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
   if (nom === 'historique') return 'historique';
   if (['soins', 'rdv', 'consultation', 'traitement'].includes(nom)) return 'soins';

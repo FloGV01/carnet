@@ -13,8 +13,8 @@ import { Reglages } from './ui/ecrans/reglages.js';
 import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
-import { ParcoursJour } from './ui/ecrans/parcours-jour.js';
 import { Moment } from './ui/ecrans/moment.js';
+import { MomentDifficile } from './ui/ecrans/moment-difficile.js';
 import { MonPlan } from './ui/ecrans/mon-plan.js';
 import { ApresCoup } from './ui/ecrans/apres-coup.js';
 import { MaJournee } from './ui/ecrans/ma-journee.js';
@@ -35,8 +35,8 @@ import { Soignants } from './ui/ecrans/soignants.js';
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
-  'pas-a-pas': (p) => html`<${ParcoursJour} key=${p.date} date=${p.date} />`,
   moment: () => html`<${Moment} />`,
+  'moment-difficile': () => html`<${MomentDifficile} />`,
   'mon-plan': () => html`<${MonPlan} />`,
   'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
   'reglages-journee': () => html`<${MaJournee} />`,
