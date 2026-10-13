@@ -1,6 +1,6 @@
 # Carnet v6 (« V2 ») : spécification (conçue, à construire, version 6.0.0)
 
-Brainstorming du 8 au 12 octobre 2026, après la v5.0.0. Choix faits point par point par Florent, à partir de
+Brainstorming du 8 au 12 octobre 2026, après la v5.0.0. Choix faits point par point par l'utilisateur, à partir de
 quatre études contre-vérifiées :
 - le marché (environ 60 applis) ;
 - la recherche AuDHD et les outils de régulation ;
@@ -14,7 +14,7 @@ corrigée.
 - **Usage strictement personnel** : la commercialisation est écartée.
 - **Règles inchangées** : celles de CLAUDE.md et du cahier des charges restent en vigueur.
 - **Une seule règle assouplie**, et seulement par un réglage éteint au départ (§5) : « rien ne s'ouvre tout seul ».
-- **Ce que fait Carnet** : il observe, range et rend les mots de Florent. Il ne conseille jamais, n'explique jamais et ne lance aucune alerte calculée.
+- **Ce que fait Carnet** : il observe, range et rend les mots de l'utilisateur. Il ne conseille jamais, n'explique jamais et ne lance aucune alerte calculée.
 
 **Livraison** : en une seule fois (choix du 12/10), version 6.0.0.
 
@@ -25,14 +25,14 @@ corrigée.
 | Priorité | « Mieux me comprendre » : explosions, énergie, rythmes, traitement. |
 | Écran Comprendre | Un écran à part, ouvert depuis l'Analyse, avec trois onglets : Explosions · Énergie · Rythmes. **Graphiques seulement** : aucune phrase calculée de plus, donc aucune calibration nouvelle. L'Analyse ne change pas, sauf la rangée énergie et les repères (§3). |
 | Traitement | Repères seulement, sur Mes jours et sur le PDF. Aucune comparaison avant/après. |
-| Humeur du jour (13/10) | Le champ « Humeur » du soir est retiré de la saisie : il est masqué et peut être réaffiché. L'humeur d'un jour devient **la moyenne de ses humeurs du moment**, « vers » compris. Un jour passé sans humeur du moment garde son humeur du soir. Toutes les analyses lisent cette humeur du jour (§1.0). C'est un choix de Florent qui modifie le cahier des charges (§6, humeur du soir). |
+| Humeur du jour (13/10) | Le champ « Humeur » du soir est retiré de la saisie : il est masqué et peut être réaffiché. L'humeur d'un jour devient **la moyenne de ses humeurs du moment**, « vers » compris. Un jour passé sans humeur du moment garde son humeur du soir. Toutes les analyses lisent cette humeur du jour (§1.0). C'est un choix de l'utilisateur qui modifie le cahier des charges (§6, humeur du soir). |
 | Saisie du soir | Une ligne repliée « Ce qui a pesé · ce qui a rechargé ». |
 | Humeur du moment | « C'était vers… » (une heure passée) et un repli « Ce que je faisais ». |
 | Après coup (TCC) | Visible en haut de la fiche d'un épisode rouvert. Une ligne « Après coup (TCC) · tes épisodes récents » sur Aujourd'hui. |
-| Fatigue | « Voir, plus ma règle » : la partie énergie, et une liste « Me ressourcer » qui s'affiche quand Florent note une énergie basse (règle éteinte au départ). **Pas d'alerte calculée.** |
+| Fatigue | « Voir, plus ma règle » : la partie énergie, et une liste « Me ressourcer » qui s'affiche quand l'utilisateur note une énergie basse (règle éteinte au départ). **Pas d'alerte calculée.** |
 | Moment difficile | Respiration réglable, avec un signal sonore facultatif éteint par défaut. « Une chose à la fois ». Accès à « Me ressourcer ». « Écrire mon plan ». Une page d'aide iPhone dans Réglages. |
 | Soins | Onglet « Notes » (idées en vrac). « La dernière fois » et « En parler au rendez-vous ». |
-| Ergonomie | Correctifs et ajustements d'office (§8), dont le mode sombre adouci : l'iPhone de Florent est en sombre le soir. |
+| Ergonomie | Correctifs et ajustements d'office (§8), dont le mode sombre adouci : l'iPhone de l'utilisateur est en sombre le soir. |
 | IA | Repoussée en V3, y compris « Copier pour PSY » et la notice pour PSY. |
 
 ## 1. Saisie
@@ -40,7 +40,7 @@ corrigée.
 ### 1.0 Humeur du jour (décision du 13/10)
 
 **Le soir**
-- Le champ « Humeur » n'est plus affiché. Il est masqué (`'humeur'` ajouté à `meta.journee.masques`) et Florent peut le réafficher dans Réglages › Ma journée.
+- Le champ « Humeur » n'est plus affiché. Il est masqué (`'humeur'` ajouté à `meta.journee.masques`) et l'utilisateur peut le réafficher dans Réglages › Ma journée.
 - Comme pour tout champ masqué, il reste visible un jour où il porte une valeur : les jours passés notés le soir gardent donc leur champ.
 - S'il n'y a eu aucune humeur du moment dans la journée, rien ne le signale. « C'était vers… » (§1.2) permet d'en ajouter une.
 
@@ -80,7 +80,7 @@ corrigée.
   - Une clé `peseRecharge` est acceptée dans `meta.journee.masques` par `normaliserJournee`.
   - Comme pour les champs, un repli masqué qui porte des valeurs ce jour-là reste affiché.
 - **Listes modifiables** dans Réglages › Listes (elles vont dans `LISTES`, sans `sensFixe`). Ce ne sont pas des listes figées comme `declencheur` et `dessous`. Les identifiants publiés, eux, ne changent plus.
-- **Listes de départ** (à vérifier par Florent, §12) :
+- **Listes de départ** (validées le 13/10, §12) :
   - `pese` : Bruit · Lumière · Monde · Changement · Attente · Trop de demandes · Fatigue · Masquer (faire comme si) · Trajets · Démarches. Les sept premiers reprennent mot pour mot les libellés de « Ce qui était trop » de l'Après coup (`sourceSurcharge`).
   - `recharge` : Être seul · Calme · Intérêt spécifique · Bouger · Dehors / nature · Stimmer · Musique · Sieste / repos.
 - **Export PSY** : la ligne du jour ajoute « a pesé : … · a rechargé : … » quand c'est noté.
@@ -343,7 +343,7 @@ Sans plan, le lien « Écrire mon plan » remplace la phrase actuelle. Avec un p
 - **Feuille** : elle propose une question déjà écrite, modifiable avant l'ajout, faite des **choix seulement**, jamais de la situation ni des notes, puisque la question part sur la page A4.
   - Épisode : « Épisode du sam 3/10, 18 h · Colère 8/10 · Explosion ».
   - Fiche Traitement : « Traitement du 12/10 · … · Moins bien · Somnolence ». Le changement, coupé à 60 caractères, est déjà imprimé dans la section Traitement de l'A4.
-- **Choix du rendez-vous** : Florent le choisit parmi les rendez-vous « À venir » (avec une date ou « Date à fixer »). Il peut aussi choisir « Nouveau rendez-vous » avec un soignant, ce qui crée un « Date à fixer ».
+- **Choix du rendez-vous** : L'utilisateur le choisit parmi les rendez-vous « À venir » (avec une date ou « Date à fixer »). Il peut aussi choisir « Nouveau rendez-vous » avec un soignant, ce qui crée un « Date à fixer ».
 - **Lien** : la question garde un lien vers l'élément.
 - **« Voir »** : en consultation, il ouvre une **feuille en lecture seule** par-dessus l'écran, sans navigation, sur le modèle de `FeuillePlan` : récapitulatif et textes, sans écriture.
   - Fermer ramène à la consultation.
@@ -389,7 +389,7 @@ Sans plan, le lien « Écrire mon plan » remplace la phrase actuelle. Avec un p
   - **Sauvegardes témoins** aux formats 1, 2 et 3. Elles sont générées avec le `construireSauvegarde` des tags v3.0.0, v4.0.0 et v5.0.0, sur une base 100 % inventée.
     - « Complète » veut dire : chaque store, chaque champ non nul au moins une fois, un élément renommé, un élément archivé, un id inconnu, et un mémo en ZIP.
   - **« Vérifier mes données »** dans l'écran Diagnostic (caché, appui long sur la version) : des nombres seulement (fiches par table, mémos sans fiche, fiches illisibles), sans libellé ni texte. C'est différent de « Vérifier un fichier » dans Réglages, qui a été refusé.
-  - **Procédure « Carnet TEST »** dans `docs/deploiement.md`, facultative. Florent active lui-même le déploiement de la branche `dev` sur Netlify.
+  - **Procédure « Carnet TEST »** dans `docs/deploiement.md`, facultative. L'utilisateur active lui-même le déploiement de la branche `dev` sur Netlify.
 
 ## 9. Données, sauvegarde, architecture
 
@@ -525,7 +525,7 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
 
 ## 11. Écarté, et plus tard
 
-- **Refusé par Florent (08-12/10)** :
+- **Refusé par l'utilisateur (08-12/10)** :
   - commercialisation ;
   - comparaison avant/après traitement ;
   - phrases calculées nouvelles ;
@@ -546,10 +546,10 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
   - nouveaux filtres et recherche étendue dans l'Historique (les filtres et la recherche actuels restent) ;
   - catalogue d'exercices écrits par l'app.
 - **V3** :
-  - l'assistant IA : « Copier pour PSY » sur un épisode, un accès direct à l'export, une notice pour PSY ; Claude dans Carnet seulement si Florent lève la règle « zéro réseau » ;
+  - l'assistant IA : « Copier pour PSY » sur un épisode, un accès direct à l'export, une notice pour PSY ; Claude dans Carnet seulement si l'utilisateur lève la règle « zéro réseau » ;
   - la page « Depuis ton dernier rendez-vous ».
 
-## 12. Relecture de Florent (13/10)
+## 12. Relecture de l'utilisateur (13/10)
 
 - **Listes** « Ce qui a pesé », « Ce qui a rechargé » et « Ce que je faisais » : validées telles quelles. Elles avaient été reconstituées, le détail du 08/10 n'ayant pas été conservé.
 - **Règle « Me ressourcer »** : énergie basse seule, sans autre cas.
