@@ -43,9 +43,10 @@ async function charger() {
 
 // periode : { du, au }, pour les calculs ; choixPeriode : la clé du sélecteur (« 3mois » ou « tout »), pour la
 // phrase des graphiques. Sous son seuil, un graphique laisse sa place à PasAssez. Les graphiques alignés ont une
-// clé graphe + période : une barre touchée ne passe pas d'un graphique ou d'une période à l'autre.
+// clé graphe + période : une barre touchée ne passe pas d'un graphique ou d'une période à l'autre ; de même, la
+// règle dépliée d'Avant ne reste pas ouverte sur Après.
 function Aligne({ graphe, resultat, d, choixPeriode }) {
-  if (resultat.statut !== 'ok') return html`<${PasAssez} graphe=${graphe} />`;
+  if (resultat.statut !== 'ok') return html`<${PasAssez} key=${graphe} graphe=${graphe} />`;
   return html`<${GrapheAligne} key=${`${graphe}-${choixPeriode}`} graphe=${graphe} resultat=${resultat} periode=${choixPeriode} carte=${d.carte} aujourdhui=${d.aujourdhui} />`;
 }
 

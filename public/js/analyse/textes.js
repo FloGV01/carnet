@@ -1,6 +1,7 @@
 // Toutes les phrases de l'analyse, en trois voix : « tu » (app), « je » (export PSY),
 // « neutre » (vue soignants). Factuelles, jamais causales, jamais évaluatives.
 import { extremesFiables } from './sommeil.js';
+import { SEUILS } from './seuils.js';
 
 export const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
 export const REGLES = {
@@ -11,19 +12,21 @@ export const REGLES = {
   moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
   tendances: "La règle : comparer l'humeur des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
 };
-// v6 · Comprendre (spec §2.1) : sous son seuil (seuils.js), chaque graphique donne sa règle fixe, sans aucun
-// décompte.
-const REGLE_EXPLOSIONS = 'La règle : au moins 3 jours avec une explosion sur la période.';
+// v6 · Comprendre (spec §2.1) : sous son seuil, chaque graphique donne sa règle fixe, sans aucun décompte. Les
+// nombres viennent de SEUILS.comprendre, jamais recopiés ; aucun libellé de liste modifiable n'y paraît.
+const C = SEUILS.comprendre;
+const REGLE_EXPLOSIONS = `La règle : au moins ${C.minEvenements} jours avec une explosion sur la période.`;
+const regleColonnes = (quoi) => `La règle : au moins ${C.minColonnes} ${quoi} qui ont chacun au moins ${C.minValeurs} valeurs pour la mesure choisie.`;
 export const REGLES_COMPRENDRE = {
   explosionsAvant: REGLE_EXPLOSIONS,
   explosionsApres: REGLE_EXPLOSIONS,
-  energieAvant: 'La règle : au moins 3 jours à énergie basse sur la période (au moins un relevé « basse » ce jour-là).',
-  retoursBureau: 'La règle : au moins 3 retours au bureau sur la période (une journée au bureau dont la veille a un autre lieu noté).',
-  semaine: 'La règle : au moins 2 jours de la semaine qui ont chacun au moins 3 valeurs pour la mesure choisie.',
-  lieu: 'La règle : au moins 2 lieux qui ont chacun au moins 3 valeurs pour la mesure choisie.',
-  mois: 'La règle : au moins 2 mois qui ont chacun au moins 3 valeurs pour la mesure choisie.',
-  nuits: "La règle : au moins 2 soirs de la semaine qui ont chacun au moins 3 nuits avec l'heure du coucher et du lever (« Nuit en détail »).",
-  activites: 'La règle : une activité de « Ce que je faisais » apparaît à partir de 3 relevés avec une énergie.',
+  energieAvant: `La règle : au moins ${C.minEvenements} jours à énergie basse sur la période.`,
+  retoursBureau: `La règle : au moins ${C.minEvenements} retours au bureau sur la période (une journée au bureau dont la veille a un autre lieu noté).`,
+  semaine: regleColonnes('jours de la semaine'),
+  lieu: regleColonnes('lieux'),
+  mois: regleColonnes('mois'),
+  nuits: `La règle : au moins ${C.minColonnes} soirs de la semaine qui ont chacun au moins ${C.minValeurs} nuits avec l'heure du coucher et du lever (« Nuit en détail »).`,
+  activites: `La règle : une activité de « Ce que je faisais » apparaît à partir de ${C.minActivite} relevés avec une énergie.`,
   peseRecharge: 'La règle : au moins un élément de « Ce qui a pesé » ou de « Ce qui a rechargé », noté sur la période.',
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';

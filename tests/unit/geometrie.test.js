@@ -318,3 +318,29 @@ test('v6 · Comprendre, phrase d\'accessibilité : la période est la clé du s�
   // Les zones de toucher n'ont pas de rôle : la phrase ne promet pas ce qu'un lecteur d'écran ne peut pas faire.
   for (const graphe of GRAPHES) assert.doesNotMatch(phraseAria(graphe, 'tout', lib), /[Tt]ouche/, graphe);
 });
+
+test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de SEUILS.comprendre, sans « undefined » ni libellé de liste', async () => {
+  const { GRAPHES } = await import('../../public/js/ui/graphes/comprendre.js');
+  const { REGLES_COMPRENDRE: R } = await import('../../public/js/analyse/textes.js');
+  const { SEUILS } = await import('../../public/js/analyse/seuils.js');
+  const { RACINE, lire, sansCommentaires } = await import('../aides/fichiers.js');
+  const S = SEUILS.comprendre;
+  // Chaque graphique (toutes les cartes PasAssez de l'écran en prennent un) a sa règle, et rien d'autre.
+  assert.deepEqual(Object.keys(R).sort(), [...GRAPHES].sort());
+  for (const [graphe, regle] of Object.entries(R)) {
+    assert.equal(typeof regle, 'string', graphe);
+    assert.match(regle, /^La règle : .+\.$/, graphe);
+    assert.doesNotMatch(regle, /undefined|NaN|null|\[object/, graphe);
+  }
+  // Les nombres sont ceux de seuils.js.
+  for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
+  for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
+  assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
+  // Aucun chiffre écrit à la main dans le bloc des règles : ils viennent tous de SEUILS.comprendre.
+  const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
+  const bloc = code.slice(code.indexOf('SEUILS.comprendre'), code.indexOf('export const PIED_EXPLOSIONS'));
+  assert.ok(bloc.includes('REGLES_COMPRENDRE'), 'bloc des règles introuvable');
+  assert.doesNotMatch(bloc, /\d/);
+  // Pas de libellé de liste modifiable (« basse ») dans une règle : il peut être renommé dans Réglages › Listes.
+  assert.doesNotMatch(R.energieAvant, /«/);
+});

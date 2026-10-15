@@ -13,6 +13,14 @@ const bouton = (page, nom, libelle) => groupe(page, nom).getByRole('button', { n
 // La carte d'un graphique, par son titre.
 const carte = (page, titre) => page.locator('figure.graphe', { has: page.getByText(titre, { exact: true }) });
 const lireLocal = (page, cle) => page.evaluate((c) => JSON.parse(localStorage.getItem(c)), cle);
+// Sous son seuil, une carte dit « Pas encore assez » ; « Pourquoi ? » déplie sa règle, sans décompte.
+async function pasAssez(page, titre) {
+  const c = carte(page, titre);
+  await expect(c).toContainText(PAS_ASSEZ);
+  await c.getByRole('button', { name: 'Pourquoi ?' }).click();
+  await expect(c.locator('.encadre-regle')).toHaveText(/^La règle : .+\.$/);
+  await expect(c.locator('.encadre-regle')).not.toContainText(/undefined|NaN|null/);
+}
 
 async function demarrer(page) {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
@@ -58,12 +66,14 @@ test('accès depuis l\'Analyse, trois onglets, le dernier rouvert ; sans donnée
   await expect(bouton(page, 'Comprendre', 'Explosions')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Période', 'Tout')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Avant ou après', 'Avant')).toHaveAttribute('aria-pressed', 'true');
-  await expect(carte(page, 'Avant mes explosions')).toContainText(PAS_ASSEZ);
+  await pasAssez(page, 'Avant mes explosions');
+  await bouton(page, 'Avant ou après', 'Après').click();
+  await pasAssez(page, 'Après mes explosions');
 
   await bouton(page, 'Comprendre', 'Énergie').click();
   await expect(page).toHaveURL(/#\/comprendre\/energie$/);
   for (const titre of ['Ce qui a pesé, ce qui a rechargé', 'Avant mes jours à énergie basse', 'Selon ce que tu faisais']) {
-    await expect(carte(page, titre)).toContainText(PAS_ASSEZ);
+    await pasAssez(page, titre);
   }
 
   await bouton(page, 'Comprendre', 'Rythmes').click();
@@ -71,7 +81,7 @@ test('accès depuis l\'Analyse, trois onglets, le dernier rouvert ; sans donnée
   await expect(groupe(page, 'Mesure').getByRole('button')).toHaveText(['Humeur', 'Nuits Mal', 'Explosions', 'Énergie basse']);
   await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
   for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Tes nuits selon le jour', 'Selon le mois']) {
-    await expect(carte(page, titre)).toContainText(PAS_ASSEZ);
+    await pasAssez(page, titre);
   }
   expect(await lireLocal(page, 'carnet:comprendre:onglet')).toBe('rythmes');
 
@@ -82,6 +92,29 @@ test('accès depuis l\'Analyse, trois onglets, le dernier rouvert ; sans donnée
   await page.getByRole('link', { name: 'Comprendre' }).click();
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
+});
+
+test('un choix gardé qui n\'est plus valable revient au défaut : Explosions, Tout, Humeur', async ({ page }) => {
+  await demarrer(page);
+  await page.evaluate(() => {
+    localStorage.setItem('carnet:comprendre:onglet', JSON.stringify('autre'));
+    localStorage.setItem('carnet:comprendre:periode', JSON.stringify('90'));
+    localStorage.setItem('carnet:comprendre:mesure', '{illisible');
+  });
+  await aller(page, '#/analyse');
+  await expect(page.getByRole('link', { name: 'Comprendre' })).toHaveAttribute('href', '#/comprendre/explosions');
+  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await expect(bouton(page, 'Comprendre', 'Explosions')).toHaveAttribute('aria-pressed', 'true');
+  await expect(bouton(page, 'Période', 'Tout')).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', JSON.stringify('humeurs')));
+  await bouton(page, 'Comprendre', 'Rythmes').click();
+  await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
+  // Une mesure illisible ou inconnue : Humeur, même relue à une nouvelle ouverture de l'écran.
+  await aller(page, '#/analyse');
+  await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', '{illisible'));
+  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => localStorage.getItem('carnet:comprendre:periode'))).toBe('"90"');
 });
 
 test('« Pas encore assez de données » avec 2 explosions ; « Pourquoi ? » donne la règle sans décompte ; à 3, le graphique', async ({ page }) => {
