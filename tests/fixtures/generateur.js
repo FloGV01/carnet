@@ -7,12 +7,30 @@ const SOMMEILS = ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'];
 
 function normale(alea) { let u = 0; let v = 0; while (u === 0) u = alea(); while (v === 0) v = alea(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 const borne = (x) => Math.max(1, Math.min(10, Math.round(x)));
+const pad = (n) => String(n).padStart(2, '0');
+
+// v6 : de 0 à 6 relevés du moment (nombre uniforme), entre 8 h et 22 h, entiers de 1 à 10, tirés
+// autour de l'humeur latente du jour (bruit σ = 1). Triés par heure.
+function relevesDuJour(alea, date, h) {
+  const n = Math.floor(alea() * 7);
+  const minutes = Array.from({ length: n }, () => 8 * 60 + Math.floor(alea() * (14 * 60 + 1))).sort((a, b) => a - b);
+  return minutes.map((m, k) => ({
+    id: `hu-${date}-${k}`, date, heure: `${pad(Math.floor(m / 60))}:${pad(m % 60)}`, humeur: borne(h + normale(alea)),
+    energie: null, vers: null, faisais: null,
+  }));
+}
 
 // scenario : 'nul' | 'bureau' | 'sommeilJourMeme' | 'sommeilLendemain' | 'ar1' | 'malEnSuite' | 'jourMemeAR' | 'ar1Long' | 'emploiDuTemps'
 //   | 'lente' (composante lente φ = 0,98 + bruit rapide) | 'decalage' (AR(1), puis + effet sur les 28 derniers jours)
-export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario = 'nul', effet = 3, trous = 0 } = {}) {
+// releves (v6) : renvoie { journal, humeurs } ; l'humeur n'est plus notée le soir (journal.humeur = null)
+// mais en relevés du moment autour de l'humeur latente, effets plantés compris. Les relevés ont leur
+// propre suite aléatoire : le journal est, à l'humeur près, celui de la forme par défaut. Un jour
+// sauté (trous) n'a ni soir ni relevés.
+export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario = 'nul', effet = 3, trous = 0, releves = false } = {}) {
   const alea = generateur(seed);
+  const aleaReleves = generateur((seed ^ 0x5eed5eed) >>> 0);
   const res = [];
+  const humeurs = [];
   let ar = 0;
   let lent = 0;
   let lieuBloc = LIEUX[0];
@@ -40,12 +58,13 @@ export function generer({ jours = 180, debut = '2026-01-05', seed = 1, scenario 
     sommeilPrec = s;
     if (trous && alea() < trous) continue;
     res.push({
-      date, lieu, sommeilRessenti: SOMMEILS[s], humeur: borne(h), contactHumain: alea() < 0.5, sportMouvement: alea() < 0.4,
+      date, lieu, sommeilRessenti: SOMMEILS[s], humeur: releves ? null : borne(h), contactHumain: alea() < 0.5, sportMouvement: alea() < 0.4,
       explosions: alea() < 0.15 ? 1 : 0, traitementPris: 'traitementPris:oui', reveilsNocturnes: Math.floor(alea() * 3),
       pointsPositifs: null, heureCoucher: null, heureLever: null, notes: null,
     });
+    if (releves) humeurs.push(...relevesDuJour(aleaReleves, date, h));
   }
-  return res;
+  return releves ? { journal: res, humeurs } : res;
 }
 
 // Périodes plus basses plantées, chacune précédée de 4 jours « signature » (nuits Mal, pas de
