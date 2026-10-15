@@ -308,3 +308,13 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(phrases.size, 2 * (7 + 3 * 4));
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
+
+test('v6 · Comprendre, phrase d\'accessibilité : la période est la clé du sélecteur, sans repli silencieux ; aucune promesse de toucher', async () => {
+  const { phraseAria, GRAPHES } = await import('../../public/js/ui/graphes/comprendre.js');
+  const lib = (id) => id;
+  for (const periode of [undefined, null, '90', 'Tout', 'toString', { du: '2026-01-01', au: '2026-10-15' }, ['2026-01-01', '2026-10-15']]) {
+    assert.throws(() => phraseAria('semaine', periode, lib, 'humeur'), /Période inconnue/, String(periode));
+  }
+  // Les zones de toucher n'ont pas de rôle : la phrase ne promet pas ce qu'un lecteur d'écran ne peut pas faire.
+  for (const graphe of GRAPHES) assert.doesNotMatch(phraseAria(graphe, 'tout', lib), /[Tt]ouche/, graphe);
+});

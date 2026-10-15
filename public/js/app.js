@@ -28,6 +28,7 @@ import { Consultation } from './ui/ecrans/consultation.js';
 import { Traitement } from './ui/ecrans/traitement.js';
 import { Symptome } from './ui/ecrans/symptome.js';
 import { Analyse } from './ui/ecrans/analyse.js';
+import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
@@ -53,6 +54,7 @@ const ECRANS = {
   'reglages-rappel': () => html`<${Rappel} />`,
   diagnostic: () => html`<${Diagnostic} />`,
   analyse: () => html`<${Analyse} />`,
+  comprendre: (p) => html`<${Comprendre} onglet=${p.onglet} />`,
   'export-psy': () => html`<${ExportPsy} />`,
   'listes-index': () => html`<${IndexListes} />`,
   soignants: () => html`<${Soignants} />`,

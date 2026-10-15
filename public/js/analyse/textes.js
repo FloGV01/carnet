@@ -11,6 +11,21 @@ export const REGLES = {
   moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
   tendances: "La règle : comparer l'humeur des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
 };
+// v6 · Comprendre (spec §2.1) : sous son seuil (seuils.js), chaque graphique donne sa règle fixe, sans aucun
+// décompte.
+const REGLE_EXPLOSIONS = 'La règle : au moins 3 jours avec une explosion sur la période.';
+export const REGLES_COMPRENDRE = {
+  explosionsAvant: REGLE_EXPLOSIONS,
+  explosionsApres: REGLE_EXPLOSIONS,
+  energieAvant: 'La règle : au moins 3 jours à énergie basse sur la période (au moins un relevé « basse » ce jour-là).',
+  retoursBureau: 'La règle : au moins 3 retours au bureau sur la période (une journée au bureau dont la veille a un autre lieu noté).',
+  semaine: 'La règle : au moins 2 jours de la semaine qui ont chacun au moins 3 valeurs pour la mesure choisie.',
+  lieu: 'La règle : au moins 2 lieux qui ont chacun au moins 3 valeurs pour la mesure choisie.',
+  mois: 'La règle : au moins 2 mois qui ont chacun au moins 3 valeurs pour la mesure choisie.',
+  nuits: "La règle : au moins 2 soirs de la semaine qui ont chacun au moins 3 nuits avec l'heure du coucher et du lever (« Nuit en détail »).",
+  activites: 'La règle : une activité de « Ce que je faisais » apparaît à partir de 3 relevés avec une énergie.',
+  peseRecharge: 'La règle : au moins un élément de « Ce qui a pesé » ou de « Ce qui a rechargé », noté sur la période.',
+};
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 export const PIED_TENDANCES = 'Une observation sur tes chiffres, pas une explication.';
 export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les jours où une humeur est notée.";

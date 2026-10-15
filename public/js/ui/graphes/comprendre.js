@@ -1,13 +1,14 @@
 // Comprendre (v6, spec §2) : les graphiques de l'écran, rendus en SVG à partir des résultats purs de
-// analyse/comprendre.js, au statut « ok » (sous un seuil, l'écran dit lui-même « Pas encore assez de données »).
+// analyse/comprendre.js, au statut « ok » ; sous un seuil, PasAssez dit « Pas encore assez de données ».
 // Chacun a une seule teinte, celle de sa rubrique ; une phrase d'accessibilité fixe, qui dit ce qui est montré
 // et sur quelle période, sans valeur ; « Voir en tableau », qui donne les valeurs ; et le pied « Ce sont tes
 // notes, rassemblées : pas des causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et
 // n'a pas de ligne dans le tableau.
 import { html, useState } from '../lib.js';
 import { Axe, Cadre } from './graphes.js';
+import { Pourquoi } from '../composants/pourquoi.js';
 import { DIM_ALIGNE, DIM_BARRES, DIM_COLONNES, DIM_NUITS, geometrieActivites, geometrieAligne, geometrieBarres, geometrieColonnes, geometrieNuits } from './geometrie.js';
-import { nombre, uneDecimale, PIED_EXPLOSIONS } from '../../analyse/textes.js';
+import { nombre, uneDecimale, PIED_EXPLOSIONS, REGLES_COMPRENDRE } from '../../analyse/textes.js';
 import { formaterJour, JOURS, JOURS_COURTS, MOIS, MOIS_COURTS } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 
@@ -46,7 +47,7 @@ const LEGENDE_MESURE = {
 const RUBRIQUE_MESURE = { humeur: 'humeur', nuitMal: 'sommeil', explosion: 'expl', energieBasse: 'humeur' };
 
 // Chaque graphique : son titre, sa rubrique, ce qu'il montre (pour la phrase d'accessibilité). Graphique aligné :
-// aussi ce que comptent ses barres (en tête du tableau, et en légende).
+// aussi ce que comptent ses barres, pour la légende.
 const G = {
   explosionsAvant: { titre: 'Avant mes explosions', rubrique: 'expl', reperes: 'Explosions',
     montre: () => `pour chaque élément, une barre par jour, de trois jours avant une explosion au jour même${AUTRES}` },
@@ -67,13 +68,20 @@ const G = {
     montre: () => 'deux groupes de barres, une par élément, longue comme le nombre de jours où il est noté' },
 };
 export const GRAPHES = Object.keys(G);
-const ALIGNES = new Set(['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']);
 
-// La phrase d'accessibilité : fixe, sans valeur, sans classement ni comparaison.
+// La phrase d'accessibilité : fixe, sans valeur, sans classement ni comparaison. `periode` est la clé du
+// sélecteur (« 3mois » ou « tout », PERIODES) : toute autre valeur est une erreur, jamais « Tout » en silence.
 export function phraseAria(graphe, periode, lib, mesure = 'humeur') {
-  const touche = ALIGNES.has(graphe) ? ' Touche une barre pour voir ses dates.' : '';
-  return `${G[graphe].titre}, ${SUR[periode] || SUR.tout} : ${G[graphe].montre(lib, mesure)}.${touche} Les valeurs sont dans « Voir en tableau ».`;
+  if (typeof periode !== 'string' || !Object.hasOwn(SUR, periode)) throw new Error(`Période inconnue : ${periode}`);
+  return `${G[graphe].titre}, ${SUR[periode]} : ${G[graphe].montre(lib, mesure)}. Les valeurs sont dans « Voir en tableau ».`;
 }
+
+// Sous un seuil (spec §2.1) : la carte du graphique, son titre, « Pas encore assez de données pour le dire. »
+// et « Pourquoi ? », qui donne la règle fixe, sans aucun décompte. La teinte des colonnes suit leur mesure.
+export const PasAssez = ({ graphe, mesure = 'humeur' }) => html`<figure class=${`graphe teinte-${G[graphe].rubrique || RUBRIQUE_MESURE[mesure]}`}>
+  <figcaption><span class="graphe-titre"><span class="point-rubrique" aria-hidden="true"></span>${G[graphe].titre}</span></figcaption>
+  <${Pourquoi} regle=${REGLES_COMPRENDRE[graphe]} />
+</figure>`;
 
 // ---------- Le graphique aligné (spec §2.2) ----------
 
@@ -115,7 +123,7 @@ export function GrapheAligne({ graphe, resultat, periode, carte, aujourdhui }) {
   const { blocs } = resultat;
   const g = geometrieAligne(blocs);
   const d = DIM_ALIGNE;
-  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Jour</th><th scope="col">${conf.reperes}</th></tr></thead>
+  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Jour</th><th scope="col">Compte</th></tr></thead>
     ${blocs.map((b) => html`<tbody><tr><th scope="rowgroup" colspan="2">${nomBloc(b, lib)}</th></tr>
       ${b.barres.filter((x) => x.n > 0).map((x) => html`<tr><td>${nomDecalage(graphe, x.decalage)}</td><td>${libelleCompte(x)}</td></tr>`)}
       ${b.autres.n > 0 && html`<tr><td>Les autres jours</td><td>${libelleCompte(b.autres)}</td></tr>`}</tbody>`)}</table>`;

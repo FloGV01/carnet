@@ -20,7 +20,7 @@ test('hash vide ou inconnu : retour sur Aujourd\'hui', () => {
 });
 
 test('aller-retour versHash / lireRoute pour chaque route', () => {
-  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion' };
+  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes' };
   for (const r of ROUTES) {
     const params = Object.fromEntries((r.params || []).map((p) => [p, exemples[p]]));
     const lu = lireRoute(versHash(r.nom, params));
@@ -38,4 +38,15 @@ test('onglet actif', () => {
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
   assert.equal(ongletDe('export-psy'), 'analyse');
+  assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v6 · Comprendre : /comprendre/ID avec ID parmi explosions, energie, rythmes', () => {
+  for (const onglet of ['explosions', 'energie', 'rythmes']) {
+    assert.deepEqual(lireRoute(`#/comprendre/${onglet}`), { nom: 'comprendre', params: { onglet }, chemin: `/comprendre/${onglet}` });
+    assert.equal(versHash('comprendre', { onglet }), `#/comprendre/${onglet}`);
+  }
+  for (const h of ['#/comprendre', '#/comprendre/', '#/comprendre/autre', '#/comprendre/Energie']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
 });
