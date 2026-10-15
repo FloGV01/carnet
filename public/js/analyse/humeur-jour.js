@@ -5,15 +5,18 @@
 import { jourEvenement } from '../domain/dates.js';
 import { moyenne } from './stats.js';
 
-// Une humeur est un entier de 1 à 10 (relevé ou soir).
-export const estHumeur = (v) => Number.isInteger(v) && v >= 1 && v <= 10;
+// Une humeur est un nombre de 1 à 10 : valeur brute (entière) ou humeur du jour (moyenne, décimale).
+export const estHumeur = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= 10;
+// Ce qui est saisi (relevé, soir) est toujours entier.
+const estHumeurSaisie = (v) => Number.isInteger(v) && estHumeur(v);
 
 // Map date → { valeur, min, max, n, source }. Un jour sans humeur n'a pas d'entrée.
+// `n` compte les valeurs : les relevés pour « moment », une seule pour « soir ».
 // Un relevé qui n'a que l'énergie n'est pas un relevé d'humeur : il est ignoré.
 export function humeursDuJour({ journal, humeurs } = {}) {
   const relevesParJour = new Map();
   for (const h of humeurs || []) {
-    if (!h || !h.date || !estHumeur(h.humeur)) continue;
+    if (!h || !h.date || !estHumeurSaisie(h.humeur)) continue;
     const jour = jourEvenement(h.date, h.heure);
     if (!relevesParJour.has(jour)) relevesParJour.set(jour, []);
     relevesParJour.get(jour).push(h.humeur);
@@ -23,7 +26,7 @@ export function humeursDuJour({ journal, humeurs } = {}) {
     res.set(date, { valeur: moyenne(xs), min: Math.min(...xs), max: Math.max(...xs), n: xs.length, source: 'moment' });
   }
   for (const j of journal || []) {
-    if (!j || !j.date || res.has(j.date) || !estHumeur(j.humeur)) continue;
+    if (!j || !j.date || res.has(j.date) || !estHumeurSaisie(j.humeur)) continue;
     res.set(j.date, { valeur: j.humeur, min: j.humeur, max: j.humeur, n: 1, source: 'soir' });
   }
   return res;

@@ -4,9 +4,18 @@ import { estHumeur, humeursDuJour, avecHumeurDuJour } from '../../public/js/anal
 
 const releve = (date, heure, humeur, plus = {}) => ({ id: `${date}-${heure}`, date, heure, humeur, energie: null, vers: null, faisais: null, ...plus });
 
-test('estHumeur : un entier de 1 à 10, rien d\'autre', () => {
-  for (const v of [1, 5, 10]) assert.equal(estHumeur(v), true, String(v));
-  for (const v of [0, 11, -1, 5.5, '5', null, undefined, NaN, Infinity, true, []]) assert.equal(estHumeur(v), false, String(v));
+test('estHumeur : un nombre de 1 à 10, décimales comprises (valeurs brutes et valeurs du jour), rien d\'autre', () => {
+  for (const v of [1, 5, 5.5, 17 / 3, 10]) assert.equal(estHumeur(v), true, String(v));
+  for (const v of [0, 0.9, 11, 10.1, -1, '5', null, undefined, NaN, Infinity, true, []]) assert.equal(estHumeur(v), false, String(v));
+});
+
+test('estHumeur : accepte l\'humeur du jour produite par avecHumeurDuJour, décimale ou non', () => {
+  const humeurs = [releve('2026-10-05', '09:00', 3), releve('2026-10-05', '19:00', 8), releve('2026-10-06', '10:00', 7)];
+  const [decimale, entiere, inconnue] = avecHumeurDuJour([{ date: '2026-10-07' }], humeurs).map((j) => j.humeur);
+  assert.equal(decimale, 5.5);
+  assert.equal(estHumeur(decimale), true);
+  assert.equal(estHumeur(entiere), true);
+  assert.equal(estHumeur(inconnue), false);
 });
 
 test('humeursDuJour : moyenne des relevés du jour, avec le plus bas et le plus haut', () => {
@@ -51,6 +60,14 @@ test('humeursDuJour : à 04:00 pile, le relevé est déjà du jour suivant', () 
   const m = humeursDuJour({ journal: [], humeurs });
   assert.equal(m.get('2026-10-05').valeur, 6);
   assert.equal(m.get('2026-10-06').valeur, 9);
+});
+
+test('humeursDuJour : relevé à 01:00 le jour D+1 : D prend le relevé et non son soir, D+1 garde son propre soir', () => {
+  const journal = [{ date: '2026-10-05', humeur: 9 }, { date: '2026-10-06', humeur: 4 }];
+  const humeurs = [releve('2026-10-06', '01:00', 2)];
+  const m = humeursDuJour({ journal, humeurs });
+  assert.deepEqual(m.get('2026-10-05'), { valeur: 2, min: 2, max: 2, n: 1, source: 'moment' });
+  assert.deepEqual(m.get('2026-10-06'), { valeur: 4, min: 4, max: 4, n: 1, source: 'soir' });
 });
 
 test('humeursDuJour : sans relevé, l\'humeur du soir reste la valeur du jour', () => {
