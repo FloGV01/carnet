@@ -62,7 +62,7 @@ export function detailColonne(pas, c, lib) {
     if (c.nuits) m.push(`nuits : ${['mal', 'moyen', 'bien'].filter((k) => c.nuits[k]).map((k) => `${lib(`sommeil:${k}`)} ${c.nuits[k]}`).join(' · ')}`);
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
-    if (c.energieBasse > 0) m.push(`${c.energieBasse} ${c.energieBasse > 1 ? 'jours' : 'jour'} d'énergie basse`);
+    if (c.energieBasse > 0) m.push(`${pluriel(c.energieBasse, 'jour', 'jours')} d'énergie basse`);
   }
   return m;
 }

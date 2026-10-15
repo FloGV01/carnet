@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { modeleSoignants } from '../../public/js/export/soignants.js';
 import { mettreEnPage, A4, couperLignes } from '../../public/js/export/page-a4.js';
 import { analyze } from '../../public/js/analyse/index.js';
+import { frise } from '../../public/js/analyse/frise.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { generer } from '../fixtures/generateur.js';
@@ -10,8 +11,14 @@ import { generer } from '../fixtures/generateur.js';
 const items = seedItems(SEED_V1, 'x');
 const carte = carteLibelles(items);
 
-function cas({ extreme = false, energie = false } = {}) {
-  const journal = generer({ jours: 180, seed: 7, scenario: 'bureau', debut: '2026-04-03' }).map((j) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée' }));
+const SEPT = (date) => date >= '2026-09-01' && date <= '2026-09-30';
+
+// energie (v6) : des relevés d'énergie sans humeur (dont des « basse »), un jour sur deux, et tous les jours de septembre.
+// trou : aucune saisie du soir en septembre 2026 (et aucun épisode : ils tombent de juillet à début août) : des semaines
+// et un mois qui n'ont, avec energie, que de l'énergie.
+// jours : 200 pour que l'évolution passe par mois (au-delà de 26 semaines d'historique).
+function donnees({ extreme = false, energie = false, trou = false, jours = 180 } = {}) {
+  const journal = generer({ jours, seed: 7, scenario: 'bureau', debut: '2026-04-03' }).map((j) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée' }));
   const aujourdhui = journal[journal.length - 1].date;
   const long = (n) => 'Une question vraiment longue sur le sommeil et les effets du matin '.repeat(4).slice(0, n);
   const episodes = Array.from({ length: 30 }, (_, i) => ({ id: `e${i}`, date: journal[100 + i].date, heure: '12:00', emotion: 'emotion:sentiment_injustice',
@@ -23,14 +30,18 @@ function cas({ extreme = false, energie = false } = {}) {
     { id: 'r1', date: journal[170].date, professionnel: 'professionnel:psychiatre', prochaineEtape: extreme ? long(200) : 'revoir dans un mois' },
     { id: 'r2', date: '2026-12-01', professionnel: 'professionnel:psychiatre', questions: Array.from({ length: 8 }, (_, i) => ({ texte: extreme ? long(200) : `question ${i}`, abordee: i === 0 })) },
   ];
-  // v6 : des relevés d'énergie sans humeur (dont des « basse »), un jour sur deux, en plus des soirs.
-  const humeurs = energie ? journal.filter((_, i) => i % 2 === 0).map((j, i) => ({ id: `h${i}`, date: j.date, heure: '15:00', humeur: null, energie: i % 3 ? 'energie:basse' : 'energie:haute' })) : [];
-  const data = { journal, episodes, symptomes, traitements, ...(energie ? { humeurs } : {}) };
+  const humeurs = energie ? journal.filter((j, i) => i % 2 === 0 || SEPT(j.date)).map((j, i) => ({ id: `h${i}`, date: j.date, heure: '15:00', humeur: null, energie: i % 3 ? 'energie:basse' : 'energie:haute' })) : [];
+  const data = { journal: trou ? journal.filter((j) => !SEPT(j.date)) : journal, episodes, symptomes, traitements, ...(energie ? { humeurs } : {}) };
   const analyse = analyze(data, { aujourdhui, items });
   // Noms fictifs : jamais de vrai médicament dans les tests.
   const traitementActuel = { depuis: '2026-09-01', lignes: Array.from({ length: extreme ? 8 : 2 }, (_, i) => ({
     id: `m${i}`, nom: extreme ? `Médicament fictif numéro ${i} au nom vraiment très long` : `Médicament ${i}`,
     doses: { matin: '½', midi: extreme ? '1' : null, apresMidi: '½', soir: '1', coucher: extreme ? '2 gouttes' : null } })) };
+  return { data, aujourdhui, analyse, rdvs, traitements, traitementActuel };
+}
+
+function cas(options) {
+  const { data, aujourdhui, analyse, rdvs, traitements, traitementActuel } = donnees(options);
   return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: 'professionnel:psychiatre', prenom: '', rdvs, traitements, traitementActuel });
 }
 
@@ -71,15 +82,25 @@ test('évolution (v5) : la frise par semaine, ou par mois sur un long historique
   assert.match(texte, /nuits Mal, Moyen, Bien, du plus clair au plus foncé/);
 });
 
-test('v6 · l\'énergie basse reste à l\'écran : ni dans le modèle, ni dans la page des soignants', () => {
-  const sans = cas();
-  const avec = cas({ energie: true });
-  assert.ok(avec.frise.colonnes.every((c) => !('energieBasse' in c)), 'le modèle ne la porte pas');
-  assert.ok(!JSON.stringify(avec).includes('energieBasse'));
-  assert.deepEqual(avec.frise, sans.frise);
-  const page = mettreEnPage(avec);
-  assert.deepEqual(page.ops, mettreEnPage(sans).ops, 'la page ne change pas d\'un trait');
-  assert.ok(page.hauteur <= A4.hauteurMax);
+test('v6 · l\'énergie basse reste à l\'écran : même modèle, même page, avec ou sans relevés d\'énergie', () => {
+  // Par semaine, puis par mois : en septembre, des semaines (le 14) et un mois (« 2026-09 ») n'ont que de l'énergie.
+  const cas2 = [[180, 'semaine', '2026-07-13', '2026-09-29', '2026-09-14'], [200, 'mois', '2025-11-01', '2026-10-19', '2026-09']];
+  for (const [jours, pas, du, au, cle] of cas2) {
+    // Le jeu d'essai est bon : à l'écran, cette colonne ne se touche que grâce à l'énergie.
+    const colonne = (opts) => frise(donnees({ trou: true, jours, ...opts }).data, du, au).colonnes.find((c) => c.cle === cle);
+    assert.equal(colonne({}).aDonnee, false, `${pas} : sans relevé, la colonne est vide`);
+    assert.equal(colonne({ energie: true }).aDonnee, true, `${pas} : avec l'énergie, elle se touche`);
+    // Le PDF ne voit rien : même modèle (octet pour octet), même page.
+    const sans = cas({ trou: true, jours });
+    const avec = cas({ trou: true, jours, energie: true });
+    assert.equal(avec.frise.pas, pas);
+    assert.ok(avec.frise.colonnes.some((c) => c.cle === cle), 'la colonne est dans la frise du PDF');
+    assert.equal(JSON.stringify(avec), JSON.stringify(sans), `${pas} : le modèle ne change pas`);
+    assert.ok(!JSON.stringify(avec).includes('energieBasse'));
+    const page = mettreEnPage(avec);
+    assert.equal(JSON.stringify(page.ops), JSON.stringify(mettreEnPage(sans).ops), `${pas} : la page ne change pas d'un trait`);
+    assert.ok(page.hauteur <= A4.hauteurMax);
+  }
 });
 
 test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements', () => {

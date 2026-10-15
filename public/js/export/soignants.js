@@ -73,7 +73,8 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     while (m < 1) { m += 12; a -= 1; }
     duFrise = `${a}-${String(m).padStart(2, '0')}-01`;
   }
-  const f = frise(data, duFrise, aujourdhui);
+  // Sans les relevés : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni les colonnes ni aDonnee.
+  const f = frise({ journal: data.journal, episodes: data.episodes }, duFrise, aujourdhui);
 
   const debut90 = addDays(aujourdhui, -89);
   const lignesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
@@ -89,7 +90,7 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
-    // L'énergie basse (v6) est à l'écran seulement : le PDF n'en porte pas.
+    // Sans la clé energieBasse (toujours nulle ici) : le modèle reste celui d'avant la v6.
     frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c) },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
