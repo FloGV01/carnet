@@ -449,12 +449,14 @@ test('colonnes, semaine : une barre par colonne, libellée par le seul compte ; 
   assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, oui: 2, part: 2 / 3, fragile: false, libelle: '2 lundis' });
   assert.deepEqual(g.colonnes[1], { cle: 1, n: 3, oui: 1, part: 1 / 3, fragile: false, libelle: '1 mardi' });
   assert.deepEqual(g.colonnes[2], { cle: 2, n: 1, oui: 0, part: 0, fragile: true, libelle: '0 mercredi' });
-  assert.deepEqual(g.colonnes[3], { cle: 3, n: 0, oui: 0, part: null, fragile: true, libelle: '0 jeudi' });
+  assert.deepEqual(g.colonnes[3], { cle: 3, n: 0, oui: 0, part: null, fragile: true, libelle: null }); // aucune valeur : pas d'étiquette, jamais « 0 jeudi »
   // Un compte et un nom de jour : jamais « 2 sur 3 », jamais le nombre de jours connus. Il n'est que dans `n`.
-  for (const c of g.colonnes) {
+  for (const c of g.colonnes.filter((x) => x.n > 0)) {
     assert.match(c.libelle, /^\d+ [a-z]+$/);
     assert.ok(!/ sur |\//.test(c.libelle), c.libelle);
   }
+  // Un jour sans valeur connue est un silence : pas d'étiquette, donc pas de zéro. Un vrai zéro (n > 0) reste dit.
+  assert.deepEqual(g.colonnes.map((c) => c.libelle === null), g.colonnes.map((c) => c.n === 0));
 });
 
 test('colonnes, semaine : une nuit notée Mal compte au jour noté ; une énergie basse notée « vers » compte aussi', () => {
@@ -547,7 +549,7 @@ test('colonnes, mois : une colonne par mois calendaire de la période, vide ou n
   const g = parColonnes(colonnesDe([], humeurs), { du: '2026-07-01', au: AUJ }, { cle: 'mois', mesure: 'energieBasse' });
   assert.equal(g.statut, 'ok');
   assert.deepEqual(g.colonnes.map((c) => [c.cle, c.oui, c.n, c.libelle]), [
-    ['2026-07', 2, 3, '2 jours'], ['2026-08', 0, 0, '0 jour'], ['2026-09', 3, 4, '3 jours'], ['2026-10', 0, 1, '0 jour'],
+    ['2026-07', 2, 3, '2 jours'], ['2026-08', 0, 0, null], ['2026-09', 3, 4, '3 jours'], ['2026-10', 0, 1, '0 jour'],
   ]);
   assert.deepEqual(g.colonnes.map((c) => c.fragile), [false, true, false, true]);
 });

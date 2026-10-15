@@ -1,3 +1,3 @@
 // Généré par scripts/precache.mjs, ne pas modifier à la main.
-export const VERSION = '4fd30c5df807';
+export const VERSION = '2c3844cc5be7';
 export const VERSION_APP = '5.0.0';

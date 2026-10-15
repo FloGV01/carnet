@@ -211,7 +211,9 @@ export const MESURES = ['humeur', 'nuitMal', 'explosion', 'energieBasse'];
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 // Un graphique en colonnes apparaît à partir de 2 colonnes d'au moins 3 valeurs. Dessous : aucune colonne.
-// Sous 3 valeurs, une colonne est `fragile` (point creux, trait en pointillé).
+// Sous 3 valeurs, une colonne est `fragile` (point creux, trait en pointillé) : la même règle « moins de 3
+// valeurs » que `peu` dans aligne(). n === 0 veut dire « aucune valeur » (rien à dessiner, pas d'étiquette) :
+// à tester avant `fragile`, qui est aussi vrai à n = 0.
 const selonSeuil = (colonnes) => (colonnes.filter((c) => c.n >= S.minValeurs).length >= S.minColonnes
   ? { statut: 'ok', colonnes } : { statut: 'insuffisant', colonnes: [] });
 
@@ -238,15 +240,21 @@ function colonneHumeur(cle, jours) {
   };
 }
 // Les autres mesures sont oui / non / inconnu, comme les facteurs. La part vaut oui / n ; le libellé ne dit
-// que le compte de oui : n, le nombre de jours connus, ne va que dans « Voir en tableau ».
+// que le compte de oui : n, le nombre de jours connus, ne va que dans « Voir en tableau ». Sans aucune
+// valeur connue (n = 0), pas de libellé : un jour non noté n'est pas un zéro. « 0 lundi » reste dit quand
+// des lundis sont connus et qu'aucun n'est oui.
 function colonneOuiNon(cle, jours, quoi, mot) {
   const connus = jours.map((j) => j[quoi]).filter((v) => v != null);
   const oui = connus.filter(Boolean).length;
-  return { cle, n: connus.length, oui, part: connus.length ? oui / connus.length : null, fragile: connus.length < S.minValeurs, libelle: pluriel(oui, mot) };
+  return {
+    cle, n: connus.length, oui, part: connus.length ? oui / connus.length : null, fragile: connus.length < S.minValeurs,
+    libelle: connus.length ? pluriel(oui, mot) : null,
+  };
 }
 
 // jours : le résultat de facteursParJour. pas : 'semaine' (clé 0 à 6), 'lieu' (clé : l'identifiant du lieu) ou
-// 'mois' (clé : « 2026-09 »). items : les lieux, pour leur ordre.
+// 'mois' (clé : « 2026-09 »). items : les lieux, pour leur ordre. Une colonne à n === 0 n'a aucune valeur
+// (ni point, ni barre, ni libellé) : à tester avant `fragile`, aussi vrai à n = 0.
 export function parColonnes(jours, periode, { cle: pas, mesure: quoi }, items = []) {
   const ici = dans(periode);
   const dansPeriode = [...jours.values()].filter((j) => ici(j.date));
@@ -262,9 +270,11 @@ const heureExacte = (m) => (m == null ? null : versHeure(m));
 
 // Une colonne par soir de coucher, du lundi (0) au dimanche. La nuit notée le jour D (celle qui précède D)
 // est celle du soir D−1 ; la période porte sur D. Une nuit compte si le coucher et le lever sont notés et
-// que dureeNuit n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis 0 h
-// du soir (un coucher avant 12:00 compte après minuit, le lever est le lendemain) ; heureCoucher et
-// heureLever : les mêmes, en heure exacte, pour le tableau.
+// que dureeNuit n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis minuit
+// du jour du coucher (un coucher avant 12:00 compte après minuit, donc au-delà de 1440 ; le lever est le
+// lendemain, + 1440) ; heureCoucher et heureLever : les mêmes, en heure exacte, pour le tableau. n === 0 :
+// aucune nuit, tout est null et il n'y a rien à tracer ; à tester avant `fragile` (aussi vrai à n = 0, même
+// règle « moins de 3 valeurs » que `peu` dans aligne()).
 export function nuitsParSoir(journal, periode) {
   const ici = dans(periode);
   const soirs = Array.from({ length: 7 }, () => []);
