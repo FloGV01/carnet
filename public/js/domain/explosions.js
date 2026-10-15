@@ -34,10 +34,12 @@ export function valeurExplosions(compteur, nEpisodes, { jourNote = false, zeroSi
 // Journal dont seul le champ explosions suit la règle. ajouterJours : les jours qui n'ont qu'un
 // épisode d'explosion (sans saisie du soir) sont ajoutés avec ce seul champ, pour les comptes
 // d'explosions uniquement. Jamais pour le calendrier, les bonnes journées, le sommeil ni le signal.
-export function journalAvecExplosions(journal, episodes, { zeroSiNote = true, zeroDepuis = null, ajouterJours = true } = {}) {
+// jourNote : l'entrée a-t-elle une saisie du soir ? (v6 : une entrée qui ne porte que l'humeur du
+// jour, faite de relevés, n'en a pas, et ne vaut donc jamais 0.)
+export function journalAvecExplosions(journal, episodes, { zeroSiNote = true, zeroDepuis = null, ajouterJours = true, jourNote = () => true } = {}) {
   const parJour = explosionsParJour(episodes);
   const res = (journal || []).map((j) => {
-    const v = valeurExplosions(j.explosions ?? null, parJour.get(j.date) || 0, { jourNote: true, zeroSiNote, date: j.date, zeroDepuis });
+    const v = valeurExplosions(j.explosions ?? null, parJour.get(j.date) || 0, { jourNote: jourNote(j), zeroSiNote, date: j.date, zeroDepuis });
     return v === (j.explosions ?? null) ? j : { ...j, explosions: v };
   });
   if (ajouterJours) {

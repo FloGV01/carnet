@@ -173,7 +173,8 @@ export function testPermutationRapide(serie, statistique, { permutations, blocJo
   return { obs, p: (1 + c) / (1 + permutations) };
 }
 
-// Rangs moyens par comptage, pour des entiers de 0 à max (sommeil 0-2, humeur 1-10).
+// Rangs moyens par comptage, pour des entiers de 0 à max (sommeil 0-2, humeur du jour codée par
+// son rang parmi les valeurs distinctes).
 export function rangsEntiers(xs, n, max, sortie) {
   const freq = new Int32Array(max + 1);
   for (let i = 0; i < n; i++) freq[xs[i]]++;

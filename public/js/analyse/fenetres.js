@@ -84,6 +84,10 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
   const jours = journal.filter((j) => dans(j.date, du, au));
   const val = (champ) => jours.map((j) => j[champ]).filter((v) => v !== null && v !== undefined);
   const humeurs = val('humeur');
+  // Humeur du jour (v6) : min et max portent sur les humeurs du jour ; minReleve et maxReleve, sur
+  // les valeurs notées elles-mêmes (relevés et humeurs du soir). Un journal sans humeur du jour
+  // (humeurMin absent) retombe sur `humeur`.
+  const avecHumeur = jours.filter((j) => j.humeur != null);
   const explosions = val('explosions');
   const sommeils = val('sommeilRessenti');
   const reveils = val('reveilsNocturnes');
@@ -101,7 +105,10 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
     du, au,
     humeur: {
       n: humeurs.length, moyenne: moyenne(humeurs), min: humeurs.length ? Math.min(...humeurs) : null,
-      max: humeurs.length ? Math.max(...humeurs) : null, haut: compte(humeurs, (h) => h >= SEUILS.bonnesJournees.haut),
+      max: humeurs.length ? Math.max(...humeurs) : null,
+      minReleve: avecHumeur.length ? Math.min(...avecHumeur.map((j) => j.humeurMin ?? j.humeur)) : null,
+      maxReleve: avecHumeur.length ? Math.max(...avecHumeur.map((j) => j.humeurMax ?? j.humeur)) : null,
+      haut: compte(humeurs, (h) => h >= SEUILS.bonnesJournees.haut),
       bas: compte(humeurs, (h) => h <= SEUILS.bonnesJournees.bas), fragile: humeurs.length < SEUILS.moyenne.peuDeValeurs,
     },
     explosions: { n: explosions.length, total: explosions.reduce((s, x) => s + x, 0), jours: compte(explosions, (x) => x > 0) },

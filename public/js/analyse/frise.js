@@ -1,5 +1,5 @@
 // « Mes jours » (v5) : les colonnes de la frise, par jour (jusqu'à 31 jours), par semaine
-// (jusqu'à 26 semaines) ou par mois au-delà. Trois rangées : humeur du soir, nuit, explosions et
+// (jusqu'à 26 semaines) ou par mois au-delà. Trois rangées : humeur du jour (v6), nuit, explosions et
 // autres épisodes. Jamais de rangée oui / non (contact, sport) : ce serait un traqueur
 // d'habitudes. Un jour sans rien reste une colonne vide, sans zéro. Pur.
 import { addDays, diffDays, lundiDe, jourEvenement } from '../domain/dates.js';
@@ -41,6 +41,9 @@ export function frise({ journal = [], episodes = [] }, du, au) {
       const col = {
         cle: d, du: d, au: d, entree: j,
         humeur: j && j.humeur != null ? j.humeur : null,
+        // Au moins 2 relevés : le trait du plus bas au plus haut (une journée mêlée se voit).
+        humeurMin: j && j.humeurN >= 2 ? j.humeurMin : null,
+        humeurMax: j && j.humeurN >= 2 ? j.humeurMax : null,
         moyenne7: h7.length >= S.minMoyenne7 ? moyenne(h7) : null,
         nuit: (j && j.sommeilRessenti) || null,
         explosions: j && j.explosions != null ? j.explosions : null,

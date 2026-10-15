@@ -60,6 +60,14 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
   const seul = analyze({ ...data, episodes: [{ id: 'e0', date: '2026-09-20', heure: '18:00', reaction: 'reaction:explosion' }, ...episodes] },
     { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.equal(seul.fenetres['30'].explosions.total, 2);
+  // v6 : un jour qui n'a que des humeurs du moment a une humeur du jour, mais pas de saisie du soir :
+  // son compte d'explosions reste inconnu (jamais 0), dans les fenêtres, la frise et le signal.
+  const releves = analyze({ ...data, humeurs: [{ id: 'h1', date: '2026-09-28', heure: '10:00', humeur: 4, energie: null }] },
+    { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
+  const f7 = releves.fenetres['7'];
+  assert.deepEqual([f7.humeur.n, f7.explosions.n, f7.explosions.total], [3, 2, 1]);
+  const jour = releves.frise['7'].colonnes.find((c) => c.cle === '2026-09-28');
+  assert.deepEqual([jour.humeur, jour.explosions, jour.aDonnee], [4, null, true]);
 });
 
 test('export PSY v4 : détails sport et contact, humeurs du moment, après coup sous l\'épisode', () => {

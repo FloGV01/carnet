@@ -5,6 +5,7 @@ import { tendances, ecartTendance } from '../../public/js/analyse/tendances.js';
 import { tesMoments } from '../../public/js/analyse/avant-explosions.js';
 import { indicateurs } from '../../public/js/analyse/fenetres.js';
 import { profilJournee } from '../../public/js/analyse/moments.js';
+import { analyze } from '../../public/js/analyse/index.js';
 import { addDays } from '../../public/js/domain/dates.js';
 import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 
@@ -79,6 +80,26 @@ test('tendances : une phrase déjà affichée reste tant que l\'écart tient (pa
   const r = tendances(bas, J);
   assert.ok(r.constat);
   assert.ok(tendances(bas, J, new Set([r.constat.cle])).constat);
+});
+
+test('humeur du jour : un jour qui n\'a que des relevés entre dans Tendances et dans la frise', () => {
+  // 372 soirs autour de 6, puis 28 jours sans soir, avec deux relevés (3 et 4) : 3,5 par jour.
+  const journal = serie(372, (i) => 5 + (i % 3));
+  const humeurs = [];
+  for (let i = 372; i < 400; i++) {
+    const date = addDays('2025-01-01', i);
+    humeurs.push({ id: `${date}a`, date, heure: '10:00', humeur: 3 }, { id: `${date}b`, date, heure: '19:00', humeur: 4 });
+  }
+  const J = addDays('2025-01-01', 399);
+  const a = analyze({ journal, humeurs, episodes: [], symptomes: [], traitements: [] }, { aujourdhui: J, items, zeroDepuis: '2025-01-01' });
+  assert.equal(a.tendances.constat.sens, 'bas');
+  assert.equal(a.tendances.constat.moyR, 3.5);
+  const c = a.frise['30'].colonnes;
+  const dernier = c[c.length - 1];
+  assert.deepEqual([dernier.humeur, dernier.humeurMin, dernier.humeurMax, dernier.explosions, dernier.aDonnee], [3.5, 3, 4, null, true]);
+  assert.equal(dernier.moyenne7, 3.5);
+  // Un soir (une seule valeur) : pas de trait du plus bas au plus haut.
+  assert.deepEqual([c[0].cle, c[0].humeur, c[0].humeurMin, c[0].humeurMax], [addDays('2025-01-01', 370), 6, null, null]);
 });
 
 test('tes moments : groupes Explosions et par type d\'Après coup, citations datées, rien de rassemblé sur les pensées', () => {

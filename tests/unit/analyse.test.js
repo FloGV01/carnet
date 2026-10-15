@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { analyze } from '../../public/js/analyse/index.js';
 import { indicateurs, dureeNuit } from '../../public/js/analyse/fenetres.js';
 import { classer } from '../../public/js/analyse/classements.js';
-import { bonnesJournees, facteursPossibles } from '../../public/js/analyse/bonnes-journees.js';
-import { sommeilHumeur } from '../../public/js/analyse/sommeil.js';
+import { bonnesJournees, facteursPossibles, evaluer as evaluerBonnesJournees } from '../../public/js/analyse/bonnes-journees.js';
+import { sommeilHumeur, evaluer as evaluerSommeil } from '../../public/js/analyse/sommeil.js';
 import { serieHebdo } from '../../public/js/analyse/semaines.js';
 import { phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, PAS_ASSEZ, duree } from '../../public/js/analyse/textes.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
@@ -26,6 +26,7 @@ test('indicateurs : champ vide = inconnu, aucun indicateur « jours notés »', 
   assert.equal(r.humeur.n, 2);
   assert.equal(r.humeur.moyenne, 5.5);
   assert.equal(r.humeur.fragile, true);
+  assert.deepEqual([r.humeur.minReleve, r.humeur.maxReleve], [3, 8], 'journal sans humeur du jour : plus bas et plus haut du soir');
   assert.equal(r.explosions.total, 2);
   assert.equal(r.explosions.jours, 1);
   assert.deepEqual(r.contact, { n: 2, oui: 1 });
@@ -243,4 +244,48 @@ test('réveils « 5 ou plus » : la moyenne s\'affiche comme une borne basse', a
   const f = indicateurs({ journal: [5, 5, 0].map((r, i) => ({ date: addDays('2026-09-01', i), reveilsNocturnes: r })), ...vide }, '2026-09-01', '2026-09-03');
   assert.equal(f.nuits.reveils.plafonne, 2);
   assert.equal(moyenneReveils(f.nuits.reveils), 'au moins 3,3');
+});
+
+// ---------- v6 : humeur du jour ----------
+
+test('humeur du jour : toutes les fenêtres la lisent, un jour de relevés seuls compris', () => {
+  const r = (date, heure, humeur) => ({ id: `${date}${heure}`, date, heure, humeur, energie: null });
+  const journal = [{ date: '2026-09-25', humeur: 8 }, { date: '2026-09-26', humeur: 2 }, { date: '2026-09-27', humeur: 7 }];
+  const humeurs = [
+    r('2026-09-20', '15:00', 6),
+    r('2026-09-26', '10:00', 6), r('2026-09-26', '18:00', 10),
+    r('2026-09-28', '09:00', 3), r('2026-09-28', '20:00', 5),
+    r('2026-09-29', '12:00', 4), r('2026-09-29', '22:00', 5), r('2026-09-30', '01:00', 4),
+  ];
+  const a = analyze({ journal, humeurs, ...vide }, { aujourdhui: '2026-09-30', items });
+  assert.equal(a.premier, '2026-09-20', 'un jour de relevés seuls compte pour « Depuis le début »');
+  const h = a.fenetres['7'].humeur;
+  // 25 : soir 8 · 26 : relevés 6 et 10 (le soir 2 n'est pas mélangé) · 27 : soir 7 · 28 : 3 et 5 · 29 : 4, 5 et 4 (01:00 le 30).
+  assert.equal(h.n, 5);
+  assert.ok(Math.abs(h.moyenne - (8 + 8 + 7 + 4 + 13 / 3) / 5) < 1e-9);
+  assert.deepEqual([h.min, h.max, h.minReleve, h.maxReleve], [4, 8, 3, 10]);
+  assert.deepEqual([h.haut, h.bas], [3, 1], '4,33 n\'est pas une journée à 4 ou moins');
+});
+
+test('humeur du jour décimale : groupes à 7,0 ou plus et à 4,0 ou moins', () => {
+  const valeurs = [7, 7.5, 8.25, 10, 7.2, 6.9, 6.99, 4.01, 5.5, 4, 3.5, 1.25, 2.75, 3.99];
+  const journal = valeurs.map((humeur, i) => ({ date: addDays('2026-09-01', i), humeur }));
+  const r = evaluerBonnesJournees(journal, addDays('2026-09-01', valeurs.length - 1));
+  assert.deepEqual([r.nH, r.nB], [5, 5]);
+});
+
+test('sommeil : la Spearman reste juste avec des ex aequo et des décimales', () => {
+  const journal = generer({ jours: 150, seed: 3, scenario: 'sommeilJourMeme' });
+  const fin = journal[journal.length - 1].date;
+  // Même ordre et mêmes ex aequo, mais des humeurs décimales toutes entre 5 et 6.
+  const decimales = journal.map((j) => ({ ...j, humeur: 5 + (j.humeur - 1) / 10 }));
+  const a = evaluerSommeil(journal, fin);
+  const b = evaluerSommeil(decimales, fin);
+  for (const cle of ['meme', 'lendemain']) {
+    assert.equal(b[cle].statut, 'ok', cle);
+    assert.equal(b[cle].rho, a[cle].rho, cle);
+    assert.equal(b[cle].p, a[cle].p, cle);
+    assert.equal(b[cle].net, a[cle].net, cle);
+  }
+  assert.equal(b.meme.net, true);
 });

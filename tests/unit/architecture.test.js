@@ -46,3 +46,36 @@ test('pas de toISOString().slice(0, 10) pour fabriquer une date du jour', () => 
 test('pas d\'eval ni de new Function dans le code de l\'app', () => {
   for (const f of js) assert.ok(!/\beval\(|new Function\(/.test(sansCommentaires(lire(f))), rel(f));
 });
+
+// ---------- v6 : humeur du jour ----------
+
+const ANALYSE = js.filter((f) => rel(f).startsWith('public/js/analyse/'));
+const nomDe = (f) => rel(f).slice('public/js/analyse/'.length);
+
+test('humeur du jour : index.js enrichit le journal avant tout appel', () => {
+  const code = sansCommentaires(lire(join(PUBLIC, 'js', 'analyse', 'index.js')));
+  const corps = code.slice(code.indexOf('export function analyze'));
+  const enrichi = corps.indexOf('avecHumeurDuJour(');
+  assert.ok(enrichi > 0, 'analyze() ne construit pas l\'humeur du jour');
+  const appels = ['journalAvecExplosions', 'premiereDate', 'indicateurs', 'classements', 'profilJournee', 'tesMoments', 'frise',
+    'bonnesJournees', 'sommeilHumeur', 'tendances', 'ressemblance'];
+  for (const f of appels) {
+    const i = corps.indexOf(`${f}(`);
+    assert.ok(i > enrichi, `${f} appelé avant l'humeur du jour`);
+  }
+});
+
+test('humeur du jour : aucun module d\'analyse ne lit l\'humeur brute', () => {
+  for (const f of ANALYSE) {
+    const nom = nomDe(f);
+    if (nom === 'humeur-jour.js') continue;
+    const code = sansCommentaires(lire(f));
+    // L'humeur du jour est décimale : plus aucun test « entier de 1 à 10 » (estHumeur).
+    assert.ok(!/Number\.isInteger\([^)]*humeur/.test(code), `${nom} n'accepte que des humeurs entières`);
+    if (nom === 'index.js') continue;
+    // Seul index.js calcule l'humeur du jour. Seul moments.js (« Ta journée heure par heure ») lit les relevés.
+    assert.ok(!/\b(avecHumeurDuJour|humeursDuJour)\b/.test(code), `${nom} recalcule l'humeur du jour`);
+    if (nom === 'moments.js') continue;
+    assert.ok(!/\bdata\.humeurs\b|export function \w+\s*\(\s*(\{[^)]*\bhumeurs\b|humeurs\b)/.test(code), `${nom} lit les relevés`);
+  }
+});
