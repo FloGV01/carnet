@@ -74,29 +74,24 @@
 .soins .vide { margin: var(--esp-4) 0; }
 .entretoise { flex: 1; }
 .pied-collant {
-  position: sticky; bottom: calc(53px + env(safe-area-inset-bottom)); margin: 0 calc(-1 * var(--marge)); padding: 12px var(--marge);
+  position: sticky; bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); margin: 0 calc(-1 * var(--marge)); padding: 12px var(--marge);
   background: var(--bg); border-top: 1px solid var(--hairline); font-size: var(--t-note); line-height: 1.4; color: var(--text-2); text-align: center;
 }
-.soins { padding-bottom: calc(53px + env(safe-area-inset-bottom)); min-height: 100dvh; }
+.soins { padding-bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); min-height: 100dvh; }
 
 /* Trois onglets sur 390 px : « Rendez-vous » reste sur une ligne. */
 .soins .segmente.large button { padding: 0 var(--esp-1); white-space: nowrap; }
 
 /* Notes en vrac : le champ prêt, puis une ligne par note (date, texte modifiable sur place, ✕).
-   La zone de texte s'agrandit avec son contenu : une copie invisible du texte (data-valeur) fixe la hauteur. */
+   La zone de texte s'agrandit avec son contenu, d'une ligne à sept, comme toutes les zones (composants.css). */
 .notes-en-vrac { display: flex; flex-direction: column; gap: var(--esp-3); margin-top: var(--esp-3); }
 .ligne-note { display: flex; align-items: flex-start; padding-left: var(--esp-4); }
 .ligne-note:focus-within { background: var(--surface-2); }
 .note-date { flex: none; min-width: 3.4em; padding-top: 13px; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-note .effacer { flex: none; align-self: flex-start; }
-.note-corps { flex: 1; min-width: 0; display: grid; }
-.note-corps::after, .note-corps .champ-texte {
-  grid-area: 1 / 1; min-width: 0; padding: 12px 0; border: 0; border-radius: 0;
-  font-size: max(16px, 1em); line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere;
-}
-.note-corps::after { content: attr(data-valeur) " "; visibility: hidden; }
-.note-corps .champ-zone, .note-corps .champ-avec-dicter { display: contents; }
-.note-corps .champ-texte, .note-corps .champ-texte:focus { min-height: 0; overflow: hidden; background: transparent; box-shadow: none; }
+.note-corps { flex: 1; min-width: 0; }
+.note-corps .champ-texte { --cadre-texte: 24px; padding: 12px 0; border: 0; border-radius: 0; overflow-wrap: anywhere; }
+.note-corps .champ-texte, .note-corps .champ-texte:focus { background: transparent; box-shadow: none; }
 .notes-lecture { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .notes-lecture li { display: flex; gap: var(--esp-3); }
 .notes-lecture .note-date { padding-top: 0; }
@@ -351,15 +346,14 @@
 .pied-jour { margin-top: 12px; font-size: var(--t-note); line-height: 1.4; color: var(--text-2); text-align: center; text-wrap: pretty; }
 .effacer-jour { align-self: center; font-size: var(--t-note); }
 .importer { align-self: center; font-weight: 400; font-size: var(--t-sous); }
-/* Boutons flottants, sur une bande au fond de l'écran : la page défile au-dessus, rien n'y reste caché. */
+/* Boutons flottants, sur une bande au fond de l'écran : la page défile au-dessus, rien n'y reste caché. Fond
+   plein, collé à la barre d'onglets (v6) : le texte de la page ne passe plus entre les boutons. */
 .actions-flottantes {
-  position: fixed; left: 0; right: 0; bottom: calc(53px + env(safe-area-inset-bottom)); z-index: 9;
+  position: fixed; left: 0; right: 0; bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); z-index: 9;
   display: flex; justify-content: space-between; align-items: center; gap: var(--esp-2);
   padding: 4px calc(var(--marge) + env(safe-area-inset-right)) 4px calc(var(--marge) + env(safe-area-inset-left));
-  background: linear-gradient(to bottom, transparent, var(--bg) 10px);
-  pointer-events: none;
+  background: var(--bg);
 }
-.actions-flottantes > * { pointer-events: auto; }
 .actions-flottantes .fab { position: static; }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
 /* Humeur du moment (v6) : les heures de « C'était vers… » sous la ligne « Maintenant ▾ ». */
@@ -463,7 +457,7 @@
 .heures-moment .pastille { min-width: 56px; justify-content: center; }
 .ma-journee, .mon-plan { gap: 14px; }
 .ligne-plan { padding: 0 var(--marge); flex: none; display: flex; align-items: center; gap: 8px; }
-.ligne-plan .btn-lien { font-size: var(--t-sous); min-height: 36px; }
+.ligne-plan .btn-lien { font-size: var(--t-sous); }
 .ligne-plan .btn-lien svg { width: 16px; height: 16px; }
 .separateur-plan { color: var(--text-2); font-size: var(--t-sous); }
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }

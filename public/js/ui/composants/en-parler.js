@@ -12,6 +12,7 @@ import { Feuille } from './feuille.js';
 import { Pastilles } from './pastilles.js';
 import { afficherToast } from './toast.js';
 import { Icones } from '../icones.js';
+import { ajusterLignes } from './texte.js';
 
 // « Psychiatre · mer. 14 oct. · 10:30 », ou « … · Date à fixer ».
 const nomRdv = (r, carte) => (r.professionnel ? libelle(carte, r.professionnel) : 'Rendez-vous');
@@ -61,7 +62,8 @@ function FeuilleEnParler({ store, element, carte, surFermer, retourFocus }) {
   return html`<${Feuille} titre="En parler au rendez-vous" idTitre="titre-feuille-en-parler" surFermer=${surFermer} retourFocus=${retourFocus}>
     <div class="champ-zone">
       <label class="etiquette" for="question-en-parler">Question</label>
-      <textarea id="question-en-parler" ref=${zone} class="champ-texte" rows="3" defaultValue=${questionPreecrite(element, { store, carte })}></textarea>
+      <textarea id="question-en-parler" ref=${zone} class="champ-texte" rows="3" data-lignes="3" defaultValue=${questionPreecrite(element, { store, carte })}
+        onInput=${(e) => ajusterLignes(e.target, 3)}></textarea>
     </div>
     ${donnees && html`<div class="choix-rdv">
       ${donnees.aVenir.length > 0 && html`<h3 class="libelle-section">Ajouter à</h3>

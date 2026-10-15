@@ -60,10 +60,9 @@ function AjoutNote() {
   </div>`;
 }
 
-// Une note : la date du jour logique, le texte entier (zone qui s'agrandit avec lui), ✕.
+// Une note : la date du jour logique, le texte entier (zone qui s'agrandit avec lui, jusqu'à sept lignes), ✕.
 function LigneNote({ note }) {
   const date = dateNote(note);
-  const [miroir, setMiroir] = useState(note.texte);
   const vide = useRef(false);
   const retiree = useRef(false);
   // Une seule suppression par note : en sortant du champ, en changeant d'écran, ou par ✕.
@@ -77,8 +76,7 @@ function LigneNote({ note }) {
   };
   return html`<li class="ligne-note">
     <span class="note-date">${date}</span>
-    <div class="note-corps" data-valeur=${miroir}
-      onInput=${(e) => { vide.current = e.target.value.trim() === ''; setMiroir(e.target.value); }} onFocusOut=${supprimerSiVide}>
+    <div class="note-corps" onInput=${(e) => { vide.current = e.target.value.trim() === ''; }} onFocusOut=${supprimerSiVide}>
       <${ChampTexte} id=${`note-${note.id}`} ariaLabel=${`Note du ${date}`} valeur=${note.texte} lignes=${1} dicter=${false}
         cleBrouillon=${`carnet:brouillon:${note.id}:texte`} surEnregistrer=${enregistrer} />
     </div>

@@ -77,7 +77,7 @@ test('le texte tapé et non ajouté est gardé quand on change d\'onglet', async
 });
 
 test('la liste montre le jour logique (une note de 01:30 est de la veille), du plus récent au plus ancien, texte entier', async ({ page }) => {
-  const longue = 'Une idée qui court sur plusieurs lignes, pour vérifier que le texte entier se lit sans défiler dans la note. '.repeat(4).trim();
+  const longue = 'Une idée qui court sur plusieurs lignes, pour vérifier que la note grandit avec son texte, puis défile. '.repeat(4).trim();
   await creerNote(page, { date: '2026-10-12', heure: '09:05', texte: 'Lundi matin' });
   await creerNote(page, { date: '2026-10-13', heure: '01:30', texte: 'Écrite la nuit' });
   await creerNote(page, { date: '2026-10-14', heure: '18:40', texte: longue });
@@ -89,12 +89,14 @@ test('la liste montre le jour logique (une note de 01:30 est de la veille), du p
   await expect(texteDe(lignes(page).nth(1))).toHaveValue('Écrite la nuit');
   await expect(lignes(page).nth(2)).toContainText('12/10');
   await expect(texteDe(lignes(page).nth(2))).toHaveValue('Lundi matin');
-  // Texte entier : la zone s'agrandit, aucun défilement intérieur.
+  // Texte entier : la zone s'agrandit avec lui, d'une ligne jusqu'à sept, puis elle défile (spec §8, comme toutes les zones).
+  const mesure = (t) => t.evaluate((z) => ({
+    lignes: Math.round((z.clientHeight - 24) / parseFloat(getComputedStyle(z).lineHeight)), defile: z.scrollHeight > z.clientHeight + 1,
+  }));
   const t = texteDe(lignes(page).nth(0));
   await expect(t).toHaveValue(longue);
-  const { defile, haut } = await t.evaluate((z) => ({ defile: z.scrollHeight > z.clientHeight + 1, haut: z.clientHeight }));
-  expect(defile).toBe(false);
-  expect(haut).toBeGreaterThan(60);
+  expect(await mesure(t)).toEqual({ lignes: 7, defile: true });
+  expect(await mesure(texteDe(lignes(page).nth(2)))).toEqual({ lignes: 1, defile: false });
 });
 
 test('un toucher modifie la note sur place, enregistrée peu après la frappe, sans bouton', async ({ page }) => {

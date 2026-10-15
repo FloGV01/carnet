@@ -30,23 +30,36 @@ const SURCHARGE = ['typeExplosion:surcharge', 'typeExplosion:fige'];
 // Étapes. L'étape 6 dépend de l'étape 1 : 6a si Colère est cochée, 6b si Surcharge ou Figé l'est ;
 // aucun type, ou « Je ne sais pas » seul : pas d'étape 6. Une branche décochée qui porte des
 // réponses reste affichée (rien n'est caché ni effacé en silence). Le repère compte ces écrans.
+// recap : les lignes du récapitulatif, [libellé court à la première personne, champs…] (spec §8) ; la question
+// complète reste sur l'écran de l'étape.
 const rempli = (v) => v != null && !(Array.isArray(v) && v.length === 0);
 export function etapesPour(ac = {}) {
   const t = ac.types || [];
   const colere = t.includes(COLERE) || ['pieges', 'pensees', 'autreFacon'].some((c) => rempli(ac[c]));
   const surcharge = t.some((x) => SURCHARGE.includes(x)) || ['tropDe', 'besoins'].some((c) => rempli(ac[c]));
   return [
-    { cle: 'types', question: 'C\'était plutôt…', sous: 'Plusieurs choix possibles.', blocs: [{ type: 'multi', champ: 'types', liste: 'typeExplosion' }] },
-    { cle: 'fragilites', question: 'Ce jour-là, ce qui me fragilisait déjà…', contexte: true, blocs: [{ type: 'multi', champ: 'fragilites', liste: 'fragilite' }] },
-    { cle: 'declencheur', question: 'Le déclencheur', sous: 'Repris de l\'épisode, tu peux le compléter.', blocs: [{ type: 'declencheur' }] },
-    { cle: 'signes', question: 'Mes premiers signes', sous: 'Dans le corps, les gestes, la tête.', blocs: [{ type: 'multi', champ: 'signes', liste: 'signe' }, { type: 'texte', champ: 'signesTexte', etiquette: 'Autre chose' }] },
-    { cle: 'repereA', question: 'Quand j\'ai remarqué que ça montait, j\'en étais à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'repereA' }] },
-    colere && { cle: 'pensees', question: 'Ce que je me suis dit', blocs: [{ type: 'multi', champ: 'pieges', liste: 'piegePensee', titre: 'Ça ressemble à…' }, { type: 'texte', champ: 'pensees', etiquette: 'Avec mes mots' }] },
-    surcharge && { cle: 'tropDe', question: 'Ce qui était trop', blocs: [{ type: 'multi', champ: 'tropDe', liste: 'sourceSurcharge' }, { type: 'multi', champ: 'besoins', liste: 'besoin', titre: 'Ce dont j\'avais besoin' }] },
-    { cle: 'consequences', question: 'Ce que ça a donné', blocs: [{ type: 'multi', champ: 'surLeMoment', liste: 'consequenceCourt', titre: 'Sur le moment' }, { type: 'multi', champ: 'plusTard', liste: 'consequenceLong', titre: 'Plus tard' }] },
-    colere && { cle: 'autreFacon', question: 'Une autre façon de voir', sous: 'Ce qui est sûr, ce que je suppose. Si un ami me racontait ça, je lui dirais…', blocs: [{ type: 'texte', champ: 'autreFacon', etiquette: 'Une autre façon de voir', lignes: 3 }] },
-    { cle: 'siAlors', question: 'Pour la prochaine fois', blocs: [{ type: 'siAlors' }] },
-    { cle: 'tensionApres', question: 'Maintenant, en y repensant, c\'est à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'tensionApres' }] },
+    { cle: 'types', question: 'C\'était plutôt…', sous: 'Plusieurs choix possibles.', blocs: [{ type: 'multi', champ: 'types', liste: 'typeExplosion' }],
+      recap: [['C\'était plutôt', 'types']] },
+    { cle: 'fragilites', question: 'Ce jour-là, ce qui me fragilisait déjà…', contexte: true, blocs: [{ type: 'multi', champ: 'fragilites', liste: 'fragilite' }],
+      recap: [['Ce qui me fragilisait', 'fragilites']] },
+    { cle: 'declencheur', question: 'Le déclencheur', sous: 'Repris de l\'épisode, tu peux le compléter.', blocs: [{ type: 'declencheur' }],
+      recap: [['Le déclencheur', 'declencheur']] },
+    { cle: 'signes', question: 'Mes premiers signes', sous: 'Dans le corps, les gestes, la tête.', blocs: [{ type: 'multi', champ: 'signes', liste: 'signe' }, { type: 'texte', champ: 'signesTexte', etiquette: 'Autre chose' }],
+      recap: [['Mes signes', 'signes', 'signesTexte']] },
+    { cle: 'repereA', question: 'Quand j\'ai remarqué que ça montait, j\'en étais à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'repereA' }],
+      recap: [['Ça montait à', 'repereA']] },
+    colere && { cle: 'pensees', question: 'Ce que je me suis dit', blocs: [{ type: 'multi', champ: 'pieges', liste: 'piegePensee', titre: 'Ça ressemble à…' }, { type: 'texte', champ: 'pensees', etiquette: 'Avec mes mots' }],
+      recap: [['Ce que je me suis dit', 'pensees'], ['Mes pièges', 'pieges']] },
+    surcharge && { cle: 'tropDe', question: 'Ce qui était trop', blocs: [{ type: 'multi', champ: 'tropDe', liste: 'sourceSurcharge' }, { type: 'multi', champ: 'besoins', liste: 'besoin', titre: 'Ce dont j\'avais besoin' }],
+      recap: [['Ce qui était trop', 'tropDe'], ['Ce dont j\'avais besoin', 'besoins']] },
+    { cle: 'consequences', question: 'Ce que ça a donné', blocs: [{ type: 'multi', champ: 'surLeMoment', liste: 'consequenceCourt', titre: 'Sur le moment' }, { type: 'multi', champ: 'plusTard', liste: 'consequenceLong', titre: 'Plus tard' }],
+      recap: [['Sur le moment', 'surLeMoment'], ['Plus tard', 'plusTard']] },
+    colere && { cle: 'autreFacon', question: 'Une autre façon de voir', sous: 'Ce qui est sûr, ce que je suppose. Si un ami me racontait ça, je lui dirais…', blocs: [{ type: 'texte', champ: 'autreFacon', etiquette: 'Une autre façon de voir', lignes: 3 }],
+      recap: [['Une autre façon de voir', 'autreFacon']] },
+    { cle: 'siAlors', question: 'Pour la prochaine fois', blocs: [{ type: 'siAlors' }],
+      recap: [['La prochaine fois', 'siAlors']] },
+    { cle: 'tensionApres', question: 'Maintenant, en y repensant, c\'est à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'tensionApres' }],
+      recap: [['Tension après', 'tensionApres']] },
   ].filter(Boolean);
 }
 
@@ -115,7 +128,9 @@ export function ApresCoup({ id }) {
   const ligneDate = html`<p class="ligne-date ligne-date-fixe">Épisode du ${formaterJour(jourEvenement(ep.date, ep.heure))}${ep.heure ? ` · ${ep.heure}` : ''}</p>`;
 
   if (etape === 'recap') {
-    const resume = (et) => et.blocs.map((b) => {
+    // Une ligne du récapitulatif : ses champs (un bloc de l'étape chacun, « declencheur » et « siAlors » par leur type).
+    const resume = (et, champs) => champs.map((champ) => {
+      const b = et.blocs.find((x) => (x.champ || x.type) === champ);
       const v = b.type === 'declencheur' ? ep.declencheur : b.type === 'siAlors' ? (ac.siJe || ac.alorsJe) && `si ${ac.siJe || '…'}, alors ${ac.alorsJe || '…'}` : ac[b.champ];
       if (v == null) return null;
       if (Array.isArray(v)) return v.map((x) => libelle(carte, x)).join(', ');
@@ -127,12 +142,12 @@ export function ApresCoup({ id }) {
       pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
         <h2 class="titre-question">Récapitulatif</h2>
-        <ul class="liste recap">${etapes.map((et, i) => {
-          const r = resume(et);
+        <ul class="liste recap">${etapes.flatMap((et, i) => et.recap.map(([nom, ...champs]) => {
+          const r = resume(et, champs);
           return html`<li><button type="button" class="ligne-recap" onClick=${() => { setVersRecap(true); setEtape(i); }}>
-            <span class="recap-nom">${et.question}</span><span class=${r ? 'recap-val' : 'recap-val discret'}>${r || '·'}</span>${Icones.chevron({ trait: 2 })}
+            <span class="recap-nom">${nom}</span><span class=${r ? 'recap-val' : 'recap-val discret'}>${r || '·'}</span>${Icones.chevron({ trait: 2 })}
           </button></li>`;
-        })}</ul>
+        }))}</ul>
         <p class="note-carte-interne">Ce sont tes mots. Tu peux les relire avec ton soignant, ou les envoyer à PSY avec l'export.</p>
         <${EnParler} store="episodes" element=${ep} carte=${carte} />
       </div>

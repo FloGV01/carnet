@@ -1,4 +1,4 @@
-# Carnet v6 (« V2 ») : spécification (conçue, à construire, version 6.0.0)
+# Carnet v6 (« V2 ») : spécification (construite, version 6.0.0)
 
 Brainstorming du 8 au 12 octobre 2026, après la v5.0.0. Choix faits point par point par l'utilisateur, à partir de
 quatre études contre-vérifiées :
@@ -558,3 +558,43 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
   - rien de plus un soir sans relevé ;
   - un trait du plus bas au plus haut dans Mes jours ;
   - les jours passés gardés.
+
+## 13. Ce qui a été construit, et les écarts
+
+Construite le 15/10, en 26 tâches, sur la branche `dev`. Version 6.0.0, base `DB_VERSION` 4, sauvegarde `FORMAT_VERSION` 4.
+
+- **Données** : comme prévu (§9). Sauvegardes témoins aux formats 1, 2 et 3 dans `tests/fixtures`, « Vérifier mes données » dans le Diagnostic, procédure « Carnet TEST » dans `docs/deploiement.md`. Les mémos se repèrent par `repo.audios.parents()`, sans lire les sons.
+- **Humeur du jour** (§1.0) : comme prévu. Ma semaine prend le plus bas et le plus haut jour par jour, parmi les relevés s'il y en a, sinon le soir, jamais les deux un même jour. L'Historique a une ligne pour un jour qui n'a que des relevés (« humeur 5,6 »), comme l'export PSY.
+- **Calibration** (§10) : aucun seuil n'a changé. Sur les relevés inventés, le bout en bout atteint 3 journaux sur 30 pour les scénarios AR(1), soit la limite de 10 %.
+- **Saisie du soir** : le repli « Ce qui a pesé · ce qui a rechargé » est fermé au départ. À 390 × 797, en clair comme en sombre, les champs et « Mes points positifs » tiennent sans défiler ; les replis suivants se lisent en faisant défiler la page.
+- **Comprendre** (§2) :
+  - un SVG par bloc du graphique aligné, sous un groupe qui porte la phrase ;
+  - toucher une barre liste les jours où le facteur vaut « oui » ;
+  - les fenêtres d'événements antérieurs à la période sont exclues des « autres jours » ;
+  - une colonne sans valeur garde son étiquette d'axe, sans marque ;
+  - « Tout » commence au premier jour des données ;
+  - la phrase « Touche une barre » a été retirée : les zones de toucher ne sont pas annoncées par VoiceOver, les valeurs sont dans « Voir en tableau ».
+- **Mes jours et PDF** : les barres d'énergie basse par semaine ou par mois sont à l'échelle de la plus haute de la période. Par semaine ou par mois, un repère de traitement est au centre de sa colonne ; la légende donne la date exacte.
+- **Après coup** (§4) : le cadre de bouton, le titre « Après coup · TCC » et son sous-titre valent aussi pour la carte d'un nouvel épisode. Seule la ligne du haut « Mon plan · Après coup » est réservée à l'épisode rouvert. « Ce jour-là » dit l'humeur du jour.
+- **Récapitulatif de l'Après coup** (§8) : une ligne par libellé du tableau, dans son ordre (« Ce que je me suis dit » avant « Mes pièges »). « Mes signes » réunit les choix et « Autre chose ». Le déclencheur, absent du tableau, garde « Le déclencheur ». Un toucher ouvre l'étape de la ligne.
+- **Moment difficile et Me ressourcer** (§5, §6) :
+  - « Une chose à la fois » est masqué quand le plan n'a aucune carte ; l'ouvrir arrête une respiration en cours ;
+  - la carte de la règle n'a que « Respirer » et se ferme avec le ✕ de l'écran ;
+  - l'écran « Me ressourcer » vide n'a pas « Respirer ».
+- **Soins** (§7) : Annuler après l'effacement d'une note rend le dernier texte enregistré. Le texte du champ du haut, pas encore ajouté, est gardé sur l'appareil (hors sauvegarde). En consultation, « Mes notes » se lit sans se modifier. La question d'un épisode reprend émotion, intensité et réaction ; l'Après coup reprend celle de son épisode.
+- **Zones de texte** (§8) :
+  - `field-sizing: content` dans `composants.css`, bornée par la taille au repos de la zone (`data-lignes`) et 7 lignes ; sans lui, `ChampTexte` ajuste l'attribut `rows` à la saisie ;
+  - vide, une zone garde sa taille même quand son texte d'aide est plus long ;
+  - la question de « En parler au rendez-vous » grandit de la même façon.
+- **Bande du bas** (§8) : fond plein, celui de la page, posé sur la barre d'onglets (`--hauteur-onglets`). Elle reçoit aussi les touchers entre ses boutons. Le pied collant de Soins › Traitement est posé de la même façon.
+- **Cibles de 44 pt** (§8) : tous les choix sur une ligne en grand format (`.segmente.large`) passent à 44, dont les onglets de Soins et de Comprendre et les réglages de la respiration. « Mon plan » et « Après coup » en haut d'un épisode aussi. La ligne de date se touche sur toute sa largeur, dans un épisode, un symptôme et l'humeur du moment.
+- **Mode sombre** (§8) : un fond plein par rubrique, moins lumineux (`--p-*` dans `tokens.css`), sous un texte clair en graisse 600. Le contraste est d'au moins 5:1, et de 2,5:1 avec le fond d'une carte. En clair, rien ne change.
+
+**Écarts**
+- **Notes en vrac** : une note de la liste garde une ligne au repos, pas deux. Elle se lit comme une ligne de liste, et elle n'est jamais vide (une note vidée est supprimée). Elle grandit jusqu'à 7 lignes, puis défile.
+- **Comprendre** : les zones de toucher du graphique aligné restent hautes de 22 (moins de 44 pt). Les agrandir doublerait la hauteur de chaque bloc, pour un toucher qui ne donne que des dates, déjà dans « Voir en tableau ».
+
+**À vérifier sur l'iPhone**
+- Le signal sonore de la respiration, en silencieux et avec de la musique.
+- Les chemins de la page d'aide iPhone et les noms d'actions de Raccourcis, écrits pour iOS 26.
+- Les zones de texte qui grandissent, et la sortie d'une note vidée quand l'app passe en arrière-plan.

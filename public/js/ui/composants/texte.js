@@ -4,6 +4,16 @@ import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { vidanges } from '../../store.js';
 
+// Une zone de texte grandit de sa taille au repos (`lignes`) à LIGNES_MAX lignes, puis elle défile (spec §8).
+// CSS s'en charge avec field-sizing ; sans lui (iOS plus ancien), l'attribut rows suit le texte, sans style en ligne.
+const LIGNES_MAX = 7; // comme max-height de textarea.champ-texte (composants.css)
+export function ajusterLignes(zone, lignes) {
+  if (!zone || getComputedStyle(zone).fieldSizing === 'content') return;
+  zone.rows = lignes;
+  if (!zone.value) return;
+  while (zone.rows < LIGNES_MAX && zone.scrollHeight > zone.clientHeight) zone.rows += 1;
+}
+
 // Champ de texte libre, non contrôlé (la dictée iOS n'est jamais réécrite pendant la saisie).
 // Enregistré 500 ms après la frappe, à la sortie du champ et quand l'app passe en arrière-plan.
 // Le brouillon est doublé dans localStorage jusqu'à confirmation de l'écriture.
@@ -34,6 +44,7 @@ export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur
     const z = zone.current;
     const brouillon = lireLocal(cleBrouillon);
     if (z && typeof brouillon === 'string' && brouillon !== (valeur ?? '')) { z.value = brouillon; planifier(); }
+    ajusterLignes(z, lignes);
     const surCache = () => { if (document.visibilityState === 'hidden') enregistrer(); };
     document.addEventListener('visibilitychange', surCache);
     window.addEventListener('pagehide', enregistrer);
@@ -48,6 +59,7 @@ export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur
 
   const surSaisie = (e) => {
     setAide(false);
+    ajusterLignes(e.target, lignes);
     ecrireLocal(cleBrouillon, e.target.value);
     if (!enCours.current) planifier();
   };
@@ -56,7 +68,7 @@ export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur
     ${etiquette && html`<label class=${icone || facultatif ? 'etiquette etiquette-icone' : 'etiquette'} for=${id}>
       ${icone && Icones[icone] && Icones[icone]()}${etiquette}${facultatif && html` <span class="facultatif">(facultatif)</span>`}</label>`}
     <div class="champ-avec-dicter">
-      <textarea id=${id} ref=${zone} class="champ-texte" rows=${lignes} placeholder=${placeholder || ''} defaultValue=${valeur ?? ''}
+      <textarea id=${id} ref=${zone} class="champ-texte" rows=${lignes} data-lignes=${lignes} placeholder=${placeholder || ''} defaultValue=${valeur ?? ''}
         aria-label=${etiquette ? null : ariaLabel || null}
         onInput=${surSaisie} onBlur=${() => { setAide(false); enregistrer(); }}
         onCompositionStart=${() => { enCours.current = true; }}

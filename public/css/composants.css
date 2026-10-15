@@ -60,7 +60,7 @@
   display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
 }
 .btn svg { width: 20px; height: 20px; }
-.btn-plein { background: var(--accent); color: var(--accent-texte); border: 0; font-weight: 600; }
+.btn-plein { background: var(--p-accent); color: var(--texte-plein); border: 0; font-weight: 600; }
 .btn-effacer { background: var(--danger); color: var(--danger-texte); border: 0; font-weight: 600; width: 100%; }
 .btn-effacer[disabled] { background: var(--surface-2); color: var(--text-2); opacity: 1; }
 .btn[disabled] { opacity: 0.45; cursor: default; }
@@ -165,6 +165,19 @@
   width: 100%; min-height: 46px; padding: 9px 14px; border-radius: var(--r-moyen);
   border: 1px solid var(--border); background: var(--surface); resize: none; line-height: 1.35; display: block;
 }
+/* Zones de texte (v6) : de leur taille au repos (data-lignes) à 7 lignes, puis elles défilent. field-sizing
+   quand il est pris en charge ; sinon ChampTexte ajuste l'attribut rows. Vide, la zone garde sa taille, même
+   quand le texte d'aide est plus long : le soir tient sans défiler. --cadre-texte : marges et filets en hauteur. */
+textarea.champ-texte {
+  --lignes: 2; --cadre-texte: 20px;
+  field-sizing: content; overflow-y: auto;
+  min-height: calc(var(--lignes) * 1lh + var(--cadre-texte));
+  max-height: calc(7lh + var(--cadre-texte));
+}
+textarea.champ-texte:placeholder-shown { max-height: calc(var(--lignes) * 1lh + var(--cadre-texte)); }
+textarea.champ-texte[data-lignes="1"] { --lignes: 1; }
+textarea.champ-texte[data-lignes="3"] { --lignes: 3; }
+textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .champ-ligne { width: 100%; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-petit); border: 1px solid var(--border); background: var(--surface); }
 .case { display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); }
 .case input { width: 22px; height: 22px; accent-color: var(--accent); }
@@ -188,7 +201,7 @@
 }
 .pastille small { font-size: var(--t-legende); color: var(--text-2); }
 .pastille[aria-pressed="true"] {
-  background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); color: var(--accent-texte);
+  background: var(--p, var(--p-accent)); border-color: var(--p, var(--p-accent)); color: var(--texte-plein);
   font-weight: 600; border-radius: var(--r-plein);
 }
 .pastille[aria-pressed="true"] small { color: inherit; opacity: 0.9; }
@@ -214,11 +227,11 @@
   font-size: var(--t-pastille); transition: background var(--duree), border-radius var(--duree);
 }
 .segmente button[aria-pressed="true"] {
-  background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); color: var(--accent-texte);
+  background: var(--p, var(--p-accent)); border-color: var(--p, var(--p-accent)); color: var(--texte-plein);
   font-weight: 600; border-radius: var(--r-plein);
 }
 .segmente.large { width: 100%; }
-.segmente.large button { min-height: 40px; font-size: var(--t-sous); }
+.segmente.large button { min-height: var(--cible); font-size: var(--t-sous); }
 
 /* Dicter */
 .champ-avec-dicter { position: relative; }
@@ -292,7 +305,7 @@
 .fab {
   position: fixed; right: calc(var(--marge) + env(safe-area-inset-right)); bottom: calc(57px + env(safe-area-inset-bottom)); z-index: 9;
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 18px 0 14px; border-radius: var(--r-plein);
-  background: var(--accent); color: var(--accent-texte); font-weight: 600; font-size: var(--t-corps); text-decoration: none;
+  background: var(--p-accent); color: var(--texte-plein); font-weight: 600; font-size: var(--t-corps); text-decoration: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .16);
 }
 .fab svg { width: 20px; height: 20px; stroke-width: 2.2; }
@@ -321,6 +334,8 @@
 .parcours-pied .terminer { flex: 1; margin: 4px 6px; }
 .ligne-date { padding: 0 var(--marge); flex: none; }
 .ligne-date .btn-lien { color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
+/* La ligne de date se touche sur toute sa largeur (v6). */
+.ligne-date > .btn-lien { width: 100%; }
 .ligne-date .btn-lien svg { width: 16px; height: 16px; stroke-width: 2; }
 .edition-date { display: flex; gap: var(--esp-2); padding-bottom: var(--esp-2); }
 .edition-date input[type="date"] { flex: 1; }
