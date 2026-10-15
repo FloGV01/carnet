@@ -84,3 +84,28 @@ test('masqué dans Réglages › Ma journée, le repli reste affiché un jour o�
   await aller(page, '#/aujourdhui');
   await expect(repli(page)).toHaveCount(1);
 });
+
+test('un long résumé replié reste dans la page : coupé par une ellipse, sans défilement de côté', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setViewportSize({ width: 390, height: 797 });
+  await repo(page, () => window.__carnet.repo.journal.patch(window.__carnet.repo.aujourdhui(), {
+    pese: ['pese:bruit', 'pese:lumiere', 'pese:monde', 'pese:changement', 'pese:attente'],
+    recharge: ['recharge:seul', 'recharge:calme', 'recharge:interet'],
+  }));
+  await page.reload();
+  const resume = repli(page).locator('.repli-resume');
+  await expect(resume).toContainText('pesé : bruit, lumière, monde, changement, attente · rechargé : être seul, calme');
+  const mesures = await page.evaluate(() => {
+    const tete = document.querySelector('.repli.resume-sous .repli-tete');
+    const r = tete.querySelector('.repli-resume');
+    return {
+      droiteResume: r.getBoundingClientRect().right, droiteTete: tete.getBoundingClientRect().right,
+      coupe: r.scrollWidth > r.clientWidth, ellipse: getComputedStyle(r).textOverflow,
+      debordePage: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+  expect(mesures.droiteResume).toBeLessThanOrEqual(mesures.droiteTete);
+  expect(mesures.coupe).toBe(true);
+  expect(mesures.ellipse).toBe('ellipsis');
+  expect(mesures.debordePage).toBe(false);
+});

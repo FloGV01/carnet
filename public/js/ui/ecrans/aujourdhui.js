@@ -102,7 +102,7 @@ function resumeNuit(e) {
 // Ce qui a pesé, ce qui a rechargé (v6) : « pesé : bruit, trajets · rechargé : calme ».
 function resumePeseRecharge(e, carte) {
   const liste = (ids) => ids.map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
-  return [e.pese && `pesé : ${liste(e.pese)}`, e.recharge && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
+  return [e.pese?.length && `pesé : ${liste(e.pese)}`, e.recharge?.length && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
 }
 
 export function Aujourdhui({ date: dateRoute }) {

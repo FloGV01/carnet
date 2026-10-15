@@ -248,9 +248,9 @@
 .repli-tete[aria-expanded="true"] .repli-fleche { transform: rotate(90deg); }
 .repli-titre { font-size: var(--t-corps); flex: none; }
 .repli-resume { margin-left: auto; color: var(--text-2); font-size: var(--t-sous); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
-/* Titre long : le résumé a sa propre ligne, sous le titre, à l'aplomb de son texte. */
+/* Titre long : le résumé a sa propre ligne, sous le titre, à l'aplomb de son texte (retrait compris dans sa largeur, il se coupe par une ellipse). */
 .repli.resume-sous .repli-tete { flex-wrap: wrap; align-content: center; gap: 0 var(--esp-2); padding: 6px 0; }
-.repli.resume-sous .repli-resume { flex: 0 0 100%; margin: 0 0 0 24px; }
+.repli.resume-sous .repli-resume { flex: 1 1 calc(100% - 24px); margin: 0 0 0 24px; }
 .repli-corps { padding: 0 0 14px 24px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Mémo vocal : puces au-dessus, bouton dessous. Pas de point rouge, rien ne clignote. */
