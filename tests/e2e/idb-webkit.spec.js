@@ -24,13 +24,18 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
     await new Promise((ok) => { const r = indexedDB.deleteDatabase('carnet-e2e'); r.onsuccess = ok; r.onerror = ok; r.onblocked = ok; });
 
     // Vraies migrations 1 → 4 dans WebKit : données gardées, humeurs, listes v4 et v6 ajoutées une
-    // fois, détail de contact v4 transformé en ligne (v5), notes (v6).
+    // fois, détail de contact v4 transformé en ligne (v5), notes et champ Humeur masqué (v6).
     const v1 = await ouvrirBase({ nom: 'carnet-e2e-v1', horodatage: 'x', version: 1, migrations: { 1: MIGRATIONS[1] } });
-    await new Promise((ok) => { const t = v1.transaction('journal', 'readwrite'); t.objectStore('journal').put({ date: '2026-09-30', humeur: 4, contactAvec: ['contactAvec:famille'], contactEffet: 'contactEffet:neutre' }); t.oncomplete = ok; });
+    await new Promise((ok) => {
+      const t = v1.transaction(['journal', 'meta'], 'readwrite');
+      t.objectStore('journal').put({ date: '2026-09-30', humeur: 4, contactAvec: ['contactAvec:famille'], contactEffet: 'contactEffet:neutre' });
+      t.objectStore('meta').put({ cle: 'journee', valeur: { ordre: ['lieu', 'humeur'], masques: ['explosions'], heuresMoment: [] } });
+      t.oncomplete = ok;
+    });
     v1.close();
     const v2 = creerRepository({ nom: 'carnet-e2e-v1' });
     const lu = await v2.journal.lire('2026-09-30');
-    const migre = { journal: lu.humeur, contacts: lu.contacts, ancien: 'contactAvec' in lu, listes: (await v2.listes.items()).length, humeurs: (await v2.humeurs.tous()).length, notes: (await v2.notes.tous()).length, schema: await v2.meta.lire('schema') };
+    const migre = { journal: lu.humeur, contacts: lu.contacts, ancien: 'contactAvec' in lu, listes: (await v2.listes.items()).length, humeurs: (await v2.humeurs.tous()).length, notes: (await v2.notes.tous()).length, schema: await v2.meta.lire('schema'), journee: await v2.meta.lire('journee') };
     await v2.fermer();
     await new Promise((ok) => { const r = indexedDB.deleteDatabase('carnet-e2e-v1'); r.onsuccess = ok; r.onerror = ok; r.onblocked = ok; });
     return {
@@ -39,5 +44,6 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
     };
   });
   expect(res).toEqual({ humeur: 7, lieu: 'lieu:bureau', explosions: 0, octets: [1, 2, 3], duJour: [true], snap: 'avant-migration-v4',
-    migre: { journal: 4, contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], ancien: false, listes: 197, humeurs: 0, notes: 0, schema: 4 } });
+    migre: { journal: 4, contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], ancien: false, listes: 197, humeurs: 0, notes: 0, schema: 4,
+      journee: { ordre: ['lieu', 'humeur'], masques: ['explosions', 'humeur'], heuresMoment: [] } } });
 });

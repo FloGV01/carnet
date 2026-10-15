@@ -1,5 +1,5 @@
 // Sauvegardes témoins écrites par les versions publiées (formats 1, 2 et 3, scripts/temoins.mjs) :
-// elles s'importent toujours, sans perte, et un export suivi d'un import reste stable.
+// elles s'importent toujours au format courant, sans perte, et un export suivi d'un import reste stable.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,9 +10,11 @@ import { nouveauRepo } from '../aides/repo.js';
 import { EMPREINTES_PRIVEES } from '../aides/empreintes-privees.js';
 import { normaliser as normaliserTexte } from '../aides/mots-interdits.js';
 import { concatener, lireZip } from '../../public/js/db/zip.js';
-import { analyserFichiers, remplacer, lireTout, exporter, listesManquantes } from '../../public/js/db/sauvegarde.js';
+import { analyserFichiers, remplacer, lireTout, exporter, listesManquantes, FORMAT_VERSION } from '../../public/js/db/sauvegarde.js';
 import { normaliser, SCHEMAS } from '../../public/js/domain/champs.js';
 import { addDays } from '../../public/js/domain/dates.js';
+import { versContacts } from '../../public/js/domain/contacts.js';
+import { SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { controlerTemoin } from '../../scripts/temoins.mjs';
 
 const DOSSIER = join(RACINE, 'tests', 'fixtures', 'temoins');
@@ -22,9 +24,14 @@ const TEMOINS = [
   { fichier: 'format-3.json', format: 3, app: '5.0.0', memos: 0 },
   { fichier: 'format-3-memo.zip', format: 3, app: '5.0.0', memos: 2 },
 ];
+// Le témoin JSON d'un format (le zip du format 3 vient après le JSON).
+const temoin = (format) => TEMOINS.find((t) => t.format === format);
 const enc = new TextEncoder();
 const dec = new TextDecoder();
-const STORES_COMPTES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'audios'];
+const STORES_COMPTES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'audios'];
+const STORES_FICHES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs'];
+// Méta techniques, jamais reprises d'un fichier (db/sauvegarde.js).
+const META_TECHNIQUES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
 
 function charger(t) {
   const octets = new Uint8Array(readFileSync(join(DOSSIER, t.fichier)));
@@ -61,12 +68,18 @@ test('les comptes sont justes : rien n\'est perdu, rien n\'est doublé', async (
   for (const t of TEMOINS) {
     const { brut, analyse, repo } = await importer(t);
     const tout = await lireTout(repo);
+    // Mis à niveau au format courant : les comptes annoncés suivent ce qui est ajouté.
+    assert.equal(analyse.sauvegarde.formatVersion, FORMAT_VERSION, t.fichier);
+    assert.equal(analyse.sauvegarde.counts.notes, 0, t.fichier);
+    assert.equal(analyse.sauvegarde.counts.listes, analyse.sauvegarde.data.listes.length, t.fichier);
+    assert.equal(analyse.resume.notes, 0, t.fichier);
     for (const s of STORES_COMPTES) assert.equal(tout[s].length, brut.counts[s] ?? 0, `${t.fichier} ${s}`);
     assert.equal(analyse.resume.journees, brut.counts.journal, t.fichier);
     assert.equal(analyse.resume.memos, t.memos, t.fichier);
     // Listes : celles du fichier, telles quelles, plus les listes par défaut absentes et l'id inconnu.
     const lues = new Map(tout.listes.map((i) => [i.id, i]));
     for (const it of brut.data.listes) assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id}`);
+    for (const it of seedItems(SEED_V4_AJOUTS, brut.exportedAt)) assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v6)`);
     const inconnus = tout.listes.filter((i) => i.origine === 'import').length;
     assert.equal(tout.listes.length, brut.counts.listes + listesManquantes(brut.data.listes).length + inconnus, t.fichier);
   }
@@ -86,8 +99,49 @@ test('l\'id inconnu est recréé comme élément archivé, et la fiche le garde'
   }
 });
 
+// Chaque champ du fichier se retrouve à l'identique. Seuls écarts admis, ceux qui sont documentés
+// (docs/format-sauvegarde.md) : les contacts du format 2 passent en une ligne, les champs apparus
+// depuis sont ajoutés vides, la méta technique `schema` n'est pas reprise, et le champ Humeur
+// rejoint les champs masqués de Ma journée.
+test('le contenu de chaque fiche survit à l\'import', async () => {
+  for (const t of TEMOINS) {
+    const { brut, repo } = await importer(t);
+    const tout = await lireTout(repo);
+    for (const store of STORES_FICHES) {
+      const cle = store === 'journal' ? 'date' : 'id';
+      const lues = new Map(tout[store].map((x) => [x[cle], x]));
+      for (const fiche of brut.data[store] || []) {
+        const voulue = store === 'journal' && t.format <= 2 ? versContacts(fiche) : fiche;
+        const lue = lues.get(fiche[cle]);
+        const ici = `${t.fichier} ${store} ${fiche[cle]}`;
+        assert.ok(lue, ici);
+        for (const [champ, v] of Object.entries(voulue)) assert.deepEqual(lue[champ], v, `${ici} ${champ}`);
+        for (const champ of Object.keys(lue)) if (!(champ in voulue)) assert.equal(lue[champ], null, `${ici} ${champ} ajouté vide`);
+      }
+    }
+
+    const metaVoulue = brut.data.meta.filter((m) => !META_TECHNIQUES.has(m.cle)).map((m) => {
+      const masques = m.cle === 'journee' && m.valeur.masques;
+      return masques && !masques.includes('humeur') ? { ...m, valeur: { ...m.valeur, masques: [...masques, 'humeur'] } } : m;
+    });
+    const metaLue = tout.meta.filter((m) => !META_TECHNIQUES.has(m.cle));
+    const parCle = (l) => [...l].sort((a, b) => a.cle.localeCompare(b.cle));
+    assert.deepEqual(parCle(metaLue), parCle(metaVoulue), `${t.fichier} meta`);
+    if (t.format >= 2) assert.deepEqual(metaLue.find((m) => m.cle === 'journee').valeur.masques, ['explosions', 'traitement', 'humeur'], t.fichier);
+
+    // Mémos : chaque champ de la fiche du mémo, et le son tel qu'il est dans le zip.
+    const entrees = t.fichier.endsWith('.zip') ? new Map(lireZip(charger(t).octets).map((e) => [e.nom, e.donnees])) : new Map();
+    const audios = new Map(tout.audios.map((a) => [a.id, a]));
+    for (const { fichier, ...meta } of brut.data.audios) {
+      const { data, ...lu } = audios.get(meta.id);
+      assert.deepEqual(lu, meta, `${t.fichier} ${meta.id}`);
+      assert.ok(Buffer.from(data).equals(Buffer.from(entrees.get(fichier))), `${t.fichier} ${fichier}`);
+    }
+  }
+});
+
 test('les contacts v4 passent en une ligne, tels quels', async () => {
-  const { brut, repo } = await importer(TEMOINS[1]);
+  const { brut, repo } = await importer(temoin(2));
   const avecContact = brut.data.journal.filter((j) => j.contactAvec || j.contactEffet);
   assert.ok(avecContact.length >= 2);
   for (const j of avecContact) {
@@ -132,7 +186,7 @@ test('aucune empreinte privée dans les témoins, mémos compris', () => {
 
 test('le script refuse un témoin incomplet', () => {
   for (const t of TEMOINS) assert.doesNotThrow(() => controlerTemoin(charger(t).octets), t.fichier);
-  const { brut } = charger(TEMOINS[2]);
+  const { brut } = charger(temoin(3));
   const sans = (modifier) => { const s = structuredClone(brut); modifier(s); return enc.encode(JSON.stringify(s)); };
   assert.throws(() => controlerTemoin(sans((s) => { s.data.episodes = s.data.episodes.filter((e) => e.heure !== '02:30'); })), /02:30/);
   assert.throws(() => controlerTemoin(sans((s) => { s.data.humeurs = s.data.humeurs.filter((e) => e.heure !== '01:30'); })), /01:30/);

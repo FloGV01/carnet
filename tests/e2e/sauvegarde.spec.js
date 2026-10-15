@@ -44,13 +44,26 @@ test('perte chiffrée, refus d\'un fichier illisible, revenir à l\'état d\'ava
   await expect(page.getByText('Ce fichier est illisible.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Choisir un autre fichier' })).toBeVisible();
   await page.locator('input[type=file]').setInputFiles({ name: f.nom, mimeType: 'application/json', buffer: Buffer.from(f.octets) });
-  await expect(page.getByText('1 journée présent ici et absent du fichier sera effacé.')).toBeVisible();
+  await expect(page.getByText('1 journée présente ici et absente du fichier sera effacée.')).toBeVisible();
   await expect(page.getByRole('button', { name: "Exporter d'abord" })).toBeVisible();
   await page.getByRole('button', { name: 'Importer', exact: true }).click();
   await expect(page.getByText('Import terminé.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toBeNull();
   await page.getByRole('button', { name: "Revenir à l'état d'avant l'import" }).click();
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toMatchObject({ humeur: 3 });
+});
+
+test('v6 : les notes sont dans le fichier, et une note absente du fichier est annoncée avant d\'être effacée', async ({ page }) => {
+  // Rien d'autre que des notes ici : la perte n'est chiffrée que si les notes comptent.
+  const gardee = await page.evaluate(() => window.__carnet.repo.notes.creer({ date: '2026-09-30', heure: '20:00', texte: 'Dans le fichier' }));
+  const f = await exporterVers(page);
+  await page.evaluate(() => window.__carnet.repo.notes.creer({ date: '2026-09-30', heure: '20:30', texte: 'Écrite après' }));
+  await page.locator('input[type=file]').setInputFiles({ name: f.nom, mimeType: 'application/json', buffer: Buffer.from(f.octets) });
+  await expect(page.getByText(/Ce fichier contient 0 journée, 0 épisode, 1 note\./)).toBeVisible();
+  await expect(page.getByText('1 note présente ici et absente du fichier sera effacée.')).toBeVisible();
+  await page.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(page.getByText('Import terminé.')).toBeVisible();
+  expect(await page.evaluate(() => window.__carnet.repo.notes.tous())).toEqual([gardee]);
 });
 
 test('avec un mémo, la sauvegarde est un ZIP qui se restaure avec le son', async ({ page }) => {

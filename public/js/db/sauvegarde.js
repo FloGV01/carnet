@@ -7,15 +7,15 @@ import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
 import { creerZip, lireZip } from './zip.js';
 import { normaliser, SCHEMAS, refsDuChamp } from '../domain/champs.js';
-import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 3;
+export const FORMAT_VERSION = 4;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
-const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'listes', 'meta', 'audios'];
+const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
 const META_NON_EXPORTEES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
 // Gardée telle quelle si le fichier (ou la copie) ne l'a pas : date de la mise à jour v4,
@@ -68,7 +68,8 @@ export function construireSauvegarde(donnees, { maintenant, versionApp, seuil = 
   const metaAudios = audios.map(({ data, ...m }) => ({ ...m, fichier: `audios/${m.id}.${extension(m.mime)}` }));
   const data = {
     journal: donnees.journal || [], episodes: donnees.episodes || [], symptomes: donnees.symptomes || [],
-    traitements: donnees.traitements || [], rdv: donnees.rdv || [], humeurs: donnees.humeurs || [], listes: donnees.listes || [],
+    traitements: donnees.traitements || [], rdv: donnees.rdv || [], humeurs: donnees.humeurs || [], notes: donnees.notes || [],
+    listes: donnees.listes || [],
     meta: (donnees.meta || []).filter((m) => !META_NON_EXPORTEES.has(m.cle)),
     audios: metaAudios,
   };
@@ -116,26 +117,40 @@ function lireJson(octets) {
 }
 const estZip = (o) => o.length > 4 && o[0] === 0x50 && o[1] === 0x4b && o[2] === 0x03 && o[3] === 0x04;
 
-// Éléments de liste par défaut absents d'un ensemble (ajouts v4) : jamais d'écrasement.
-export function listesManquantes(items, horodatage) {
+// Éléments d'un ensemble de listes par défaut absents de `items` : jamais d'écrasement.
+function absentes(seed, items, horodatage) {
   const ids = new Set((Array.isArray(items) ? items : []).map((i) => i && i.id));
-  return seedItems(SEED_V2_AJOUTS, horodatage).filter((i) => !ids.has(i.id));
+  return seedItems(seed, horodatage).filter((i) => !ids.has(i.id));
+}
+// Listes par défaut ajoutées depuis la première version (v4 puis v6) et absentes d'un ensemble.
+export function listesManquantes(items, horodatage) {
+  return [...absentes(SEED_V2_AJOUTS, items, horodatage), ...absentes(SEED_V4_AJOUTS, items, horodatage)];
+}
+
+// Ajoute à une sauvegarde les listes par défaut d'une version qu'elle n'a pas. Les comptes annoncés
+// restent vérifiés : on ajoute seulement ce qu'on vient d'ajouter. Des listes illisibles (pas un
+// tableau) restent telles quelles : le contrôle des comptes les refuse.
+function ajouterListes(seed, data, counts, horodatage) {
+  if (!Array.isArray(data.listes)) return;
+  const ajouts = absentes(seed, data.listes, horodatage);
+  data.listes = [...data.listes, ...ajouts];
+  if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
+}
+
+// Méta de Ma journée : le champ Humeur du soir rejoint les champs masqués, s'ils sont réglés.
+function masquerHumeur(m) {
+  const masques = m && m.cle === 'journee' && m.valeur && m.valeur.masques;
+  if (!Array.isArray(masques) || masques.includes('humeur')) return m;
+  return { ...m, valeur: { ...m.valeur, masques: [...masques, 'humeur'] } };
 }
 
 // Mises à niveau successives d'une sauvegarde ancienne (v1 -> v2 -> …). Pures.
 export const MISES_A_NIVEAU = {
   // v1 -> v2 : humeurs du moment (aucune) et nouvelles listes par défaut.
   1(s) {
-    const data = { ...(s.data || {}) };
-    data.humeurs = [];
-    // Les comptes annoncés restent vérifiés : on ajoute seulement ce qu'on vient d'ajouter. Des
-    // listes illisibles (pas un tableau) restent telles quelles : le contrôle des comptes les refuse.
+    const data = { ...(s.data || {}), humeurs: [] };
     const counts = { ...(s.counts || {}), humeurs: 0 };
-    if (Array.isArray(data.listes)) {
-      const ajouts = listesManquantes(data.listes, s.exportedAt);
-      data.listes = [...data.listes, ...ajouts];
-      if (Number.isInteger(counts.listes)) counts.listes += ajouts.length;
-    }
+    ajouterListes(SEED_V2_AJOUTS, data, counts, s.exportedAt);
     return { ...s, formatVersion: 2, counts, data };
   },
   // v2 -> v3 : plusieurs contacts par jour ; le détail v4 du jour devient une ligne, tel quel.
@@ -143,6 +158,15 @@ export const MISES_A_NIVEAU = {
     const data = { ...(s.data || {}) };
     if (Array.isArray(data.journal)) data.journal = data.journal.map(versContacts);
     return { ...s, formatVersion: 3, data };
+  },
+  // v3 -> v4 : notes (aucune), nouvelles listes par défaut, et le champ Humeur du soir rejoint les
+  // champs masqués déjà réglés, comme le fait la migration 4 de la base.
+  3(s) {
+    const data = { ...(s.data || {}), notes: [] };
+    const counts = { ...(s.counts || {}), notes: 0 };
+    ajouterListes(SEED_V4_AJOUTS, data, counts, s.exportedAt);
+    if (Array.isArray(data.meta)) data.meta = data.meta.map(masquerHumeur);
+    return { ...s, formatVersion: 4, counts, data };
   },
 };
 export function mettreANiveauSauvegarde(s) {
@@ -218,7 +242,8 @@ export function analyserFichiers(fichiers) {
     manquants,
     resume: {
       journees: valides.journal.length, episodes: valides.episodes.length, symptomes: valides.symptomes.length,
-      traitements: valides.traitements.length, rdv: valides.rdv.length, humeurs: valides.humeurs.length, memos: audios.length,
+      traitements: valides.traitements.length, rdv: valides.rdv.length, humeurs: valides.humeurs.length, notes: valides.notes.length,
+      memos: audios.length,
       du: dates[0] || null, au: dates[dates.length - 1] || null, exportedAt: s.exportedAt,
     },
   };
@@ -226,7 +251,7 @@ export function analyserFichiers(fichiers) {
 
 // Ce que l'import effacerait : éléments présents ici et absents du fichier.
 export function chiffrerPerte(actuel, analyse) {
-  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', humeurs: 'id', audios: 'id' };
+  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', humeurs: 'id', notes: 'id', audios: 'id' };
   const res = {};
   for (const [store, k] of Object.entries(cle)) {
     const dansFichier = new Set((analyse.valides[store] || []).map((x) => x[k]));
@@ -243,7 +268,7 @@ async function prendreCopie(t, type, horodatage, donnees) {
   snaps.put({ id: `${type}-${horodatage}`, type, date: horodatage, schemaVersion: DB_VERSION, data: sansAudios });
 }
 
-const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'listes', 'audios'];
+const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'listes', 'audios'];
 
 // Remplacement complet, en une seule transaction (copie de secours comprise).
 export async function remplacer(repo, analyse, { panne } = {}) {
@@ -279,9 +304,10 @@ export async function revenirAvantImport(repo) {
   const actuel = await lireTout(repo);
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
     await prendreCopie(t, 'avant-retour', h, actuel);
-    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'humeurs']) {
-      // Une copie prise avant la v4 n'a pas d'humeurs du moment : on les laisse telles quelles.
-      if (s === 'humeurs' && !Array.isArray(copie.data.humeurs)) continue;
+    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'humeurs', 'notes']) {
+      // Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a
+      // pas de notes : on les laisse telles quelles.
+      if ((s === 'humeurs' || s === 'notes') && !Array.isArray(copie.data[s])) continue;
       t.objectStore(s).clear();
       // Une copie prise avant la v5 a encore un seul détail de contact par jour.
       for (const x of copie.data[s] || []) t.objectStore(s).put(s === 'journal' ? versContacts(x) : x);
@@ -312,7 +338,7 @@ export async function toutEffacer(repo) {
     const installation = await req(t.objectStore('meta').get('installation'));
     const depuis = await req(t.objectStore('meta').get('explosionsDepuis'));
     for (const s of [...STORES_DONNEES, 'snapshots']) t.objectStore(s).clear();
-    for (const it of [...seedItems(SEED_V1, h), ...seedItems(SEED_V2_AJOUTS, h)]) t.objectStore('listes').put(it);
+    for (const it of [...seedItems(SEED_V1, h), ...seedItems(SEED_V2_AJOUTS, h), ...seedItems(SEED_V4_AJOUTS, h)]) t.objectStore('listes').put(it);
     const meta = t.objectStore('meta');
     meta.put({ cle: 'schema', valeur: DB_VERSION });
     meta.put(installation || { cle: 'installation', valeur: h });

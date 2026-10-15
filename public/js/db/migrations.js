@@ -59,7 +59,8 @@ export const MIGRATIONS = {
   },
   // v6 : notes en vrac, nouvelles listes (sans écraser un id existant). Le champ Humeur du soir
   // est masqué seulement si des champs masqués sont déjà réglés (sinon la valeur par défaut
-  // s'applique à la lecture). Aucun enregistrement n'est transformé. Synchrone, comme la 2.
+  // s'applique à la lecture) : seule la méta journee peut alors être réécrite, aucune fiche de
+  // l'utilisateur n'est transformée. Synchrone, comme la 2.
   4(db, tx, ctx) {
     db.createObjectStore('notes', { keyPath: 'id' }).createIndex('date', 'date');
     const listes = tx.objectStore('listes');

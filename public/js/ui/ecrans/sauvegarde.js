@@ -17,34 +17,42 @@ function phraseContenu(r) {
   if (r.traitements) morceaux.push(pluriel(r.traitements, 'fiche de traitement', 'fiches de traitement'));
   if (r.rdv) morceaux.push(pluriel(r.rdv, 'rendez-vous', 'rendez-vous'));
   if (r.humeurs) morceaux.push(pluriel(r.humeurs, "relevé d'humeur du moment", "relevés d'humeur du moment"));
+  if (r.notes) morceaux.push(pluriel(r.notes, 'note', 'notes'));
   if (r.memos) morceaux.push(pluriel(r.memos, 'mémo vocal', 'mémos vocaux'));
   const periode = r.du ? ` (du ${formaterJour(r.du, { annee: true })} au ${formaterJour(r.au, { annee: true })})` : '';
   return `Ce fichier contient ${morceaux.join(', ')}${periode}.`;
 }
-// « 12 journées et 3 épisodes présents ici et absents du fichier seront effacés. »
+// « 12 journées et 3 épisodes présents ici et absents du fichier seront effacés. » Accord au
+// féminin seulement si tout ce qui est nommé est féminin (« 2 notes présentes… effacées »).
+const NOMS_PERTE = [
+  ['journal', 'journée', 'journées', true], ['episodes', 'épisode', 'épisodes'], ['symptomes', 'symptôme', 'symptômes'],
+  ['traitements', 'fiche de traitement', 'fiches de traitement', true], ['rdv', 'rendez-vous', 'rendez-vous'],
+  ['humeurs', "relevé d'humeur du moment", "relevés d'humeur du moment"], ['notes', 'note', 'notes', true],
+  ['audios', 'mémo vocal', 'mémos vocaux'],
+];
 export function phrasePerte(p) {
-  const m = [];
-  if (p.journal) m.push(pluriel(p.journal, 'journée', 'journées'));
-  if (p.episodes) m.push(pluriel(p.episodes, 'épisode', 'épisodes'));
-  if (p.symptomes) m.push(pluriel(p.symptomes, 'symptôme', 'symptômes'));
-  if (p.traitements) m.push(pluriel(p.traitements, 'fiche de traitement', 'fiches de traitement'));
-  if (p.rdv) m.push(pluriel(p.rdv, 'rendez-vous', 'rendez-vous'));
-  if (p.humeurs) m.push(pluriel(p.humeurs, "relevé d'humeur du moment", "relevés d'humeur du moment"));
-  if (p.audios) m.push(pluriel(p.audios, 'mémo vocal', 'mémos vocaux'));
-  if (!m.length) return null;
-  const total = Object.values(p).reduce((n, x) => n + (Number(x) || 0), 0);
-  return `${enumerer(m)} ${total > 1 ? 'présents' : 'présent'} ici et ${total > 1 ? 'absents' : 'absent'} du fichier ${total > 1 ? 'seront effacés' : 'sera effacé'}.`;
+  const nommes = NOMS_PERTE.filter(([cle]) => p[cle]);
+  if (!nommes.length) return null;
+  const m = nommes.map(([cle, un, plusieurs]) => pluriel(p[cle], un, plusieurs));
+  const feminin = nommes.every(([, , , f]) => f);
+  const auPluriel = Object.values(p).reduce((n, x) => n + (Number(x) || 0), 0) > 1;
+  const accord = (mot) => `${mot}${feminin ? 'e' : ''}${auPluriel ? 's' : ''}`;
+  return `${enumerer(m)} ${accord('présent')} ici et ${accord('absent')} du fichier ${auPluriel ? 'seront' : 'sera'} ${accord('effacé')}.`;
 }
 
 // « Mon plan et les réglages de Ma journée seront remplacés par ceux du fichier. »
 const NOMS_META = {
   monPlan: 'Mon plan', journee: 'les réglages de Ma journée', traitementActuel: 'ton traitement actuel',
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
+  respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
+  ressourcer: 'les réglages de « Me ressourcer »',
 };
 export function phraseMeta(cles) {
   const noms = (cles || []).map((c) => NOMS_META[c]).filter(Boolean);
   if (!noms.length) return null;
-  const t = `${enumerer(noms)} ${noms.length > 1 ? 'seront remplacés' : 'sera remplacé'} par ce que contient le fichier.`;
+  // « Les réglages de la respiration » seuls sont aussi un pluriel.
+  const plusieurs = noms.length > 1 || noms[0].startsWith('les ');
+  const t = `${enumerer(noms)} ${plusieurs ? 'seront remplacés' : 'sera remplacé'} par ce que contient le fichier.`;
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
