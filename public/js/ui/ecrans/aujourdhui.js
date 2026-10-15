@@ -126,10 +126,9 @@ export function Aujourdhui({ date: dateRoute }) {
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
-    const [episodes, symptomes, items, rdvs, audios] = await Promise.all([
-      repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.metas(),
+    const [episodes, symptomes, items, rdvs, avecMemo] = await Promise.all([
+      repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.parents(),
     ]);
-    const avecMemo = new Set(audios.map((a) => `${a.parentStore}:${a.parentId}`));
     return { episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo };
   }, [date]);
 

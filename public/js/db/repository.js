@@ -390,7 +390,22 @@ export function creerRepository({
       return ok;
     },
 
-    // Métadonnées seules (sans les octets), pour l'Historique et l'espace utilisé.
+    // Les fiches qui ont au moins un mémo, en clés « magasin:id ». Curseur de clés sur l'index
+    // « parent » : les sons ne sont jamais lus, quel que soit le nombre de mémos.
+    parents: () => tx(['audios'], 'readonly', (t) => new Promise((ok, ko) => {
+      const res = new Set();
+      const r = t.objectStore('audios').index('parent').openKeyCursor();
+      r.onerror = () => ko(r.error);
+      r.onsuccess = () => {
+        const c = r.result;
+        if (!c) { ok(res); return; }
+        res.add(`${c.key[0]}:${c.key[1]}`);
+        c.continue();
+      };
+    })),
+
+    // Métadonnées seules (sans les octets), pour l'espace utilisé dans Réglages. Parcourt tout
+    // le magasin : à ne pas appeler pour un simple « a un mémo ? » (voir parents).
     metas: () => tx(['audios'], 'readonly', (t) => new Promise((ok, ko) => {
       const res = [];
       const r = t.objectStore('audios').openCursor();

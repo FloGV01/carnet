@@ -32,8 +32,7 @@ export function Soins() {
   const [onglet, setOnglet] = useState(() => lireLocal('carnet:soins:onglet', 'rdv'));
   const choisir = (v) => { if (v) { setOnglet(v); ecrireLocal('carnet:soins:onglet', v); } };
   const { donnees } = useDonnees(async () => {
-    const [rdv, traitements, items, audios] = await Promise.all([repo.rdv.tous(), repo.traitements.tous(), repo.listes.items(), repo.audios.metas()]);
-    const avecMemo = new Set(audios.map((a) => `${a.parentStore}:${a.parentId}`));
+    const [rdv, traitements, items, avecMemo] = await Promise.all([repo.rdv.tous(), repo.traitements.tous(), repo.listes.items(), repo.audios.parents()]);
     return { rdv, traitements, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
   if (!donnees) return html`<main class="ecran soins"><${Entete} titre="Soins" /></main>`;

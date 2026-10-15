@@ -49,10 +49,9 @@ export function Historique() {
   const majF = (cle) => (v) => setF((x) => ({ ...x, [cle]: v || null }));
 
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, audios] = await Promise.all([
-      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.metas(),
+    const [journal, episodes, symptomes, items, avecMemo] = await Promise.all([
+      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(),
     ]);
-    const avecMemo = new Set(audios.map((a) => `${a.parentStore}:${a.parentId}`));
     return { journal, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
 

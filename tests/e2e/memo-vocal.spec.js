@@ -56,3 +56,33 @@ test('mémo dans un épisode : la fiche est créée si besoin', async ({ page })
   });
   expect(auPremierPlan).toBe(true);
 });
+
+test('la puce « avec mémo vocal » se lit sur Aujourd\'hui, l\'Historique et Soins',async ({ page }) => {
+  // Un mémo sur chaque sorte de fiche : le jour, un épisode, un rendez-vous, un changement de traitement.
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    const jour = r.aujourdhui();
+    await r.journal.patch(jour, { humeur: 6 });
+    const ep = await r.episodes.creer({ date: jour, heure: '14:30', emotion: 'emotion:colere' });
+    // Un rendez-vous passé : le prochain rendez-vous a sa propre carte, sans puce.
+    const rdv = await r.rdv.creer({ date: '2020-01-06', heure: '10:30', professionnel: 'professionnel:psychiatre' });
+    const tr = await r.traitements.creer({ date: jour, changement: 'ajustement du soir' });
+    for (const [parentStore, parentId] of [['journal', jour], ['episodes', ep.id], ['rdv', rdv.id], ['traitements', tr.id]]) {
+      await r.audios.creer({ parentStore, parentId, dureeMs: 1500, mime: 'audio/wav', data: new ArrayBuffer(64) });
+    }
+  });
+  const puce = (zone) => zone.getByRole('img', { name: 'avec mémo vocal' });
+
+  await page.reload();
+  await expect(puce(page.locator('.evenements-jour'))).toHaveCount(1);
+
+  await page.getByRole('link', { name: 'Historique' }).click();
+  await expect(puce(page.locator('.ligne-hist'))).toHaveCount(1); // le jour
+  await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Épisodes/ }).click();
+  await expect(puce(page.locator('.ligne-hist'))).toHaveCount(1); // l'épisode
+
+  await page.getByRole('link', { name: 'Soins' }).click();
+  await expect(puce(page.locator('.ligne-rdv-liste'))).toHaveCount(1); // le rendez-vous
+  await page.getByRole('group', { name: 'Soins' }).getByRole('button', { name: /Traitement/ }).click();
+  await expect(puce(page.locator('.ligne-hist'))).toHaveCount(1); // le changement
+});
