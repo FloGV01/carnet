@@ -105,6 +105,11 @@ export function formaterDateNumerique(cle) {
   const [a, m, j] = cle.split('-').map(Number);
   return `${pad(j)}/${pad(m)}/${a}`;
 }
+// « 12/10 »
+export function formaterJourMois(cle) {
+  const [, m, j] = cle.split('-').map(Number);
+  return `${pad(j)}/${pad(m)}`;
+}
 export function formaterSemaine(lundi) {
   const [, m, j] = lundi.split('-').map(Number);
   return `Semaine du ${j}${j === 1 ? 'er' : ''} ${MOIS[m - 1]}`;

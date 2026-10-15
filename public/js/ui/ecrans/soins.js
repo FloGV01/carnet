@@ -1,4 +1,4 @@
-// Soins : rendez-vous (par défaut) et traitement.
+// Soins : rendez-vous (par défaut), notes en vrac et traitement ; l'onglet utilisé en dernier se rouvre.
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -12,8 +12,9 @@ import { trierRdv } from '../../domain/soins.js';
 import { versHash } from '../../routeur.js';
 import { PIED_TRAITEMENT } from './traitement.js';
 import { CarteTraitementActuel } from '../composants/traitement-actuel.js';
+import { NotesEnVrac } from '../composants/notes.js';
 
-const ONGLETS = [{ valeur: 'rdv', libelle: 'Rendez-vous' }, { valeur: 'traitement', libelle: 'Traitement' }];
+const ONGLETS = [{ valeur: 'rdv', libelle: 'Rendez-vous' }, { valeur: 'notes', libelle: 'Notes' }, { valeur: 'traitement', libelle: 'Traitement' }];
 
 // « Psychiatre · mercredi 14 oct. 10:30 » (ligne d'Aujourd'hui).
 export function libelleRdv(r, carte) {
@@ -63,6 +64,8 @@ export function Soins() {
       </section>`}
       ${autres.length > 0 && html`<ul class="liste carte carte-groupe">${autres.map(ligne)}</ul>`}
       ${passes.length > 0 && html`<h2 class="libelle-section passes">Passés</h2><ul class="liste carte carte-groupe">${passes.map(ligne)}</ul>`}`;
+  } else if (onglet === 'notes') {
+    contenu = html`<${NotesEnVrac} />`;
   } else {
     const liste = [...donnees.traitements].sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`));
     contenu = html`

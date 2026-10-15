@@ -5,6 +5,7 @@ import { html } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
+import { ReplisNotes } from '../composants/notes.js';
 import { QuestionsACocher, AjoutQuestion } from '../composants/questions.js';
 import { repo } from '../../donnees.js';
 import { etatApp } from '../../store.js';
@@ -66,6 +67,7 @@ export function Consultation({ id: idRoute }) {
         <${QuestionsACocher} questions=${questions} surChanger=${majQuestions} grand=${true} />
         <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />
       </section>
+      <${ReplisNotes} />
       <${ChampTexte} id="consultation-compte-rendu" etiquette="Ce qui a été dit / décidé" icone="note" valeur=${fiche.compteRendu} lignes=${4}
         cleBrouillon=${id ? `carnet:brouillon:${id}:compteRendu` : null} surEnregistrer=${(v) => ecrire({ compteRendu: v })} />
       <${ChampTexte} id="consultation-prochaine-etape" etiquette="Prochaine étape" icone="etape" valeur=${fiche.prochaineEtape} lignes=${2}
