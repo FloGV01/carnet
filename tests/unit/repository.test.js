@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nouveauRepo } from '../aides/repo.js';
 import { ErreurValidation } from '../../public/js/domain/champs.js';
+import { versDateHeure } from '../../public/js/domain/dates.js';
 
 test('base neuve : 197 éléments de liste (v1, v4 et v6), aujourd\'hui suit le jour logique', async () => {
   const { repo, horloge } = nouveauRepo();
@@ -270,6 +271,43 @@ test('v4 : humeurs du moment par jour logique, références vérifiées, suppres
   assert.equal(await repo.humeurs.lire(a.id), null);
   await repo.humeurs.restaurer(sauve);
   assert.equal((await repo.humeurs.lire(a.id)).humeur, 4);
+});
+
+test('v6 : un relevé déjà créé passe à « vers » : date, heure et vers changent ensemble, le jour logique suit', async () => {
+  const { repo, horloge } = nouveauRepo();
+  horloge.t = new Date(2026, 9, 13, 1, 30);
+  const jour = repo.aujourdhui();
+  assert.equal(jour, '2026-10-12');
+  // Créé « maintenant » (01:30 le 13), donc au jour logique du 12.
+  const r = await repo.humeurs.creer({ date: '2026-10-13', heure: '01:30', humeur: 6, energie: 'energie:basse' });
+  assert.deepEqual([r.vers, r.faisais], [null, null]);
+  // « Vers 22 h » : 2026-10-12 22:00.
+  const a = await repo.humeurs.modifier(r.id, { ...versDateHeure(horloge.t, 22), vers: true });
+  assert.deepEqual([a.date, a.heure, a.vers, a.humeur, a.energie], ['2026-10-12', '22:00', true, 6, 'energie:basse']);
+  assert.equal(a.createdAt, r.createdAt);
+  // Puis « vers 0 h » : 2026-10-13 00:00, toujours au jour logique du 12.
+  const b = await repo.humeurs.modifier(r.id, { ...versDateHeure(horloge.t, 0), vers: true });
+  assert.deepEqual([b.date, b.heure, b.vers], ['2026-10-13', '00:00', true]);
+  assert.deepEqual((await repo.humeurs.parJour(jour, jour)).map((h) => [h.id, h.date, h.heure]), [[r.id, '2026-10-13', '00:00']]);
+  assert.deepEqual(await repo.humeurs.parJour('2026-10-13', '2026-10-13'), [], 'pas au 13');
+  // Retour à « maintenant » : vers repasse à null (jamais false).
+  const c = await repo.humeurs.modifier(r.id, { date: '2026-10-13', heure: '01:31', vers: null });
+  assert.deepEqual([c.heure, c.vers], ['01:31', null]);
+  assert.equal((await repo.humeurs.modifier(r.id, { vers: false })).vers, null);
+  assert.equal((await repo.humeurs.tous()).length, 1, 'un seul relevé, jamais de doublon');
+});
+
+test('v6 : un relevé « vers » vidé est supprimé ; « vers » et activités seuls ne le gardent pas', async () => {
+  const { repo } = nouveauRepo();
+  const r = await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', vers: true, humeur: 5, energie: 'energie:basse' });
+  const sansHumeur = await repo.humeurs.modifier(r.id, { humeur: null, faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
+  assert.deepEqual([sansHumeur.energie, sansHumeur.vers, sansHumeur.faisais], ['energie:basse', true, ['activiteMoment:travail', 'activiteMoment:trajet']]);
+  assert.equal(await repo.humeurs.modifier(r.id, { energie: null }), null, 'vers et activités seuls : le relevé part');
+  assert.equal(await repo.humeurs.lire(r.id), null);
+  assert.deepEqual(await repo.humeurs.tous(), []);
+  // Les activités sont des références de liste vérifiées.
+  const s = await repo.humeurs.creer({ date: '2026-09-30', heure: '16:00', vers: true, humeur: 4 });
+  await assert.rejects(repo.humeurs.modifier(s.id, { faisais: ['pese:bruit'] }), ErreurValidation);
 });
 
 test('v4 : activités, contact et après coup enregistrés, références imbriquées refusées si inconnues', async () => {

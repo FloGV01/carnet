@@ -6,6 +6,8 @@ import { classer } from '../../public/js/analyse/classements.js';
 import { bonnesJournees, facteursPossibles, evaluer as evaluerBonnesJournees } from '../../public/js/analyse/bonnes-journees.js';
 import { sommeilHumeur, evaluer as evaluerSommeil } from '../../public/js/analyse/sommeil.js';
 import { serieHebdo } from '../../public/js/analyse/semaines.js';
+import { profilJournee } from '../../public/js/analyse/moments.js';
+import { humeursDuJour } from '../../public/js/analyse/humeur-jour.js';
 import { phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, PAS_ASSEZ, duree } from '../../public/js/analyse/textes.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
@@ -288,4 +290,23 @@ test('sommeil : la Spearman reste juste avec des ex aequo et des décimales', ()
     assert.equal(b[cle].net, a[cle].net, cle);
   }
   assert.equal(b.meme.net, true);
+});
+
+test('v6 : « Ta journée heure par heure » laisse de côté les relevés « vers », l\'humeur du jour les compte', () => {
+  const rel = (date, heure, humeur, plus = {}) => ({ id: `${date}-${heure}`, date, heure, humeur, energie: null, vers: null, faisais: null, ...plus });
+  const jours = ['2026-10-01', '2026-10-02', '2026-10-03'];
+  const maintenant = jours.map((d) => rel(d, '10:00', 5, { energie: 'energie:basse' }));
+  const vers = [...jours.map((d) => rel(d, '14:00', 9, { vers: true, energie: 'energie:haute' })), rel('2026-10-04', '00:00', 9, { vers: true })];
+  const p = profilJournee([...maintenant, ...vers], '2026-10-01', '2026-10-03');
+  assert.equal(p.n, 3, 'les relevés « vers » ne comptent pas');
+  assert.deepEqual(p.creneaux.map((c) => [c.debut, c.n, c.jours, c.moyenne, c.energie['energie:haute']]), [[10, 3, 3, 5, 0]],
+    'ni créneau de 14 h, ni de minuit, ni énergie haute');
+  // Un jour qui n'a que des relevés « vers » : hors du profil, mais il a une humeur du jour.
+  const seuls = profilJournee(vers, '2026-10-01', '2026-10-04');
+  assert.deepEqual([seuls.n, seuls.creneaux.length, seuls.statut], [0, 0, 'insuffisant']);
+  assert.equal(humeursDuJour({ journal: [], humeurs: vers }).get('2026-10-01').valeur, 9);
+  assert.equal(humeursDuJour({ journal: [], humeurs: vers }).get('2026-10-03').n, 2, 'le « vers 0 h » du 04 compte pour le 03');
+  // Le même relevé sans « vers » compte, lui.
+  const sansVers = vers.map((h) => ({ ...h, vers: null }));
+  assert.deepEqual(profilJournee(sansVers, '2026-10-01', '2026-10-03').creneaux.map((c) => c.debut), [14], 'le créneau de 14 h apparaît (3 jours)');
 });

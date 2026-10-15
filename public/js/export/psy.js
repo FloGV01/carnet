@@ -1,7 +1,7 @@
 // Export vers le projet Claude « PSY » : texte brut des 7 derniers jours, voix « je ».
 // Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
-import { addDays, formaterJourCourt, formaterDateNumerique, jourEvenement } from '../domain/dates.js';
+import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
 import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
@@ -33,6 +33,13 @@ function phraseHumeur(j) {
   return `humeur ${nombre(j.humeur)}${j.humeurMin !== j.humeurMax ? ` (de ${j.humeurMin} à ${j.humeurMax})` : ''}`;
 }
 
+// Un relevé d'humeur du moment : « 18:42 7 (énergie moyenne) » ; noté après coup, « vers 14 h 5
+// (énergie basse ; travail, trajet) » : l'énergie, puis ce que je faisais, entre parenthèses.
+function releveMoment(h, lib) {
+  const details = [h.energie && `énergie ${minuscule(lib(h.energie))}`, h.faisais && h.faisais.length > 0 && listeLib(h.faisais, lib)].filter(Boolean).join(' ; ');
+  return [h.vers ? formaterVers(h.heure) : h.heure, h.humeur != null && `${h.humeur}`, details && `(${details})`].filter(Boolean).join(' ');
+}
+
 function ligneJour(j, lib, moments = []) {
   const m = [formaterJourCourt(j.date)];
   if (j.lieu) m.push(lib(j.lieu));
@@ -54,7 +61,7 @@ function ligneJour(j, lib, moments = []) {
   if (j.recharge && j.recharge.length) m.push(`a rechargé : ${listeLib(j.recharge, lib)}`);
   const lignes = [m.join(' · ')];
   if (moments.length) {
-    lignes.push(`  humeur du moment : ${moments.map((h) => [h.heure, h.humeur != null && `${h.humeur}`, h.energie && `(énergie ${minuscule(lib(h.energie))})`].filter(Boolean).join(' ')).join(' · ')}`);
+    lignes.push(`  humeur du moment : ${moments.map((h) => releveMoment(h, lib)).join(' · ')}`);
   }
   if (j.pointsPositifs) lignes.push(`  + ${couper(j.pointsPositifs)}`);
   if (j.notes) lignes.push(`  note : ${couper(j.notes)}`);

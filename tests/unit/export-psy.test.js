@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { exportPsy, reperesPsy } from '../../public/js/export/psy.js';
-import { SEED_V1, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 
 const carte = carteLibelles(seedItems(SEED_V1, 'x'));
@@ -149,4 +149,37 @@ test('v6 : rien de noté, rien dans la ligne (listes absentes, nulles ou vides)'
     assert.ok(t.includes('dim 27/09 · Bureau\n'), t);
     assert.ok(!/a pesé|a rechargé/.test(t), t);
   }
+});
+
+// ---------- v6 : « vers » et ce que je faisais ----------
+
+const carteMoments = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V2_AJOUTS, ...SEED_V4_AJOUTS }, 'x'));
+const exportMoments = (humeurs) => exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte: carteMoments });
+const ligneMoments = (t) => t.split('\n').find((l) => l.startsWith('  humeur du moment : '));
+
+test('v6 : un relevé « vers » s\'écrit « vers 14 h 5 (énergie basse ; travail, trajet) »', () => {
+  const t = exportMoments([releve('2026-09-26', '14:00', 5, { vers: true, energie: 'energie:basse', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] })]);
+  assert.equal(ligneMoments(t), '  humeur du moment : vers 14 h 5 (énergie basse ; travail, trajet)');
+});
+
+test('v6 : « vers » sans énergie, sans humeur ou sans activité, et les activités d\'un relevé « maintenant »', () => {
+  const t = exportMoments([
+    releve('2026-09-26', '08:00', 4, { vers: true }),
+    releve('2026-09-26', '10:00', null, { vers: true, energie: 'energie:haute' }),
+    releve('2026-09-26', '12:00', 6, { vers: true, faisais: ['activiteMoment:courses', 'activiteMoment:maison'] }),
+    releve('2026-09-26', '18:42', 7, { energie: 'energie:moyenne', faisais: ['activiteMoment:monde'] }),
+    releve('2026-09-26', '20:15', 6, { energie: 'energie:moyenne', faisais: [] }),
+  ]);
+  assert.equal(ligneMoments(t), '  humeur du moment : vers 8 h 4 · vers 10 h (énergie haute) · vers 12 h 6 (courses / démarches, chez moi)'
+    + ' · 18:42 7 (énergie moyenne ; avec du monde) · 20:15 6 (énergie moyenne)');
+});
+
+test('v6 : le « vers 0 h » de la nuit vient après le relevé de 22 h, au jour logique de la veille', () => {
+  const t = exportMoments([
+    releve('2026-09-27', '00:00', 3, { vers: true }),
+    releve('2026-09-26', '22:00', 6, { vers: true }),
+    releve('2026-09-26', '23:10', 5),
+  ]);
+  assert.equal(ligneMoments(t), '  humeur du moment : vers 22 h 6 · 23:10 5 · vers 0 h 3');
+  assert.ok(t.includes('sam 26/09 · humeur 4,7 (de 3 à 6)\n'), t);
 });

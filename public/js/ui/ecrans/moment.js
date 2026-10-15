@@ -1,14 +1,18 @@
 // Humeur du moment (v4) : humeur 1-10 puis énergie, en deux touchers, quand on le veut.
-// Le relevé est créé au premier toucher (date et heure réelles) ; une fois les deux choisis,
-// l'écran se referme. L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
+// Le relevé est créé au premier toucher (date et heure réelles, ou l'heure de « C'était vers… ») ;
+// une fois les deux choisis, l'écran se referme, sauf si « Ce que je faisais » est ouvert.
+// L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
-import { useDonnees, useIndicateur, ecrireAvecEssais } from '../hooks.js';
-import { cleLocale, heureLocale } from '../../domain/dates.js';
+import { useDonnees, useIndicateur, ecrireAvecEssais, lireLocal } from '../hooks.js';
+import { cleLocale, heureLocale, heuresVers, versDateHeure, formaterVers } from '../../domain/dates.js';
 import { nouvelId } from '../../domain/ids.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
+import { minusculeInitiale } from '../../domain/phrase.js';
 import { CadreParcours } from '../composants/parcours.js';
+import { PastillesMultiples } from '../composants/multiples.js';
 import { Pastilles } from '../composants/pastilles.js';
+import { Repli } from '../composants/repli.js';
 import { Segmente } from '../composants/segmente.js';
 import { afficherToast } from '../composants/toast.js';
 import { Icones } from '../icones.js';
@@ -16,9 +20,44 @@ import { options } from './aujourdhui.js';
 
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const DELAI_FERMETURE_MS = 250;
+const CLE_FAISAIS = 'carnet:moment:faisais';
+// Ce que l'écran porte : les valeurs du relevé, et son heure (null : maintenant, sinon { date, heure } de « vers »).
+const NEUF = { humeur: null, energie: null, faisais: null, quand: null };
+
+const complet = (r) => r.humeur != null && r.energie != null;
+// Seul endroit qui décide si l'écran se ferme tout seul, humeur et énergie choisies : pas tant que
+// « Ce que je faisais » est ouvert. Toute autre raison de le garder ouvert s'ajoute ici.
+const seFermeSeul = (r, { faisaisOuvert }) => complet(r) && !faisaisOuvert;
+
+// Date, heure et « vers » d'un relevé : l'heure réelle, ou l'heure choisie dans « C'était vers… ».
+const horaire = (quand, maintenant) => (quand
+  ? { ...quand, vers: true }
+  : { date: cleLocale(maintenant), heure: heureLocale(maintenant), vers: null });
+const cleQuand = (quand) => (quand ? `${quand.date} ${quand.heure}` : '');
+
+// « Ce que je faisais » replié : « travail, trajet ».
+const resumeFaisais = (ids, carte) => (ids || []).map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
+
+// « Maintenant ▾ » ouvre les heures déjà passées du jour logique ; avant 6 h il n'y en a pas, la ligne
+// reste fixe. Choisir une heure referme la liste.
+function LigneQuand({ quand, heures, surChoix }) {
+  const [ouvert, setOuvert] = useState(false);
+  if (heures.length === 0 && !quand) return html`<p class="ligne-date ligne-date-fixe">Maintenant</p>`;
+  const choisie = quand ? Number(quand.heure.slice(0, 2)) : null;
+  const choix = [{ h: null, texte: 'Maintenant' }, ...heures.map((h) => ({ h, texte: `${h} h` }))];
+  return html`<div class="ligne-date">
+    <button type="button" class="btn-lien" aria-expanded=${ouvert ? 'true' : 'false'} onClick=${() => setOuvert(!ouvert)}>
+      ${quand ? `C'était ${formaterVers(quand.heure)}` : 'Maintenant'}${Icones.chevronBas({ trait: 2 })}</button>
+    ${ouvert && html`<div class="pastilles souples teinte-humeur choix-vers" role="group" aria-label="C'était vers…">
+      ${choix.map(({ h, texte }) => html`<button type="button" class="pastille" aria-pressed=${h === choisie ? 'true' : 'false'}
+        onClick=${() => { setOuvert(false); surChoix(h); }}><span>${texte}</span></button>`)}
+    </div>`}
+  </div>`;
+}
 
 export function Moment() {
-  const [releve, setReleve] = useState({ humeur: null, energie: null });
+  const [releve, setReleve] = useState(NEUF);
+  const [faisaisOuvert, setFaisaisOuvert] = useState(() => lireLocal(CLE_FAISAIS, false) === true);
   const [, signaler] = useIndicateur();
   const idRef = useRef(null);
   const file = useRef(Promise.resolve());
@@ -31,12 +70,23 @@ export function Moment() {
   useEffect(() => () => clearTimeout(fermeture.current), []);
 
   const fermer = () => { clearTimeout(fermeture.current); location.hash = '#/aujourdhui'; };
-  const ecrire = (changements) => {
+  // Referme l'écran en disant que le relevé est noté (avec « Annuler »).
+  const terminer = async () => {
+    await file.current;
+    const id = idRef.current;
+    fermer();
+    if (id) afficherToast('Humeur du moment notée', { libelle: 'Annuler', faire: () => repo.humeurs.supprimer(id) });
+  };
+  // Écrit en file. Le relevé est créé avec tout ce que porte l'écran (`etat`), dès qu'il y a une
+  // humeur ou une énergie : des activités ou une heure seules ne créent rien. Ensuite on le modifie.
+  const ecrire = (changements, etat) => {
     file.current = file.current.then(async () => {
       if (!idRef.current) {
-        const maintenant = repo.maintenant();
+        if (etat.humeur == null && etat.energie == null) return;
         const id = nouvelId('hu');
-        const cree = await ecrireAvecEssais(() => repo.humeurs.creer({ date: cleLocale(maintenant), heure: heureLocale(maintenant), ...changements }, { id }), signaler);
+        const cree = await ecrireAvecEssais(() => repo.humeurs.creer({
+          ...horaire(etat.quand, repo.maintenant()), humeur: etat.humeur, energie: etat.energie, faisais: etat.faisais,
+        }, { id }), signaler);
         if (cree) idRef.current = cree.id;
         return;
       }
@@ -48,27 +98,34 @@ export function Moment() {
   const choisir = (champ) => (v) => {
     const suivant = { ...releve, [champ]: v };
     setReleve(suivant);
-    ecrire({ [champ]: v });
+    ecrire({ [champ]: v }, suivant);
     clearTimeout(fermeture.current);
-    if (suivant.humeur != null && suivant.energie != null) {
-      fermeture.current = setTimeout(async () => {
-        await file.current;
-        const id = idRef.current;
-        fermer();
-        if (id) afficherToast('Humeur du moment notée', { libelle: 'Annuler', faire: () => repo.humeurs.supprimer(id) });
-      }, DELAI_FERMETURE_MS);
-    }
+    if (seFermeSeul(suivant, { faisaisOuvert })) fermeture.current = setTimeout(terminer, DELAI_FERMETURE_MS);
+  };
+  // Une heure de « vers » (ou « Maintenant ») : sans relevé encore, rien n'est écrit, l'heure reste à
+  // l'écran et sera posée à la création ; avec un relevé, il change d'heure.
+  const choisirQuand = (h) => {
+    const maintenant = repo.maintenant();
+    const quand = h == null ? null : versDateHeure(maintenant, h);
+    if (cleQuand(quand) === cleQuand(releve.quand)) return;
+    const suivant = { ...releve, quand };
+    setReleve(suivant);
+    ecrire(horaire(quand, maintenant), suivant);
+  };
+  const basculerFaisais = (ouvert) => {
+    setFaisaisOuvert(ouvert);
+    if (ouvert) clearTimeout(fermeture.current);
   };
   const supprimer = async (h) => {
     const sauve = await repo.humeurs.supprimer(h.id);
-    if (h.id === idRef.current) { idRef.current = null; setReleve({ humeur: null, energie: null }); }
+    if (h.id === idRef.current) { idRef.current = null; setReleve(NEUF); }
     afficherToast('Relevé supprimé', { libelle: 'Annuler', faire: () => repo.humeurs.restaurer(sauve) });
   };
 
   if (!donnees) return html`<div class="parcours"></div>`;
   const { items, carte, jour } = donnees;
-  return html`<${CadreParcours} titre="Humeur du moment" teinte="humeur" surFermer=${fermer}
-    sousTitre=${html`<p class="ligne-date ligne-date-fixe">Maintenant · ${heureLocale(repo.maintenant())}</p>`}>
+  return html`<${CadreParcours} titre="Humeur du moment" teinte="humeur" surFermer=${() => (complet(releve) ? terminer() : fermer())}
+    sousTitre=${html`<${LigneQuand} quand=${releve.quand} heures=${heuresVers(repo.maintenant())} surChoix=${choisirQuand} />`}>
     <div class="etape">
       <div><h2 class="titre-question">Humeur</h2><p class="sous-question">1 = au plus bas, 10 = au plus haut</p></div>
       <${Pastilles} etiquette="Humeur du moment" ariaPrefixe="Humeur" options=${HUMEURS} valeur=${releve.humeur} surChoix=${choisir('humeur')}
@@ -76,11 +133,15 @@ export function Moment() {
       <h2 class="titre-question">Énergie</h2>
       <${Segmente} etiquette="Énergie" options=${options(items, 'energie', releve.energie)} valeur=${releve.energie} surChoix=${choisir('energie')}
         classe="large energie" teinte="humeur" />
+      <${Repli} titre="Ce que je faisais" cleStockage=${CLE_FAISAIS} resume=${resumeFaisais(releve.faisais, carte)} surBascule=${basculerFaisais}>
+        <${PastillesMultiples} etiquette="Ce que je faisais" options=${options(items, 'activiteMoment', releve.faisais)} valeurs=${releve.faisais}
+          surChoix=${choisir('faisais')} teinte="humeur" />
+      </${Repli}>
       ${jour.length > 0 && html`<section class="moments-du-jour" aria-label="Relevés d'aujourd'hui">
         <h3 class="libelle-section">Aujourd'hui</h3>
         <ul class="liste carte carte-groupe">${jour.map((h) => html`<li class="ligne-info">
-          <span><span class="heure-moment">${h.heure || '·'}</span> humeur ${h.humeur ?? '·'}${h.energie ? ` · énergie ${libelle(carte, h.energie).toLowerCase()}` : ''}</span>
-          <button type="button" class="effacer" aria-label=${`Supprimer le relevé de ${h.heure || 'cette heure'}`} onClick=${() => supprimer(h)}>${Icones.fermer()}</button>
+          <span><span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> humeur ${h.humeur ?? '·'}${h.energie ? ` · énergie ${libelle(carte, h.energie).toLowerCase()}` : ''}</span>
+          <button type="button" class="effacer" aria-label=${`Supprimer le relevé ${h.vers ? formaterVers(h.heure) : `de ${h.heure || 'cette heure'}`}`} onClick=${() => supprimer(h)}>${Icones.fermer()}</button>
         </li>`)}</ul>
       </section>`}
     </div>

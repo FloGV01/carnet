@@ -317,6 +317,8 @@
 .actions-flottantes > * { pointer-events: auto; }
 .actions-flottantes .fab { position: static; }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
+/* Humeur du moment (v6) : les heures de « C'était vers… » sous la ligne « Maintenant ▾ ». */
+.choix-vers { padding-bottom: var(--esp-2); }
 
 /* Réglages */
 .reglages { gap: 10px; }
