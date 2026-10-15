@@ -9,7 +9,9 @@ import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
 
-function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim, aria, children }) {
+// Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
+// `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
+export function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
   const [voirTableau, setVoirTableau] = useState(false);
   return html`<figure class=${`graphe teinte-${rubrique}`}>
     <figcaption>
@@ -17,12 +19,13 @@ function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim,
         ${droite && html`<span class="graphe-droite">${droite}</span>`}</span>
       ${resume && html`<span class="graphe-resume">${resume}</span>`}
     </figcaption>
-    ${voirTableau ? tableau : html`<svg viewBox=${`0 0 ${dim.largeur} ${dim.hauteur}`} role="img" aria-label=${aria}>${children}</svg>${legende}${detail}`}
+    ${voirTableau ? tableau : html`${corps || html`<svg viewBox=${`0 0 ${dim.largeur} ${dim.hauteur}`} role="img" aria-label=${aria}>${children}</svg>`}${legende}${detail}`}
     <button type="button" class="btn-lien bascule-graphe" onClick=${() => setVoirTableau(!voirTableau)}>${voirTableau ? 'Voir le graphe' : 'Voir en tableau'}</button>
+    ${pied && html`<p class="pied-section">${pied}</p>`}
   </figure>`;
 }
 
-const Axe = ({ graduations, filets, dim }) => html`
+export const Axe = ({ graduations, filets, dim }) => html`
   ${graduations.map((t) => html`<text class="g-axe g-graduation" x="0" y=${t.y}>${t.v}</text>`)}
   ${filets.map((f) => html`<line class="g-filet" x1=${dim.gauche} x2=${dim.largeur} y1=${f.y} y2=${f.y} />`)}`;
 
