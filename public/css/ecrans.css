@@ -435,7 +435,7 @@
 .lien-apres-coup { padding: 10px 10px 10px 16px; min-height: 56px; }
 .lien-apres-coup .ligne-libelle { display: flex; flex-direction: column; gap: 2px; }
 .titre-apres-coup { font-weight: 600; }
-/* Fiche rouverte : la carte a un cadre de bouton, teinté comme les épisodes (--c et --t viennent du parcours). */
+/* Carte « Après coup · TCC » des épisodes : un cadre de bouton, teinté comme les épisodes (--c et --t viennent du parcours). */
 .ligne-carte.bouton-apres-coup { border: 1px solid var(--c); border-radius: var(--r-bouton); background: var(--t); color: var(--c); }
 .bouton-apres-coup .note-carte-interne, .ligne-carte.bouton-apres-coup svg { color: inherit; }
 /* Aujourd'hui et sa liste : une ligne ordinaire, toujours de la même forme (aucun état). */

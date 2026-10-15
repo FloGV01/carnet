@@ -11,7 +11,7 @@ export const premierJourRecent = (aujourdhui) => addDays(aujourdhui, 1 - JOURS_R
 
 // Épisodes rattachés par jourEvenement (avant 04:00, c'est la veille) à l'un des 7 derniers jours
 // logiques, du plus récent au plus ancien. Dans un jour logique, l'ordre est celui des heures,
-// après minuit comprises ; un épisode sans heure passe avant tous les autres de son jour.
+// après minuit comprises ; un épisode sans heure passe après tous les autres de son jour.
 export function episodesRecents(episodes, aujourdhui) {
   const debut = premierJourRecent(aujourdhui);
   return (episodes || [])

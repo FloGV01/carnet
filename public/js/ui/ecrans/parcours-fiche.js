@@ -58,7 +58,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const suivant = useRef(null);
   const glisse = useRef({ etape: null, classe: '' });
   const maintenant = repo.maintenant();
-  // Fiche rouverte (et non nouvelle fiche saisie à chaud) : c'est elle qui montre l'accès à l'Après coup.
+  // Fiche rouverte (et non nouvelle fiche saisie à chaud) : elle seule montre « Après coup » en haut.
   const rouvert = Boolean(idRoute) && idRoute !== 'nouveau';
 
   useEffect(() => {
@@ -201,10 +201,9 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrireTexte({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
-      ${avecPlan && html`<a class=${`ligne-carte carte lien-apres-coup${rouvert ? ' bouton-apres-coup' : ''}`} href=${hrefApresCoup} onClick=${ouvrirApresCoup}>
-        <span class="ligne-libelle"><span class="titre-apres-coup">${rouvert ? 'Après coup · TCC' : 'Après coup'}</span>
-          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || (rouvert
-            ? 'Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.' : 'Retour à froid sur cet épisode, étape par étape.')}</span></span>
+      ${avecPlan && html`<a class="ligne-carte carte lien-apres-coup bouton-apres-coup" href=${hrefApresCoup} onClick=${ouvrirApresCoup}>
+        <span class="ligne-libelle"><span class="titre-apres-coup">Après coup · TCC</span>
+          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.'}</span></span>
         ${Icones.chevron({ trait: 2 })}</a>`}
       ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
       ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
