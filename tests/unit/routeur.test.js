@@ -10,6 +10,7 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
   assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
   assert.equal(lireRoute('#/reglages/ressourcer').nom, 'reglages-ressourcer');
+  assert.equal(lireRoute('#/reglages/aide-iphone').nom, 'reglages-aide-iphone');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
 
@@ -41,6 +42,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
   assert.equal(ongletDe('ressourcer'), 'aujourdhui', 'Me ressourcer s\'ouvre depuis Moment difficile');
   assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'les réglages ne sont pas l\'écran Me ressourcer');
+  assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
@@ -73,4 +75,12 @@ test('v6 · Me ressourcer : l\'écran (/ressourcer) et ses réglages (/reglages/
   assert.equal(versHash('reglages-ressourcer'), '#/reglages/ressourcer');
   assert.equal(lireRoute('#/ressourcer/').inconnue, true);
   assert.equal(lireRoute('#/ressourcer/autre').inconnue, true);
+});
+
+test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => {
+  assert.deepEqual(lireRoute('#/reglages/aide-iphone'), { nom: 'reglages-aide-iphone', params: {}, chemin: '/reglages/aide-iphone' });
+  assert.equal(versHash('reglages-aide-iphone'), '#/reglages/aide-iphone');
+  for (const h of ['#/reglages/aide-iphone/', '#/reglages/aide-iphone/autre', '#/aide-iphone']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
 });

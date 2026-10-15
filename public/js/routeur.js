@@ -28,6 +28,7 @@ export const ROUTES = [
   { nom: 'reglages-journee', motif: '/reglages/journee' },
   { nom: 'reglages-moment-difficile', motif: '/reglages/moment-difficile' },
   { nom: 'reglages-ressourcer', motif: '/reglages/ressourcer' },
+  { nom: 'reglages-aide-iphone', motif: '/reglages/aide-iphone' },
   { nom: 'listes-index', motif: '/reglages/listes' },
   { nom: 'listes', motif: `/reglages/listes/${ID}`, params: ['liste'] },
   { nom: 'diagnostic', motif: '/diagnostic' },

@@ -247,9 +247,10 @@
 .bouton-ajouter { min-height: var(--cible); border-radius: var(--r-moyen); }
 .listes .libelle-section { padding: 8px 0 0 4px; margin-bottom: -6px; }
 
-/* Rappel du soir */
-.rappel { gap: 14px; }
-.rappel > .entete-pousse { margin-bottom: 0; }
+/* Rappel du soir, aide iPhone */
+.rappel, .aide-iphone { gap: 14px; }
+.rappel > .entete-pousse, .aide-iphone > .entete-pousse { margin-bottom: 0; }
+.aide-rubrique { display: grid; gap: 10px; }
 .etapes { margin: 0; padding-left: 22px; display: grid; gap: 12px; font-size: var(--t-corps); line-height: 1.45; }
 
 .apercu-page { width: 100%; height: auto; display: block; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: #FFFFFF; }

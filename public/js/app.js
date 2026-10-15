@@ -25,6 +25,7 @@ import { ReglagesRessourcer } from './ui/ecrans/reglages-ressourcer.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
+import { AideIphone } from './ui/ecrans/aide-iphone.js';
 import { Historique } from './ui/ecrans/historique.js';
 import { Soins } from './ui/ecrans/soins.js';
 import { Rdv } from './ui/ecrans/rdv.js';
@@ -60,6 +61,7 @@ const ECRANS = {
   'reglages-sauvegarde': () => html`<${Sauvegarde} />`,
   'reglages-effacer': () => html`<${Effacer} />`,
   'reglages-rappel': () => html`<${Rappel} />`,
+  'reglages-aide-iphone': () => html`<${AideIphone} />`,
   diagnostic: () => html`<${Diagnostic} />`,
   analyse: () => html`<${Analyse} />`,
   comprendre: (p) => html`<${Comprendre} onglet=${p.onglet} />`,
