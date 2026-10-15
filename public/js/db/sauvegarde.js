@@ -313,8 +313,13 @@ export async function revenirAvantImport(repo) {
       for (const x of copie.data[s] || []) t.objectStore(s).put(s === 'journal' ? versContacts(x) : x);
     }
     for (const it of listesManquantes(copie.data.listes, h)) t.objectStore('listes').put(it);
-    // Une copie de la v3 et d'avant n'a pas forcément de méta : on ne touche alors à rien.
-    if (Array.isArray(copie.data.meta)) remplacerMeta(t.objectStore('meta'), actuel.meta, copie.data.meta);
+    // Une copie de la v3 et d'avant n'a pas forcément de méta : on ne touche alors à rien. Dans
+    // une copie prise avant la v6 (base en version 3 ou moins), le champ Humeur du soir rejoint
+    // les champs masqués, comme le fait la migration 4.
+    if (Array.isArray(copie.data.meta)) {
+      const meta = (copie.schemaVersion ?? 0) < 4 ? copie.data.meta.map(masquerHumeur) : copie.data.meta;
+      remplacerMeta(t.objectStore('meta'), actuel.meta, meta);
+    }
     // Les mémos dont la fiche n'existe plus après le retour sont retirés.
     const parents = {
       journal: new Set((copie.data.journal || []).map((x) => x.date)),

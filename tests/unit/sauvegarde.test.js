@@ -15,6 +15,8 @@ const json = (o) => [{ nom: 'x.json', octets: enc.encode(JSON.stringify(o)) }];
 const contenuDe = (f) => JSON.parse(new TextDecoder().decode(octetsDe(f)));
 // Identifiants des listes versées par la v6 (SEED_V4_AJOUTS).
 const IDS_V6 = seedItems(SEED_V4_AJOUTS, 'x').map((i) => i.id);
+// Pose une copie « avant-import » telle qu'une version donnée l'écrivait.
+const poserCopie = (repo, copie) => repo.tx(['snapshots'], 'readwrite', (t) => new Promise((ok) => { t.objectStore('snapshots').put(copie).onsuccess = ok; }));
 
 async function remplir(repo) {
   await repo.journal.patch('2026-09-29', { humeur: 4, lieu: 'lieu:teletravail' });
@@ -69,6 +71,8 @@ test('fichiers refusés : illisible, autre format, version future, tronqué', ()
   assert.throws(() => analyserFichiers(json({ format: 'autre' })), /ne ressemble pas/);
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: FORMAT_VERSION + 1 })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 1, counts: { journal: 3 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 4, counts: { notes: 2 }, data: { notes: [{ id: 'no_1', date: '2026-09-30', heure: '20:00', texte: 'Une' }] } })),
+    (e) => e.code === 'BACKUP_INCOMPLET', 'format 4 : notes tronquées');
   assert.throws(() => analyserFichiers([{ nom: 'x.zip', octets: new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0]) }]), (e) => e.code === 'BACKUP_INCOMPLET');
 });
 
@@ -288,7 +292,7 @@ test('v6 : « Revenir » vers une copie prise avant la v6 garde les notes et rem
     id: 'avant-import-2026-09-30T17:00:00.000Z', type: 'avant-import', date: '2026-09-30T17:00:00.000Z', schemaVersion: 3,
     data: { ...data, listes: data.listes.filter((i) => !IDS_V6.includes(i.id)) },
   };
-  await a.repo.tx(['snapshots'], 'readwrite', (t) => new Promise((ok) => { t.objectStore('snapshots').put(copie).onsuccess = ok; }));
+  await poserCopie(a.repo, copie);
   const note = await a.repo.notes.creer({ date: '2026-10-01', heure: '09:00', texte: 'Écrite après la copie' });
   await a.repo.journal.patch('2026-10-01', { humeur: 7 });
   await revenirAvantImport(a.repo);
@@ -298,6 +302,20 @@ test('v6 : « Revenir » vers une copie prise avant la v6 garde les notes et rem
   assert.equal(listes.length, 197);
   for (const id of IDS_V6) assert.ok(listes.some((i) => i.id === id), `${id} remis`);
   assert.equal(listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
+});
+
+test('v6 : « Revenir » vers une copie d\'avant la v6 masque le champ Humeur, une copie de la v6 garde le choix fait', async () => {
+  const { repo } = nouveauRepo();
+  const journee = (masques) => [{ cle: 'journee', valeur: { ordre: ['lieu', 'humeur'], masques, heuresMoment: [] } }];
+  const copie = (date, schemaVersion) => ({ id: `avant-import-${date}`, type: 'avant-import', date, schemaVersion, data: { journal: [], listes: [], meta: journee(['explosions']) } });
+  await repo.meta.ecrire('journee', { masques: [] });
+  await poserCopie(repo, copie('2026-09-30T17:00:00.000Z', 3));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur'])[0].valeur, 'copie de la v5 : comme la migration');
+  // En v6, l'utilisateur a pu réafficher Humeur : ce choix n'est pas défait.
+  await poserCopie(repo, copie('2026-09-30T18:00:00.000Z', 4));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions'])[0].valeur);
 });
 
 test('v6 : aperçu de l\'import, les notes et les nouveaux réglages ont leurs mots', () => {

@@ -54,3 +54,4 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
 7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant.
    - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes : elles restent alors telles quelles.
    - Les listes par défaut absentes de la copie (v4, v6) sont ajoutées.
+   - Dans une copie prise avant la v6, `'humeur'` rejoint les champs masqués de `journee`, comme à l'import d'un fichier au format 3. Une copie de la v6 garde le choix qu'elle contient.
