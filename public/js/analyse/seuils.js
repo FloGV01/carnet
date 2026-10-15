@@ -43,4 +43,9 @@ export const SEUILS = Object.freeze({
     varPlancher: 0.04, facteur: 1.5, minRecent: 10, minAvant: 20, tauxSaisie: 0.6, minJoursHistoire: 84,
     zEntree: 3.5, zSortie: 2, ecartMin: 1, ecartSortie: 0.7, joursStables: 7,
   },
+  // v6 · Comprendre (spec §2) : un graphique aligné à partir de 3 événements (jours d'explosion, jours à
+  // énergie basse, retours au bureau) ; « peu de valeurs » sous 3 ; un graphique en colonnes à partir de 2
+  // colonnes d'au moins 3 valeurs ; une activité à partir de 3 relevés avec énergie ; un élément pesé ou
+  // rechargé à partir de 3 jours notés sur la période.
+  comprendre: { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3 },
 });

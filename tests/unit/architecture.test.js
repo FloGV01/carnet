@@ -72,8 +72,10 @@ test('humeur du jour : aucun module d\'analyse ne lit l\'humeur brute', () => {
     const code = sansCommentaires(lire(f));
     // L'humeur du jour est décimale : plus aucun test « entier de 1 à 10 » (estHumeur).
     assert.ok(!/Number\.isInteger\([^)]*humeur/.test(code), `${nom} n'accepte que des humeurs entières`);
-    if (nom === 'index.js') continue;
-    // Seul index.js calcule l'humeur du jour. Seul moments.js (« Ta journée heure par heure ») lit les relevés.
+    // Seuls les points d'entrée calculent l'humeur du jour : index.js (l'Analyse) et comprendre.js (l'écran
+    // Comprendre, qui lit aussi l'énergie des relevés, spec §2.2). Ailleurs, seul moments.js (« Ta journée
+    // heure par heure ») lit les relevés.
+    if (nom === 'index.js' || nom === 'comprendre.js') continue;
     assert.ok(!/\b(avecHumeurDuJour|humeursDuJour)\b/.test(code), `${nom} recalcule l'humeur du jour`);
     if (nom === 'moments.js') continue;
     assert.ok(!/\bdata\.humeurs\b|export function \w+\s*\(\s*(\{[^)]*\bhumeurs\b|humeurs\b)/.test(code), `${nom} lit les relevés`);
