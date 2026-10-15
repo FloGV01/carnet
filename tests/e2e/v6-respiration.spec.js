@@ -20,24 +20,55 @@ const ouvrir = async (page) => {
 };
 const bouton = (page, nom) => page.getByRole('button', { name: nom, exact: true });
 
-// Faux contexte Web Audio : il compte les contextes ouverts, les notes jouées (avec leur fréquence) et les fermetures.
-const espionnerAudio = (page) => page.evaluate(() => {
-  const j = { contextes: 0, notes: [], fermes: 0 };
+// Faux contexte Web Audio, comme celui d'iOS : il naît « suspendu » et ne tourne qu'une fois `resume()` résolu.
+// Il compte les contextes créés, les notes jouées (avec leur fréquence), les reprises, les mises en veille et les
+// fermetures. `window.__audioCtl.interrompre()` le suspend et fait attendre les reprises (écran verrouillé),
+// `liberer()` les laisse aboutir. Avec `session`, `navigator.audioSession` existe (Safari 16.4 et plus).
+const espionnerAudio = (page, { session = false } = {}) => page.evaluate((avecSession) => {
+  const j = { contextes: 0, notes: [], reprises: 0, suspensions: 0, fermes: 0 };
+  const attentes = [];
+  let retenu = false;
+  let dernier = null;
   window.__audio = j;
+  window.__audioCtl = {
+    etat: () => (dernier ? dernier.state : null),
+    interrompre: () => { retenu = true; dernier.state = 'suspended'; },
+    liberer: () => { retenu = false; attentes.splice(0).forEach((reprendre) => reprendre()); },
+  };
   class FauxContexte {
-    constructor() { j.contextes += 1; this.state = 'running'; this.currentTime = 0; this.destination = {}; }
+    constructor() { j.contextes += 1; this.state = 'suspended'; this.currentTime = 0; this.destination = {}; dernier = this; }
     createGain() { return { gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
     createOscillator() {
       const o = { type: '', frequency: { value: 0 }, connect() {}, stop() {}, start() { j.notes.push(o.frequency.value); } };
       return o;
     }
-    resume() { return Promise.resolve(); }
-    close() { j.fermes += 1; return Promise.resolve(); }
+    resume() {
+      j.reprises += 1;
+      const tourner = () => { this.state = 'running'; };
+      if (retenu) return new Promise((ok) => attentes.push(() => { tourner(); ok(); }));
+      return Promise.resolve().then(tourner);
+    }
+    suspend() { j.suspensions += 1; this.state = 'suspended'; return Promise.resolve(); }
+    close() { j.fermes += 1; this.state = 'closed'; return Promise.resolve(); }
   }
   window.AudioContext = FauxContexte;
   window.webkitAudioContext = FauxContexte;
-});
-const audio = (page) => page.evaluate(() => window.__audio);
+  if (avecSession) Object.defineProperty(navigator, 'audioSession', { configurable: true, value: { type: 'auto' } });
+}, session);
+const audio = (page) => page.evaluate(() => ({ ...window.__audio, etat: window.__audioCtl.etat(), session: navigator.audioSession ? navigator.audioSession.type : null }));
+const notes = (page) => page.evaluate(() => window.__audio.notes.length);
+// Monte la respiration comme le fera « Me ressourcer », avec `demarrerTout`. `prepare` : l'appelant a appelé
+// `preparerSon()` dans son toucher, avant le montage (synchrone, sans attendre la lecture des réglages).
+const monterAuto = (page, prepare) => page.evaluate(async (avecPrepa) => {
+  const { html, render } = await import('/js/ui/lib.js');
+  const { Respiration } = await import('/js/ui/composants/respiration.js');
+  const { preparerSon } = await import('/js/ui/composants/signal-sonore.js');
+  const hote = document.createElement('div');
+  hote.id = 'essai-respiration';
+  document.body.append(hote);
+  if (avecPrepa) preparerSon();
+  render(html`<${Respiration} demarrerTout=${true} />`, hote);
+}, prepare);
 
 test('Réglages › Moment difficile : 5 min, 5-5, signal éteint, et la phrase sur le mode silencieux', async ({ page }) => {
   await aller(page, '#/reglages');
@@ -163,48 +194,54 @@ test('sans « Réduire les animations » : le cercle respire, et sa teinte ne ch
 });
 
 test('le signal sonore est éteint par défaut : aucun contexte audio, même après un exercice entier', async ({ page }) => {
-  await espionnerAudio(page);
+  await espionnerAudio(page, { session: true });
   const vue = await ouvrir(page);
   await vue.getByRole('button', { name: 'Commencer' }).click();
   await page.clock.runFor(5400);
   await expect(vue.locator('.phase-respiration')).toHaveText('Expire');
   await page.clock.runFor(5 * 60 * 1000);
   await expect(vue.locator('.phase-respiration')).toHaveText('5 minutes de respiration.');
-  expect(await audio(page)).toEqual({ contextes: 0, notes: [], fermes: 0 });
+  expect(await audio(page)).toMatchObject({ contextes: 0, notes: [], reprises: 0, suspensions: 0, fermes: 0, session: 'auto' });
 });
 
-test('signal sonore activé : un contexte créé au toucher, une note par phase, fermé à l\'arrêt', async ({ page }) => {
+test('signal sonore activé : contexte créé au toucher, une note par phase, mis en veille à l\'arrêt et réutilisé', async ({ page }) => {
   await aller(page, '#/reglages/moment-difficile');
   const interrupteur = page.getByRole('switch', { name: 'Signal sonore' });
   await interrupteur.click();
   await expect(interrupteur).toHaveAttribute('aria-checked', 'true');
   await expect.poll(() => lire(page)).toEqual({ duree: 5, rythme: '5-5', son: true });
 
-  await espionnerAudio(page);
+  await espionnerAudio(page, { session: true });
   const vue = await ouvrir(page);
   // Rien ne s'ouvre avant le toucher : iOS n'accepte un contexte audio que dans un geste.
   expect((await audio(page)).contextes).toBe(0);
   await vue.getByRole('button', { name: 'Commencer' }).click();
-  expect(await audio(page)).toMatchObject({ contextes: 1, fermes: 0 });
-  expect((await audio(page)).notes).toHaveLength(1);
+  await expect.poll(() => notes(page)).toBe(1);
+  // Le contexte est préparé dans le toucher, en session « ambiante » quand Safari la propose.
+  expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'running', session: 'ambient', fermes: 0 });
   await page.clock.runFor(5400);
   await expect(vue.locator('.phase-respiration')).toHaveText('Expire');
   await page.clock.runFor(5000);
   await expect(vue.locator('.phase-respiration')).toHaveText('Inspire');
-  const { notes, contextes } = await audio(page);
-  expect(contextes).toBe(1);
-  expect(notes).toHaveLength(3);
-  expect(notes[0]).not.toBe(notes[1]);
-  expect(notes[2]).toBe(notes[0]);
+  const joue = (await audio(page)).notes;
+  expect(joue).toHaveLength(3);
+  expect(joue[0]).not.toBe(joue[1]);
+  expect(joue[2]).toBe(joue[0]);
 
+  // À l'arrêt : jamais fermé, mis en veille un instant après (la dernière note finit de sonner), session rendue.
   await vue.getByRole('button', { name: 'Arrêter' }).click();
   await page.clock.runFor(2000);
-  expect((await audio(page)).fermes).toBe(1);
+  expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'suspended', suspensions: 1, fermes: 0, session: 'auto' });
   expect((await audio(page)).notes).toHaveLength(3);
   await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+
+  // Un second exercice reprend le même contexte.
+  await vue.getByRole('button', { name: 'Commencer' }).click();
+  await expect.poll(() => notes(page)).toBe(4);
+  expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'running', session: 'ambient' });
 });
 
-test('signal sonore activé : une note à la fin aussi, puis le contexte est fermé', async ({ page }) => {
+test('signal sonore activé : une note à la fin aussi, puis le contexte dort, sans être fermé', async ({ page }) => {
   await ecrire(page, { duree: 2, rythme: '4-6', son: true });
   await espionnerAudio(page);
   const vue = await ouvrir(page);
@@ -212,9 +249,85 @@ test('signal sonore activé : une note à la fin aussi, puis le contexte est fer
   await page.clock.runFor(122 * 1000);
   await expect(vue.locator('.phase-respiration')).toHaveText('2 minutes de respiration.');
   // Un début d'inspiration et un début d'expiration par cycle de 10 s (12 cycles), plus la note de fin.
-  const { notes, fermes } = await audio(page);
-  expect(notes).toHaveLength(12 * 2 + 1);
-  expect(fermes).toBe(1);
+  expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'suspended', suspensions: 1, fermes: 0 });
+  expect((await audio(page)).notes).toHaveLength(12 * 2 + 1);
+});
+
+test('contexte interrompu (écran verrouillé) : aucune note ne joue tant qu\'il dort, et rien ne part en rafale à la reprise', async ({ page }) => {
+  await ecrire(page, { duree: 5, rythme: '5-5', son: true });
+  await espionnerAudio(page);
+  const vue = await ouvrir(page);
+  await vue.getByRole('button', { name: 'Commencer' }).click();
+  await expect.poll(() => notes(page)).toBe(1);
+
+  await page.evaluate(() => window.__audioCtl.interrompre());
+  // Trois changements de phase (5, 10 et 15 s) pendant l'interruption : aucune note n'est jouée ni mise de côté.
+  await page.clock.runFor(18 * 1000);
+  expect((await audio(page)).notes).toHaveLength(1);
+  expect((await audio(page)).etat).toBe('suspended');
+  await page.evaluate(() => window.__audioCtl.liberer());
+  // Les notes d'il y a plusieurs secondes ne sonnent pas : rien ne part à la reprise.
+  await expect.poll(async () => (await audio(page)).etat).toBe('running');
+  expect((await audio(page)).notes).toHaveLength(1);
+  // Le changement de phase suivant (20 s) sonne normalement, une seule fois.
+  await page.clock.runFor(3000);
+  await expect(vue.locator('.phase-respiration')).toHaveText('Inspire');
+  await expect.poll(() => notes(page)).toBe(2);
+  await page.clock.runFor(1000);
+  expect(await notes(page)).toBe(2);
+});
+
+test('démarrer tout de suite avec le signal : l\'appelant prépare le son dans son toucher, la note part avec l\'exercice', async ({ page }) => {
+  await ecrire(page, { duree: 2, rythme: '5-5', son: true });
+  await espionnerAudio(page, { session: true });
+  await monterAuto(page, true);
+  const hote = page.locator('#essai-respiration');
+  await expect(hote.locator('.phase-respiration')).toHaveText('Inspire');
+  await expect.poll(() => notes(page)).toBe(1);
+  // Un seul contexte : celui que l'appelant a préparé.
+  expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'running', session: 'ambient' });
+  await page.clock.runFor(5400);
+  await expect(hote.locator('.phase-respiration')).toHaveText('Expire');
+  await expect.poll(() => notes(page)).toBe(2);
+});
+
+test('démarrer tout de suite avec le signal, sans son préparé : aucun contexte créé hors d\'un toucher, mais l\'exercice part', async ({ page }) => {
+  await ecrire(page, { duree: 2, rythme: '5-5', son: true });
+  await espionnerAudio(page);
+  await monterAuto(page, false);
+  const hote = page.locator('#essai-respiration');
+  await expect(hote.locator('.phase-respiration')).toHaveText('Inspire');
+  await page.clock.runFor(5400);
+  await expect(hote.locator('.phase-respiration')).toHaveText('Expire');
+  expect(await audio(page)).toMatchObject({ contextes: 0, notes: [] });
+});
+
+test('démarrer tout de suite, signal éteint : un contexte préparé pour rien se rendort et rien ne sonne', async ({ page }) => {
+  await ecrire(page, { duree: 2, rythme: '5-5', son: false });
+  await espionnerAudio(page);
+  await monterAuto(page, true);
+  const hote = page.locator('#essai-respiration');
+  await expect(hote.locator('.phase-respiration')).toHaveText('Inspire');
+  await page.clock.runFor(6400);
+  await expect(hote.locator('.phase-respiration')).toHaveText('Expire');
+  expect(await audio(page)).toMatchObject({ etat: 'suspended', notes: [], fermes: 0 });
+});
+
+test('lecture des réglages impossible : les valeurs par défaut s\'appliquent, « Commencer » reste utilisable', async ({ page }) => {
+  await page.evaluate(() => {
+    const meta = window.__carnet.repo.meta;
+    const lireVraiment = meta.lire;
+    meta.lire = (cle) => (cle === 'respiration' ? Promise.reject(new Error('lecture refusée')) : lireVraiment(cle));
+  });
+  const vue = await ouvrir(page);
+  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+  await expect(vue.getByRole('button', { name: 'Commencer' })).toBeEnabled();
+  await vue.getByRole('button', { name: 'Commencer' }).click();
+  await expect(vue.locator('.phase-respiration')).toHaveText('Inspire');
+  // Les réglages ne restent pas vides non plus.
+  await aller(page, '#/reglages/moment-difficile');
+  await expect(bouton(page, 'Durée : 5 min')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('switch', { name: 'Signal sonore' })).toHaveAttribute('aria-checked', 'false');
 });
 
 test('l\'écran reste allumé pendant l\'exercice, puis le verrou est rendu', async ({ page }) => {
@@ -237,14 +350,7 @@ test('l\'écran reste allumé pendant l\'exercice, puis le verrou est rendu', as
 
 test('démarrer tout de suite (Me ressourcer) : la respiration part sans toucher, avec les réglages', async ({ page }) => {
   await ecrire(page, { duree: 2, rythme: '4-6', son: false });
-  await page.evaluate(async () => {
-    const { html, render } = await import('/js/ui/lib.js');
-    const { Respiration } = await import('/js/ui/composants/respiration.js');
-    const hote = document.createElement('div');
-    hote.id = 'essai-respiration';
-    document.body.append(hote);
-    render(html`<${Respiration} demarrerTout=${true} />`, hote);
-  });
+  await monterAuto(page, false);
   const hote = page.locator('#essai-respiration');
   await expect(hote.locator('.phase-respiration')).toHaveText('Inspire');
   await expect(hote.getByRole('button', { name: 'Arrêter' })).toBeVisible();

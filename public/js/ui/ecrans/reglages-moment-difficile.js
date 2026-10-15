@@ -13,7 +13,8 @@ const OPTIONS_RYTHME = RYTHMES.map((r) => ({ valeur: r, libelle: r }));
 export function ReglagesMomentDifficile() {
   const [respiration, setRespiration] = useState(null);
   const file = useRef(Promise.resolve());
-  useEffect(() => { repo.meta.lire('respiration').then((v) => setRespiration(normaliserRespiration(v))); }, []);
+  // Une lecture qui échoue donne les réglages par défaut : l'écran ne reste jamais vide.
+  useEffect(() => { repo.meta.lire('respiration').catch(() => null).then((v) => setRespiration(normaliserRespiration(v))); }, []);
   // Les écritures se suivent : deux touchers rapprochés ne s'écrasent pas.
   const changer = (cle) => (valeur) => {
     file.current = file.current.then(async () => {
