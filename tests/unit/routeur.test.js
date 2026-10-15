@@ -9,6 +9,7 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/episode/ep_abc-12').params.id, 'ep_abc-12');
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
   assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
+  assert.equal(lireRoute('#/reglages/ressourcer').nom, 'reglages-ressourcer');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
 
@@ -38,6 +39,8 @@ test('onglet actif', () => {
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
+  assert.equal(ongletDe('ressourcer'), 'aujourdhui', 'Me ressourcer s\'ouvre depuis Moment difficile');
+  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'les réglages ne sont pas l\'écran Me ressourcer');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
@@ -61,4 +64,13 @@ test('v6 · Après coup : la liste (/apres-coup) et un épisode (/apres-coup/ID)
   assert.equal(versHash('apres-coup-liste'), '#/apres-coup');
   assert.equal(versHash('apres-coup', { id: 'ep_x' }), '#/apres-coup/ep_x');
   assert.equal(lireRoute('#/apres-coup/').inconnue, true);
+});
+
+test('v6 · Me ressourcer : l\'écran (/ressourcer) et ses réglages (/reglages/ressourcer) ne se confondent pas', () => {
+  assert.deepEqual(lireRoute('#/ressourcer'), { nom: 'ressourcer', params: {}, chemin: '/ressourcer' });
+  assert.deepEqual(lireRoute('#/reglages/ressourcer'), { nom: 'reglages-ressourcer', params: {}, chemin: '/reglages/ressourcer' });
+  assert.equal(versHash('ressourcer'), '#/ressourcer');
+  assert.equal(versHash('reglages-ressourcer'), '#/reglages/ressourcer');
+  assert.equal(lireRoute('#/ressourcer/').inconnue, true);
+  assert.equal(lireRoute('#/ressourcer/autre').inconnue, true);
 });

@@ -10,6 +10,7 @@ export const ROUTES = [
   { nom: 'jour', motif: `/jour/${DATE}`, params: ['date'] },
   { nom: 'moment', motif: '/moment' },
   { nom: 'moment-difficile', motif: '/moment-difficile' },
+  { nom: 'ressourcer', motif: '/ressourcer' },
   { nom: 'mon-plan', motif: '/mon-plan' },
   { nom: 'apres-coup-liste', motif: '/apres-coup' },
   { nom: 'apres-coup', motif: `/apres-coup/${ID}`, params: ['id'] },
@@ -26,6 +27,7 @@ export const ROUTES = [
   { nom: 'reglages-rappel', motif: '/reglages/rappel' },
   { nom: 'reglages-journee', motif: '/reglages/journee' },
   { nom: 'reglages-moment-difficile', motif: '/reglages/moment-difficile' },
+  { nom: 'reglages-ressourcer', motif: '/reglages/ressourcer' },
   { nom: 'listes-index', motif: '/reglages/listes' },
   { nom: 'listes', motif: `/reglages/listes/${ID}`, params: ['liste'] },
   { nom: 'diagnostic', motif: '/diagnostic' },
@@ -58,7 +60,7 @@ export function versHash(nom, params = {}) {
 
 // Onglet actif pour une route donnée.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'ressourcer', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
   if (nom === 'historique') return 'historique';
   if (['soins', 'rdv', 'consultation', 'traitement'].includes(nom)) return 'soins';

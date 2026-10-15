@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
+import { espionnerAudio, audio, notes } from '../aides/audio.js';
 
 // v6 · Respiration réglable (spec §6) : durée, rythme et signal sonore dans Réglages › Moment difficile,
 // et le cercle qui change de teinte quand l'iPhone demande « Réduire les animations ».
@@ -20,43 +21,6 @@ const ouvrir = async (page) => {
 };
 const bouton = (page, nom) => page.getByRole('button', { name: nom, exact: true });
 
-// Faux contexte Web Audio, comme celui d'iOS : il naît « suspendu » et ne tourne qu'une fois `resume()` résolu.
-// Il compte les contextes créés, les notes jouées (avec leur fréquence), les reprises, les mises en veille et les
-// fermetures. `window.__audioCtl.interrompre()` le suspend et fait attendre les reprises (écran verrouillé),
-// `liberer()` les laisse aboutir. Avec `session`, `navigator.audioSession` existe (Safari 16.4 et plus).
-const espionnerAudio = (page, { session = false } = {}) => page.evaluate((avecSession) => {
-  const j = { contextes: 0, notes: [], reprises: 0, suspensions: 0, fermes: 0 };
-  const attentes = [];
-  let retenu = false;
-  let dernier = null;
-  window.__audio = j;
-  window.__audioCtl = {
-    etat: () => (dernier ? dernier.state : null),
-    interrompre: () => { retenu = true; dernier.state = 'suspended'; },
-    liberer: () => { retenu = false; attentes.splice(0).forEach((reprendre) => reprendre()); },
-  };
-  class FauxContexte {
-    constructor() { j.contextes += 1; this.state = 'suspended'; this.currentTime = 0; this.destination = {}; dernier = this; }
-    createGain() { return { gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
-    createOscillator() {
-      const o = { type: '', frequency: { value: 0 }, connect() {}, stop() {}, start() { j.notes.push(o.frequency.value); } };
-      return o;
-    }
-    resume() {
-      j.reprises += 1;
-      const tourner = () => { this.state = 'running'; };
-      if (retenu) return new Promise((ok) => attentes.push(() => { tourner(); ok(); }));
-      return Promise.resolve().then(tourner);
-    }
-    suspend() { j.suspensions += 1; this.state = 'suspended'; return Promise.resolve(); }
-    close() { j.fermes += 1; this.state = 'closed'; return Promise.resolve(); }
-  }
-  window.AudioContext = FauxContexte;
-  window.webkitAudioContext = FauxContexte;
-  if (avecSession) Object.defineProperty(navigator, 'audioSession', { configurable: true, value: { type: 'auto' } });
-}, session);
-const audio = (page) => page.evaluate(() => ({ ...window.__audio, etat: window.__audioCtl.etat(), session: navigator.audioSession ? navigator.audioSession.type : null }));
-const notes = (page) => page.evaluate(() => window.__audio.notes.length);
 // Monte la respiration comme le fera « Me ressourcer », avec `demarrerTout`. `prepare` : l'appelant a appelé
 // `preparerSon()` dans son toucher, avant le montage (synchrone, sans attendre la lecture des réglages).
 const monterAuto = (page, prepare) => page.evaluate(async (avecPrepa) => {

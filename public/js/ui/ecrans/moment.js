@@ -1,6 +1,7 @@
 // Humeur du moment (v4) : humeur 1-10 puis énergie, en deux touchers, quand on le veut.
 // Le relevé est créé au premier toucher (date et heure réelles, ou l'heure de « C'était vers… ») ;
-// une fois les deux choisis, l'écran se referme, sauf si « Ce que je faisais » est ouvert.
+// une fois les deux choisis, l'écran se referme, sauf si « Ce que je faisais » est ouvert ou si la règle
+// « Me ressourcer » joue : sous les choix, « Pour récupérer, je… » (domain/ressourcer.js).
 // L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
@@ -9,9 +10,13 @@ import { cleLocale, heureLocale, heuresVers, versDateHeure, formaterVers } from 
 import { nouvelId } from '../../domain/ids.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
+import { normaliserPlan } from '../../domain/mon-plan.js';
+import { regleRessourcer } from '../../domain/ressourcer.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { Pastilles } from '../composants/pastilles.js';
+import { lirePlan } from '../composants/mon-plan.js';
+import { PourRecuperer, lireRessourcer } from '../composants/ressourcer.js';
 import { Repli } from '../composants/repli.js';
 import { Segmente } from '../composants/segmente.js';
 import { afficherToast } from '../composants/toast.js';
@@ -26,8 +31,9 @@ const NEUF = { humeur: null, energie: null, faisais: null, quand: null };
 
 const complet = (r) => r.humeur != null && r.energie != null;
 // Seul endroit qui décide si l'écran se ferme tout seul, humeur et énergie choisies : pas tant que
-// « Ce que je faisais » est ouvert. Toute autre raison de le garder ouvert s'ajoute ici.
-const seFermeSeul = (r, { faisaisOuvert }) => complet(r) && !faisaisOuvert;
+// « Ce que je faisais » est ouvert, ni quand la règle « Me ressourcer » affiche la liste. Toute autre
+// raison de le garder ouvert s'ajoute ici.
+const seFermeSeul = (r, { faisaisOuvert, ressourcer }) => complet(r) && !faisaisOuvert && !ressourcer;
 
 // Date, heure et « vers » d'un relevé : l'heure réelle, ou l'heure choisie dans « C'était vers… ».
 const horaire = (quand, maintenant) => (quand
@@ -64,14 +70,23 @@ export function Moment() {
   const fermeture = useRef(null);
   const aujourdhui = repo.aujourdhui();
   const { donnees } = useDonnees(async () => {
-    const [items, jour] = await Promise.all([repo.listes.items(), repo.humeurs.parJour(aujourdhui, aujourdhui)]);
-    return { items, carte: carteLibelles(items), jour };
+    // Le réglage et le plan de la règle : une lecture qui échoue donne leurs valeurs par défaut (règle éteinte).
+    const [items, jour, reglage, plan] = await Promise.all([
+      repo.listes.items(), repo.humeurs.parJour(aujourdhui, aujourdhui), lireRessourcer(), lirePlan().catch(() => normaliserPlan(null)),
+    ]);
+    return { items, carte: carteLibelles(items), jour, reglage, plan };
   }, [aujourdhui]);
   useEffect(() => () => clearTimeout(fermeture.current), []);
 
   const fermer = () => { clearTimeout(fermeture.current); location.hash = '#/aujourdhui'; };
-  // Referme l'écran en disant que le relevé est noté (avec « Annuler »).
+  // La règle « Me ressourcer » pour ce que porte l'écran : un relevé noté maintenant (pas « vers »), avec son énergie.
+  const regle = (r) => Boolean(donnees) && regleRessourcer({
+    reglage: donnees.reglage, releve: { vers: r.quand ? true : null, energie: r.energie }, plan: donnees.plan,
+  });
+  // Referme l'écran en disant que le relevé est noté (avec « Annuler »). La fermeture automatique en attente
+  // est annulée tout de suite : ✕ touché pendant ses 250 ms ne doit pas noter le relevé deux fois.
   const terminer = async () => {
+    clearTimeout(fermeture.current);
     await file.current;
     const id = idRef.current;
     fermer();
@@ -100,7 +115,7 @@ export function Moment() {
     setReleve(suivant);
     ecrire({ [champ]: v }, suivant);
     clearTimeout(fermeture.current);
-    if (seFermeSeul(suivant, { faisaisOuvert })) fermeture.current = setTimeout(terminer, DELAI_FERMETURE_MS);
+    if (seFermeSeul(suivant, { faisaisOuvert, ressourcer: regle(suivant) })) fermeture.current = setTimeout(terminer, DELAI_FERMETURE_MS);
   };
   // Une heure de « vers » (ou « Maintenant ») : sans relevé encore, rien n'est écrit, l'heure reste à
   // l'écran et sera posée à la création ; avec un relevé, il change d'heure.
@@ -133,6 +148,7 @@ export function Moment() {
       <h2 class="titre-question">Énergie</h2>
       <${Segmente} etiquette="Énergie" options=${options(items, 'energie', releve.energie)} valeur=${releve.energie} surChoix=${choisir('energie')}
         classe="large energie" teinte="humeur" />
+      ${regle(releve) && html`<${PourRecuperer} texte=${donnees.plan.pourRecuperer} />`}
       <${Repli} titre="Ce que je faisais" cleStockage=${CLE_FAISAIS} resume=${resumeFaisais(releve.faisais, carte)} surBascule=${basculerFaisais}>
         <${PastillesMultiples} etiquette="Ce que je faisais" options=${options(items, 'activiteMoment', releve.faisais)} valeurs=${releve.faisais}
           surChoix=${choisir('faisais')} teinte="humeur" />

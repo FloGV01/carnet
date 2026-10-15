@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '28bcb9fb8e06';
+const VERSION = 'bb73a42441c6';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -54,6 +54,7 @@ const FICHIERS = [
   "./js/domain/mon-plan.js",
   "./js/domain/phrase.js",
   "./js/domain/respiration.js",
+  "./js/domain/ressourcer.js",
   "./js/domain/soins.js",
   "./js/domain/traitement-actuel.js",
   "./js/domain/verification.js",
@@ -91,6 +92,7 @@ const FICHIERS = [
   "./js/ui/composants/questions.js",
   "./js/ui/composants/repli.js",
   "./js/ui/composants/respiration.js",
+  "./js/ui/composants/ressourcer.js",
   "./js/ui/composants/rubrique.js",
   "./js/ui/composants/segmente.js",
   "./js/ui/composants/signal-sonore.js",
@@ -120,7 +122,9 @@ const FICHIERS = [
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
   "./js/ui/ecrans/reglages-moment-difficile.js",
+  "./js/ui/ecrans/reglages-ressourcer.js",
   "./js/ui/ecrans/reglages.js",
+  "./js/ui/ecrans/ressourcer.js",
   "./js/ui/ecrans/sauvegarde.js",
   "./js/ui/ecrans/soignants.js",
   "./js/ui/ecrans/soins.js",
