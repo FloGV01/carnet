@@ -473,6 +473,17 @@
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 .plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
+.plan-moment .lien-discret { display: inline-flex; align-items: center; }
+.plan-moment .contenu-plan + .lien-discret { margin-top: 6px; }
+/* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
+   texte est long, les boutons restent à l'écran. Aucun repère de position : rien n'est compté. */
+.une-chose { height: 100%; display: flex; flex-direction: column; }
+.une-chose-carte { flex: 1; min-height: 0; overflow-y: auto; padding: 28px var(--marge) 16px; display: flex; flex-direction: column; gap: 14px; }
+.une-chose-rubrique { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
+.une-chose-texte { font: 600 clamp(2rem, 9vw, 3rem)/1.25 var(--police-titre); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
+.une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
+.une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
+.une-chose-tout { grid-column: 1 / -1; justify-content: center; }
 /* « J'ai fini pour ce soir » (v5) */
 .fini-bouton { align-self: stretch; margin-top: 4px; }
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }

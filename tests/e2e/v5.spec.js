@@ -27,9 +27,12 @@ test('Moment difficile : un toucher, cohérence cardiaque, Mon plan tel qu\'écr
   await expect(page.getByRole('heading', { name: 'Ça a démarré avec…' })).toBeVisible();
 });
 
-test('Moment difficile sans plan : une ligne neutre, aucun conseil', async ({ page }) => {
+test('Moment difficile sans plan : un lien neutre « Écrire mon plan », aucun conseil', async ({ page }) => {
   await page.getByRole('link', { name: 'Moment difficile' }).click();
-  await expect(page.getByRole('dialog', { name: 'Moment difficile' })).toContainText("Rien d'écrit pour l'instant.");
+  const vue = page.getByRole('dialog', { name: 'Moment difficile' });
+  // v6 : le lien remplace l'ancienne phrase.
+  await expect(vue.getByRole('link', { name: 'Écrire mon plan' })).toBeVisible();
+  await expect(vue).not.toContainText("Rien d'écrit pour l'instant.");
 });
 
 test('« J\'ai fini pour ce soir » : la page se replie sur la phrase du jour, Rouvrir la saisie', async ({ page }) => {
