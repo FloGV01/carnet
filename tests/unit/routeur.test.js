@@ -32,6 +32,7 @@ test('aller-retour versHash / lireRoute pour chaque route', () => {
 test('onglet actif', () => {
   assert.equal(ongletDe('episode'), 'aujourdhui');
   assert.equal(ongletDe('apres-coup'), 'aujourdhui');
+  assert.equal(ongletDe('apres-coup-liste'), 'aujourdhui');
   assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('rdv'), 'soins');
@@ -49,4 +50,12 @@ test('v6 · Comprendre : /comprendre/ID avec ID parmi explosions, energie, rythm
   for (const h of ['#/comprendre', '#/comprendre/', '#/comprendre/autre', '#/comprendre/Energie']) {
     assert.equal(lireRoute(h).inconnue, true, h);
   }
+});
+
+test('v6 · Après coup : la liste (/apres-coup) et un épisode (/apres-coup/ID) ne se confondent pas', () => {
+  assert.deepEqual(lireRoute('#/apres-coup'), { nom: 'apres-coup-liste', params: {}, chemin: '/apres-coup' });
+  assert.deepEqual(lireRoute('#/apres-coup/ep_abc-12'), { nom: 'apres-coup', params: { id: 'ep_abc-12' }, chemin: '/apres-coup/ep_abc-12' });
+  assert.equal(versHash('apres-coup-liste'), '#/apres-coup');
+  assert.equal(versHash('apres-coup', { id: 'ep_x' }), '#/apres-coup/ep_x');
+  assert.equal(lireRoute('#/apres-coup/').inconnue, true);
 });

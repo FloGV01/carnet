@@ -17,6 +17,7 @@ import { Moment } from './ui/ecrans/moment.js';
 import { MomentDifficile } from './ui/ecrans/moment-difficile.js';
 import { MonPlan } from './ui/ecrans/mon-plan.js';
 import { ApresCoup } from './ui/ecrans/apres-coup.js';
+import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
 import { MaJournee } from './ui/ecrans/ma-journee.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
@@ -39,6 +40,7 @@ const ECRANS = {
   moment: () => html`<${Moment} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
   'mon-plan': () => html`<${MonPlan} />`,
+  'apres-coup-liste': () => html`<${ApresCoupListe} />`,
   'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
   'reglages-journee': () => html`<${MaJournee} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,

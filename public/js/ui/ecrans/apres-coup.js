@@ -10,6 +10,7 @@ import { formaterJour, jourEvenement } from '../../domain/dates.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { phraseResume } from '../../domain/phrase.js';
 import { estExplosion } from '../../domain/explosions.js';
+import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { ajouterSiAlors, retirerSiAlors, normaliserPlan } from '../../domain/mon-plan.js';
 import { versHash } from '../../routeur.js';
 import { CadreParcours } from '../composants/parcours.js';
@@ -74,9 +75,11 @@ export function ApresCoup({ id }) {
       acRef.current = lu.apresCoup || {};
       setEp(lu);
       const j = jourEvenement(lu.date, lu.heure);
-      const [entree, duJour] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j)]);
+      const [entree, duJour, humeurs] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j), repo.humeurs.parJour(j, j)]);
       if (!actif) return;
-      setJour({ entree: entree || { date: j }, nExplosions: duJour.filter(estExplosion).length });
+      // « Ce jour-là » dit l'humeur du jour (v6), comme tous les écrans, et non celle du soir.
+      const jourLu = avecHumeurDuJour([entree || { date: j }], humeurs).find((x) => x.date === j);
+      setJour({ entree: jourLu, nExplosions: duJour.filter(estExplosion).length });
       if (lu.apresCoup) setEtape('recap');
     })();
     return () => { actif = false; clearTimeout(suivant.current); };
