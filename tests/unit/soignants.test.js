@@ -10,7 +10,7 @@ import { generer } from '../fixtures/generateur.js';
 const items = seedItems(SEED_V1, 'x');
 const carte = carteLibelles(items);
 
-function cas({ extreme = false } = {}) {
+function cas({ extreme = false, energie = false } = {}) {
   const journal = generer({ jours: 180, seed: 7, scenario: 'bureau', debut: '2026-04-03' }).map((j) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée' }));
   const aujourdhui = journal[journal.length - 1].date;
   const long = (n) => 'Une question vraiment longue sur le sommeil et les effets du matin '.repeat(4).slice(0, n);
@@ -23,7 +23,9 @@ function cas({ extreme = false } = {}) {
     { id: 'r1', date: journal[170].date, professionnel: 'professionnel:psychiatre', prochaineEtape: extreme ? long(200) : 'revoir dans un mois' },
     { id: 'r2', date: '2026-12-01', professionnel: 'professionnel:psychiatre', questions: Array.from({ length: 8 }, (_, i) => ({ texte: extreme ? long(200) : `question ${i}`, abordee: i === 0 })) },
   ];
-  const data = { journal, episodes, symptomes, traitements };
+  // v6 : des relevés d'énergie sans humeur (dont des « basse »), un jour sur deux, en plus des soirs.
+  const humeurs = energie ? journal.filter((_, i) => i % 2 === 0).map((j, i) => ({ id: `h${i}`, date: j.date, heure: '15:00', humeur: null, energie: i % 3 ? 'energie:basse' : 'energie:haute' })) : [];
+  const data = { journal, episodes, symptomes, traitements, ...(energie ? { humeurs } : {}) };
   const analyse = analyze(data, { aujourdhui, items });
   // Noms fictifs : jamais de vrai médicament dans les tests.
   const traitementActuel = { depuis: '2026-09-01', lignes: Array.from({ length: extreme ? 8 : 2 }, (_, i) => ({
@@ -67,6 +69,17 @@ test('évolution (v5) : la frise par semaine, ou par mois sur un long historique
   assert.ok(ops.some((o) => o.type === 'frise'));
   const texte = ops.filter((o) => o.type === 'texte').map((o) => o.texte).join(' ');
   assert.match(texte, /nuits Mal, Moyen, Bien, du plus clair au plus foncé/);
+});
+
+test('v6 · l\'énergie basse reste à l\'écran : ni dans le modèle, ni dans la page des soignants', () => {
+  const sans = cas();
+  const avec = cas({ energie: true });
+  assert.ok(avec.frise.colonnes.every((c) => !('energieBasse' in c)), 'le modèle ne la porte pas');
+  assert.ok(!JSON.stringify(avec).includes('energieBasse'));
+  assert.deepEqual(avec.frise, sans.frise);
+  const page = mettreEnPage(avec);
+  assert.deepEqual(page.ops, mettreEnPage(sans).ops, 'la page ne change pas d\'un trait');
+  assert.ok(page.hauteur <= A4.hauteurMax);
 });
 
 test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements', () => {

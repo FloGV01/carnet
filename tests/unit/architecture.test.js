@@ -74,10 +74,11 @@ test('humeur du jour : aucun module d\'analyse ne lit l\'humeur brute', () => {
     assert.ok(!/Number\.isInteger\([^)]*humeur/.test(code), `${nom} n'accepte que des humeurs entières`);
     // Seuls les points d'entrée calculent l'humeur du jour : index.js (l'Analyse) et comprendre.js (l'écran
     // Comprendre, qui lit aussi l'énergie des relevés, spec §2.2). Ailleurs, seul moments.js (« Ta journée
-    // heure par heure ») lit les relevés.
+    // heure par heure ») lit les relevés, avec l'énergie basse par jour (energie-jour.js, que frise.js reçoit
+    // pour la rangée de Mes jours, spec §3) : ils ne touchent jamais à l'humeur.
     if (nom === 'index.js' || nom === 'comprendre.js') continue;
     assert.ok(!/\b(avecHumeurDuJour|humeursDuJour)\b/.test(code), `${nom} recalcule l'humeur du jour`);
-    if (nom === 'moments.js') continue;
+    if (nom === 'moments.js' || nom === 'energie-jour.js' || nom === 'frise.js') continue;
     assert.ok(!/\bdata\.humeurs\b|export function \w+\s*\(\s*(\{[^)]*\bhumeurs\b|humeurs\b)/.test(code), `${nom} lit les relevés`);
   }
 });

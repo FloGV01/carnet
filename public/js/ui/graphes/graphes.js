@@ -3,7 +3,7 @@
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
-import { DIM_FRISE, DIM_JOURNEE, geometrieFrise, geometrieJournee } from './geometrie.js';
+import { DIM_FRISE, DIM_FRISE_ENERGIE, DIM_JOURNEE, geometrieFrise, geometrieJournee } from './geometrie.js';
 import { nombre, uneDecimale } from '../../analyse/textes.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
@@ -52,6 +52,7 @@ export function detailColonne(pas, c, lib) {
     if (e.reveilsNocturnes != null) m.push(e.reveilsNocturnes === 5 ? '5 réveils ou plus' : pluriel(e.reveilsNocturnes, 'réveil', 'réveils'));
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
+    if (c.energieBasse === true) m.push('énergie basse');
     if (e.lieu) m.push(lib(e.lieu));
     const contacts = resumeContacts(e.contacts, lib);
     if (contacts) m.push(contacts);
@@ -61,6 +62,7 @@ export function detailColonne(pas, c, lib) {
     if (c.nuits) m.push(`nuits : ${['mal', 'moyen', 'bien'].filter((k) => c.nuits[k]).map((k) => `${lib(`sommeil:${k}`)} ${c.nuits[k]}`).join(' · ')}`);
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
+    if (c.energieBasse > 0) m.push(`${c.energieBasse} ${c.energieBasse > 1 ? 'jours' : 'jour'} d'énergie basse`);
   }
   return m;
 }
@@ -68,8 +70,9 @@ export function detailColonne(pas, c, lib) {
 export function MesJours({ frise: f, carte, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
-  const g = geometrieFrise(f);
-  const d = DIM_FRISE;
+  // La rangée « énergie basse » n'existe que si un relevé d'énergie est noté sur la période.
+  const d = f.avecEnergie ? DIM_FRISE_ENERGIE : DIM_FRISE;
+  const g = geometrieFrise(f, d);
   const humeurs = f.colonnes.map((c) => c.humeur).filter((h) => h != null);
   const unite = { jour: 'Humeur', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
   const resume = humeurs.length ? `${unite} entre ${nombre(Math.min(...humeurs))} et ${nombre(Math.max(...humeurs))}.` : '';
@@ -85,6 +88,7 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-sommeil-1" x="1" y="1" width="10" height="10" /></svg>nuit ${lib('sommeil:mal').toLowerCase()}, ${lib('sommeil:moyen').toLowerCase()}, ${lib('sommeil:bien').toLowerCase()}, du clair au foncé</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-expl"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>explosion</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-ep"><circle class="g-autre" cx="6" cy="6" r="3" /></svg>autre épisode</span>
+    ${f.avecEnergie && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>${f.pas === 'jour' ? 'énergie basse' : 'jours d\'énergie basse'}</span>`}
   </p>`;
   const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}
     ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
@@ -100,6 +104,7 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
     ${g.nuits.map((n) => html`<rect class=${`g-${n.classe}`} x=${n.x} y=${n.y} width=${n.l} height=${n.h} rx="1.5" />`)}
     <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-autre" cx=${a.x} cy=${a.y} r="2.5" />`)}</g>
+    <g class="teinte-humeur">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${d.axeY} text-anchor="middle">${e.texte}</text>`)}
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;

@@ -6,6 +6,7 @@
 import { addDays, jourEvenement, jourSemaine, JOURS } from '../domain/dates.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { avecHumeurDuJour, estHumeur } from './humeur-jour.js';
+import { energieBasseParJour } from './energie-jour.js';
 import { bornesFenetre, dureeNuit, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
 import { moyenne, mediane } from './stats.js';
 import { SEUILS } from './seuils.js';
@@ -13,7 +14,6 @@ import { SEUILS } from './seuils.js';
 const S = SEUILS.comprendre;
 const NUIT_MAL = 'sommeil:mal';
 const BUREAU = 'lieu:bureau';
-const ENERGIE_BASSE = 'energie:basse';
 const COUTEUX = 'contactEffet:couteux';
 
 // « 3 mois · Tout » (§2.1) : « 3 mois » est la fenêtre « 90 » de l'Analyse ; « Tout » par défaut.
@@ -38,18 +38,6 @@ function contactCouteux(j) {
   if (j.contactHumain === false) return false;
   if (lignes.length && lignes.every((c) => c.effet)) return false;
   return null;
-}
-
-// Énergie basse par jour logique (« vers » compris) : oui dès un relevé « basse », non si les relevés
-// d'énergie n'en ont aucun. Un jour sans relevé d'énergie n'a pas d'entrée.
-function energieBasseParJour(humeurs) {
-  const res = new Map();
-  for (const h of humeurs || []) {
-    if (!h || !h.date || !h.energie) continue;
-    const jour = jourEvenement(h.date, h.heure);
-    res.set(jour, res.get(jour) === true || h.energie === ENERGIE_BASSE);
-  }
-  return res;
 }
 
 // Les facteurs de chaque jour logique, rangés par date. Chaque jour garde aussi son humeur du jour et

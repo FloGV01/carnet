@@ -89,7 +89,8 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
-    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, ...c }) => c) },
+    // L'énergie basse (v6) est à l'écran seulement : le PDF n'en porte pas.
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c) },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     reperes,

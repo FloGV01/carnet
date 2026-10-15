@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '2223c0610773';
+const VERSION = '0cda2f0856a3';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -20,6 +20,7 @@ const FICHIERS = [
   "./js/analyse/calendrier.js",
   "./js/analyse/classements.js",
   "./js/analyse/comprendre.js",
+  "./js/analyse/energie-jour.js",
   "./js/analyse/fenetres.js",
   "./js/analyse/frise.js",
   "./js/analyse/humeur-jour.js",

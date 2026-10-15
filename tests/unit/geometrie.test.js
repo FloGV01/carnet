@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieFrise, geometrieJournee, DIM_FRISE, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieFrise, geometrieJournee, DIM_FRISE, DIM_FRISE_ENERGIE, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
 
 const jour = (cle, extra = {}) => ({ cle, humeur: null, moyenne7: null, nuit: null, explosions: null, autres: 0, aDonnee: false, ...extra });
 
@@ -62,12 +62,72 @@ test('ta journée : 12 créneaux de 4 h à 4 h, points sans segments, énergie e
   assert.ok(!('segments' in g));
 });
 
+// v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement. Les dimensions du PDF
+// (DIM_FRISE) n'ont pas cette rangée : la même colonne y donne exactement la même frise.
+test('v6 · frise par jour : une marque par jour à énergie basse, rien pour les autres jours', () => {
+  const colonnes = [
+    jour('2026-10-01', { energieBasse: true, aDonnee: true }),
+    jour('2026-10-02', { energieBasse: false }),
+    jour('2026-10-03', { energieBasse: null }),
+    jour('2026-10-04'),
+    jour('2026-10-05', { energieBasse: true, humeur: 5, aDonnee: true }),
+  ];
+  const d = DIM_FRISE_ENERGIE;
+  const g = geometrieFrise({ pas: 'jour', colonnes }, d);
+  assert.equal(g.energieBasse.length, 2, 'ni les jours sans basse, ni les jours sans relevé, ni zéro');
+  assert.ok(g.energieBasse.every((m) => m.y === d.energieY && m.h === d.energieH && m.n === 1), 'la même marque chaque jour');
+  assert.deepEqual(g.energieBasse.map((m) => m.x + m.l / 2), [g.zones[0].x + g.zones[0].l / 2, g.zones[1].x + g.zones[1].l / 2], 'au milieu de la colonne');
+  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-10-01', '2026-10-05'], 'se touchent : les jours qui portent une donnée');
+  assert.ok(d.energieY >= d.explY + d.explH + 6 + 2.5, 'sous les autres épisodes');
+  assert.ok(d.energieY + d.energieH < d.axeY, 'au-dessus de l\'axe');
+  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+});
+
+test('v6 · frise par semaine ou par mois : une barre longue du nombre de jours, comme les explosions', () => {
+  const col = (cle, energieBasse, extra = {}) => ({ cle, humeur: null, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: energieBasse > 0, energieBasse, ...extra });
+  const colonnes = [col('2026-09-14', 6), col('2026-09-21', 1), col('2026-09-28', 0), col('2026-10-05', null), col('2026-10-12', 3)];
+  const d = DIM_FRISE_ENERGIE;
+  for (const pas of ['semaine', 'mois']) {
+    const g = geometrieFrise({ pas, colonnes }, d);
+    assert.deepEqual(g.energieBasse.map((m) => m.n), [6, 1, 3], 'zéro jour et jour inconnu ne dessinent rien');
+    assert.deepEqual(g.energieBasse.map((m) => m.h), [d.energieH, 3, 6], 'à l\'échelle de la plus haute, 3 au moins');
+    assert.ok(g.energieBasse.every((m) => m.y + m.h === d.energieY + d.energieH), 'posées sur le bas de la rangée');
+    assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+  }
+});
+
+test('v6 · frise : sans les dimensions de la rangée (le PDF), aucune marque et rien d\'autre ne change', () => {
+  const col = (cle, extra) => ({ cle, humeur: 5, fragile: false, nuits: { mal: 1, moyen: 0, bien: 1 }, explosions: 1, autres: 1, aDonnee: true, ...extra });
+  const avec = [col('2026-09-21', { energieBasse: 4 }), col('2026-09-28', { energieBasse: 0 })];
+  const sans = avec.map(({ energieBasse, ...c }) => c);
+  const pdf = geometrieFrise({ pas: 'semaine', colonnes: avec });
+  assert.deepEqual(pdf, geometrieFrise({ pas: 'semaine', colonnes: sans }));
+  assert.deepEqual(pdf.energieBasse, []);
+  assert.equal(DIM_FRISE.energieY, undefined);
+  assert.equal(geometrieFrise({ pas: 'semaine', colonnes: avec }, { ...DIM_FRISE, largeur: 400 }).energieBasse.length, 0, 'même avec la largeur du PDF');
+  // Au-dessus de la rangée, l'écran garde les mêmes formes qu'avant.
+  const ecran = geometrieFrise({ pas: 'semaine', colonnes: sans }, DIM_FRISE_ENERGIE);
+  for (const cle of ['points', 'nuits', 'encoches', 'autres', 'moyenne', 'filets', 'graduations']) assert.deepEqual(ecran[cle], pdf[cle], cle);
+});
+
 test('v6 · Mes jours, détail d\'une colonne : l\'humeur, avec une décimale, et son écart', async () => {
   const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
   const lib = (id) => id;
   assert.deepEqual(detailColonne('jour', { humeur: 17 / 3, humeurMin: 3, humeurMax: 8, entree: {} }, lib), ['humeur 5,7 (de 3 à 8)']);
   assert.deepEqual(detailColonne('jour', { humeur: 6, humeurMin: null, humeurMax: null, entree: {} }, lib), ['humeur 6']);
   assert.deepEqual(detailColonne('semaine', { humeur: 5.64, fragile: false }, lib), ['humeur 5,6 en moyenne']);
+});
+
+test('v6 · Mes jours, détail d\'une colonne : l\'énergie basse seulement quand il y en a, jamais un zéro', async () => {
+  const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
+  const lib = (id) => id;
+  assert.deepEqual(detailColonne('jour', { humeur: 6, energieBasse: true, entree: {} }, lib), ['humeur 6', 'énergie basse']);
+  assert.deepEqual(detailColonne('jour', { humeur: 6, energieBasse: false, entree: {} }, lib), ['humeur 6']);
+  assert.deepEqual(detailColonne('jour', { humeur: 6, energieBasse: null, entree: {} }, lib), ['humeur 6']);
+  assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: 1 }, lib), ['humeur 5,0 en moyenne', '1 jour d\'énergie basse']);
+  assert.deepEqual(detailColonne('mois', { humeur: null, energieBasse: 12 }, lib), ['12 jours d\'énergie basse']);
+  assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: 0 }, lib), ['humeur 5,0 en moyenne']);
+  assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: null }, lib), ['humeur 5,0 en moyenne']);
 });
 
 // ---------- v6 · Comprendre ----------

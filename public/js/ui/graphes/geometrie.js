@@ -10,10 +10,14 @@ export function geometrieHaltere(p1, p2, largeur = 306, marge = 8) {
 }
 
 // ---------- v5 · Mes jours (frise) ----------
-// Trois rangées sur le même axe : humeur du jour (1 à 10, filets à 4 et 7), nuit, explosions et
-// autres épisodes. Une colonne vide ne dessine rien. Pure : rendue en SVG et sur canvas (PDF).
+// Rangées sur le même axe : humeur du jour (1 à 10, filets à 4 et 7), nuit, explosions et autres épisodes.
+// Une colonne vide ne dessine rien. Pure : rendue en SVG et sur canvas (PDF).
 // Par jour (v6), un trait vertical va du plus bas au plus haut des relevés : une journée mêlée se voit.
+// DIM_FRISE est celle du PDF. L'écran ajoute, quand un relevé d'énergie est noté sur la période, la rangée
+// « énergie basse » (v6) sous les autres épisodes : DIM_FRISE_ENERGIE, la seule à avoir energieY. Sans
+// energieY, aucune marque d'énergie : la frise du PDF ne change pas.
 export const DIM_FRISE = { largeur: 326, gauche: 22, droite: 6, haut: 8, basHumeur: 104, nuitY: 114, nuitH: 12, explY: 132, explH: 20, axeY: 168, hauteur: 172 };
+export const DIM_FRISE_ENERGIE = { ...DIM_FRISE, energieY: 168, energieH: 12, axeY: 194, hauteur: 198 };
 const CLASSE_NUIT = { 'sommeil:mal': 'sommeil-1', 'sommeil:moyen': 'sommeil-2', 'sommeil:bien': 'sommeil-3' };
 const MOIS_AXE = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
@@ -30,8 +34,12 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
   const nuits = [];
   const encoches = [];
   const autres = [];
+  const energieBasse = [];
   const zones = [];
   const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));
+  // Jours à énergie basse d'une colonne : 1 pour un jour « basse » (true), le nombre de jours par semaine ou mois.
+  const joursBas = (c) => (c.energieBasse === true ? 1 : c.energieBasse || 0);
+  const maxEnergie = Math.max(1, ...colonnes.map(joursBas));
   let prec = null;
   colonnes.forEach((c, i) => {
     const x = r1(centre(i));
@@ -57,6 +65,13 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
       encoches.push({ x: r1(x - larg / 2), y: r1(d.explY + d.explH - h), l: larg, h, n: c.explosions });
     }
     if (c.autres > 0) autres.push({ x, y: r1(d.explY + d.explH + 6), n: c.autres });
+    // Énergie basse : une marque les jours concernés, une barre du nombre de jours par semaine ou par mois.
+    // Faux, zéro et inconnu ne dessinent rien.
+    const jours = joursBas(c);
+    if (d.energieY != null && jours > 0) {
+      const h = pas === 'jour' ? d.energieH : r1(Math.max(3, (jours / maxEnergie) * d.energieH));
+      energieBasse.push({ x: r1(x - larg / 2), y: r1(d.energieY + d.energieH - h), l: larg, h, n: jours });
+    }
     if (c.aDonnee) zones.push({ x: r1(d.gauche + l * i), l: r1(l), cle: c.cle, i });
   });
   // Étiquettes de l'axe : au plus 7, en partant de la colonne la plus récente.
@@ -67,7 +82,7 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
   };
   const etiquettes = colonnes.map((c, i) => ({ x: r1(centre(i)), texte: texte(c), visible: (n - 1 - i) % pasEtiquette === 0 })).filter((e) => e.visible);
   return {
-    points, traits, moyenne, nuits, encoches, autres, zones, etiquettes, largeurColonne: r1(l),
+    points, traits, moyenne, nuits, encoches, autres, energieBasse, zones, etiquettes, largeurColonne: r1(l),
     filets: [4, 7].map((v) => ({ v, y: y(v) })), graduations: [1, 4, 7, 10].map((v) => ({ v, y: y(v) })),
   };
 }
