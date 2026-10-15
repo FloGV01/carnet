@@ -289,3 +289,40 @@ test('un texte très long reste lisible : il défile dans la carte, les boutons 
   await bouton(cartes, 'Suivant').click();
   expect((await lireCarte(cartes)).texte).toBe('une ligne courte');
 });
+
+test('chaque carte s\'ouvre en haut : le défilement de la carte précédente ne se reporte pas, dans les deux sens', async ({ page }) => {
+  const long = (p) => Array.from({ length: 60 }, (_, i) => `${p}${i}`).join(' ');
+  await ecrirePlan(page, { quandCaMonte: `${long('un')}\n${long('deux')}\nune ligne courte`, siAlors: [] });
+  const cartes = await ouvrirCartes(page);
+  const zone = cartes.locator('.une-chose-carte');
+  const defiler = (y) => zone.evaluate((z, haut) => { z.scrollTop = haut; return z.scrollTop; }, y);
+  const haut = () => zone.evaluate((z) => z.scrollTop);
+  expect(await haut()).toBe(0);
+  expect(await defiler(300)).toBeGreaterThan(0);
+  await bouton(cartes, 'Suivant').click();
+  expect((await lireCarte(cartes)).texte).toMatch(/^deux0 /);
+  expect(await haut()).toBe(0);
+  expect(await defiler(300)).toBeGreaterThan(0);
+  await bouton(cartes, 'Précédent').click();
+  expect((await lireCarte(cartes)).texte).toMatch(/^un0 /);
+  expect(await haut()).toBe(0);
+  // Vers une carte courte, puis retour : toujours en haut.
+  await defiler(300);
+  await bouton(cartes, 'Suivant').click();
+  await bouton(cartes, 'Suivant').click();
+  expect(await haut()).toBe(0);
+  await bouton(cartes, 'Précédent').click();
+  expect(await haut()).toBe(0);
+});
+
+test('le focus suit : sur la carte à l\'ouverture, puis sur l\'autre bouton quand celui qu\'on touche devient inactif', async ({ page }) => {
+  await ecrirePlan(page);
+  const cartes = await ouvrirCartes(page);
+  await expect(cartes.locator('.une-chose-carte')).toBeFocused();
+  await toutesLesCartes(cartes);
+  await expect(bouton(cartes, 'Suivant')).toBeDisabled();
+  await expect(bouton(cartes, 'Précédent')).toBeFocused();
+  while (await bouton(cartes, 'Précédent').isEnabled()) await bouton(cartes, 'Précédent').click();
+  await expect(bouton(cartes, 'Précédent')).toBeDisabled();
+  await expect(bouton(cartes, 'Suivant')).toBeFocused();
+});

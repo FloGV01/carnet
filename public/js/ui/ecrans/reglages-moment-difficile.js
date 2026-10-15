@@ -7,7 +7,7 @@ import { Interrupteur } from '../composants/interrupteur.js';
 import { Segmente } from '../composants/segmente.js';
 import { repo } from '../../donnees.js';
 import { DUREES, RYTHMES, normaliserRespiration } from '../../domain/respiration.js';
-import { RUBRIQUES_PLAN, TITRE_SI_ALORS, normaliserUneChose } from '../../domain/mon-plan.js';
+import { CLES_RUBRIQUES, RUBRIQUES_PLAN, TITRE_SI_ALORS, normaliserUneChose } from '../../domain/mon-plan.js';
 
 const OPTIONS_DUREE = DUREES.map((d) => ({ valeur: d, libelle: `${d} min` }));
 const OPTIONS_RYTHME = RYTHMES.map((r) => ({ valeur: r, libelle: r }));
@@ -30,7 +30,7 @@ export function ReglagesMomentDifficile() {
   const changer = (cle) => (valeur) => ecrire('respiration', normaliserRespiration, setRespiration, (r) => ({ ...r, [cle]: valeur }));
   // Une rubrique allumée ou éteinte : la liste garde l'ordre de Mon plan.
   const choisirRubrique = (cle) => (actif) => ecrire('uneChoseALaFois', normaliserUneChose, setUneChose, (u) => ({
-    ...u, rubriques: RUBRIQUES_PLAN.map(([k]) => k).filter((k) => (k === cle ? actif : u.rubriques.includes(k))),
+    ...u, rubriques: CLES_RUBRIQUES.filter((k) => (k === cle ? actif : u.rubriques.includes(k))),
   }));
   const choisirSiAlors = (actif) => ecrire('uneChoseALaFois', normaliserUneChose, setUneChose, (u) => ({ ...u, siAlors: actif }));
   const retour = () => { location.hash = '#/reglages'; };
@@ -71,6 +71,6 @@ export function ReglagesMomentDifficile() {
         </div>
       </li>
     </ul>
-    <p class="aide-carte">Chaque ligne des rubriques allumées devient un écran, avec le nom de la rubrique en petit. Ils s'ouvrent depuis Moment difficile.</p>
+    <p class="aide-carte">Chaque ligne des rubriques allumées devient un écran, avec le nom de la rubrique en petit. Les écrans s'ouvrent depuis Moment difficile.</p>
   </main>`;
 }

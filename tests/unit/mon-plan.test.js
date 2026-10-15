@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RUBRIQUES_PLAN, UNE_CHOSE_DEFAUT, cartesPlan, normaliserPlan, normaliserUneChose, phraseSiAlors } from '../../public/js/domain/mon-plan.js';
+import { CLES_RUBRIQUES, RUBRIQUES_PLAN, UNE_CHOSE_DEFAUT, cartesPlan, normaliserPlan, normaliserUneChose, phraseSiAlors } from '../../public/js/domain/mon-plan.js';
 
 // Un plan écrit avec des mots inventés pour le test : une rubrique par clé, plusieurs lignes par endroits.
 const plan = {
@@ -76,4 +76,9 @@ test('lecture des réglages : défauts à la lecture, hors liste ignoré, liste 
   // Le résultat est une copie : modifier l'un ne touche pas aux défauts.
   normaliserUneChose(null).rubriques.push('premiersSignes');
   assert.equal(UNE_CHOSE_DEFAUT.rubriques.includes('premiersSignes'), false);
+});
+
+test('CLES_RUBRIQUES : les clés de Mon plan, dans l\'ordre des rubriques', () => {
+  assert.deepEqual(CLES_RUBRIQUES, ['premiersSignes', 'quandCaMonte', 'siSurcharge', 'pourRecuperer', 'prevenir']);
+  assert.deepEqual(CLES_RUBRIQUES, RUBRIQUES_PLAN.map(([cle]) => cle));
 });

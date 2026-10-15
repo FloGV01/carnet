@@ -7,6 +7,8 @@ export const RUBRIQUES_PLAN = [
   ['pourRecuperer', 'Pour récupérer, je…'],
   ['prevenir', 'Qui prévenir'],
 ];
+// Les clés des rubriques, dans l'ordre de Mon plan.
+export const CLES_RUBRIQUES = RUBRIQUES_PLAN.map(([cle]) => cle);
 
 const propre = (v) => (typeof v === 'string' && v.normalize('NFC').trim() ? v.normalize('NFC').trim() : null);
 
@@ -44,7 +46,7 @@ export const phraseSiAlors = (x) => `Si ${x.si || '…'}, alors ${x.alors || '�
 // « Une chose à la fois » (v6, méta `uneChoseALaFois`) : quelles rubriques passent en cartes. Par défaut
 // toutes, sauf « Mes premiers signes », et sans les « si… alors… ».
 export const UNE_CHOSE_DEFAUT = Object.freeze({
-  rubriques: Object.freeze(RUBRIQUES_PLAN.map(([cle]) => cle).filter((cle) => cle !== 'premiersSignes')),
+  rubriques: Object.freeze(CLES_RUBRIQUES.filter((cle) => cle !== 'premiersSignes')),
   siAlors: false,
 });
 
@@ -54,7 +56,7 @@ export function normaliserUneChose(brut) {
   const b = brut && typeof brut === 'object' ? brut : {};
   return {
     rubriques: Array.isArray(b.rubriques)
-      ? RUBRIQUES_PLAN.map(([cle]) => cle).filter((cle) => b.rubriques.includes(cle))
+      ? CLES_RUBRIQUES.filter((cle) => b.rubriques.includes(cle))
       : [...UNE_CHOSE_DEFAUT.rubriques],
     siAlors: b.siAlors === true,
   };
