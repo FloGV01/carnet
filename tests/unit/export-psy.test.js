@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { exportPsy, reperesPsy } from '../../public/js/export/psy.js';
-import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 
 const carte = carteLibelles(seedItems(SEED_V1, 'x'));
@@ -124,4 +124,29 @@ test('v6 : un jour qui n\'a que des relevés ne compte jamais « 0 explosion »'
   // Un jour noté le soir garde son 0, lui.
   const avecSoir = exportPsy({ journal: [J('2026-09-27', { lieu: 'lieu:bureau' })], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte, zeroDepuis: '2026-01-01' });
   assert.ok(avecSoir.includes('humeur moyenne 5 (de 4 à 6) · explosions 0 ·'), avecSoir);
+});
+
+// ---------- v6 : ce qui a pesé, ce qui a rechargé ----------
+
+const carteV6 = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V4_AJOUTS }, 'x'));
+const exportJour = (o) => exportPsy({ journal: [J('2026-09-27', o)], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte: carteV6 });
+
+test('v6 : la ligne du jour ajoute « a pesé : … · a rechargé : … », après les explosions', () => {
+  const t = exportJour({ lieu: 'lieu:bureau', explosions: 1, pese: ['pese:bruit', 'pese:trajets'], recharge: ['recharge:calme'] });
+  assert.ok(t.includes('dim 27/09 · Bureau · explosions 1 · a pesé : bruit, trajets · a rechargé : calme\n'), t);
+});
+
+test('v6 : une seule des deux listes, ou un jour qui n\'a que cela, garde une ligne juste', () => {
+  assert.ok(exportJour({ pese: ['pese:demarches'] }).includes('dim 27/09 · a pesé : démarches\n'));
+  const recharge = exportJour({ recharge: ['recharge:seul', 'recharge:dehors'] });
+  assert.ok(recharge.includes('dim 27/09 · a rechargé : être seul, dehors / nature\n'), recharge);
+  assert.ok(!recharge.includes('a pesé'));
+});
+
+test('v6 : rien de noté, rien dans la ligne (listes absentes, nulles ou vides)', () => {
+  for (const o of [{}, { pese: null, recharge: null }, { pese: [], recharge: [] }]) {
+    const t = exportJour({ lieu: 'lieu:bureau', ...o });
+    assert.ok(t.includes('dim 27/09 · Bureau\n'), t);
+    assert.ok(!/a pesé|a rechargé/.test(t), t);
+  }
 });

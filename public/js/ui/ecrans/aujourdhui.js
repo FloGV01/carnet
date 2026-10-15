@@ -15,9 +15,9 @@ import { MemoVocal } from '../composants/memo-vocal.js';
 import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Rubrique } from '../composants/rubrique.js';
-import { phraseResume } from '../../domain/phrase.js';
+import { phraseResume, minusculeInitiale } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
-import { normaliserJournee, champsAffiches } from '../../domain/journee.js';
+import { normaliserJournee, champsAffiches, repliAffiche, NOM_PESE_RECHARGE } from '../../domain/journee.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
@@ -97,6 +97,12 @@ function resumeNuit(e) {
   if (e.heureCoucher || e.heureLever) morceaux.push(`${e.heureCoucher || '·'} → ${e.heureLever || '·'}`);
   if (e.reveilsNocturnes != null) morceaux.push(e.reveilsNocturnes === 5 ? '5 réveils ou plus' : `${e.reveilsNocturnes} réveil${e.reveilsNocturnes > 1 ? 's' : ''}`);
   return morceaux.join(' · ');
+}
+
+// Ce qui a pesé, ce qui a rechargé (v6) : « pesé : bruit, trajets · rechargé : calme ».
+function resumePeseRecharge(e, carte) {
+  const liste = (ids) => ids.map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
+  return [e.pese && `pesé : ${liste(e.pese)}`, e.recharge && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
 }
 
 export function Aujourdhui({ date: dateRoute }) {
@@ -256,6 +262,16 @@ export function Aujourdhui({ date: dateRoute }) {
         <div class="champ-jour">
           <span class="etiquette">Réveils</span>
           <${Pastilles} etiquette="Réveils" ariaPrefixe="Réveils" options=${REVEILS} valeur=${entree.reveilsNocturnes} surChoix=${ecrire('reveilsNocturnes')} colonnes=${6} classe="chiffres reveils" teinte="sommeil" />
+        </div>
+      </${Repli}>`}
+      ${repliAffiche(journee, entree) && html`<${Repli} cle="pese" titre=${NOM_PESE_RECHARGE} resume=${resumePeseRecharge(entree, carte)} resumeSous=${true}>
+        <div class="champ-jour">
+          <span class="etiquette">Ce qui a pesé</span>
+          <${PastillesMultiples} etiquette="Ce qui a pesé" options=${options(items, 'pese', entree.pese)} valeurs=${entree.pese} surChoix=${ecrire('pese')} />
+        </div>
+        <div class="champ-jour">
+          <span class="etiquette">Ce qui a rechargé</span>
+          <${PastillesMultiples} etiquette="Ce qui a rechargé" options=${options(items, 'recharge', entree.recharge)} valeurs=${entree.recharge} surChoix=${ecrire('recharge')} />
         </div>
       </${Repli}>`}
       ${visibles.includes('sport') && html`<${Repli} cle="sport" titre="Sport en détail" resume=${resumeSport(entree, carte)} memoriser=${false}>

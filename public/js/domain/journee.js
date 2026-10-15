@@ -10,7 +10,8 @@ export const HEURE_MIN = 6;
 export const HEURE_MAX = 23;
 // Le repli « Ce qui a pesé · ce qui a rechargé » (v6) se masque comme un champ, mais n'a pas de place
 // dans l'ordre : sa clé n'est acceptée que dans les masques.
-const MASQUE_PESE_RECHARGE = 'peseRecharge';
+export const MASQUE_PESE_RECHARGE = 'peseRecharge';
+export const NOM_PESE_RECHARGE = 'Ce qui a pesé · ce qui a rechargé';
 const MASQUABLES = new Set([...CHAMPS_JOURNEE, MASQUE_PESE_RECHARGE]);
 // Masqués par défaut : le compteur du soir (les épisodes « Explosion » font foi) et, depuis la v6,
 // l'Humeur du soir (l'humeur du jour est la moyenne des humeurs du moment). Réaffichables.

@@ -49,6 +49,9 @@ function ligneJour(j, lib, moments = []) {
   const sport = detailSport(j, lib);
   if (j.sportMouvement != null || sport) m.push(`sport${j.sportMouvement != null ? ` ${ouiNon(j.sportMouvement)}` : ''}${sport ? ` (${sport})` : ''}`);
   if (j.explosions != null) m.push(`explosions ${j.explosions}`);
+  // Ce qui a pesé, ce qui a rechargé (v6) : chacun seulement s'il est noté.
+  if (j.pese && j.pese.length) m.push(`a pesé : ${listeLib(j.pese, lib)}`);
+  if (j.recharge && j.recharge.length) m.push(`a rechargé : ${listeLib(j.recharge, lib)}`);
   const lignes = [m.join(' · ')];
   if (moments.length) {
     lignes.push(`  humeur du moment : ${moments.map((h) => [h.heure, h.humeur != null && `${h.humeur}`, h.energie && `(énergie ${minuscule(lib(h.energie))})`].filter(Boolean).join(' ')).join(' · ')}`);

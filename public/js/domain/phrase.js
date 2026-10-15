@@ -7,7 +7,7 @@ import { valeurExplosions } from './explosions.js';
 
 const ESPACE_FINE = ' ';
 
-function minusculeInitiale(texte) {
+export function minusculeInitiale(texte) {
   if (texte.length > 1 && texte[1] === texte[1].toLowerCase() && texte[1] !== texte[1].toUpperCase()) {
     return texte[0].toLowerCase() + texte.slice(1);
   }
