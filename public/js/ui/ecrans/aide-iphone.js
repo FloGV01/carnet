@@ -2,7 +2,7 @@ import { html } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 
 // Texte fixe, comme le pas-à-pas du rappel : ce que l'iPhone fait lui-même, et comment le régler.
-// Rien n'est lu, écrit ni compté, et le texte ne dit jamais quand s'en servir. Chemins d'iOS 26.
+// Rien n'est lu, écrit ni compté, et le texte ne dit jamais quand s'en servir. Les chemins sont à vérifier sur l'iPhone.
 const RUBRIQUES = [
   {
     titre: 'Sons d\'arrière-plan',
@@ -27,7 +27,7 @@ const RUBRIQUES = [
     etapes: [
       'Ouvre Réglages › Accessibilité › Affichage et taille du texte, puis « Réduire le point blanc ». Un curseur règle l\'intensité.',
       'Ouvre Réglages › Accessibilité › Raccourci d\'accessibilité et coche « Réduire le point blanc ».',
-      'Un triple clic sur le bouton latéral l\'allume ou l\'éteint.',
+      'Un triple clic sur le bouton latéral l\'allume ou l\'éteint. Quand plusieurs raccourcis sont cochés, une liste s\'ouvre d\'abord.',
     ],
   },
   {
@@ -54,10 +54,11 @@ const RUBRIQUES = [
       'Ouvre Raccourcis, touche « + » et nomme le raccourci « Sieste ».',
       'Ajoute l\'action « Démarrer le minuteur » et règle la durée.',
       'Ajoute « Définir la Concentration », puis choisis « Ne pas déranger ».',
+      'Dans cette action, un réglage donne la fin : par défaut, elle reste allumée jusqu\'à ce que tu l\'éteignes.',
       'Ajoute « Définir les sons d\'arrière-plan » et choisis « Bruit sombre ».',
       'Pour le lancer, touche-le dans Raccourcis, ajoute-le à l\'écran d\'accueil ou associe-le à Toucher le dos.',
     ],
-    note: 'À la fin, c\'est le minuteur de l\'iPhone qui sonne. Carnet n\'envoie rien.',
+    note: 'Le minuteur ne coupe ni la Concentration ni les sons : ils restent allumés jusqu\'à ce que tu les éteignes, depuis le Centre de contrôle. À la fin, c\'est le minuteur de l\'iPhone qui sonne. Carnet n\'envoie rien.',
   },
 ];
 

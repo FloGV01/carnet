@@ -34,3 +34,15 @@ test('la page dit que c\'est l\'iPhone qui sonne, pas Carnet, et ne propose aucu
   await expect(page.locator('main').getByRole('button')).toHaveCount(1);
   await expect(page.locator('main').getByRole('button', { name: 'Retour' })).toBeVisible();
 });
+
+// La Sieste ne coupe rien d'elle-même : la page le dit au lieu de suggérer une fin propre.
+test('Sieste : la page dit que la Concentration et les sons restent allumés, et que le triple clic peut ouvrir une liste', async ({ page }) => {
+  await aller(page, '#/reglages/aide-iphone');
+  const sieste = page.locator('section', { has: page.getByRole('heading', { name: 'Raccourci « Sieste »', level: 2 }) });
+  await expect(sieste.getByText('un réglage donne la fin', { exact: false })).toBeVisible();
+  await expect(sieste.getByText('reste allumée jusqu\'à ce que tu l\'éteignes', { exact: false })).toBeVisible();
+  await expect(sieste.getByText('ne coupe ni la Concentration ni les sons', { exact: false })).toBeVisible();
+  await expect(sieste.getByText('c\'est le minuteur de l\'iPhone qui sonne', { exact: false })).toBeVisible();
+  const pointBlanc = page.locator('section', { has: page.getByRole('heading', { name: 'Réduire le point blanc', level: 2 }) });
+  await expect(pointBlanc.getByText('plusieurs raccourcis sont cochés', { exact: false })).toBeVisible();
+});
