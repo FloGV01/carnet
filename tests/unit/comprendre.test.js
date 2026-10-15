@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, plageJours } from '../../public/js/domain/dates.js';
+import { addDays, jourSemaine, plageJours } from '../../public/js/domain/dates.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import {
   periodeComprendre, facteursParJour, aligne, elementsFrequents,
   explosionsAvant, explosionsApres, energieAvant, retoursBureau,
+  MESURES, parColonnes, nuitsParSoir, energieParActivite, peseRecharge,
 } from '../../public/js/analyse/comprendre.js';
 
 // Données inventées (aucune donnée réelle).
@@ -408,4 +409,349 @@ test('seuils : un élément pesé n\'apparaît qu\'à partir de 3 jours notés s
   const g = explosionsAvant(jours, tout('2026-09-15', '2026-09-01'));
   assert.equal(bloc(g, 'pese:bruit'), undefined, 'noté 2 fois dans la période (le 20/08 est avant)');
   assert.ok(bloc(g, 'pese:monde'));
+});
+
+// ---------- Colonnes : jour de la semaine, lieu, mois (§2.5, graphiques 1, 2 et 5) ----------
+
+// Le 07/09/2026 est un lundi : 07, 14, 21 et 28 sont des lundis, 08, 15, 22 et 29 des mardis, 09, 16, 23 et 30 des mercredis.
+const colonnesDe = (journal, humeurs = []) => facteursParJour({ journal, humeurs, episodes: [] });
+
+test('mesures de Comprendre : humeur, nuits Mal, explosions, énergie basse', () => {
+  assert.deepEqual(MESURES, ['humeur', 'nuitMal', 'explosion', 'energieBasse']);
+});
+
+test('colonnes, semaine : sept colonnes du lundi au dimanche ; humeur du jour en moyenne, du plus bas au plus haut ; fragile sous 3 valeurs', () => {
+  assert.equal(jourSemaine('2026-09-07'), 0);
+  const journal = [
+    soir('2026-09-07', { humeur: 4 }), soir('2026-09-14', { humeur: 6 }), soir('2026-09-21', { humeur: 8 }),
+    soir('2026-09-08', { humeur: 5 }), soir('2026-09-15', { humeur: 7 }),
+    // Le 09 : les relevés (4 et 5) font l'humeur du jour, le 9 du soir n'est pas lu.
+    soir('2026-09-09', { humeur: 9 }), soir('2026-09-16', { humeur: 2 }), soir('2026-09-23', { humeur: 5 }),
+  ];
+  const humeurs = [releve('2026-09-09', '10:00', { humeur: 4 }), releve('2026-09-09', '18:00', { humeur: 5 })];
+  const g = parColonnes(colonnesDe(journal, humeurs), tout('2026-09-23', '2026-09-07'), { cle: 'semaine', mesure: 'humeur' });
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.colonnes.map((c) => c.cle), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, moyenne: 6, min: 4, max: 8, fragile: false });
+  assert.deepEqual(g.colonnes[1], { cle: 1, n: 2, moyenne: 6, min: 5, max: 7, fragile: true });
+  assert.deepEqual(g.colonnes[2], { cle: 2, n: 3, moyenne: (4.5 + 2 + 5) / 3, min: 2, max: 5, fragile: false });
+  assert.deepEqual(g.colonnes[3], { cle: 3, n: 0, moyenne: null, min: null, max: null, fragile: true }, 'un jeudi sans humeur : colonne vide');
+});
+
+test('colonnes, semaine : une barre par colonne, libellée par le seul compte ; aucun dénominateur', () => {
+  const journal = [
+    // Lundis : explosion oui, oui, non, inconnu. Mardis : non, non, oui. Un mercredi : non.
+    ...[['2026-09-07', 1], ['2026-09-14', 1], ['2026-09-21', 0], ['2026-09-28', null],
+      ['2026-09-08', 0], ['2026-09-15', 0], ['2026-09-22', 2], ['2026-09-09', 0]].map(([d, x]) => soir(d, { explosions: x })),
+  ];
+  const g = parColonnes(colonnesDe(journal), tout('2026-09-30', '2026-09-01'), { cle: 'semaine', mesure: 'explosion' });
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, oui: 2, part: 2 / 3, fragile: false, libelle: '2 lundis' });
+  assert.deepEqual(g.colonnes[1], { cle: 1, n: 3, oui: 1, part: 1 / 3, fragile: false, libelle: '1 mardi' });
+  assert.deepEqual(g.colonnes[2], { cle: 2, n: 1, oui: 0, part: 0, fragile: true, libelle: '0 mercredi' });
+  assert.deepEqual(g.colonnes[3], { cle: 3, n: 0, oui: 0, part: null, fragile: true, libelle: '0 jeudi' });
+  // Un compte et un nom de jour : jamais « 2 sur 3 », jamais le nombre de jours connus. Il n'est que dans `n`.
+  for (const c of g.colonnes) {
+    assert.match(c.libelle, /^\d+ [a-z]+$/);
+    assert.ok(!/ sur |\//.test(c.libelle), c.libelle);
+  }
+});
+
+test('colonnes, semaine : une nuit notée Mal compte au jour noté ; une énergie basse notée « vers » compte aussi', () => {
+  // Trois nuits Mal notées les mardis 08, 15, 22 (« la nuit qui précède ce jour » : jamais le lundi), Bien les lundis.
+  const journal = [
+    ...['2026-09-08', '2026-09-15', '2026-09-22'].map((d) => soir(d, { sommeilRessenti: MAL })),
+    ...['2026-09-07', '2026-09-14', '2026-09-21'].map((d) => soir(d, { sommeilRessenti: BIEN })),
+  ];
+  const g = parColonnes(colonnesDe(journal), tout('2026-09-22', '2026-09-07'), { cle: 'semaine', mesure: 'nuitMal' });
+  assert.deepEqual(g.colonnes.slice(0, 2).map((c) => [c.cle, c.oui, c.n, c.libelle]), [[0, 0, 3, '0 lundi'], [1, 3, 3, '3 mardis']]);
+
+  const humeurs = ['2026-09-07', '2026-09-14', '2026-09-21'].map((d) => releve(d, '10:00', { energie: 'energie:basse', vers: true }));
+  const basse = parColonnes(colonnesDe([], [...humeurs, ...['2026-09-08', '2026-09-15', '2026-09-22'].map((d) => releve(d, '10:00', { energie: 'energie:haute' }))]),
+    tout('2026-09-22', '2026-09-07'), { cle: 'semaine', mesure: 'energieBasse' });
+  assert.deepEqual(basse.colonnes.slice(0, 2).map((c) => [c.oui, c.n]), [[3, 3], [0, 3]]);
+});
+
+test('colonnes, semaine : minuit et bascule de 4 h, un relevé à 01:00 ou 03:59 compte pour la veille, à 04:00 pour le jour', () => {
+  // Relevés « basse » le 08 à 01:00 (jour logique : le lundi 07), le 15 à 03:59 (le lundi 14) et le 22 à 04:00 (le mardi 22) ;
+  // relevés « haute » à 10:00 les mardis 08, 15 et 22 et le lundi 21, pour que chaque colonne ait 3 jours connus.
+  const humeurs = [
+    releve('2026-09-08', '01:00', { energie: 'energie:basse' }), // lundi 07
+    releve('2026-09-15', '03:59', { energie: 'energie:basse' }), // lundi 14
+    releve('2026-09-22', '04:00', { energie: 'energie:basse' }), // mardi 22
+    releve('2026-09-08', '10:00', { energie: 'energie:haute' }), // mardi 08
+    releve('2026-09-15', '10:00', { energie: 'energie:haute' }), // mardi 15
+    releve('2026-09-21', '10:00', { energie: 'energie:haute' }), // lundi 21
+    releve('2026-09-22', '10:00', { energie: 'energie:haute' }), // mardi 22 (aussi une journée « basse »)
+  ];
+  const g = parColonnes(colonnesDe([], humeurs), tout('2026-09-30', '2026-09-01'), { cle: 'semaine', mesure: 'energieBasse' });
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual([g.colonnes[0].oui, g.colonnes[0].n], [2, 3], 'les lundis 07 et 14 (relevés après minuit), 21 non');
+  assert.deepEqual([g.colonnes[1].oui, g.colonnes[1].n], [1, 3], 'le mardi 22 seulement (04:00)');
+});
+
+test('colonnes, semaine : seuls les jours de la période comptent, bornes comprises (aujourd\'hui compris)', () => {
+  // Nuits Mal les lundis 07, 14, 21 et 28/09, Bien le 31/08 et le 05/10 ; mardis Bien. Période du 07 au 28/09 (le 28 est aujourd'hui).
+  const journal = [
+    ...['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28'].map((d) => soir(d, { sommeilRessenti: MAL })),
+    ...['2026-08-31', '2026-10-05', '2026-09-01', '2026-09-08', '2026-09-15', '2026-09-22', '2026-09-29'].map((d) => soir(d, { sommeilRessenti: BIEN })),
+  ];
+  const g = parColonnes(colonnesDe(journal), { du: '2026-09-07', au: '2026-09-28' }, { cle: 'semaine', mesure: 'nuitMal' });
+  assert.deepEqual([g.colonnes[0].oui, g.colonnes[0].n], [4, 4]);
+  assert.deepEqual([g.colonnes[1].oui, g.colonnes[1].n], [0, 3], 'mardis 08, 15 et 22 : ni le 01 ni le 29');
+});
+
+test('colonnes, lieu : une colonne par lieu présent, dans l\'ordre de la liste ; un lieu hors liste va à la fin ; jour sans lieu écarté', () => {
+  const lieu = (d, l, sommeil) => soir(d, { lieu: l && `lieu:${l}`, sommeilRessenti: sommeil });
+  const journal = [
+    lieu('2026-09-01', 'teletravail', MAL), lieu('2026-09-02', 'teletravail', BIEN), lieu('2026-09-03', 'teletravail', BIEN),
+    lieu('2026-09-04', 'bureau', MAL), lieu('2026-09-05', 'bureau', MAL), lieu('2026-09-06', 'bureau', 'sommeil:moyen'), lieu('2026-09-08', 'bureau', null),
+    lieu('2026-09-07', 'ailleurs', BIEN),
+    lieu('2026-09-09', null, MAL),
+  ];
+  const items = [
+    { id: 'lieu:bureau', liste: 'lieu', ordre: 20 }, { id: 'lieu:teletravail', liste: 'lieu', ordre: 10 },
+    { id: 'lieu:conge_repos', liste: 'lieu', ordre: 30 }, // dans la liste, absent des données : pas de colonne
+  ];
+  const periode = tout('2026-09-30', '2026-09-01');
+  const g = parColonnes(colonnesDe(journal), periode, { cle: 'lieu', mesure: 'nuitMal' }, items);
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.colonnes.map((c) => c.cle), ['lieu:teletravail', 'lieu:bureau', 'lieu:ailleurs']);
+  assert.deepEqual(g.colonnes.map((c) => [c.oui, c.n, c.libelle]), [[1, 3, '1 jour'], [2, 3, '2 jours'], [0, 1, '0 jour']]);
+  assert.equal(g.colonnes[2].fragile, true);
+  // Sans liste fournie : rangés par identifiant.
+  assert.deepEqual(parColonnes(colonnesDe(journal), periode, { cle: 'lieu', mesure: 'nuitMal' }).colonnes.map((c) => c.cle),
+    ['lieu:ailleurs', 'lieu:bureau', 'lieu:teletravail']);
+});
+
+test('colonnes, lieu : l\'humeur du jour par lieu', () => {
+  const journal = [
+    ...['2026-09-01', '2026-09-02', '2026-09-03'].map((d, i) => soir(d, { lieu: 'lieu:bureau', humeur: [3, 5, 7][i] })),
+    ...['2026-09-04', '2026-09-05', '2026-09-06'].map((d, i) => soir(d, { lieu: 'lieu:teletravail', humeur: [6, 8, 9][i] })),
+  ];
+  const g = parColonnes(colonnesDe(journal), tout('2026-09-30', '2026-09-01'), { cle: 'lieu', mesure: 'humeur' });
+  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.moyenne, c.min, c.max]),
+    [['lieu:bureau', 5, 3, 7], ['lieu:teletravail', 23 / 3, 6, 9]]);
+});
+
+test('colonnes, mois : une colonne par mois calendaire de la période, vide ou non ; le jour logique fait foi', () => {
+  const humeurs = [
+    // Juillet : basse, haute, basse (3 jours).
+    releve('2026-07-20', '10:00', { energie: 'energie:basse' }), releve('2026-07-21', '10:00', { energie: 'energie:haute' }), releve('2026-07-22', '10:00', { energie: 'energie:basse' }),
+    // Août : rien. Septembre : basse les 10 et 12, moyenne le 11, et un relevé du 01/10 à 03:59, qui est le 30/09.
+    releve('2026-09-10', '10:00', { energie: 'energie:basse' }), releve('2026-09-11', '10:00', { energie: 'energie:moyenne' }), releve('2026-09-12', '10:00', { energie: 'energie:basse' }),
+    releve('2026-10-01', '03:59', { energie: 'energie:basse' }),
+    // Octobre : le 01/10 à 04:00 est bien le 01/10.
+    releve('2026-10-01', '04:00', { energie: 'energie:haute' }),
+  ];
+  const g = parColonnes(colonnesDe([], humeurs), { du: '2026-07-01', au: AUJ }, { cle: 'mois', mesure: 'energieBasse' });
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.oui, c.n, c.libelle]), [
+    ['2026-07', 2, 3, '2 jours'], ['2026-08', 0, 0, '0 jour'], ['2026-09', 3, 4, '3 jours'], ['2026-10', 0, 1, '0 jour'],
+  ]);
+  assert.deepEqual(g.colonnes.map((c) => c.fragile), [false, true, false, true]);
+});
+
+test('colonnes, mois : l\'humeur du jour d\'un mois à cheval sur la bascule de 4 h', () => {
+  // Humeurs de septembre : relevé du 01/10 à 02:00 (6), jour logique du 30/09. Mois suivant : trois jours.
+  const humeurs = [
+    releve('2026-09-28', '10:00', { humeur: 4 }), releve('2026-09-29', '10:00', { humeur: 5 }), releve('2026-10-01', '02:00', { humeur: 6 }),
+    releve('2026-10-02', '10:00', { humeur: 7 }), releve('2026-10-03', '10:00', { humeur: 8 }), releve('2026-10-04', '10:00', { humeur: 9 }),
+  ];
+  const g = parColonnes(colonnesDe([], humeurs), tout('2026-10-15', '2026-09-28'), { cle: 'mois', mesure: 'humeur' });
+  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.n, c.moyenne, c.min, c.max]), [['2026-09', 3, 5, 4, 6], ['2026-10', 3, 8, 7, 9]]);
+});
+
+test('colonnes, seuils : 2 colonnes à au moins 3 valeurs (jour de la semaine, lieu), 2 mois à au moins 3 valeurs', () => {
+  const nuits = (dates, sommeil = MAL) => dates.map((d) => soir(d, { sommeilRessenti: sommeil }));
+  const lundis = ['2026-09-07', '2026-09-14', '2026-09-21'];
+  const mardis = ['2026-09-08', '2026-09-15', '2026-09-22'];
+  const semaine = (journal) => parColonnes(colonnesDe(journal), tout('2026-09-30', '2026-09-01'), { cle: 'semaine', mesure: 'nuitMal' });
+  assert.deepEqual(semaine(nuits(lundis)), { statut: 'insuffisant', colonnes: [] }, 'une colonne');
+  assert.deepEqual(semaine([...nuits(lundis), ...nuits(mardis.slice(0, 2))]), { statut: 'insuffisant', colonnes: [] }, 'une colonne et une de 2 valeurs');
+  assert.equal(semaine([...nuits(lundis), ...nuits(mardis)]).statut, 'ok');
+  assert.deepEqual(semaine([]), { statut: 'insuffisant', colonnes: [] });
+
+  // Les valeurs inconnues ne comptent pas : trois jours sans nuit notée ne font pas une colonne.
+  assert.equal(semaine([...nuits(lundis), ...mardis.map((d) => soir(d))]).statut, 'insuffisant');
+
+  const lieux = (l1, l2) => [...l1.map((d) => soir(d, { lieu: 'lieu:bureau', sommeilRessenti: MAL })), ...l2.map((d) => soir(d, { lieu: 'lieu:teletravail', sommeilRessenti: MAL }))];
+  const parLieu = (journal) => parColonnes(colonnesDe(journal), tout('2026-09-30', '2026-09-01'), { cle: 'lieu', mesure: 'nuitMal' });
+  assert.equal(parLieu(lieux(lundis, mardis.slice(0, 2))).statut, 'insuffisant');
+  assert.equal(parLieu(lieux(lundis, mardis)).statut, 'ok');
+
+  const septembre = ['2026-09-01', '2026-09-02', '2026-09-03'];
+  const octobre = ['2026-10-01', '2026-10-02', '2026-10-03'];
+  const parMois = (journal) => parColonnes(colonnesDe(journal), tout(AUJ, '2026-09-01'), { cle: 'mois', mesure: 'nuitMal' });
+  assert.deepEqual(parMois(nuits(septembre)), { statut: 'insuffisant', colonnes: [] }, 'un seul mois');
+  assert.equal(parMois([...nuits(septembre), ...nuits(octobre.slice(0, 2))]).statut, 'insuffisant', 'un mois de 3 valeurs, un de 2');
+  assert.equal(parMois([...nuits(septembre), ...nuits(octobre)]).statut, 'ok');
+});
+
+// ---------- Nuits : une colonne par soir de coucher (§2.5, graphique 4) ----------
+
+const nuit = (date, coucher, lever) => soir(date, { heureCoucher: coucher, heureLever: lever });
+// Mardis 01, 08, 15 : nuits du lundi soir. Lundis 07, 14, 21 : nuits du dimanche soir.
+const MARDIS = ['2026-09-01', '2026-09-08', '2026-09-15'];
+const LUNDIS = ['2026-09-07', '2026-09-14', '2026-09-21'];
+const nuitsDe = (dates, coucher = '23:00', lever = '07:00') => dates.map((d) => nuit(d, coucher, lever));
+
+test('nuitsParSoir : la nuit notée le jour D va au soir D−1, du lundi au dimanche', () => {
+  // Notées les mardis : soir du lundi. Notées les lundis : soir du dimanche. Notées les dimanches 13 et 20 : soir du samedi.
+  const journal = [...nuitsDe(MARDIS), ...nuitsDe(LUNDIS), ...nuitsDe(['2026-09-13', '2026-09-20'])];
+  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.colonnes.map((c) => c.cle), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(g.colonnes.map((c) => c.n), [3, 0, 0, 0, 0, 2, 3]);
+});
+
+test('nuitsParSoir : une nuit compte si le coucher et le lever sont notés et que dureeNuit n\'est pas nul', () => {
+  const journal = [
+    ...nuitsDe(LUNDIS), ...nuitsDe(MARDIS),
+    // Des mardis qui ne comptent pas.
+    nuit('2026-09-22', '23:00', null), nuit('2026-09-29', null, '07:00'), nuit('2026-09-23', null, null),
+    nuit('2026-09-24', '05:00', '06:00'), // 1 h : sous la durée minimale
+    nuit('2026-09-25', '20:00', '13:00'), // 17 h : au-dessus de la durée maximale
+    nuit('2026-09-26', 'tard', '07:00'), // pas une heure
+    soir('2026-09-27', { sommeilRessenti: MAL }), // une nuit notée sans horaires
+  ];
+  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
+  assert.deepEqual(g.colonnes.map((c) => c.n), [3, 0, 0, 0, 0, 0, 3]);
+});
+
+test('nuitsParSoir : un coucher avant midi compte après minuit ; médianes en minutes depuis 0 h du soir, heures exactes', () => {
+  // Soir du lundi : coucher 23:00, 00:30 et 01:00 (1380, 1470, 1500), lever 07:00, 08:00 et 06:30.
+  // Soir du dimanche : coucher 22:30, 22:30 et 23:30, lever 07:00, 07:30 et 06:30.
+  const journal = [
+    nuit('2026-09-01', '23:00', '07:00'), nuit('2026-09-08', '00:30', '08:00'), nuit('2026-09-15', '01:00', '06:30'),
+    nuit('2026-09-07', '22:30', '07:00'), nuit('2026-09-14', '22:30', '07:30'), nuit('2026-09-21', '23:30', '06:30'),
+  ];
+  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
+  assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, fragile: false, coucher: 1470, lever: 1860, heureCoucher: '00:30', heureLever: '07:00' });
+  assert.deepEqual(g.colonnes[6], { cle: 6, n: 3, fragile: false, coucher: 1350, lever: 1860, heureCoucher: '22:30', heureLever: '07:00' });
+});
+
+test('nuitsParSoir : fragile avec 1 ou 2 nuits, sans valeur avec aucune nuit', () => {
+  const journal = [...nuitsDe(MARDIS), ...nuitsDe(LUNDIS), nuit('2026-09-13', '23:15', '07:45'), nuit('2026-09-20', '23:45', '08:15')];
+  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
+  assert.deepEqual(g.colonnes.map((c) => c.fragile), [false, true, true, true, true, true, false]);
+  // Le samedi : deux nuits, médiane des deux.
+  assert.deepEqual(g.colonnes[5], { cle: 5, n: 2, fragile: true, coucher: 1410, lever: 1920, heureCoucher: '23:30', heureLever: '08:00' });
+  // Le mardi : aucune nuit.
+  assert.deepEqual(g.colonnes[1], { cle: 1, n: 0, fragile: true, coucher: null, lever: null, heureCoucher: null, heureLever: null });
+});
+
+test('nuitsParSoir : seuil de 2 colonnes à au moins 3 nuits', () => {
+  const periode = tout('2026-09-30', '2026-09-01');
+  assert.deepEqual(nuitsParSoir(nuitsDe(MARDIS), periode), { statut: 'insuffisant', colonnes: [] }, 'une seule colonne');
+  assert.deepEqual(nuitsParSoir([...nuitsDe(MARDIS), ...nuitsDe(LUNDIS.slice(0, 2))], periode), { statut: 'insuffisant', colonnes: [] }, 'une colonne de 3 nuits, une de 2');
+  assert.equal(nuitsParSoir([...nuitsDe(MARDIS), ...nuitsDe(LUNDIS)], periode).statut, 'ok');
+  assert.deepEqual(nuitsParSoir([], periode), { statut: 'insuffisant', colonnes: [] });
+});
+
+test('nuitsParSoir : la période porte sur le jour où la nuit est notée, bornes comprises', () => {
+  // Notées les mardis 01, 08, 15 et 22 (soir du lundi), les lundis 07, 14 et 21 (soir du dimanche).
+  const journal = nuitsDe([...MARDIS, '2026-09-22', ...LUNDIS]);
+  const nombres = (periode) => nuitsParSoir(journal, periode).colonnes.map((c) => c.n);
+  assert.deepEqual(nombres({ du: '2026-09-01', au: '2026-09-30' }), [4, 0, 0, 0, 0, 0, 3]);
+  assert.deepEqual(nombres({ du: '2026-09-02', au: '2026-09-30' }), [3, 0, 0, 0, 0, 0, 3], 'la nuit notée le 01 est avant la période');
+  assert.deepEqual(nombres({ du: '2026-09-01', au: '2026-09-21' }), [3, 0, 0, 0, 0, 0, 3], 'la nuit notée le 22 est après ; celle du 21 est gardée');
+  // Notée le 07, premier jour de la période, une nuit est celle du soir du 06 : elle compte.
+  assert.deepEqual(nombres({ du: '2026-09-07', au: '2026-09-30' }), [3, 0, 0, 0, 0, 0, 3]);
+  assert.deepEqual(nuitsParSoir(journal, { du: '2026-09-08', au: '2026-09-30' }), { statut: 'insuffisant', colonnes: [] }, 'le dimanche n\'a plus que 2 nuits');
+});
+
+// ---------- Énergie selon ce que je faisais (§2.4, graphique 3) ----------
+
+const TRAVAIL = 'activiteMoment:travail';
+const TRAJET = 'activiteMoment:trajet';
+const REPOS = 'activiteMoment:repos';
+const COURSES = 'activiteMoment:courses';
+
+test('energieParActivite : une barre par activité à partir de 3 relevés avec énergie, découpée en basse, moyenne et haute', () => {
+  const humeurs = [
+    // Travail : 4 relevés (un « vers »), dont un qui nomme aussi le trajet et un qui nomme deux fois le travail.
+    releve('2026-09-01', '09:00', { energie: 'energie:basse', faisais: [TRAVAIL] }),
+    releve('2026-09-02', '09:00', { energie: 'energie:basse', faisais: [TRAVAIL, TRAJET] }),
+    releve('2026-09-03', '14:00', { energie: 'energie:moyenne', faisais: [TRAVAIL], vers: true }),
+    releve('2026-09-04', '09:00', { energie: 'energie:haute', faisais: [TRAVAIL, TRAVAIL] }),
+    // Trajet : 3 relevés avec le premier. Repos : 2 relevés seulement.
+    releve('2026-09-05', '08:00', { energie: 'energie:basse', faisais: [TRAJET] }),
+    releve('2026-09-06', '08:00', { energie: 'energie:moyenne', faisais: [TRAJET] }),
+    releve('2026-09-07', '20:00', { energie: 'energie:haute', faisais: [REPOS] }),
+    releve('2026-09-08', '20:00', { energie: 'energie:haute', faisais: [REPOS] }),
+    // Courses : 3 relevés, mais l'un n'a pas d'énergie.
+    releve('2026-09-09', '11:00', { energie: 'energie:basse', faisais: [COURSES] }),
+    releve('2026-09-10', '11:00', { energie: 'energie:haute', faisais: [COURSES] }),
+    releve('2026-09-11', '11:00', { humeur: 6, faisais: [COURSES] }),
+    // Énergie sans activité : ne compte pour aucune activité.
+    releve('2026-09-12', '11:00', { energie: 'energie:basse' }),
+    releve('2026-09-13', '11:00', { energie: 'energie:basse', faisais: [] }),
+  ];
+  const items = [{ id: TRAVAIL, liste: 'activiteMoment', ordre: 10 }, { id: TRAJET, liste: 'activiteMoment', ordre: 20 }];
+  const periode = tout('2026-09-30', '2026-09-01');
+  const g = energieParActivite(humeurs, periode, items);
+  assert.equal(g.statut, 'ok');
+  assert.deepEqual(g.activites, [
+    { id: TRAVAIL, n: 4, basse: 2, moyenne: 1, haute: 1, libelle: '4 relevés' },
+    { id: TRAJET, n: 3, basse: 2, moyenne: 1, haute: 0, libelle: '3 relevés' },
+  ]);
+  // Dans l'ordre de la liste ; sans liste, par identifiant.
+  assert.deepEqual(energieParActivite(humeurs, periode).activites.map((a) => a.id), [TRAJET, TRAVAIL]);
+  assert.deepEqual(energieParActivite(humeurs, periode, [{ id: TRAJET, liste: 'activiteMoment', ordre: 10 }, { id: TRAVAIL, liste: 'activiteMoment', ordre: 20 }]).activites.map((a) => a.id), [TRAJET, TRAVAIL]);
+});
+
+test('energieParActivite : minuit et bascule de 4 h, le relevé d\'après minuit est du jour d\'avant', () => {
+  const humeurs = [
+    releve('2026-09-01', '03:59', { energie: 'energie:basse', faisais: [REPOS] }), // 31/08 : avant la période
+    releve('2026-09-01', '04:00', { energie: 'energie:basse', faisais: [REPOS] }),
+    releve('2026-09-01', '10:00', { energie: 'energie:moyenne', faisais: [REPOS] }),
+    releve('2026-09-02', '01:00', { energie: 'energie:haute', faisais: [REPOS], vers: true }), // encore le 01/09
+    releve('2026-09-02', '04:00', { energie: 'energie:haute', faisais: [REPOS] }), // 02/09 : après la période
+  ];
+  const g = energieParActivite(humeurs, { du: '2026-09-01', au: '2026-09-01' });
+  assert.deepEqual(g.activites, [{ id: REPOS, n: 3, basse: 1, moyenne: 1, haute: 1, libelle: '3 relevés' }]);
+});
+
+test('energieParActivite : sous 3 relevés avec énergie, pas assez de données', () => {
+  const humeurs = [
+    releve('2026-09-01', '09:00', { energie: 'energie:basse', faisais: [TRAVAIL] }),
+    releve('2026-09-02', '09:00', { energie: 'energie:basse', faisais: [TRAVAIL] }),
+    releve('2026-09-03', '09:00', { humeur: 5, faisais: [TRAVAIL] }),
+  ];
+  assert.deepEqual(energieParActivite(humeurs, tout('2026-09-30', '2026-09-01')), { statut: 'insuffisant', activites: [] });
+  assert.deepEqual(energieParActivite([], tout('2026-09-30', '2026-09-01')), { statut: 'insuffisant', activites: [] });
+});
+
+// ---------- Ce qui a pesé, ce qui a rechargé (§2.4, graphique 1) ----------
+
+test('peseRecharge : des jours distincts par élément, dans l\'ordre des listes, dès un jour noté', () => {
+  const journal = [
+    soir('2026-08-31', { pese: ['pese:trajets'] }), // avant la période
+    soir('2026-09-01', { pese: ['pese:bruit', 'pese:bruit', 'pese:monde'], recharge: ['recharge:calme'] }),
+    soir('2026-09-02', { pese: ['pese:bruit'], recharge: null }),
+    soir('2026-09-03', { pese: [], recharge: ['recharge:calme', 'recharge:musique'] }),
+    soir('2026-09-04'),
+  ];
+  const items = [
+    { id: 'pese:monde', liste: 'pese', ordre: 10 }, { id: 'pese:bruit', liste: 'pese', ordre: 20 },
+    { id: 'recharge:musique', liste: 'recharge', ordre: 10 }, { id: 'recharge:calme', liste: 'recharge', ordre: 20 },
+  ];
+  const periode = tout('2026-09-30', '2026-09-01');
+  assert.deepEqual(peseRecharge(journal, periode, items), {
+    statut: 'ok',
+    pese: [{ id: 'pese:monde', n: 1, libelle: '1 jour' }, { id: 'pese:bruit', n: 2, libelle: '2 jours' }],
+    recharge: [{ id: 'recharge:musique', n: 1, libelle: '1 jour' }, { id: 'recharge:calme', n: 2, libelle: '2 jours' }],
+  });
+  // Sans liste fournie : par identifiant. Un élément absent de la liste va à la fin.
+  assert.deepEqual(peseRecharge(journal, periode).pese.map((e) => e.id), ['pese:bruit', 'pese:monde']);
+  assert.deepEqual(peseRecharge(journal, periode, [{ id: 'pese:monde', liste: 'pese', ordre: 10 }]).pese.map((e) => e.id), ['pese:monde', 'pese:bruit']);
+});
+
+test('peseRecharge : les deux listes sont lues séparément ; rien de noté, pas assez de données', () => {
+  const periode = tout('2026-09-30', '2026-09-01');
+  assert.deepEqual(peseRecharge([soir('2026-09-01', { recharge: ['recharge:calme'] })], periode),
+    { statut: 'ok', pese: [], recharge: [{ id: 'recharge:calme', n: 1, libelle: '1 jour' }] });
+  assert.deepEqual(peseRecharge([soir('2026-09-01'), soir('2026-09-02', { pese: [], recharge: [] })], periode), { statut: 'insuffisant', pese: [], recharge: [] });
+  assert.deepEqual(peseRecharge([], periode), { statut: 'insuffisant', pese: [], recharge: [] });
 });

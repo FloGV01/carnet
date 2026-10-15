@@ -15,8 +15,8 @@ export function premiereDate({ journal = [], episodes = [], symptomes = [], trai
   return dates.reduce((m, x) => (!m || x < m ? x : m), null);
 }
 
-const enMinutes = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
-const versHeure = (m) => { const x = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
+export const enMinutes = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+export const versHeure = (m) => { const x = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 const estHeure = (h) => typeof h === 'string' && /^\d{2}:\d{2}$/.test(h);
 
 // Un coucher avant 12:00 compte après minuit.

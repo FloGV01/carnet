@@ -1,11 +1,13 @@
-// Comprendre (v6, spec §2) : les calculs de l'écran. Ici, les facteurs de chaque jour logique et le
-// graphique aligné : des jours repères (explosions, jours à énergie basse, retours au bureau), lus à
-// quelques jours de décalage. Des comptes seulement, rassemblés : jamais une cause, jamais une phrase
-// calculée. La date du jour arrive par la période, qui finit aujourd'hui. Pur.
-import { addDays, jourEvenement } from '../domain/dates.js';
+// Comprendre (v6, spec §2) : les calculs de l'écran. Les facteurs de chaque jour logique et le graphique
+// aligné : des jours repères (explosions, jours à énergie basse, retours au bureau), lus à quelques jours de
+// décalage. Puis les colonnes (jour de la semaine, lieu, mois), les nuits selon le soir du coucher, l'énergie
+// selon ce que je faisais, et ce qui a pesé ou rechargé. Des comptes seulement, rassemblés : jamais une cause,
+// jamais une phrase calculée. La date du jour arrive par la période, qui finit aujourd'hui. Pur.
+import { addDays, jourEvenement, jourSemaine, JOURS } from '../domain/dates.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { avecHumeurDuJour, estHumeur } from './humeur-jour.js';
-import { bornesFenetre } from './fenetres.js';
+import { bornesFenetre, dureeNuit, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
+import { moyenne, mediane } from './stats.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.comprendre;
@@ -126,12 +128,18 @@ export function elementsFrequents(jours, periode, liste, min) {
 
 const fixes = (...cles) => cles.map((cle) => ({ cle, valeur: (j) => j[cle] }));
 
-// Les éléments pesés ou rechargés de la période, dans l'ordre de leur liste (Réglages › Listes) ; un
-// élément absent de `items` va à la fin. Connus seulement les jours où la liste du soir est remplie.
-function elements(jours, periode, liste, items) {
+// Compare deux identifiants dans l'ordre de leur liste (Réglages › Listes) ; un identifiant absent de
+// `items` va à la fin, rangé par identifiant.
+function ordreDeListe(items) {
   const rang = new Map(items.map((i) => [i.id, i.ordre]));
   const pos = (id) => (rang.has(id) ? rang.get(id) : Number.MAX_SAFE_INTEGER);
-  return elementsFrequents(jours, periode, liste, S.minElement).sort((a, b) => pos(a) - pos(b))
+  return (a, b) => pos(a) - pos(b) || (a < b ? -1 : a > b ? 1 : 0);
+}
+
+// Les éléments pesés ou rechargés de la période, dans l'ordre de leur liste. Connus seulement les jours où
+// la liste du soir est remplie.
+function elements(jours, periode, liste, items) {
+  return elementsFrequents(jours, periode, liste, S.minElement).sort(ordreDeListe(items))
     .map((id) => ({ cle: id, liste, valeur: (j) => (j[liste] ? j[liste].includes(id) : null) }));
 }
 
@@ -192,4 +200,128 @@ export function retoursBureau(jours, periode) {
     facteurs: fixes('humeurBasse', 'nuitMal', 'energieBasse', 'explosion', 'contactCouteux'),
     autres: joursDeLaPeriode(jours, periode, (j) => !exclus.has(j.date)),
   });
+}
+
+// ---------- Les colonnes (§2.5) : jour de la semaine, lieu, mois ----------
+
+// Le choix « Humeur · Nuits Mal · Explosions · Énergie basse » : l'humeur du jour, puis les facteurs de
+// facteursParJour. Une nuit Mal compte pour le jour où elle est notée.
+export const MESURES = ['humeur', 'nuitMal', 'explosion', 'energieBasse'];
+
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+// Un graphique en colonnes apparaît à partir de 2 colonnes d'au moins 3 valeurs. Dessous : aucune colonne.
+// Sous 3 valeurs, une colonne est `fragile` (point creux, trait en pointillé).
+const selonSeuil = (colonnes) => (colonnes.filter((c) => c.n >= S.minValeurs).length >= S.minColonnes
+  ? { statut: 'ok', colonnes } : { statut: 'insuffisant', colonnes: [] });
+
+// Les colonnes de chaque découpage, dans l'ordre d'affichage : les 7 jours de la semaine (lundi = 0), les
+// lieux présents dans la période (dans l'ordre de leur liste), les mois calendaires de la période, vides compris.
+function clesDeColonnes(pas, jours, periode, items) {
+  if (pas === 'semaine') return [0, 1, 2, 3, 4, 5, 6];
+  if (pas === 'lieu') return [...new Set(jours.map((j) => j.lieu).filter(Boolean))].sort(ordreDeListe(items));
+  const mois = new Set();
+  for (let d = periode.du; d <= periode.au; d = addDays(d, 1)) mois.add(d.slice(0, 7));
+  return [...mois];
+}
+const colonneDe = { semaine: (j) => jourSemaine(j.date), lieu: (j) => j.lieu, mois: (j) => j.date.slice(0, 7) };
+// Le mot qui suit le compte d'une barre : « 3 lundis », « 3 jours ».
+const motDe = { semaine: (cle) => JOURS[cle], lieu: () => 'jour', mois: () => 'jour' };
+
+// Humeur : la moyenne des humeurs du jour de la colonne, de la plus basse à la plus haute.
+function colonneHumeur(cle, jours) {
+  const humeurs = jours.map((j) => j.humeur).filter((h) => h != null);
+  return {
+    cle, n: humeurs.length, moyenne: moyenne(humeurs),
+    min: humeurs.length ? Math.min(...humeurs) : null, max: humeurs.length ? Math.max(...humeurs) : null,
+    fragile: humeurs.length < S.minValeurs,
+  };
+}
+// Les autres mesures sont oui / non / inconnu, comme les facteurs. La part vaut oui / n ; le libellé ne dit
+// que le compte de oui : n, le nombre de jours connus, ne va que dans « Voir en tableau ».
+function colonneOuiNon(cle, jours, quoi, mot) {
+  const connus = jours.map((j) => j[quoi]).filter((v) => v != null);
+  const oui = connus.filter(Boolean).length;
+  return { cle, n: connus.length, oui, part: connus.length ? oui / connus.length : null, fragile: connus.length < S.minValeurs, libelle: pluriel(oui, mot) };
+}
+
+// jours : le résultat de facteursParJour. pas : 'semaine' (clé 0 à 6), 'lieu' (clé : l'identifiant du lieu) ou
+// 'mois' (clé : « 2026-09 »). items : les lieux, pour leur ordre.
+export function parColonnes(jours, periode, { cle: pas, mesure: quoi }, items = []) {
+  const ici = dans(periode);
+  const dansPeriode = [...jours.values()].filter((j) => ici(j.date));
+  const parCle = new Map(clesDeColonnes(pas, dansPeriode, periode, items).map((c) => [c, []]));
+  for (const j of dansPeriode) parCle.get(colonneDe[pas](j))?.push(j);
+  return selonSeuil([...parCle].map(([c, js]) => (quoi === 'humeur' ? colonneHumeur(c, js) : colonneOuiNon(c, js, quoi, motDe[pas](c)))));
+}
+
+// ---------- Tes nuits selon le jour (§2.5, graphique 4) ----------
+
+const LENDEMAIN = 1440; // le lever est le lendemain du coucher, en minutes
+const heureExacte = (m) => (m == null ? null : versHeure(m));
+
+// Une colonne par soir de coucher, du lundi (0) au dimanche. La nuit notée le jour D (celle qui précède D)
+// est celle du soir D−1 ; la période porte sur D. Une nuit compte si le coucher et le lever sont notés et
+// que dureeNuit n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis 0 h
+// du soir (un coucher avant 12:00 compte après minuit, le lever est le lendemain) ; heureCoucher et
+// heureLever : les mêmes, en heure exacte, pour le tableau.
+export function nuitsParSoir(journal, periode) {
+  const ici = dans(periode);
+  const soirs = Array.from({ length: 7 }, () => []);
+  for (const j of journal || []) {
+    if (!j || !ici(j.date) || dureeNuit(j.heureCoucher, j.heureLever) == null) continue;
+    soirs[jourSemaine(addDays(j.date, -1))].push(j);
+  }
+  return selonSeuil(soirs.map((nuits, cle) => {
+    const coucher = mediane(nuits.map((j) => coucherAjuste(j.heureCoucher)));
+    const lever = mediane(nuits.map((j) => enMinutes(j.heureLever) + LENDEMAIN));
+    return { cle, n: nuits.length, fragile: nuits.length < S.minValeurs, coucher, lever, heureCoucher: heureExacte(coucher), heureLever: heureExacte(lever) };
+  }));
+}
+
+// ---------- Selon ce que je faisais (§2.4, graphique 3) ----------
+
+const NIVEAUX = new Map([['energie:basse', 'basse'], ['energie:moyenne', 'moyenne'], ['energie:haute', 'haute']]);
+
+// Une barre par activité de « Ce que je faisais », découpée en relevés d'énergie basse, moyenne et haute
+// (« vers » compris). Elle compte des relevés, pas des jours : un relevé de deux activités compte pour
+// chacune. Seules les activités présentes dans au moins 3 relevés avec énergie apparaissent, dans l'ordre de
+// leur liste.
+export function energieParActivite(humeurs, periode, items = []) {
+  const ici = dans(periode);
+  const par = new Map();
+  for (const h of humeurs || []) {
+    const niveau = h && h.date ? NIVEAUX.get(h.energie) : null;
+    if (!niveau || !ici(jourEvenement(h.date, h.heure))) continue;
+    for (const id of new Set(listeNotee(h.faisais) || [])) {
+      const a = par.get(id) || { id, n: 0, basse: 0, moyenne: 0, haute: 0 };
+      a.n += 1;
+      a[niveau] += 1;
+      par.set(id, a);
+    }
+  }
+  const ordre = ordreDeListe(items);
+  const activites = [...par.values()].filter((a) => a.n >= S.minActivite).sort((a, b) => ordre(a.id, b.id))
+    .map((a) => ({ ...a, libelle: pluriel(a.n, 'relevé') }));
+  return { statut: activites.length ? 'ok' : 'insuffisant', activites };
+}
+
+// ---------- Ce qui a pesé, ce qui a rechargé (§2.4, graphique 1) ----------
+
+// Deux groupes de barres, dans l'ordre de leurs listes. Chaque élément compte les jours distincts où il est
+// noté, dès une fois dans la période.
+export function peseRecharge(journal, periode, items = []) {
+  const ici = dans(periode);
+  const ordre = ordreDeListe(items);
+  const joursPar = (liste) => {
+    const n = new Map();
+    for (const j of journal || []) {
+      if (!j || !ici(j.date)) continue;
+      for (const id of new Set(listeNotee(j[liste]) || [])) n.set(id, (n.get(id) || 0) + 1);
+    }
+    return [...n].map(([id, jours]) => ({ id, n: jours, libelle: pluriel(jours, 'jour') })).sort((a, b) => ordre(a.id, b.id));
+  };
+  const pese = joursPar('pese');
+  const recharge = joursPar('recharge');
+  return { statut: pese.length || recharge.length ? 'ok' : 'insuffisant', pese, recharge };
 }
