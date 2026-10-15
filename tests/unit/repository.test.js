@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { nouveauRepo } from '../aides/repo.js';
 import { ErreurValidation } from '../../public/js/domain/champs.js';
 
-test('base neuve : 173 éléments de liste (v1 et v4), aujourd\'hui suit le jour logique', async () => {
+test('base neuve : 197 éléments de liste (v1, v4 et v6), aujourd\'hui suit le jour logique', async () => {
   const { repo, horloge } = nouveauRepo();
-  assert.equal((await repo.listes.items()).length, 173);
+  assert.equal((await repo.listes.items()).length, 197);
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 3);
+  assert.equal(await repo.meta.lire('schema'), 4);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {
@@ -281,4 +281,26 @@ test('v4 : activités, contact et après coup enregistrés, références imbriqu
   const m = await repo.episodes.modifier(e.id, { apresCoup: { types: ['typeExplosion:surcharge'], tropDe: ['sourceSurcharge:bruit'], repereA: 7 } });
   assert.deepEqual(m.apresCoup.tropDe, ['sourceSurcharge:bruit']);
   await assert.rejects(repo.episodes.modifier(e.id, { apresCoup: { signes: ['signe:nexistepas'] } }), ErreurValidation);
+});
+
+test('v6 : notes en vrac, créer et modifier, jour logique, texte effacé supprime la note', async () => {
+  const { repo, horloge, changements } = nouveauRepo();
+  const n = await repo.notes.creer({ date: '2026-10-01', heure: '01:30', texte: '  Une idée, en vrac  ' });
+  assert.match(n.id, /^no_[0-9a-f]{16}$/);
+  assert.equal(n.texte, 'Une idée, en vrac');
+  assert.ok(n.createdAt && n.updatedAt);
+  await repo.notes.creer({ date: '2026-09-30', heure: '14:00', texte: 'Autre idée' });
+  await repo.notes.creer({ date: '2026-10-01', heure: '09:00', texte: 'Le lendemain' });
+  assert.deepEqual((await repo.notes.parJour('2026-09-30', '2026-09-30')).map((x) => x.heure), ['14:00', '01:30'], 'avant 04:00, c\'est la veille');
+  await assert.rejects(repo.notes.creer({ date: '2026-09-30', texte: 'Sans heure' }), ErreurValidation, 'date et heure posées par l\'app');
+
+  horloge.t = new Date(2026, 9, 1, 8, 0);
+  const m = await repo.notes.modifier(n.id, { texte: 'Idée reprise' });
+  assert.deepEqual({ date: m.date, heure: m.heure, texte: m.texte, createdAt: m.createdAt }, { date: '2026-10-01', heure: '01:30', texte: 'Idée reprise', createdAt: n.createdAt });
+  assert.equal(m.updatedAt, horloge.t.toISOString());
+  assert.equal((await repo.notes.lire(n.id)).texte, 'Idée reprise');
+  assert.equal(await repo.notes.modifier(n.id, { texte: '   ' }), null);
+  assert.equal(await repo.notes.lire(n.id), null);
+  assert.equal((await repo.notes.tous()).length, 2);
+  assert.equal(changements.filter((c) => c.store === 'notes').length, 5, 'trois créations, deux modifications');
 });

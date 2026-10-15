@@ -169,14 +169,14 @@ test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les resta
   assert.equal(await b.repo.meta.lire('journee'), null, 'absente du fichier : retirée');
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je sors' });
   assert.equal(await b.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'absente du fichier : gardée');
-  assert.equal(await b.repo.meta.lire('schema'), 3);
+  assert.equal(await b.repo.meta.lire('schema'), 4);
 
   await revenirAvantImport(b.repo);
   assert.deepEqual(metaRemplacee([{ cle: 'monPlan', valeur: { a: 1 } }, { cle: 'journee', valeur: { b: 2 } }, { cle: 'schema', valeur: 2 }, { cle: 'explosionsDepuis', valeur: 'x' }],
     [{ cle: 'journee', valeur: { b: 2 } }]), ['monPlan'], 'aperçu : seul ce qui change est annoncé');
   assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
-  assert.equal(await b.repo.meta.lire('schema'), 3);
+  assert.equal(await b.repo.meta.lire('schema'), 4);
 });
 
 test('v5 : une sauvegarde v2 (un détail de contact par jour) devient une ligne de contacts, telle quelle', () => {

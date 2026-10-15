@@ -12,8 +12,8 @@ import { carteLibelles } from '../domain/libelles.js';
 
 export { DataError };
 
-const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au', humeurs: 'hu' };
-const AVEC_HEURE = new Set(['episodes', 'humeurs']);
+const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au', humeurs: 'hu', notes: 'no' };
+const AVEC_HEURE = new Set(['episodes', 'humeurs', 'notes']);
 const ERREURS_CONNEXION = new Set(['InvalidStateError', 'UnknownError', 'TransactionInactiveError']);
 const PARENTS_AUDIO = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv'];
 // Méta qui ne comptent pas comme une saisie (pas de mise à jour de derniereEcriture).
@@ -455,6 +455,7 @@ export function creerRepository({
     traitements: evenements('traitements'),
     rdv: evenements('rdv'),
     humeurs: evenements('humeurs'),
+    notes: evenements('notes'),
     listes,
     audios,
     meta,
