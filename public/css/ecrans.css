@@ -83,7 +83,7 @@
 .soins .segmente.large button { padding: 0 var(--esp-1); white-space: nowrap; }
 
 /* Notes en vrac : le champ prêt, puis une ligne par note (date, texte modifiable sur place, ✕).
-   La zone de texte s'agrandit avec son contenu, d'une ligne à sept, comme toutes les zones (composants.css). */
+   La zone de texte s'agrandit avec son contenu, de deux lignes à sept, comme toutes les zones (composants.css). */
 .notes-en-vrac { display: flex; flex-direction: column; gap: var(--esp-3); margin-top: var(--esp-3); }
 .ligne-note { display: flex; align-items: flex-start; padding-left: var(--esp-4); }
 .ligne-note:focus-within { background: var(--surface-2); }

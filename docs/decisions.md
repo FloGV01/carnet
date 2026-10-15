@@ -104,6 +104,8 @@ Spécification : `docs/v6-specification.md` (ce qui a été construit et les éc
 - **Après coup** : « Ce jour-là » dit l'humeur du jour. Le cadre de bouton, le titre « Après coup · TCC » et son sous-titre valent aussi pour un nouvel épisode ; seule la ligne du haut « Mon plan · Après coup » est réservée à l'épisode rouvert.
 - **Comprendre** :
   - les fenêtres d'événements antérieurs à la période sont exclues des « autres jours » ;
+  - une liste vide (pesé, rechargé, activités) donne « pas assez de données » ;
+  - le message de seuil s'affiche dans la carte du graphique ;
   - toucher une barre liste les jours où le facteur vaut « oui » ;
   - une colonne sans valeur garde son étiquette d'axe, sans marque ;
   - un SVG par bloc, sous un groupe qui porte la phrase ;
@@ -111,11 +113,22 @@ Spécification : `docs/v6-specification.md` (ce qui a été construit et les éc
   - « Tout » commence au premier jour des données.
 - **Énergie basse dans Mes jours** : barres par semaine ou par mois à l'échelle de la plus haute de la période, comme les explosions.
 - **Repères de traitement** : un trait au centre de la colonne par semaine ou par mois, la légende donne la date exacte ; la phrase de légende du PDF tient sur une ligne existante.
+- **Page A4 de la vue soignants** : 272,4 mm dans le cas le plus haut, accepté. Avec un prénom de 12 caractères ou plus, le dépassement existait déjà ; rien n'est coupé, la limite réelle est de 285 mm.
 - **Moment difficile** : « Une chose à la fois » est masqué sans carte ; l'ouvrir arrête une respiration en cours. La carte de la règle « Me ressourcer » n'a que « Respirer » et se ferme avec le ✕ de l'écran.
-- **Notes en vrac** : Annuler après un effacement rend le dernier texte enregistré ; le brouillon du champ du haut reste sur l'appareil (hors sauvegarde) ; en consultation, « Mes notes » se lit sans se modifier.
-- **En parler au rendez-vous** : la question d'un épisode reprend émotion, intensité et réaction ; l'Après coup reprend celle de son épisode.
+- **Notes en vrac** : Annuler après un effacement rend le dernier texte enregistré ; le brouillon du champ du haut reste sur l'appareil (hors sauvegarde) ; Retour dans une note déjà écrite va à la ligne ; en consultation, « Mes notes » se lit sans se modifier.
+- **En parler au rendez-vous** : la question d'un épisode reprend émotion, intensité et réaction (celle d'un symptôme, de la même façon) ; l'Après coup reprend celle de son épisode.
+- **Libellés choisis pendant la construction**, que ni la spec ni le plan ne fixaient :
+  - aperçu d'import : « les réglages de la respiration », « les réglages de « Une chose à la fois » », « les réglages de « Me ressourcer » » ;
+  - Comprendre : « Avant mes explosions », « A pesé : … », « Jours connus », l'en-tête de colonne « Compte » ;
+  - légende des repères de traitement : « changement : » ;
+  - messages : « Question ajoutée au rendez-vous · Annuler » et « Déjà dans ce rendez-vous ».
 - **Ergonomie (tâche 26)** :
   - les zones de texte gardent leur taille au repos (2 lignes le plus souvent, jusqu'à 4 en consultation) et grandissent jusqu'à 7 lignes ;
-  - une note de la liste des notes en vrac garde une ligne au repos ;
+  - les notes en vrac aussi : deux lignes au repos, comme le veut la spec ;
   - en sombre, un choix sélectionné, « + Épisode » et « Terminer » prennent un fond plein moins lumineux (`--p-*`), texte clair en 600, contraste d'au moins 5:1 ;
-  - les zones de toucher des barres de Comprendre restent hautes de 22 (leurs valeurs sont aussi dans « Voir en tableau »).
+  - les zones de toucher des barres de Comprendre restent hautes de 22 (leurs valeurs sont aussi dans « Voir en tableau ») ;
+  - récapitulatif de l'Après coup : les lignes suivent l'ordre du tableau de la spec ; « Le déclencheur », absent du tableau, garde son libellé.
+
+### Pas encore construit
+
+- **« La dernière fois »** ne doit jamais citer un rendez-vous futur : la date de référence sera la plus ancienne entre la date du rendez-vous (ou aujourd'hui s'il est « Date à fixer ») et aujourd'hui. Arbitrage de la tâche 25, à faire dans la dernière vague de corrections.

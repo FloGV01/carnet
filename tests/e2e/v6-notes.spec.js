@@ -89,14 +89,14 @@ test('la liste montre le jour logique (une note de 01:30 est de la veille), du p
   await expect(texteDe(lignes(page).nth(1))).toHaveValue('Écrite la nuit');
   await expect(lignes(page).nth(2)).toContainText('12/10');
   await expect(texteDe(lignes(page).nth(2))).toHaveValue('Lundi matin');
-  // Texte entier : la zone s'agrandit avec lui, d'une ligne jusqu'à sept, puis elle défile (spec §8, comme toutes les zones).
+  // Texte entier : la zone s'agrandit avec lui, de deux lignes jusqu'à sept, puis elle défile (spec §8, comme toutes les zones).
   const mesure = (t) => t.evaluate((z) => ({
     lignes: Math.round((z.clientHeight - 24) / parseFloat(getComputedStyle(z).lineHeight)), defile: z.scrollHeight > z.clientHeight + 1,
   }));
   const t = texteDe(lignes(page).nth(0));
   await expect(t).toHaveValue(longue);
   expect(await mesure(t)).toEqual({ lignes: 7, defile: true });
-  expect(await mesure(texteDe(lignes(page).nth(2)))).toEqual({ lignes: 1, defile: false });
+  expect(await mesure(texteDe(lignes(page).nth(2)))).toEqual({ lignes: 2, defile: false });
 });
 
 test('un toucher modifie la note sur place, enregistrée peu après la frappe, sans bouton', async ({ page }) => {

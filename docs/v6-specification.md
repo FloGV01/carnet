@@ -585,13 +585,13 @@ Construite le 15/10, en 26 tâches, sur la branche `dev`. Version 6.0.0, base `D
 - **Zones de texte** (§8) :
   - `field-sizing: content` dans `composants.css`, bornée par la taille au repos de la zone (`data-lignes`) et 7 lignes ; sans lui, `ChampTexte` ajuste l'attribut `rows` à la saisie ;
   - vide, une zone garde sa taille même quand son texte d'aide est plus long ;
+  - une note de la liste des notes en vrac a deux lignes au repos, comme les autres zones ;
   - la question de « En parler au rendez-vous » grandit de la même façon.
 - **Bande du bas** (§8) : fond plein, celui de la page, posé sur la barre d'onglets (`--hauteur-onglets`). Elle reçoit aussi les touchers entre ses boutons. Le pied collant de Soins › Traitement est posé de la même façon.
 - **Cibles de 44 pt** (§8) : tous les choix sur une ligne en grand format (`.segmente.large`) passent à 44, dont les onglets de Soins et de Comprendre et les réglages de la respiration. « Mon plan » et « Après coup » en haut d'un épisode aussi. La ligne de date se touche sur toute sa largeur, dans un épisode, un symptôme et l'humeur du moment.
 - **Mode sombre** (§8) : un fond plein par rubrique, moins lumineux (`--p-*` dans `tokens.css`), sous un texte clair en graisse 600. Le contraste est d'au moins 5:1, et de 2,5:1 avec le fond d'une carte. En clair, rien ne change.
 
-**Écarts**
-- **Notes en vrac** : une note de la liste garde une ligne au repos, pas deux. Elle se lit comme une ligne de liste, et elle n'est jamais vide (une note vidée est supprimée). Elle grandit jusqu'à 7 lignes, puis défile.
+**Écart**
 - **Comprendre** : les zones de toucher du graphique aligné restent hautes de 22 (moins de 44 pt). Les agrandir doublerait la hauteur de chaque bloc, pour un toucher qui ne donne que des dates, déjà dans « Voir en tableau ».
 
 **À vérifier sur l'iPhone**

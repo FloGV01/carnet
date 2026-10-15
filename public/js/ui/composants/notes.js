@@ -60,7 +60,7 @@ function AjoutNote() {
   </div>`;
 }
 
-// Une note : la date du jour logique, le texte entier (zone qui s'agrandit avec lui, jusqu'à sept lignes), ✕.
+// Une note : la date du jour logique, le texte entier (zone de deux lignes qui s'agrandit avec lui jusqu'à sept), ✕.
 function LigneNote({ note }) {
   const date = dateNote(note);
   const vide = useRef(false);
@@ -77,7 +77,7 @@ function LigneNote({ note }) {
   return html`<li class="ligne-note">
     <span class="note-date">${date}</span>
     <div class="note-corps" onInput=${(e) => { vide.current = e.target.value.trim() === ''; }} onFocusOut=${supprimerSiVide}>
-      <${ChampTexte} id=${`note-${note.id}`} ariaLabel=${`Note du ${date}`} valeur=${note.texte} lignes=${1} dicter=${false}
+      <${ChampTexte} id=${`note-${note.id}`} ariaLabel=${`Note du ${date}`} valeur=${note.texte} lignes=${2} dicter=${false}
         cleBrouillon=${`carnet:brouillon:${note.id}:texte`} surEnregistrer=${enregistrer} />
     </div>
     <button type="button" class="effacer" aria-label=${`Supprimer la note du ${date}`} onClick=${supprimer}>${Icones.fermer()}</button>

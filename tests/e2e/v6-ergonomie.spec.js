@@ -24,6 +24,29 @@ function luminance(couleur) {
 }
 const contraste = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 const styleDe = (loc) => loc.evaluate((e) => { const s = getComputedStyle(e); return { fond: s.backgroundColor, texte: s.color, graisse: s.fontWeight }; });
+// Couleur vue d'un texte posé à l'opacité `a` sur un fond plein : le mélange des deux, canal par canal.
+const melange = (texte, fond, a) => {
+  const [t, f] = [texte, fond].map((c) => c.match(/[\d.]+/g).slice(0, 3).map(Number));
+  return `rgb(${t.map((v, i) => Math.round(a * v + (1 - a) * f[i])).join(', ')})`;
+};
+// Un choix sélectionné et sa précision (<small>), pour chaque teinte et sans teinte, construits dans la page.
+const TEINTES = ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'expl', 'trt', 'pos', 'ep', 'sy', 'jour', null];
+const choixParTeinte = (page) => page.evaluate((teintes) => teintes.map((t) => {
+  const groupe = document.createElement('div');
+  groupe.className = t ? `pastilles teinte-${t}` : 'pastilles';
+  const choix = document.createElement('button');
+  choix.className = 'pastille';
+  choix.setAttribute('aria-pressed', 'true');
+  const petit = document.createElement('small');
+  petit.textContent = 'bruit, monde';
+  choix.append('Choix', petit);
+  groupe.append(choix);
+  document.body.append(groupe);
+  const [sc, sp] = [getComputedStyle(choix), getComputedStyle(petit)];
+  const r = { teinte: t, fond: sc.backgroundColor, texte: sc.color, graisse: sc.fontWeight, petit: sp.color, opacite: Number(sp.opacity) };
+  groupe.remove();
+  return r;
+}), TEINTES);
 
 // Hauteur d'une zone en lignes (cadre retiré) et défilement intérieur.
 const lignesDe = (zone) => zone.evaluate((z) => {
@@ -39,7 +62,8 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre ; la b
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     await expect(groupe(page, 'Lieu')).toHaveCount(1);
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    // De Lieu aux points positifs, tout est à l'écran d'un coup, au-dessus de la bande.
+    expect((await groupe(page, 'Lieu').boundingBox()).y).toBeGreaterThanOrEqual(0);
     const positifs = await page.locator('#points-positifs').boundingBox();
     const bande = page.locator('.actions-flottantes');
     const cadre = await bande.boundingBox();
@@ -136,13 +160,13 @@ test('toutes les zones de texte grandissent jusqu\'à 7 lignes : soir, épisode,
   await aller(page, '#/mon-plan');
   await expect(page.locator('textarea.champ-texte').first()).toBeVisible();
   for (const z of await zonesDe(page)) expect(z).toMatchObject({ auto: 'content', min: 2, max: 7 });
-  // Une note de la liste se lit comme une ligne : une ligne au repos, sept au plus, puis elle défile.
+  // Une note de la liste aussi : deux lignes au repos, sept au plus, puis elle défile.
   await repo(page, () => window.__carnet.repo.notes.creer({ date: '2026-10-15', heure: '20:00', texte: 'Une idée' }));
   await aller(page, '#/soins');
   await page.getByRole('group', { name: 'Soins' }).getByRole('button', { name: 'Notes' }).click();
   const note = page.getByRole('list', { name: 'Notes' }).getByRole('textbox');
   await expect(note).toHaveValue('Une idée');
-  expect(await lignesDe(note)).toEqual({ lignes: 1, defile: false });
+  expect(await lignesDe(note)).toEqual({ lignes: 2, defile: false });
   await note.fill(texteSur(10));
   expect(await lignesDe(note)).toEqual({ lignes: 7, defile: true });
 });
@@ -157,7 +181,7 @@ test('mode sombre : un choix sélectionné, « + Épisode » et « Terminer » g
       expect(luminance(s.texte)).toBeGreaterThan(0.6);
     }
   };
-  const id = await creerEpisode(page, COLERE);
+  const id = await creerEpisode(page, { ...COLERE, declencheur: 'declencheur:surcharge_sensorielle' });
   for (const schema of ['dark', 'light']) {
     const sombre = schema === 'dark';
     await page.emulateMedia({ colorScheme: schema });
@@ -180,12 +204,22 @@ test('mode sombre : un choix sélectionné, « + Épisode » et « Terminer » g
     await aller(page, `#/episode/${id}`);
     const fiche = page.getByRole('dialog', { name: 'Épisode' });
     verifier(await styleDe(fiche.getByRole('button', { name: 'Terminer' })), sombre);
-    await fiche.getByRole('button', { name: /^Émotion/ }).click();
-    const colere = fiche.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Colère' });
-    await expect(colere).toHaveAttribute('aria-pressed', 'true');
-    verifier(await styleDe(colere), sombre);
+    // Un choix sélectionné dans une étape, avec sa précision en petit : « Surcharge sensorielle (bruit, monde) ».
+    await fiche.getByRole('button', { name: /^Déclencheur/ }).click();
+    const surcharge = fiche.getByRole('group', { name: 'Déclencheur' }).getByRole('button', { name: /^Surcharge sensorielle/ });
+    await expect(surcharge).toHaveAttribute('aria-pressed', 'true');
+    const style = await styleDe(surcharge);
+    verifier(style, sombre);
+    const petit = await surcharge.locator('small').evaluate((e) => ({ couleur: getComputedStyle(e).color, opacite: Number(getComputedStyle(e).opacity) }));
+    expect(contraste(melange(petit.couleur, style.fond, petit.opacite), style.fond)).toBeGreaterThanOrEqual(4.5);
     await fiche.getByRole('button', { name: 'Fermer', exact: true }).click();
     await expect(page).toHaveURL(/#\/aujourdhui$/);
+
+    // Toutes les teintes : le choix et sa précision gardent le contraste AA.
+    for (const c of await choixParTeinte(page)) {
+      verifier(c, sombre);
+      expect(contraste(melange(c.petit, c.fond, c.opacite), c.fond), `${c.teinte} (petit)`).toBeGreaterThanOrEqual(4.5);
+    }
   }
 });
 

@@ -175,7 +175,6 @@ textarea.champ-texte {
   max-height: calc(7lh + var(--cadre-texte));
 }
 textarea.champ-texte:placeholder-shown { max-height: calc(var(--lignes) * 1lh + var(--cadre-texte)); }
-textarea.champ-texte[data-lignes="1"] { --lignes: 1; }
 textarea.champ-texte[data-lignes="3"] { --lignes: 3; }
 textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .champ-ligne { width: 100%; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-petit); border: 1px solid var(--border); background: var(--surface); }
@@ -204,7 +203,7 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
   background: var(--p, var(--p-accent)); border-color: var(--p, var(--p-accent)); color: var(--texte-plein);
   font-weight: 600; border-radius: var(--r-plein);
 }
-.pastille[aria-pressed="true"] small { color: inherit; opacity: 0.9; }
+.pastille[aria-pressed="true"] small { color: inherit; }
 .pastille .coche { display: none; }
 /* Grilles des parcours : alignées à gauche, coche devant le choix. */
 .pastilles.grille-choix .pastille {
