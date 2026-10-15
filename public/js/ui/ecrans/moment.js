@@ -1,6 +1,6 @@
 // Humeur du moment (v4) : humeur 1-10 puis énergie, en deux touchers, quand on le veut.
 // Le relevé est créé au premier toucher (date et heure réelles) ; une fois les deux choisis,
-// l'écran se referme. L'humeur du soir reste le bilan de la journée : rien n'est calculé.
+// l'écran se referme. L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useIndicateur, ecrireAvecEssais } from '../hooks.js';

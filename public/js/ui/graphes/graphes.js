@@ -39,7 +39,10 @@ function nomColonne(pas, c) {
 // Détail d'une colonne touchée : seulement ce qui est noté.
 export function detailColonne(pas, c, lib) {
   const m = [];
-  if (c.humeur != null) m.push(pas === 'jour' ? `humeur du soir ${c.humeur}` : `humeur du soir ${uneDecimale(c.humeur)} en moyenne${c.fragile ? ' (peu de valeurs)' : ''}`);
+  if (c.humeur != null) {
+    m.push(pas === 'jour' ? `humeur ${nombre(c.humeur)}${c.humeurMin != null && c.humeurMax > c.humeurMin ? ` (de ${c.humeurMin} à ${c.humeurMax})` : ''}`
+      : `humeur ${uneDecimale(c.humeur)} en moyenne${c.fragile ? ' (peu de valeurs)' : ''}`);
+  }
   if (pas === 'jour') {
     const e = c.entree || {};
     if (c.nuit) m.push(`nuit ${lib(c.nuit).toLowerCase()}`);
@@ -65,7 +68,7 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
   const g = geometrieFrise(f);
   const d = DIM_FRISE;
   const humeurs = f.colonnes.map((c) => c.humeur).filter((h) => h != null);
-  const unite = { jour: 'Humeur du soir', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
+  const unite = { jour: 'Humeur', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
   const resume = humeurs.length ? `${unite} entre ${nombre(Math.min(...humeurs))} et ${nombre(Math.max(...humeurs))}.` : '';
   const col = choix != null ? f.colonnes.find((c) => c.cle === choix) : null;
   const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
@@ -73,7 +76,8 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
     <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>`;
   const legende = html`<p class="legende-graphe legende-frise">
-    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'humeur du soir' : 'moyenne'}</span>
+    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'humeur' : 'moyenne'}</span>
+    ${g.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>du plus bas au plus haut</span>`}
     ${f.pas === 'jour' && html`<span><svg viewBox="0 0 16 12" aria-hidden="true" class="teinte-humeur"><line class="g-moyenne" x1="1" x2="15" y1="6" y2="6" /></svg>moyenne des 7 jours</span>`}
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-sommeil-1" x="1" y="1" width="10" height="10" /></svg>nuit ${lib('sommeil:mal').toLowerCase()}, ${lib('sommeil:moyen').toLowerCase()}, ${lib('sommeil:bien').toLowerCase()}, du clair au foncé</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-expl"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>explosion</span>
@@ -87,6 +91,7 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${d.axeY - 10} rx="3" />`}
     <g class="teinte-humeur">
       ${g.moyenne.map((s) => html`<line class=${f.pas === 'jour' ? 'g-moyenne' : 'g-ligne'} x1=${s.x1} y1=${s.y1} x2=${s.x2} y2=${s.y2} />`)}
+      ${g.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
       ${g.points.map((p) => html`<circle class=${p.plein ? 'g-point' : 'g-anneau'} cx=${p.x} cy=${p.y} r=${f.pas === 'jour' && g.largeurColonne < 12 ? 2.5 : 4} />`)}
     </g>
     ${g.nuits.map((n) => html`<rect class=${`g-${n.classe}`} x=${n.x} y=${n.y} width=${n.l} height=${n.h} rx="1.5" />`)}

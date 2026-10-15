@@ -102,6 +102,18 @@ test('humeur du jour : un jour qui n\'a que des relevés entre dans Tendances et
   assert.deepEqual([c[0].cle, c[0].humeur, c[0].humeurMin, c[0].humeurMax], [addDays('2025-01-01', 370), 6, null, null]);
 });
 
+test('v6 : les textes de l\'humeur parlent de l\'humeur, plus de l\'humeur du soir', async () => {
+  const { phraseTendance, REGLES, POURQUOI_TENDANCE, ligneHumeurSemaine } = await import('../../public/js/analyse/textes.js');
+  const c = { sens: 'bas', moyR: 4.6, moyB: 6.1 };
+  assert.equal(phraseTendance(c, 'tu'), 'Ces 4 dernières semaines, ton humeur est plus basse que sur les 8 semaines d\'avant : 4,6 en moyenne, contre 6,1.');
+  assert.equal(phraseTendance(c, 'neutre', { court: true }), 'l\'humeur est plus basse : 4,6 en moyenne, contre 6,1.');
+  assert.equal(REGLES.tendances, 'La règle : comparer l\'humeur des 4 dernières semaines à celle des 8 d\'avant, une fois environ 3 mois réunis.');
+  assert.ok(POURQUOI_TENDANCE.endsWith('Les moyennes ne portent que sur les jours où une humeur est notée.'));
+  // Ma semaine : le plus bas et le plus haut des valeurs notées, la moyenne des humeurs du jour.
+  assert.equal(ligneHumeurSemaine({ n: 5, moyenne: 5.6, min: 4.5, max: 6.5, minReleve: 3, maxReleve: 8, fragile: false }), 'Humeur : de 3 à 8, 5,6 en moyenne');
+  assert.equal(ligneHumeurSemaine({ n: 2, moyenne: 6, min: 6, max: 6, minReleve: 6, maxReleve: 6, fragile: true }), 'Humeur : 6, 6,0 en moyenne (peu de valeurs)');
+});
+
 test('tes moments : groupes Explosions et par type d\'Après coup, citations datées, rien de rassemblé sur les pensées', () => {
   const ep = (date, extra) => ({ id: date, date, heure: '18:00', ...extra });
   const ac = (types, extra = {}) => ({ types, tropDe: ['sourceSurcharge:bruit'], besoins: ['besoin:calme'], pensees: 'secret', ...extra });

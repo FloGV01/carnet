@@ -103,7 +103,7 @@ export function Reglages() {
         <span class="ligne-libelle">Tendances</span>
         <${Interrupteur} etiquette="Tendances" actif=${tendances} surChanger=${basculer('tendances')} />
       </div>
-      <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur du soir des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
+      <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
       <div class="champ-carte">
         <label class="libelle-carte" for="prenom-soignants">Prénom pour la vue soignants</label>
         <input id="prenom-soignants" class="champ-ligne" autocomplete="off" defaultValue=${infos.prenom || ''}

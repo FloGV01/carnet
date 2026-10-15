@@ -1,5 +1,6 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
-// n'existent pas ici : ni ligne vide, ni décompte.
+// n'existent pas ici : ni ligne vide, ni décompte. L'humeur d'un jour (ligne et filtre) est
+// l'humeur du jour (v6) : un jour qui n'a que des humeurs du moment a sa ligne.
 import { html, useState, useRef } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -11,6 +12,7 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
 import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
 import { phraseResume } from '../../domain/phrase.js';
+import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { estExplosion, valeurExplosions } from '../../domain/explosions.js';
 import { versHash } from '../../routeur.js';
 import { options } from './aujourdhui.js';
@@ -49,10 +51,10 @@ export function Historique() {
   const majF = (cle) => (v) => setF((x) => ({ ...x, [cle]: v || null }));
 
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, avecMemo] = await Promise.all([
-      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(),
+    const [journal, episodes, symptomes, items, avecMemo, humeurs] = await Promise.all([
+      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(), repo.humeurs.tous(),
     ]);
-    return { journal, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
+    return { journal: avecHumeurDuJour(journal, humeurs), episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
 
   if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" /></main>`;

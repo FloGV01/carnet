@@ -21,11 +21,11 @@ test('export PSY : aperçu complet, copie dans le geste, mémos et traitement ex
   await aller(page, '#/export-psy');
   const apercu = page.getByLabel('Aperçu du texte');
   await expect(apercu).toContainText('SUIVI APP · 7 jours du jeu 24/09 au mer 30/09/2026');
-  await expect(apercu).toContainText('mar 29/09 · Bureau · humeur 5');
+  await expect(apercu).toContainText('mar 29/09 · Bureau · humeur du soir 5');
   await expect(apercu).toContainText('PSY : fais-moi le récap de la semaine, format habituel.');
   await expect(apercu).not.toContainText(/partiel|ajustement|Psychiatre|mémo|jeu 24\/09 ·/i);
   await page.getByRole('button', { name: 'Copier les 7 derniers jours pour PSY' }).click();
   await expect(page.getByText('Copié. Prêt à coller dans PSY.')).toBeVisible();
-  expect(await page.evaluate(() => window.__copie)).toContain('mer 30/09 · humeur 7 · explosions 0');
+  expect(await page.evaluate(() => window.__copie)).toContain('mer 30/09 · humeur du soir 7 · explosions 0');
   await expect(page.getByRole('button', { name: 'Faire aussi une sauvegarde' })).toBeEnabled();
 });

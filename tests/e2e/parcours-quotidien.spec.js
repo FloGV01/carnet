@@ -24,16 +24,17 @@ async function sansDefilement(page, dernier = '#points-positifs') {
   }
 }
 
-test('les 6 champs du soir en 6 touchers, sans frappe, sans défilement, sans bouton Enregistrer', async ({ page }) => {
+test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bouton Enregistrer', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   await toucher(page, 'Lieu', 'Bureau');
   await toucher(page, 'Sommeil', 'Moyen');
-  await toucher(page, 'Humeur', '6');
   await toucher(page, 'Contact humain', 'Oui');
   await toucher(page, 'Sport / mouvement', 'Non');
   await toucher(page, 'Traitement pris', 'Oui');
-  // Le compteur d'explosions est masqué par défaut : les épisodes « Explosion » font foi.
+  // Le compteur d'explosions est masqué par défaut : les épisodes « Explosion » font foi. L'Humeur du
+  // soir aussi (v6) : l'humeur du jour est la moyenne des humeurs du moment.
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
+  await expect(groupe(page, 'Humeur')).toHaveCount(0);
   await sansDefilement(page);
   // À 390 px : « Moment difficile » en toutes lettres, « Humeur » en texte (sans son icône).
   await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
@@ -42,7 +43,7 @@ test('les 6 champs du soir en 6 touchers, sans frappe, sans défilement, sans bo
   await expect(page.getByText('Enregistré')).toBeVisible();
   const entree = await entreeDuJour(page);
   expect(entree).toMatchObject({
-    lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:moyen', humeur: 6, contactHumain: true,
+    lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:moyen', humeur: null, contactHumain: true,
     sportMouvement: false, explosions: null, traitementPris: 'traitementPris:oui',
   });
   await page.reload();
@@ -93,10 +94,10 @@ test('un champ masqué qui porte une valeur reste affiché, et un second toucher
 });
 
 test('un second toucher efface le choix', async ({ page }) => {
-  await toucher(page, 'Humeur', '7');
-  await expect.poll(async () => (await entreeDuJour(page))?.humeur).toBe(7);
-  await toucher(page, 'Humeur', '7');
-  await expect(groupe(page, 'Humeur').getByRole('button', { name: 'Humeur 7' })).toHaveAttribute('aria-pressed', 'false');
+  await toucher(page, 'Lieu', 'Bureau');
+  await expect.poll(async () => (await entreeDuJour(page))?.lieu).toBe('lieu:bureau');
+  await toucher(page, 'Lieu', 'Bureau');
+  await expect(groupe(page, 'Lieu').getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(() => entreeDuJour(page)).toBeNull();
 });
 

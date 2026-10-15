@@ -50,12 +50,15 @@ function phraseFiche(modele, fiche, carte) {
 }
 
 const ouiNon = (v) => (v ? 'oui' : 'non');
-// Journée : « Bureau · nuit moyen · humeur 6 · contact oui · … », chaque valeur à sa couleur
-// (aussi les puces d'un jour dans l'Historique).
+// Humeur du jour (v6) : une décimale au plus (« 5,6 », mais « 6 »). Une valeur abîmée s'écrit telle quelle.
+const uneDecimaleAuPlus = (v) => (Number.isFinite(v) ? v.toFixed(1).replace('.', ',').replace(/,0$/, '') : String(v));
+// Journée : « Bureau · nuit moyen · humeur 5,6 · contact oui · … », chaque valeur à sa couleur
+// (aussi les puces d'un jour dans l'Historique). `humeur` : l'humeur du jour quand l'appelant l'a
+// posée (analyse/humeur-jour.js), sinon celle du soir.
 const JOUR = [
   ['lieu', 'lieu', (v, c) => libelle(c, v)],
   ['sommeilRessenti', 'sommeil', (v, c) => `nuit ${minusculeInitiale(libelle(c, v))}`],
-  ['humeur', 'humeur', (v) => `humeur ${v}`],
+  ['humeur', 'humeur', (v) => `humeur ${uneDecimaleAuPlus(v)}`],
   ['contactHumain', 'contact', (v) => `contact ${ouiNon(v)}`],
   ['sportMouvement', 'sport', (v) => `sport ${ouiNon(v)}`],
   ['explosions', 'expl', (v) => `explosions ${v}`],

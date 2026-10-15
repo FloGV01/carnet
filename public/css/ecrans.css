@@ -462,6 +462,8 @@
 .ma-semaine .repli { margin: 0; }
 .selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
 .g-moyenne { stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+/* v6 : du plus bas au plus haut des relevés d'un jour, sous le point de l'humeur du jour */
+.g-trait { stroke: var(--c); stroke-width: 2; stroke-linecap: round; opacity: .7; }
 .g-autre { fill: var(--surface); stroke: var(--c); stroke-width: 1.6; }
 .g-choix { fill: var(--surface-2); }
 .g-energie-1 { fill: var(--c); opacity: .3; }

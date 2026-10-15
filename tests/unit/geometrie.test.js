@@ -22,6 +22,24 @@ test('frise par jour : y(10) au bord haut, colonne vide sans rien, trait de moye
   assert.ok(!JSON.stringify(g).includes('NaN'));
 });
 
+test('v6 · frise par jour : un trait du plus bas au plus haut, seulement là où il y a un écart', () => {
+  const colonnes = [
+    jour('2026-10-01', { humeur: 5.5, humeurMin: 3, humeurMax: 8, aDonnee: true }),
+    jour('2026-10-02', { humeur: 6, humeurMin: null, humeurMax: null, aDonnee: true }),
+    jour('2026-10-03'),
+    jour('2026-10-04', { humeur: 5, humeurMin: 5, humeurMax: 5, aDonnee: true }),
+  ];
+  const g = geometrieFrise({ pas: 'jour', colonnes });
+  assert.equal(g.traits.length, 1, 'ni le soir, ni un jour vide, ni des relevés tous égaux');
+  const [t] = g.traits;
+  assert.equal(t.x, g.points[0].x);
+  const y = (v) => Math.round((DIM_FRISE.haut + ((10 - v) / 9) * (DIM_FRISE.basHumeur - DIM_FRISE.haut)) * 10) / 10;
+  assert.deepEqual(t, { x: g.points[0].x, y1: y(8), y2: y(3) });
+  assert.ok(t.y1 < g.points[0].y && g.points[0].y < t.y2, 'le point est sur le trait');
+  assert.deepEqual(geometrieFrise({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', humeur: 5, humeurMin: 2, humeurMax: 9, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: true }] }).traits, [],
+    'par semaine ou par mois, la moyenne seule');
+});
+
 test('frise par semaine : nuits empilées, anneau si fragile, explosions à l\'échelle', () => {
   const colonnes = [
     { cle: '2026-09-21', humeur: 5, fragile: true, nuits: { mal: 1, moyen: 0, bien: 2 }, explosions: 3, autres: 0, aDonnee: true },
@@ -42,4 +60,12 @@ test('ta journée : 12 créneaux de 4 h à 4 h, points sans segments, énergie e
   assert.equal(g.energies.length, 3);
   assert.ok(g.zones[1].x > g.zones[0].x, 'minuit après la soirée');
   assert.ok(!('segments' in g));
+});
+
+test('v6 · Mes jours, détail d\'une colonne : l\'humeur, avec une décimale, et son écart', async () => {
+  const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
+  const lib = (id) => id;
+  assert.deepEqual(detailColonne('jour', { humeur: 17 / 3, humeurMin: 3, humeurMax: 8, entree: {} }, lib), ['humeur 5,7 (de 3 à 8)']);
+  assert.deepEqual(detailColonne('jour', { humeur: 6, humeurMin: null, humeurMax: null, entree: {} }, lib), ['humeur 6']);
+  assert.deepEqual(detailColonne('semaine', { humeur: 5.64, fragile: false }, lib), ['humeur 5,6 en moyenne']);
 });

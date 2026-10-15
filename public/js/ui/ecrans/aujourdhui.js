@@ -16,6 +16,7 @@ import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Rubrique } from '../composants/rubrique.js';
 import { phraseResume } from '../../domain/phrase.js';
+import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { normaliserJournee, champsAffiches } from '../../domain/journee.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { PastillesMultiples } from '../composants/multiples.js';
@@ -126,10 +127,11 @@ export function Aujourdhui({ date: dateRoute }) {
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
-    const [episodes, symptomes, items, rdvs, avecMemo] = await Promise.all([
+    const [episodes, symptomes, items, rdvs, avecMemo, humeurs] = await Promise.all([
       repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.parents(),
+      repo.humeurs.parJour(date, date),
     ]);
-    return { episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo };
+    return { episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo, humeurs };
   }, [date]);
 
   const aller = (cible) => {
@@ -162,7 +164,11 @@ export function Aujourdhui({ date: dateRoute }) {
 
   const carte = carteLibelles(items);
   const nExplosions = evenements ? evenements.episodes.filter(estExplosion).length : 0;
-  const phrase = phraseResume('jour', entree, carte, { nExplosions });
+  // Humeur du jour (v6) : le résumé dit la moyenne des humeurs du moment du jour, sinon l'humeur du
+  // soir. Les champs, eux, gardent l'entrée du soir telle quelle. Pendant un changement de jour, les
+  // relevés encore chargés sont ceux de l'autre jour : seule l'entrée de ce jour-ci compte.
+  const duJour = avecHumeurDuJour([entree], evenements ? evenements.humeurs : []).find((j) => j.date === date);
+  const phrase = phraseResume('jour', duJour, carte, { nExplosions });
   const resume = phrase.map((x) => x.texte).join('');
   const replie = fini && date === aujourdhui && !vide;
   const visibles = champsAffiches(journee, entree);

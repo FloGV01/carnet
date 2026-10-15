@@ -5,7 +5,7 @@ import { classements } from './classements.js';
 import { bonnesJournees } from './bonnes-journees.js';
 import { sommeilHumeur } from './sommeil.js';
 import { ressemblance } from './ressemblance.js';
-import { journalAvecExplosions } from '../domain/explosions.js';
+import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { addDays } from '../domain/dates.js';
 import { profilJournee } from './moments.js';
 import { tesMoments } from './avant-explosions.js';
@@ -20,13 +20,12 @@ export function analyze(data, ctx) {
   // Humeur du jour (v6, humeur-jour.js), avant tout le reste : dans chaque journal, `humeur` est la
   // moyenne des relevés du jour, sinon l'humeur du soir. Un jour qui n'a que des relevés y entre.
   const journal = avecHumeurDuJour(data.journal, data.humeurs || []).filter((j) => j.date <= aujourdhui);
-  const soirs = new Set(data.journal.map((j) => j.date));
   const episodes = data.episodes || [];
   // Explosions (v4, domain/explosions.js) : la règle ne change que la valeur des explosions.
   // Les jours qui n'ont qu'un épisode d'explosion n'entrent que dans les comptes d'explosions
   // (fenêtres, semaines) ; calendrier, bonnes journées, sommeil et signal gardent le journal.
   // Un jour de relevés seuls n'a pas de saisie du soir : il ne vaut jamais 0 explosion.
-  const regle = { zeroDepuis, jourNote: (j) => soirs.has(j.date) };
+  const regle = { zeroDepuis, jourNote: saisieDuSoir(data.journal) };
   const brut = { ...data, journal };
   const d = { ...data, journal: journalAvecExplosions(journal, episodes, regle).filter((j) => j.date <= aujourdhui) };
   const pourSignal = { ...data, journal: journalAvecExplosions(journal, episodes, { ...regle, ajouterJours: false }) };

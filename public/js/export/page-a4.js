@@ -36,6 +36,7 @@ export function mettreEnPage(m) {
 
   texte(m.entete, { taille: 12, gras: true });
   texte(m.sousTitre, { taille: 8, couleur: 'secondaire' });
+  texte(m.noteHumeur, { taille: 8, couleur: 'secondaire' });
 
   titreSection('Indicateurs');
   const lNom = 54;

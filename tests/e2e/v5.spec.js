@@ -34,16 +34,19 @@ test('Moment difficile sans plan : une ligne neutre, aucun conseil', async ({ pa
 
 test('« J\'ai fini pour ce soir » : la page se replie sur la phrase du jour, Rouvrir la saisie', async ({ page }) => {
   await expect(page.getByRole('button', { name: "J'ai fini pour ce soir" })).toHaveCount(0);
-  await toucher(page, 'Humeur', '6');
+  // v6 : la phrase dit l'humeur du jour, moyenne des humeurs du moment (5 et 8).
+  await page.evaluate(async () => {
+    for (const [heure, humeur] of [['10:00', 5], ['18:00', 8]]) await window.__carnet.repo.humeurs.creer({ date: '2026-10-06', heure, humeur, energie: null });
+  });
   await toucher(page, 'Lieu', 'Bureau');
   await page.getByRole('button', { name: "J'ai fini pour ce soir" }).click();
   const soiree = page.getByRole('region', { name: 'Ta soirée' });
-  await expect(soiree).toContainText('Bureau · humeur 6');
-  await expect(groupe(page, 'Humeur')).toHaveCount(0);
+  await expect(soiree).toContainText('Bureau · humeur 6,5');
+  await expect(groupe(page, 'Lieu')).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('region', { name: 'Ta soirée' })).toBeVisible();
   await page.getByRole('button', { name: 'Rouvrir la saisie' }).click();
-  await expect(groupe(page, 'Humeur').getByRole('button', { name: 'Humeur 6' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(groupe(page, 'Lieu').getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'true');
   // Rien n'est compté ni enregistré : la base ne garde que la saisie.
   const meta = await page.evaluate(() => window.__carnet.repo.meta.lire('fini'));
   expect(meta).toBeNull();

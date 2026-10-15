@@ -50,3 +50,16 @@ test('repliAffiche : masqué mais portant des valeurs ce jour-là, il reste affi
   assert.equal(repliAffiche(masque, { pese: null, recharge: ['recharge:calme'] }), true);
   assert.equal(repliAffiche(masque, { pese: ['pese:bruit'], recharge: ['recharge:calme'] }), true);
 });
+
+test('v6 : le champ Humeur du soir est masqué par défaut, avec le compteur d\'explosions', () => {
+  assert.deepEqual(JOURNEE_DEFAUT.masques, ['explosions', 'humeur']);
+  const j = normaliserJournee(null);
+  assert.ok(!champsVisibles(j).includes('humeur'));
+  assert.ok(!champsAffiches(j, { date: '2026-10-14', lieu: 'lieu:bureau' }).includes('humeur'));
+});
+
+test('v6 : un jour passé noté le soir garde son champ Humeur', () => {
+  const j = normaliserJournee(null);
+  assert.ok(champsAffiches(j, { date: '2026-09-30', humeur: 6 }).includes('humeur'));
+  assert.ok(!champsAffiches(j, { date: '2026-09-30', humeur: null }).includes('humeur'));
+});

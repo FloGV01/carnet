@@ -37,7 +37,7 @@ test('avec 180 jours synthétiques : constats, Mes jours, tableau, sans déborde
   await expect(page.getByText('Ce sont des observations sur tes données, pas des causes.')).toBeVisible();
   // v5 : Mes jours, par jour sur 30 jours, par semaine sur 3 mois et sur 180 jours (Tout : par mois
   // seulement au-delà de 26 semaines, voir v5-analyse.test.js).
-  await expect(page.getByRole('img', { name: /^Mes jours\. Humeur du soir entre/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Mes jours\. Humeur entre/ })).toBeVisible();
   await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: /3 mois/ }).click();
   await expect(page.getByRole('img', { name: /^Mes jours\. Moyenne par semaine entre/ })).toBeVisible();
   await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: /Tout/ }).click();

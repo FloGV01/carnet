@@ -12,8 +12,9 @@ export const HEURE_MAX = 23;
 // dans l'ordre : sa clé n'est acceptée que dans les masques.
 const MASQUE_PESE_RECHARGE = 'peseRecharge';
 const MASQUABLES = new Set([...CHAMPS_JOURNEE, MASQUE_PESE_RECHARGE]);
-// Le compteur du soir est masqué par défaut : les épisodes « Explosion » font foi.
-export const JOURNEE_DEFAUT = Object.freeze({ ordre: CHAMPS_JOURNEE, masques: ['explosions'], heuresMoment: [] });
+// Masqués par défaut : le compteur du soir (les épisodes « Explosion » font foi) et, depuis la v6,
+// l'Humeur du soir (l'humeur du jour est la moyenne des humeurs du moment). Réaffichables.
+export const JOURNEE_DEFAUT = Object.freeze({ ordre: CHAMPS_JOURNEE, masques: ['explosions', 'humeur'], heuresMoment: [] });
 
 export function normaliserJournee(brut) {
   const b = brut && typeof brut === 'object' ? brut : {};

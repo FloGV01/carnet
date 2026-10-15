@@ -36,18 +36,18 @@ const reperes = [
 const ATTENDU = `SUIVI APP · 7 jours du lun 21/09 au dim 27/09/2026
 
 JOURS
-lun 21/09 · Bureau · nuit Mal (2 réveils) · humeur 5 · contact oui · sport non · explosions 1
+lun 21/09 · Bureau · nuit Mal (2 réveils) · humeur du soir 5 · contact oui · sport non · explosions 1
   + café avec Léo, point projet qui s'est bien passé
   note : open space très bruyant l'après-midi
-mar 22/09 · Télétravail · nuit Moyen · humeur 6 · contact non · sport oui · explosions 0
+mar 22/09 · Télétravail · nuit Moyen · humeur du soir 6 · contact non · sport oui · explosions 0
   + marche de 40 min au soleil
-mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur 7 · contact oui · sport non · explosions 0
+mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur du soir 7 · contact oui · sport non · explosions 0
   + bloc 7h-9h tenu, déjeuner avec l'équipe
-ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur 4 · contact non · sport non · explosions 1
+ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur du soir 4 · contact non · sport non · explosions 1
   + j'ai tenu aujourd'hui
-sam 26/09 · Congé / repos · nuit Moyen · humeur 7 · contact oui · sport oui · explosions 0
+sam 26/09 · Congé / repos · nuit Moyen · humeur du soir 7 · contact oui · sport oui · explosions 0
   + repas en famille
-dim 27/09 · Congé / repos · nuit Bien · humeur 8 · contact oui · sport oui · explosions 0
+dim 27/09 · Congé / repos · nuit Bien · humeur du soir 8 · contact oui · sport oui · explosions 0
   + vélo, bonne soirée
 
 ÉPISODES (2)
@@ -89,5 +89,39 @@ test('repères : insuffisant et phrases en voix « je »', () => {
   const analyse = { bonnesJournees: { statut: 'insuffisant', constats: [] }, sommeil: { meme: { statut: 'insuffisant' }, lendemain: { statut: 'insuffisant' } } };
   assert.deepEqual(reperesPsy(analyse, carte), ['Bonnes journées : pas encore assez de données.', 'Sommeil et humeur : pas encore assez de données pour le dire.']);
   const avecTendance = { ...analyse, tendances: { statut: 'ok', constat: { sens: 'bas', moyR: 4.6, moyB: 6.1 } } };
-  assert.equal(reperesPsy(avecTendance, carte)[2], "Tendances (4 dernières semaines contre les 8 d'avant) : mon humeur du soir est plus basse : 4,6 en moyenne, contre 6,1.");
+  assert.equal(reperesPsy(avecTendance, carte)[2], "Tendances (4 dernières semaines contre les 8 d'avant) : mon humeur est plus basse : 4,6 en moyenne, contre 6,1.");
+});
+
+// ---------- v6 : humeur du jour ----------
+
+const releve = (date, heure, humeur, o = {}) => ({ id: `${date}-${heure}`, date, heure, humeur, energie: null, ...o });
+
+test('v6 : un jour avec relevés dit « humeur 5,6 (de 3 à 8) », jamais son humeur du soir', () => {
+  const j = [J('2026-09-26', { humeur: 9, lieu: 'lieu:bureau' }), J('2026-09-27', { humeur: 6 })];
+  const humeurs = [releve('2026-09-26', '09:00', 3), releve('2026-09-26', '12:00', 5), releve('2026-09-26', '15:00', 6, { vers: true }),
+    releve('2026-09-26', '19:00', 6), releve('2026-09-27', '01:00', 8)];
+  const t = exportPsy({ journal: j, episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte });
+  assert.ok(t.includes('sam 26/09 · Bureau · humeur 5,6 (de 3 à 8)\n'), t);
+  assert.ok(t.includes('dim 27/09 · humeur du soir 6\n'), t);
+  assert.ok(!t.includes('humeur 9') && !t.includes('soir 9'), 'le soir n\'est jamais mêlé aux relevés');
+  // La liste des relevés ne change pas.
+  assert.ok(t.includes('  humeur du moment : 09:00 3 · 12:00 5 · '), t);
+  assert.ok(t.includes('cette semaine : humeur moyenne 5,8 (de 3 à 8)'), t);
+});
+
+test('v6 : un seul relevé, ou des relevés égaux, sans « de … à … » ; un jour qui n\'a que des relevés a sa ligne', () => {
+  const humeurs = [releve('2026-09-25', '10:00', 7), releve('2026-09-26', '10:00', 4), releve('2026-09-26', '18:00', 4)];
+  const t = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte });
+  assert.ok(t.includes('ven 25/09 · humeur 7\n'), t);
+  assert.ok(t.includes('sam 26/09 · humeur 4\n'), t);
+});
+
+test('v6 : un jour qui n\'a que des relevés ne compte jamais « 0 explosion »', () => {
+  const humeurs = [releve('2026-09-26', '10:00', 4), releve('2026-09-26', '18:00', 6)];
+  const t = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte, zeroDepuis: '2026-01-01' });
+  assert.ok(!/explosion/.test(t), t);
+  assert.ok(t.includes('cette semaine : humeur moyenne 5 (de 4 à 6)'), t);
+  // Un jour noté le soir garde son 0, lui.
+  const avecSoir = exportPsy({ journal: [J('2026-09-27', { lieu: 'lieu:bureau' })], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte, zeroDepuis: '2026-01-01' });
+  assert.ok(avecSoir.includes('humeur moyenne 5 (de 4 à 6) · explosions 0 ·'), avecSoir);
 });

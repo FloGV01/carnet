@@ -11,7 +11,7 @@ import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, POURQUOI_TENDANCE, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
+import { nombre, uneDecimale, ligneHumeurSemaine, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, POURQUOI_TENDANCE, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { JOURS, jourSemaine } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
@@ -79,7 +79,7 @@ function MaSemaine({ f, frise7, positifs, sommeil, carte, sansPhrase }) {
   const phrase = !sansPhrase && phraseSommeilSemaine(sommeil, carte);
   const joursExpl = frise7.colonnes.filter((c) => c.explosions > 0).map((c) => JOURS[jourSemaine(c.cle)]);
   const lignes = [];
-  if (f.humeur.n) lignes.push(`Humeur du soir : ${f.humeur.min === f.humeur.max ? f.humeur.min : `de ${f.humeur.min} à ${f.humeur.max}`}, ${uneDecimale(f.humeur.moyenne)} en moyenne${f.humeur.fragile ? ' (peu de valeurs)' : ''}`);
+  if (f.humeur.n) lignes.push(ligneHumeurSemaine(f.humeur));
   if (f.nuits.n) lignes.push(`Nuits ${lib('sommeil:mal')} : ${f.nuits.mal}`);
   const expl = f.explosions.n ? `Explosions : ${f.explosions.total}${joursExpl.length && joursExpl.length <= 2 ? ` (${joursExpl.join(', ')})` : ''}` : null;
   const eps = f.episodes.nombre ? `Épisodes : ${f.episodes.nombre}` : null;
@@ -201,7 +201,7 @@ function Tuiles({ f, carte }) {
   const h = f.humeur;
   const r = f.nuits.reveils;
   return html`<div class="tuiles">
-    <${Tuile} rubrique="humeur" titre="Humeur moyenne" valeur=${h.n ? uneDecimale(h.moyenne) : '·'} detail=${h.n ? `de ${h.min} à ${h.max}` : ''} fragile=${h.n > 0 && h.fragile} />
+    <${Tuile} rubrique="humeur" titre="Humeur moyenne" valeur=${h.n ? uneDecimale(h.moyenne) : '·'} detail=${h.n ? `de ${nombre(h.minReleve)} à ${nombre(h.maxReleve)}` : ''} fragile=${h.n > 0 && h.fragile} />
     <${Tuile} rubrique="humeur" titre="Journées à 7 ou plus" valeur=${h.n ? String(h.haut) : '·'} />
     <${Tuile} rubrique="humeur" titre="Journées à 4 ou moins" valeur=${h.n ? String(h.bas) : '·'} />
     <${Tuile} rubrique="expl" titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />

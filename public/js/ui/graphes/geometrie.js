@@ -10,8 +10,9 @@ export function geometrieHaltere(p1, p2, largeur = 306, marge = 8) {
 }
 
 // ---------- v5 · Mes jours (frise) ----------
-// Trois rangées sur le même axe : humeur du soir (1 à 10, filets à 4 et 7), nuit, explosions et
+// Trois rangées sur le même axe : humeur du jour (1 à 10, filets à 4 et 7), nuit, explosions et
 // autres épisodes. Une colonne vide ne dessine rien. Pure : rendue en SVG et sur canvas (PDF).
+// Par jour (v6), un trait vertical va du plus bas au plus haut des relevés : une journée mêlée se voit.
 export const DIM_FRISE = { largeur: 326, gauche: 22, droite: 6, haut: 8, basHumeur: 104, nuitY: 114, nuitH: 12, explY: 132, explH: 20, axeY: 168, hauteur: 172 };
 const CLASSE_NUIT = { 'sommeil:mal': 'sommeil-1', 'sommeil:moyen': 'sommeil-2', 'sommeil:bien': 'sommeil-3' };
 const MOIS_AXE = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -24,6 +25,7 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
   const y = (v) => r1(d.haut + ((10 - v) / 9) * (d.basHumeur - d.haut));
   const larg = r1(Math.min(10, Math.max(2, l * 0.6)));
   const points = [];
+  const traits = [];
   const moyenne = [];
   const nuits = [];
   const encoches = [];
@@ -34,6 +36,7 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
   colonnes.forEach((c, i) => {
     const x = r1(centre(i));
     if (c.humeur != null) points.push({ x, y: y(c.humeur), plein: pas === 'jour' || !c.fragile, cle: c.cle });
+    if (pas === 'jour' && c.humeurMin != null && c.humeurMax > c.humeurMin) traits.push({ x, y1: y(c.humeurMax), y2: y(c.humeurMin) });
     // Jour : trait de la moyenne des 7 jours ; semaine et mois : segments entre colonnes voisines.
     const v = pas === 'jour' ? c.moyenne7 : c.humeur;
     if (v != null) { const p = { x, y: y(v) }; if (prec && prec.i === i - 1) moyenne.push({ x1: prec.x, y1: prec.y, x2: p.x, y2: p.y }); prec = { ...p, i }; }
@@ -64,7 +67,7 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
   };
   const etiquettes = colonnes.map((c, i) => ({ x: r1(centre(i)), texte: texte(c), visible: (n - 1 - i) % pasEtiquette === 0 })).filter((e) => e.visible);
   return {
-    points, moyenne, nuits, encoches, autres, zones, etiquettes, largeurColonne: r1(l),
+    points, traits, moyenne, nuits, encoches, autres, zones, etiquettes, largeurColonne: r1(l),
     filets: [4, 7].map((v) => ({ v, y: y(v) })), graduations: [1, 4, 7, 10].map((v) => ({ v, y: y(v) })),
   };
 }

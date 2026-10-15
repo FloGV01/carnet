@@ -9,16 +9,16 @@ export const REGLES = {
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
   moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
-  tendances: "La règle : comparer l'humeur du soir des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
+  tendances: "La règle : comparer l'humeur des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 export const PIED_TENDANCES = 'Une observation sur tes chiffres, pas une explication.';
-export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les soirs où une humeur est notée.";
+export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les jours où une humeur est notée.";
 export const SANS_ECART = "Pas d'écart net entre ces 4 semaines et les 8 d'avant.";
 
 // Tendances (v5) : même tournure dans les deux sens, sans adjectif ni jugement.
 export function phraseTendance(c, voix = 'tu', { court = false } = {}) {
-  const qui = { tu: 'ton humeur du soir est', je: 'mon humeur du soir est', neutre: "l'humeur du soir est" }[voix];
+  const qui = { tu: 'ton humeur est', je: 'mon humeur est', neutre: "l'humeur est" }[voix];
   const sens = c.sens === 'haut' ? 'plus haute' : 'plus basse';
   if (court) return `${qui} ${sens} : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
   return `Ces 4 dernières semaines, ${qui} ${sens} que sur les 8 semaines d'avant : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
@@ -35,6 +35,11 @@ export function nombre(x, decimales = 1) {
   if (x == null || Number.isNaN(x)) return '·';
   return x.toFixed(decimales).replace('.', ',').replace(/,0$/, '');
 }
+// Humeur du jour (v6) : « de 3 à 8 » porte sur les valeurs notées (relevés, ou soir d'un jour sans
+// relevé : minReleve, maxReleve), la moyenne sur les humeurs du jour.
+const etendueHumeur = (h) => (h.minReleve === h.maxReleve ? nombre(h.minReleve) : `de ${nombre(h.minReleve)} à ${nombre(h.maxReleve)}`);
+// Ma semaine : « Humeur : de 3 à 8, 5,6 en moyenne ».
+export const ligneHumeurSemaine = (h) => `Humeur : ${etendueHumeur(h)}, ${uneDecimale(h.moyenne)} en moyenne${h.fragile ? ' (peu de valeurs)' : ''}`;
 // Une valeur 5 vaut « 5 ou plus » : la moyenne n'est alors qu'une borne basse.
 export const moyenneReveils = (r) => (r && r.n ? `${r.plafonne ? 'au moins ' : ''}${nombre(r.moyenne)}` : '·');
 
