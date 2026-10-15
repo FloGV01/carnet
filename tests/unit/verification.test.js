@@ -142,7 +142,10 @@ test('le résultat ne contient que des nombres, jamais un libellé ni un texte',
   for (const n of nombres) assert.ok(Number.isInteger(n) && n >= 0, String(n));
   const json = JSON.stringify(res);
   assert.ok(!json.includes('SECRET'));
-  assert.ok(!/[a-z]{4,}/i.test(json.replace(/"(parTable|memosSansFiche|fichesIllisibles|journal|episodes|symptomes|traitements|rdv|humeurs|listes|meta|audios)"/g, '')), json);
+  // Seules les clés du résultat et les noms de tables de l'instantané ont le droit d'être du texte.
+  const cles = ['parTable', 'memosSansFiche', 'fichesIllisibles', ...Object.keys(instantane)];
+  const restant = cles.reduce((j, cle) => j.split(`"${cle}"`).join(''), json);
+  assert.ok(!/[a-z]{4,}/i.test(restant), json);
 });
 
 test('l\'instantané lu n\'est pas modifié', async () => {
