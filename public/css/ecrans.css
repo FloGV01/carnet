@@ -121,6 +121,27 @@
 .questions-grandes .case-question { width: 28px; height: 28px; border-radius: 8px; border-width: 2px; }
 .questions-grandes .case-question svg { width: 16px; height: 16px; }
 .carte-questions { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-bouton); padding: 0 4px 0 12px; }
+.voir-question { flex: none; padding: 0 4px 0 12px; font-weight: 600; }
+
+/* « La dernière fois » (v6) : le compte rendu et la prochaine étape tels qu'écrits, « Reprendre » à côté de chaque question. */
+.bloc-lecture { display: flex; flex-direction: column; gap: 2px; }
+.texte-lecture { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.4; }
+.question-reprendre { gap: var(--esp-2); }
+.question-reprendre .texte-question { flex: 1; min-width: 0; padding: 6px 0; line-height: 1.35; overflow-wrap: anywhere; }
+.question-reprendre .btn-lien { flex: none; font-weight: 600; }
+.question-reprendre .btn-lien[disabled] { color: var(--text-2); font-weight: 400; }
+
+/* Feuilles « Voir » (lecture seule) et « En parler au rendez-vous » (v6) */
+.quand-lecture { margin: 0; color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
+.recap-lecture { margin: 0; display: flex; flex-direction: column; }
+.ligne-lecture { display: flex; gap: var(--esp-3); padding: 10px 0; border-top: 1px solid var(--hairline); line-height: 1.35; }
+.ligne-lecture dt { width: 6.4em; flex: none; color: var(--text-2); font-size: var(--t-sous); }
+.ligne-lecture dd { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.ligne-lecture.texte { flex-direction: column; gap: 2px; }
+.ligne-lecture.texte dt { width: auto; }
+.ligne-lecture.texte dd { white-space: pre-wrap; }
+.choix-rdv { display: flex; flex-direction: column; gap: var(--esp-2); }
+.en-parler { align-self: flex-start; }
 .champ-une-ligne { min-height: 46px; }
 .ajout-question .champ-une-ligne { padding-right: 46px; }
 

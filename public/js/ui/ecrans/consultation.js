@@ -1,17 +1,20 @@
 // « En consultation » : le rendez-vous en plein écran, à garder sous les yeux pendant l'échange.
-// Chiffres des 30 derniers jours, questions en grand, compte rendu, prochaine étape, mémo.
+// « La dernière fois » en haut, chiffres des 30 derniers jours, questions en grand (« Voir » ouvre la fiche liée en
+// lecture seule), compte rendu, prochaine étape, mémo.
 // Tout est enregistré au fil des touchers : Fermer et Terminer ferment simplement.
-import { html } from '../lib.js';
+import { html, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
 import { ReplisNotes } from '../composants/notes.js';
-import { QuestionsACocher, AjoutQuestion } from '../composants/questions.js';
+import { QuestionsACocher, AjoutQuestion, DerniereFois } from '../composants/questions.js';
+import { FeuilleElement } from '../composants/feuille-element.js';
 import { repo } from '../../donnees.js';
 import { etatApp } from '../../store.js';
 import { useDonnees } from '../hooks.js';
 import { useFiche } from '../fiche.js';
 import { addDays } from '../../domain/dates.js';
+import { derniereFois, reprendreQuestion } from '../../domain/soins.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { indicateurs } from '../../analyse/fenetres.js';
 import { journalAvecExplosions, saisieDuSoir } from '../../domain/explosions.js';
@@ -27,18 +30,22 @@ function revenir() {
 
 export function Consultation({ id: idRoute }) {
   const { fiche, id, ecrire, assurer } = useFiche({ store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({}) });
+  const [voir, setVoir] = useState(null);
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, traitement, zeroDepuis, humeurs] = await Promise.all([
+    const [journal, episodes, symptomes, items, traitement, zeroDepuis, humeurs, rdvs, traitements] = await Promise.all([
       repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), lireTraitementActuel(), repo.meta.lire('explosionsDepuis'),
-      repo.humeurs.tous(),
+      repo.humeurs.tous(), repo.rdv.tous(), repo.traitements.tous(),
     ]);
     const au = repo.aujourdhui();
     // Humeur du jour (v6) ; un jour qui n'a que des relevés ne vaut jamais « 0 explosion ».
     const duJour = journalAvecExplosions(avecHumeurDuJour(journal, humeurs), episodes, { zeroDepuis, jourNote: saisieDuSoir(journal) });
-    return { ind: indicateurs({ journal: duJour, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement };
+    // Les fiches qui existent encore : « Voir » disparaît quand la fiche liée a été supprimée.
+    const existantes = new Set([['episodes', episodes], ['symptomes', symptomes], ['traitements', traitements]]
+      .flatMap(([store, liste]) => liste.map((e) => `${store}:${e.id}`)));
+    return { ind: indicateurs({ journal: duJour, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement, rdvs, existantes, aujourdhui: au };
   }, []);
   if (!fiche || !donnees) return html`<div class="parcours"></div>`;
-  const { ind, carte, traitement } = donnees;
+  const { ind, carte, traitement, rdvs, existantes, aujourdhui } = donnees;
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const cellules = [
@@ -54,6 +61,7 @@ export function Consultation({ id: idRoute }) {
         <h1 class="titre-consultation">${nomRdv(fiche, carte)}</h1>
         <span class="quand-consultation">${quandRdv(fiche)}</span>
       </div>
+      <${DerniereFois} derniere=${derniereFois(fiche, rdvs, aujourdhui)} questions=${questions} surReprendre=${(q) => majQuestions(reprendreQuestion(fiche, q))} />
       <section class="carte chiffres-consultation" aria-label="30 derniers jours">
         <span class="legende-chiffres">30 derniers jours</span>
         <div class="grille-chiffres">${cellules.map((c) => html`<div class="cellule-chiffre">
@@ -64,7 +72,8 @@ export function Consultation({ id: idRoute }) {
         <h2 class="titre-carte">Traitement actuel</h2><${TableauTraitement} traitement=${traitement} /></section>`}
       <section class="bloc-consultation">
         <h2 class="titre-carte">Mes questions</h2>
-        <${QuestionsACocher} questions=${questions} surChanger=${majQuestions} grand=${true} />
+        <${QuestionsACocher} questions=${questions} surChanger=${majQuestions} grand=${true}
+          voir=${(q) => (q.lien && existantes.has(`${q.lien.store}:${q.lien.id}`) ? (bouton) => setVoir({ lien: q.lien, bouton }) : null)} />
         <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />
       </section>
       <${ReplisNotes} />
@@ -74,5 +83,6 @@ export function Consultation({ id: idRoute }) {
         cleBrouillon=${id ? `carnet:brouillon:${id}:prochaineEtape` : null} surEnregistrer=${(v) => ecrire({ prochaineEtape: v })} />
       <${MemoVocal} parentStore="rdv" parentId=${id} assurerParent=${assurer} />
     </div>
+    ${voir && html`<${FeuilleElement} lien=${voir.lien} surFermer=${() => setVoir(null)} retourFocus=${{ current: voir.bouton }} />`}
   </${CadreParcours}>`;
 }

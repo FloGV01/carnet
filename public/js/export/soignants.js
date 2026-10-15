@@ -3,7 +3,7 @@
 import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
-import { trierRdv } from '../domain/soins.js';
+import { trierRdv, rdvReference } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
@@ -41,9 +41,9 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   const journal = avecHumeurDuJour(data.journal, data.humeurs || []);
   const premier = premiereDate({ ...data, journal }, aujourdhui);
   data = { ...data, journal: journalAvecExplosions(journal, data.episodes || [], { zeroDepuis, jourNote: saisieDuSoir(data.journal) }) };
-  const { aVenir, passes } = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui);
-  const dernierRdv = passes[0] || null;
-  const prochain = aVenir[0] || null;
+  // Le dernier rendez-vous : la même référence que « La dernière fois » (domain/soins.js), comptée depuis aujourd'hui.
+  const dernierRdv = rdvReference(rdvs, { professionnel, avant: aujourdhui });
+  const prochain = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui).aVenir[0] || null;
   const colonnes = [
     { titre: '7 j', f: indicateurs(data, addDays(aujourdhui, -6), aujourdhui) },
     { titre: '30 j', f: indicateurs(data, addDays(aujourdhui, -29), aujourdhui) },

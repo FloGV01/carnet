@@ -93,9 +93,9 @@ export function formaterJourAbrege(cle) {
   const [, m, j] = cle.split('-').map(Number);
   return `${JOURS_COURTS[jourSemaine(cle)]}. ${j} ${MOIS_COURTS[m - 1]}`;
 }
-export function formaterJourCourt(cle) {
-  const [, m, j] = cle.split('-').map(Number);
-  return `${JOURS_COURTS[jourSemaine(cle)]} ${pad(j)}/${pad(m)}`;
+// « lun 21/09 » ; sans zéro : « sam 3/10 ».
+export function formaterJourCourt(cle, { zero = true } = {}) {
+  return `${JOURS_COURTS[jourSemaine(cle)]} ${formaterJourMois(cle, { zero })}`;
 }
 export function formaterDateLongue(cle) {
   const [a, m, j] = cle.split('-').map(Number);
@@ -105,10 +105,15 @@ export function formaterDateNumerique(cle) {
   const [a, m, j] = cle.split('-').map(Number);
   return `${pad(j)}/${pad(m)}/${a}`;
 }
-// « 12/10 »
-export function formaterJourMois(cle) {
+// « 12/10 », « 03/10 » ; sans zéro : « 3/10 ».
+export function formaterJourMois(cle, { zero = true } = {}) {
   const [, m, j] = cle.split('-').map(Number);
-  return `${pad(j)}/${pad(m)}`;
+  return zero ? `${pad(j)}/${pad(m)}` : `${j}/${m}`;
+}
+// « 18 h », « 9 h 05 »
+export function formaterHeure(heure) {
+  const [h, m] = heure.split(':').map(Number);
+  return `${h} h${m ? ` ${pad(m)}` : ''}`;
 }
 export function formaterSemaine(lundi) {
   const [, m, j] = lundi.split('-').map(Number);

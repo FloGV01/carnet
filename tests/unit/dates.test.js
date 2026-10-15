@@ -48,6 +48,12 @@ test('formats français', () => {
   assert.equal(D.formaterJourComplet('2026-10-01'), 'jeudi 1er octobre');
   assert.equal(D.formaterJourAbrege('2026-09-16'), 'mer. 16 sept.');
   assert.equal(D.formaterJourCourt('2026-09-21'), 'lun 21/09');
+  assert.equal(D.formaterJourCourt('2026-10-03', { zero: false }), 'sam 3/10');
+  assert.equal(D.formaterJourMois('2026-09-10'), '10/09');
+  assert.equal(D.formaterJourMois('2026-10-02', { zero: false }), '2/10');
+  assert.equal(D.formaterHeure('18:00'), '18 h');
+  assert.equal(D.formaterHeure('09:05'), '9 h 05');
+  assert.equal(D.formaterHeure('00:30'), '0 h 30');
   assert.equal(D.formaterDateLongue('2026-10-01'), '1er octobre 2026');
   assert.equal(D.formaterSemaine('2026-09-21'), 'Semaine du 21 septembre');
   assert.equal(D.formaterDuree(24400), '0:24');

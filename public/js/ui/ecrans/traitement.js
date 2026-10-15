@@ -6,9 +6,11 @@ import { Segmente } from '../composants/segmente.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
+import { EnParler } from '../composants/en-parler.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Rubrique, LibelleChamp } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
+import { carteLibelles } from '../../domain/libelles.js';
 import { useFiche } from '../fiche.js';
 import { options } from './aujourdhui.js';
 
@@ -49,6 +51,7 @@ export function Traitement({ id: idRoute }) {
     <div class="champ-fiche"><${ChampTexte} key=${`no-${idRoute}`} id="tr-notes" etiquette="Notes" icone="note" valeur=${fiche.notes} lignes=${2}
       cleBrouillon=${id ? `carnet:brouillon:${id}:notes` : null} surEnregistrer=${(v) => ecrire({ notes: v })} /></div>
     <${MemoVocal} parentStore="traitements" parentId=${id} assurerParent=${assurer} />
+    <${EnParler} store="traitements" element=${{ ...fiche, id }} carte=${carteLibelles(items)} />
     ${id && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer cette fiche</button>`}
     ${confirmer && html`<${Confirmation} titre="Supprimer cette fiche ?" texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"
       surAnnuler=${() => setConfirmer(false)} surConfirmer=${() => { setConfirmer(false); supprimer('Fiche'); }} />`}

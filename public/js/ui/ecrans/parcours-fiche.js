@@ -16,6 +16,7 @@ import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Icones } from '../icones.js';
 import { FeuillePlan } from '../composants/mon-plan.js';
+import { EnParler } from '../composants/en-parler.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -29,7 +30,7 @@ export function libelleDate(date, maintenant) {
 }
 
 // Résumé d'un Après coup sur la ligne du récapitulatif (le contenu, jamais un état « fait »).
-function resumeApresCoup(a, carte) {
+export function resumeApresCoup(a, carte) {
   if (!a) return null;
   return [(a.types || []).map((id) => libelle(carte, id)).join(', '), a.repereA != null && `remarqué à ${a.repereA}/10`,
     (a.siJe || a.alorsJe) && `si ${a.siJe || '…'}, alors ${a.alorsJe || '…'}`].filter(Boolean).join(' · ') || null;
@@ -205,6 +206,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="ligne-libelle"><span class="titre-apres-coup">Après coup · TCC</span>
           <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.'}</span></span>
         ${Icones.chevron({ trait: 2 })}</a>`}
+      <${EnParler} store=${store} element=${{ ...fiche, id: idRef.current }} carte=${carte} />
       ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
       ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
         texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"

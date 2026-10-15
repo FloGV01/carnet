@@ -10,7 +10,7 @@ export const ETAPES_EPISODE = [
   { champ: 'dessous', liste: 'dessous', question: 'Et en dessous, il y avait peut-être…', recap: 'En dessous' },
   { champ: 'reaction', liste: 'reaction', question: 'Ta réaction', recap: 'Réaction' },
 ];
-const TEXTES = [
+export const TEXTES_EPISODE = [
   { champ: 'situation', etiquette: 'Situation', icone: 'note', placeholder: "Ce qui s'est passé…" },
   { champ: 'ceQuiAAide', etiquette: 'Ce qui a aidé', icone: 'positifs', placeholder: 'Une personne, un geste…' },
 ];
@@ -19,5 +19,5 @@ const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="epi
 
 export function Episode({ id }) {
   return html`<${ParcoursFiche} store="episodes" route="episode" titre="Épisode" nomFiche="Épisode" etapes=${ETAPES_EPISODE}
-    textes=${TEXTES} avecHeure=${true} id=${id} memo=${memo} teinte="ep" avecPlan=${true} />`;
+    textes=${TEXTES_EPISODE} avecHeure=${true} id=${id} memo=${memo} teinte="ep" avecPlan=${true} />`;
 }

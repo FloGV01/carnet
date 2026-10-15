@@ -18,6 +18,7 @@ import { Pastilles } from '../composants/pastilles.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { ChampTexte } from '../composants/texte.js';
 import { afficherToast } from '../composants/toast.js';
+import { EnParler } from '../composants/en-parler.js';
 import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
 
@@ -133,6 +134,7 @@ export function ApresCoup({ id }) {
           </button></li>`;
         })}</ul>
         <p class="note-carte-interne">Ce sont tes mots. Tu peux les relire avec ton soignant, ou les envoyer à PSY avec l'export.</p>
+        <${EnParler} store="episodes" element=${ep} carte=${carte} />
       </div>
     </${CadreParcours}>`;
   }
