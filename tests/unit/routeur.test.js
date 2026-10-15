@@ -8,6 +8,7 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/episode/nouveau').params.id, 'nouveau');
   assert.equal(lireRoute('#/episode/ep_abc-12').params.id, 'ep_abc-12');
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
+  assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
 
@@ -35,6 +36,8 @@ test('onglet actif', () => {
   assert.equal(ongletDe('apres-coup-liste'), 'aujourdhui');
   assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-journee'), 'reglages');
+  assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
+  assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');

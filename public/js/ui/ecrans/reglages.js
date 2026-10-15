@@ -90,6 +90,7 @@ export function Reglages() {
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
       <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
       <${LigneLien} href="#/mon-plan" icone="bulle" titre="Mon plan" />
+      <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
     </ul>
 
     <h2 class="libelle-section">Analyse</h2>
