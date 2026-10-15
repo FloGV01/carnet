@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { RACINE, lister, rel, lire, chainesJs } from '../aides/fichiers.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
-import { SEED_V2_AJOUTS } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V2_AJOUTS, SEED_V4_AJOUTS } from '../../public/js/domain/vocabulaire.js';
+import { LISTES } from '../../public/js/domain/listes-def.js';
 
 // Les libellés des listes (vocabulaire clinique) sont exemptés : ils ne se lissent pas.
 const EXEMPTES = new Set(['public/js/domain/vocabulaire.js']);
@@ -24,6 +25,14 @@ test('aucune formulation interdite dans l\'app', () => {
 // Les listes v4 ont été écrites pour l'app (pas reprises du Numbers) : elles suivent la règle.
 test('aucune formulation interdite dans les listes v4', () => {
   const fautes = Object.values(SEED_V2_AJOUTS).flat().map(([, libelle]) => [libelle, trouverInterdits(libelle)]).filter(([, t]) => t.length);
+  assert.deepEqual(fautes, []);
+});
+
+// Les listes de la v6 (SEED_V4_AJOUTS) et leurs titres : mêmes règles.
+test('aucune formulation interdite dans les listes de la v6', () => {
+  const textes = [...Object.values(SEED_V4_AJOUTS).flat().map(([, libelle]) => libelle), ...['pese', 'recharge', 'activiteMoment'].map((n) => LISTES[n].libelle)];
+  assert.equal(textes.length, 27);
+  const fautes = textes.map((t) => [t, trouverInterdits(t)]).filter(([, f]) => f.length);
   assert.deepEqual(fautes, []);
 });
 

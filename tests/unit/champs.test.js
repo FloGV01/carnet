@@ -101,3 +101,104 @@ test('v5 : versContacts transforme le détail v4 en une ligne, sans rien invente
   assert.equal(resumeContacts([{ avec: ['contactAvec:famille', 'contactAvec:amis'], effet: 'contactEffet:couteux' }, { avec: ['contactAvec:amis'], effet: null }], lib),
     'Famille, Amis (Coûteux) · Amis');
 });
+
+// ---- v6 ----
+
+test('v6 : journal ce qui a pesé et rechargé, références de leur liste, doublons retirés', () => {
+  const { valeur, erreurs } = normaliser('journal', { date: '2026-10-15', pese: ['pese:bruit', 'pese:bruit', 'pese:trajets'], recharge: ['recharge:calme'] });
+  assert.deepEqual(erreurs, []);
+  assert.deepEqual(valeur.pese, ['pese:bruit', 'pese:trajets']);
+  assert.deepEqual(valeur.recharge, ['recharge:calme']);
+  assert.deepEqual(referencesDe('journal', valeur).sort(), ['pese:bruit', 'pese:trajets', 'recharge:calme']);
+  const vide = normaliser('journal', { date: '2026-10-15', pese: [], recharge: null }).valeur;
+  assert.equal(vide.pese, null);
+  assert.equal(vide.recharge, null);
+  assert.ok(normaliser('journal', { date: '2026-10-15', pese: ['recharge:calme'] }).erreurs.length > 0, 'une référence d\'une autre liste est refusée');
+  assert.equal(estVide('journal', valeur), false);
+});
+
+test('v6 : vers vaut true ou null, false devient null', () => {
+  const base = { id: 'h1', date: '2026-10-15', heure: '14:00', humeur: 5 };
+  assert.equal(normaliser('humeurs', { ...base, vers: true }).valeur.vers, true);
+  const faux = normaliser('humeurs', { ...base, vers: false });
+  assert.deepEqual(faux.erreurs, []);
+  assert.equal(faux.valeur.vers, null);
+  assert.equal(normaliser('humeurs', { ...base, vers: null }).valeur.vers, null);
+  assert.equal(normaliser('humeurs', base).valeur.vers, null);
+  assert.ok(normaliser('humeurs', { ...base, vers: 'oui' }).erreurs.length > 0);
+  assert.ok(normaliser('humeurs', { ...base, vers: 1 }).erreurs.length > 0);
+});
+
+test('v6 : ce que je faisais, références activiteMoment', () => {
+  const { valeur, erreurs } = normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', humeur: 5, faisais: ['activiteMoment:travail', 'activiteMoment:trajet', 'activiteMoment:travail'] });
+  assert.deepEqual(erreurs, []);
+  assert.deepEqual(valeur.faisais, ['activiteMoment:travail', 'activiteMoment:trajet']);
+  assert.deepEqual(referencesDe('humeurs', valeur), ['activiteMoment:travail', 'activiteMoment:trajet']);
+  assert.equal(normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', faisais: [] }).valeur.faisais, null);
+  assert.ok(normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', faisais: ['pese:bruit'] }).erreurs.length > 0);
+});
+
+test('v6 : vers et faisais sont du contexte, seuls ils ne gardent pas un relevé', () => {
+  const rel = (extra) => normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', ...extra }).valeur;
+  assert.equal(rel({ vers: true }).vers, true, 'le champ existe');
+  assert.equal(estVide('humeurs', rel({ vers: true })), true, 'un relevé « vers » seul est vide');
+  assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), true, 'des activités seules ne gardent pas le relevé');
+  assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:repos'] })), true);
+  assert.equal(estVide('humeurs', rel({ vers: true, humeur: 4 })), false);
+  assert.equal(estVide('humeurs', rel({ vers: true, energie: 'energie:basse' })), false);
+  assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'], humeur: 7 })), false);
+});
+
+test('v6 : une note a pour clés id, date et heure, et pour seul champ saisi le texte', () => {
+  const { valeur, erreurs, avertissements } = normaliser('notes', { id: 'no1', date: '2026-10-15', heure: '21:05', texte: '  rappeler la pharmacie\nmardi  ' });
+  assert.deepEqual(erreurs, []);
+  assert.deepEqual(avertissements, []);
+  assert.deepEqual(valeur, { id: 'no1', date: '2026-10-15', heure: '21:05', texte: 'rappeler la pharmacie\nmardi' });
+  assert.equal(estVide('notes', valeur), false);
+  assert.equal(normaliser('notes', { id: 'no1', date: '2026-10-15', heure: '21:05', texte: '   ' }).valeur.texte, null);
+  assert.equal(estVide('notes', normaliser('notes', { id: 'no1', date: '2026-10-15', heure: '21:05' }).valeur), true);
+  for (const cle of ['id', 'date', 'heure']) {
+    const brut = { id: 'no1', date: '2026-10-15', heure: '21:05', texte: 'x' };
+    delete brut[cle];
+    assert.ok(normaliser('notes', brut).erreurs.length > 0, `${cle} manquant`);
+  }
+  assert.ok(normaliser('notes', { id: 'no1', date: '2026-10-15', heure: '25:00', texte: 'x' }).erreurs.length > 0);
+  assert.equal(normaliser('notes', { id: 'no1', date: '2026-10-15', heure: '21:05', texte: 'x', bizarre: 1 }).avertissements.length, 1);
+  assert.deepEqual(referencesDe('notes', valeur), []);
+});
+
+test('v6 : le lien d\'une question est gardé pour episodes, symptomes et traitements', () => {
+  for (const store of ['episodes', 'symptomes', 'traitements']) {
+    const { valeur, erreurs, avertissements } = normaliser('rdv', { id: 'r1', questions: [{ texte: 'Parler de ça', abordee: true, lien: { store, id: 'ep_1' } }] });
+    assert.deepEqual(erreurs, []);
+    assert.deepEqual(avertissements, []);
+    assert.deepEqual(valeur.questions, [{ texte: 'Parler de ça', abordee: true, lien: { store, id: 'ep_1' } }]);
+  }
+  // Sans lien, la question garde sa forme d'avant : pas de clé « lien ».
+  const sans = normaliser('rdv', { id: 'r1', questions: [{ texte: 'Dose ?' }, { texte: 'Sommeil ?', lien: null }] });
+  assert.deepEqual(sans.valeur.questions, [{ texte: 'Dose ?', abordee: false }, { texte: 'Sommeil ?', abordee: false }]);
+  assert.deepEqual(sans.avertissements, []);
+  // Le lien est reconstruit : une clé en trop n'est pas conservée.
+  const extra = normaliser('rdv', { id: 'r1', questions: [{ texte: 'Q', lien: { store: 'episodes', id: 'ep_1', autre: 1 } }] });
+  assert.deepEqual(extra.valeur.questions, [{ texte: 'Q', abordee: false, lien: { store: 'episodes', id: 'ep_1' } }]);
+});
+
+test('v6 : un lien invalide est retiré avec un avertissement, la question et le rendez-vous sont gardés', () => {
+  const invalides = [
+    { store: 'journal', id: 'x' }, { store: 'rdv', id: 'x' }, { store: 'humeurs', id: 'x' }, { store: 'notes', id: 'x' },
+    { store: 'episodes', id: '' }, { store: 'episodes', id: '   ' }, { store: 'episodes', id: 12 }, { store: 'episodes' },
+    { id: 'ep_1' }, 'ep_1', 7, true, [], {},
+  ];
+  for (const lien of invalides) {
+    const r = normaliser('rdv', { id: 'r1', date: '2026-10-20', questions: [{ texte: 'Dose ?', abordee: true, lien }, { texte: 'Autre' }] });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(lien));
+    assert.deepEqual(r.valeur.questions, [{ texte: 'Dose ?', abordee: true }, { texte: 'Autre', abordee: false }], JSON.stringify(lien));
+    assert.equal(r.avertissements.length, 1, JSON.stringify(lien));
+    assert.match(r.avertissements[0], /questions\[0\]\.lien/);
+  }
+});
+
+test('v6 : le lien d\'une question passe aussi par valider, sans jamais rejeter le rendez-vous', () => {
+  const v = valider('rdv', { id: 'r1', questions: [{ texte: 'Q', lien: { store: 'journal', id: 'x' } }] });
+  assert.deepEqual(v.questions, [{ texte: 'Q', abordee: false }]);
+});
