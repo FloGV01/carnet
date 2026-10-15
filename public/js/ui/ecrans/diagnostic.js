@@ -10,6 +10,9 @@ import { peutPartager, partager, variantesTexte, premierPartageable } from '../.
 import { copier } from '../../plateforme/presse-papier.js';
 import { formatsSupportes, microDisponible, ouvrirMicro, creerEnregistreur, assembler } from '../../plateforme/micro.js';
 import { creerZip } from '../../db/zip.js';
+import { lireTout } from '../../db/sauvegarde.js';
+import { verifierDonnees } from '../../domain/verification.js';
+import { repo } from '../../donnees.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
 
 const enc = new TextEncoder();
@@ -33,6 +36,7 @@ export function Diagnostic() {
   const [fichiers, setFichiers] = useState({});
   const [journal, setJournal] = useState([]);
   const [micro, setMicro] = useState({ etat: 'repos' });
+  const [verif, setVerif] = useState({ etat: 'repos' });
   const zoneDicter = useRef(null);
   const noter = (test, resultat) => setJournal((j) => [...j, `${test} : ${resultat}`]);
 
@@ -69,6 +73,16 @@ export function Diagnostic() {
   const copierTest = () => copier('Carnet : test du presse-papier').then((ok) => noter('Presse-papier', ok ? 'copié' : 'échec'));
   const imprimer = () => { try { window.print(); noter('Impression', 'appel fait (vérifier à l\'écran)'); } catch (e) { noter('Impression', `échec (${e && e.message})`); } };
   const persister = () => demanderPersistance().then((r) => noter('Persistance', String(r)));
+  // Des nombres seulement : rien de ce que l'utilisateur a écrit n'est affiché ni copié.
+  const verifier = async () => {
+    setVerif({ etat: 'lecture' });
+    try {
+      setVerif({ etat: 'fini', ...verifierDonnees(await lireTout(repo)) });
+    } catch (e) {
+      setVerif({ etat: 'repos' });
+      noter('Vérification des données', `échec (${(e && e.code) || (e && e.name) || 'erreur'})`);
+    }
+  };
   const dicter = () => { const z = zoneDicter.current; if (z) { z.focus(); noter('Dicter', 'focus demandé (le clavier est-il ouvert ?)'); } };
 
   const enregistrer = async () => {
@@ -97,6 +111,7 @@ export function Diagnostic() {
     `canShare JSON : ${fichiers.jsonVariantes ? fichiers.jsonVariantes.map((f) => `${f.type}=${peutPartager(f)}`).join(', ') : '·'}`,
     `canShare ZIP : ${fichiers.zip ? peutPartager(fichiers.zip) : '·'} · PDF : ${fichiers.pdf ? peutPartager(fichiers.pdf) : '·'}`,
     `Formats micro : ${JSON.stringify(infos.formats)} · API micro : ${infos.microApi} · webkitSpeechRecognition exposé : ${infos.webSpeech}`,
+    ...(verif.etat === 'fini' ? [`Données : ${Object.entries(verif.parTable).map(([t, n]) => `${t} ${n}`).join(' · ')} · mémos sans fiche ${verif.memosSansFiche} · fiches illisibles ${verif.fichesIllisibles}`] : []),
     `UA : ${infos.ua}`, '', ...journal,
   ].join('\n');
 
@@ -112,6 +127,21 @@ export function Diagnostic() {
         <dt>Formats micro</dt><dd>${infos.formats ? Object.entries(infos.formats).map(([k, v]) => `${k} ${v ? 'oui' : 'non'}`).join(' · ') : '·'}</dd>
         <dt>canShare</dt><dd>JSON ${fichiers.json ? 'oui' : 'non'} · ZIP ${fichiers.zip && peutPartager(fichiers.zip) ? 'oui' : 'non'} · PDF ${fichiers.pdf && peutPartager(fichiers.pdf) ? 'oui' : 'non'}</dd>
       </dl>
+    </section>
+    <section class="section">
+      <h2>Mes données</h2>
+      <div class="actions">
+        <button type="button" class="btn" disabled=${verif.etat === 'lecture'} onClick=${verifier}>Vérifier mes données</button>
+      </div>
+      <div class="resultat" aria-live="polite">
+        ${verif.etat === 'fini' && html`<section class="carte">
+          <dl>
+            ${Object.entries(verif.parTable).map(([table, n]) => html`<dt>${table}</dt><dd>${n}</dd>`)}
+            <dt>Mémos sans fiche</dt><dd>${verif.memosSansFiche}</dd>
+            <dt>Fiches illisibles</dt><dd>${verif.fichesIllisibles}</dd>
+          </dl>
+        </section>`}
+      </div>
     </section>
     <section class="section">
       <h2>Tests</h2>

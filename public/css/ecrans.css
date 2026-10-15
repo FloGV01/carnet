@@ -14,6 +14,7 @@
 .diag dt { color: var(--text-2); }
 .diag dd { margin: 0; word-break: break-word; }
 .diag .actions { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+.diag .resultat { margin-top: var(--esp-3); }
 .diag pre { white-space: pre-wrap; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }
 
 /* Historique */
