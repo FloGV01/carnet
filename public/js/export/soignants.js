@@ -9,6 +9,7 @@ import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.j
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { frise } from '../analyse/frise.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
+import { reperesTraitement } from '../analyse/reperes.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -76,13 +77,20 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   // Sans les relevés : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni les colonnes ni aDonnee.
   const f = frise({ journal: data.journal, episodes: data.episodes }, duFrise, aujourdhui);
 
-  const debut90 = addDays(aujourdhui, -89);
-  const lignesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
-    .sort((a, b) => `${b.date}${b.createdAt || ''}`.localeCompare(`${a.date}${a.createdAt || ''}`)).slice(0, 4)
-    .map((t) => [formaterJourCourt(t.date), couper(t.changement, 80), t.effetRessenti && lib(t.effetRessenti),
-      (t.effetsSecondaires || []).map(lib).join(', ')].filter(Boolean).join(' · '));
-
   const actuel = normaliserTraitement(traitementActuel).lignes.slice(0, 4).map((l) => couper(`${l.nom || '·'} : ${resumeLigne(l) || '·'}`, 70));
+  // Les changements datés des 90 derniers jours : 4 lignes au plus, 3 sous un traitement actuel.
+  const debut90 = addDays(aujourdhui, -89);
+  const fichesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
+    .sort((a, b) => `${b.date}${b.createdAt || ''}`.localeCompare(`${a.date}${a.createdAt || ''}`)).slice(0, actuel.length ? 3 : 4);
+  // Repères (v6, analyse/reperes.js) : seuls les changements qui ont une ligne ci-dessous sont numérotés et
+  // tracés sur la frise, et leur ligne reprend le numéro. Aucun trait sans légende.
+  const reperesFrise = reperesTraitement(traitements, f.colonnes, { lignes: fichesTraitement.map((t) => t.id) });
+  const symbole = new Map(reperesFrise.legende.map((r) => [r.id, r.symbole]));
+  const lignesTraitement = fichesTraitement.map((t) => {
+    const ligne = [formaterJourCourt(t.date), couper(t.changement, 80), t.effetRessenti && lib(t.effetRessenti),
+      (t.effetsSecondaires || []).map(lib).join(', ')].filter(Boolean).join(' · ');
+    return symbole.has(t.id) ? `${symbole.get(t.id)} ${ligne}` : ligne;
+  });
   return {
     entete: `Suivi quotidien${prenom ? ` · ${prenom}` : ''} · édité le ${formaterDateNumerique(aujourdhui)}${premier ? ` · données depuis le ${formaterDateNumerique(premier)}` : ''}`,
     sousTitre: 'Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.',
@@ -90,12 +98,12 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
-    // Sans la clé energieBasse (toujours nulle ici) : le modèle reste celui d'avant la v6.
-    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c) },
+    // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran.
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c), reperes: reperesFrise.traits },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     reperes,
-    traitement: actuel.length ? lignesTraitement.slice(0, 3) : lignesTraitement,
+    traitement: lignesTraitement,
     traitementActuel: actuel,
     rdv: {
       professionnel: professionnel ? lib(professionnel) : null,

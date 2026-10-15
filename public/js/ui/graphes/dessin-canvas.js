@@ -1,7 +1,7 @@
 // Dessine les opérations de la page A4 (mm) sur un canvas de 1654 × 2339 px (200 ppp).
 // Toujours en thème clair : la page doit rester lisible imprimée en noir et blanc.
 import { A4 } from '../../export/page-a4.js';
-import { DIM_FRISE, geometrieFrise } from './geometrie.js';
+import { DIM_FRISE, TAILLE_REPERE, geometrieFrise } from './geometrie.js';
 
 export const TAILLE_PX = { largeur: 1654, hauteur: 2339 };
 const PT = 0.3528;
@@ -10,16 +10,25 @@ const POLICE = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 // Frise « Mes jours » (semaines ou mois) : même géométrie qu'à l'écran, mise à l'échelle du cadre.
 // Échelle uniforme : la géométrie est calculée sur une largeur qui suit le rapport du cadre
-// (sinon points et textes seraient écrasés).
+// (sinon points et textes seraient écrasés). La bande des repères de traitement (v6) ajoute de la
+// hauteur : un second calcul en tient compte, et l'échelle ne dépasse jamais le cadre.
 function dessinerFrise(ctx, op, k) {
-  const d = { ...DIM_FRISE, largeur: (DIM_FRISE.hauteur * op.largeur) / op.hauteur };
-  const geo = geometrieFrise(op.frise, d);
-  const echelle = (op.hauteur * k) / d.hauteur;
+  const cadre = (hauteur) => ({ ...DIM_FRISE, largeur: (hauteur * op.largeur) / op.hauteur });
+  let geo = geometrieFrise(op.frise, cadre(DIM_FRISE.hauteur));
+  if (geo.dim.hauteur !== DIM_FRISE.hauteur) geo = geometrieFrise(op.frise, cadre(geo.dim.hauteur));
+  const d = geo.dim;
+  const echelle = Math.min((op.hauteur * k) / d.hauteur, (op.largeur * k) / d.largeur);
   ctx.save();
   ctx.translate(op.x * k, op.y * k);
   ctx.scale(echelle, echelle);
   ctx.strokeStyle = COULEURS.filet; ctx.lineWidth = 1;
   for (const f of geo.filets) { ctx.beginPath(); ctx.moveTo(d.gauche, f.y); ctx.lineTo(d.largeur - d.droite, f.y); ctx.stroke(); }
+  // Repères de traitement (v6) : un trait fin sous les données, son numéro en haut.
+  ctx.strokeStyle = COULEURS.trait; ctx.lineWidth = 0.8;
+  for (const r of geo.reperes) { ctx.beginPath(); ctx.moveTo(r.x, r.y1); ctx.lineTo(r.x, r.y2); ctx.stroke(); }
+  ctx.fillStyle = COULEURS.texte; ctx.font = `600 ${TAILLE_REPERE}px ${POLICE}`; ctx.textAlign = 'center';
+  for (const r of geo.reperes) ctx.fillText(r.etiquette, r.texteX, r.texteY);
+  ctx.textAlign = 'start';
   ctx.fillStyle = COULEURS.secondaire; ctx.font = `8px ${POLICE}`;
   for (const t of geo.graduations) ctx.fillText(String(t.v), 4, t.y + 3);
   ctx.strokeStyle = COULEURS.accent; ctx.lineWidth = 1.6;

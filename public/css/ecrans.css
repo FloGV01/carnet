@@ -479,6 +479,10 @@
 .legende-frise { flex-wrap: wrap; gap: 4px 12px; }
 .legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
 .legende-frise svg { width: 14px; height: 12px; }
+/* v6 · repères de traitement : un trait fin à la date, son numéro en haut, la légende sous le graphique */
+.g-changement { stroke: var(--text-2); stroke-width: 1; }
+.g-changement-num { font-size: 11px; font-weight: 600; fill: var(--text-2); } /* TAILLE_REPERE, geometrie.js */
+.legende-reperes { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: var(--t-note); line-height: 1.4; color: var(--text-2); overflow-wrap: anywhere; }
 .detail-colonne { font-size: var(--t-sous); line-height: 1.45; text-wrap: pretty; padding: 8px 10px; border-radius: var(--r-moyen); background: var(--surface-2); }
 .liste-barres { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
 .ligne-barre { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); gap: 2px 10px; align-items: center; }

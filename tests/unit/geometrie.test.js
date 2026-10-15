@@ -404,3 +404,66 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   // Pas de libellé de liste modifiable (« basse ») dans une règle : il peut être renommé dans Réglages › Listes.
   assert.doesNotMatch(R.energieAvant, /«/);
 });
+
+// ---------- v6 · repères de traitement (spec §3) ----------
+
+const colonnesJour = (n, extra = () => ({})) => Array.from({ length: n }, (_, i) => jour(`2026-09-${String(i + 1).padStart(2, '0')}`, { humeur: 10, moyenne7: 10, nuit: 'sommeil:bien', explosions: 1, autres: 1, aDonnee: true, ...extra(i) }));
+const repere = (i, etiquette, cle = `c${i}`) => ({ i, cle, numeros: [], etiquette });
+
+test('v6 · repères : sans repère, la frise ne change pas d\'un trait', () => {
+  const colonnes = colonnesJour(7);
+  for (const d of [DIM_FRISE, DIM_FRISE_ENERGIE]) {
+    const sans = geometrieFrise({ pas: 'jour', colonnes }, d);
+    assert.deepEqual(geometrieFrise({ pas: 'jour', colonnes, reperes: [] }, d), sans);
+    assert.deepEqual(sans.reperes, []);
+    assert.equal(sans.dim, d, 'les dimensions reçues');
+  }
+});
+
+test('v6 · repères : un trait fin par repère au centre de sa colonne, son numéro dans une bande en haut, tout dans le cadre', () => {
+  const colonnes = colonnesJour(7, (i) => ({ energieBasse: i % 2 === 0 }));
+  for (const base of [DIM_FRISE, DIM_FRISE_ENERGIE]) {
+    const sans = geometrieFrise({ pas: 'jour', colonnes }, base);
+    const g = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(1, '①'), repere(6, '②–③')] }, base);
+    const d = g.dim;
+    const bande = d.hauteur - base.hauteur;
+    assert.ok(bande > 0, 'une bande s\'ajoute');
+    // Toutes les rangées descendent d'autant ; la largeur ne change pas.
+    for (const k of ['haut', 'basHumeur', 'nuitY', 'explY', 'axeY', ...(base.energieY != null ? ['energieY'] : [])]) assert.equal(d[k], base[k] + bande, k);
+    assert.equal(d.largeur, base.largeur);
+    assert.equal(g.points[0].y, d.haut, 'y(10) au nouveau bord haut');
+    assert.deepEqual(g.points.map((p) => p.y - bande), sans.points.map((p) => p.y));
+    assert.deepEqual(g.zones.map((z) => z.x), sans.zones.map((z) => z.x));
+    assert.ok(g.zones.length && g.zones.every((z) => z.cle), 'les zones restent');
+    // Les traits : au centre de la colonne, du dessous du numéro jusqu'au-dessus de l'axe, sous toutes les rangées.
+    assert.deepEqual(g.reperes.map((r) => [r.cle, r.etiquette]), [['c1', '①'], ['c6', '②–③']]);
+    for (const r of g.reperes) {
+      const z = g.zones.find((zz) => zz.i === Number(r.cle.slice(1)));
+      assert.equal(r.x, Math.round((z.x + z.l / 2) * 10) / 10);
+      assert.ok(r.texteY < r.y1 && r.y1 < d.haut, 'le numéro en haut, au-dessus du trait et de l\'humeur');
+      assert.equal(r.y2, d.axeY - 10);
+      const bas = d.energieY != null ? d.energieY + d.energieH : d.explY + d.explH + 6;
+      assert.ok(r.y2 >= bas && r.y2 < d.axeY, 'le trait traverse toutes les rangées, sans toucher l\'axe');
+    }
+    assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+  }
+});
+
+test('v6 · repères : deux numéros trop proches passent sur un second rang ; un numéro au bord reste dans le cadre', () => {
+  const colonnes = colonnesJour(30);
+  const loin = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(3, '①'), repere(10, '②')] });
+  assert.deepEqual(loin.reperes.map((r) => r.rang), [0, 0]);
+  const proches = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(10, '①'), repere(11, '②'), repere(12, '③'), repere(29, '④–⑤')] });
+  assert.deepEqual(proches.reperes.map((r) => r.rang), [0, 1, 0, 0], 'le 11 descend, le 12 remonte');
+  assert.ok(proches.dim.hauteur > loin.dim.hauteur, 'un second rang, une bande plus haute');
+  assert.ok(proches.reperes[1].texteY > proches.reperes[0].texteY);
+  assert.ok(proches.reperes[1].texteY < proches.dim.haut);
+  const dernier = proches.reperes[3];
+  assert.ok(dernier.texteX < dernier.x, 'le numéro du bord droit est ramené dans le cadre, son trait reste à sa date');
+  assert.deepEqual(horsCadre(proches, proches.dim.largeur, proches.dim.hauteur), []);
+  // Par mois sur la largeur du PDF : de la place, un seul rang.
+  const mois = Array.from({ length: 12 }, (_, i) => ({ cle: `2026-${String(i + 1).padStart(2, '0')}`, humeur: 5, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: true }));
+  const pdf = geometrieFrise({ pas: 'mois', colonnes: mois, reperes: mois.map((c, i) => repere(i, '⑦–⑨', c.cle)) }, { ...DIM_FRISE, largeur: 888 });
+  assert.ok(pdf.reperes.every((r) => r.rang === 0));
+  assert.deepEqual(horsCadre(pdf, 888, pdf.dim.hauteur), []);
+});

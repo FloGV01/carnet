@@ -12,6 +12,7 @@ import { tesMoments } from './avant-explosions.js';
 import { frise } from './frise.js';
 import { tendances } from './tendances.js';
 import { avecHumeurDuJour } from './humeur-jour.js';
+import { reperesTraitement } from './reperes.js';
 
 export const FENETRES = ['7', '30', '90', 'tout'];
 
@@ -35,6 +36,7 @@ export function analyze(data, ctx) {
   const moments = {};
   const lesMoments = {};
   const frises = {};
+  const reperes = {};
   for (const f of FENETRES) {
     const [du, au] = bornesFenetre(f, aujourdhui, premier);
     fenetres[f] = indicateurs(d, du, au);
@@ -42,6 +44,8 @@ export function analyze(data, ctx) {
     moments[f] = profilJournee(data.humeurs || [], du, au);
     lesMoments[f] = tesMoments(episodes, du, au, items);
     frises[f] = frise(d, du, au);
+    // Repères de traitement (v6) : les changements notés, sur les colonnes de cette frise.
+    reperes[f] = reperesTraitement(data.traitements, frises[f].colonnes);
   }
   const deja = new Set(constatsAffiches);
   const bj = bonnesJournees(journal, aujourdhui, deja);
@@ -58,7 +62,7 @@ export function analyze(data, ctx) {
   const positifs = journal.filter((j) => j.date >= debut7 && j.pointsPositifs).sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 2).map((j) => ({ date: j.date, texte: j.pointsPositifs.length > 120 ? `${j.pointsPositifs.slice(0, 119)}…` : j.pointsPositifs }));
   return {
-    aujourdhui, premier, fenetres, semaine: { positifs }, classements: classes, moments, tesMoments: lesMoments, frise: frises, tendances: tend,
+    aujourdhui, premier, fenetres, semaine: { positifs }, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, tendances: tend,
     bonnesJournees: bj, sommeil, constatsAffiches: affiches,
     signal: ressemblance(pourSignal, { aujourdhui, items, actif: reglages.signal !== false }),
   };

@@ -4,6 +4,7 @@ import { modeleSoignants } from '../../public/js/export/soignants.js';
 import { mettreEnPage, A4, couperLignes } from '../../public/js/export/page-a4.js';
 import { analyze } from '../../public/js/analyse/index.js';
 import { frise } from '../../public/js/analyse/frise.js';
+import { numeroCercle } from '../../public/js/analyse/reperes.js';
 import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { generer } from '../fixtures/generateur.js';
@@ -148,4 +149,83 @@ test('v6 : un jour qui n\'a que des relevés ne compte jamais « 0 explosion »,
   // Un jour noté le soir, lui, vaut 0.
   const avecSoir = casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }], humeurs: [releve('2026-10-12', '10:00', 4)] });
   assert.equal(valeur7j(avecSoir, 'Explosions (jours avec)'), '0 (0)');
+});
+
+// ---------- v6 : repères de traitement (spec §3) ----------
+// Textes inventés : jamais un vrai médicament. Aujourd'hui le mercredi 14/10 : la frise va du lundi 27/07 au
+// 14/10, la section Traitement reprend les 90 derniers jours (depuis le 17/07), 4 lignes au plus, 3 avec un
+// traitement actuel.
+
+const fiche = (id, date, changement, extra = {}) => ({ id, date, changement, effetsSecondaires: [], effetRessenti: null, ...extra });
+const CERCLE = /^[①-⑳㉑-㉟㊱-㊿]/u;
+function casReperes(traitements, { actuel = false } = {}) {
+  const data = { journal: [{ date: '2026-10-01', humeur: 6 }], episodes: [], symptomes: [], traitements, humeurs: [] };
+  const aujourdhui = '2026-10-14';
+  const analyse = analyze(data, { aujourdhui, items });
+  const traitementActuel = actuel ? { depuis: '2026-09-01', lignes: [{ id: 'm0', nom: 'Médicament 0', doses: { matin: '½' } }] } : null;
+  return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: null, prenom: '', traitements, traitementActuel });
+}
+// Les numéros des traits de la frise, et ceux des lignes de la section Traitement.
+const numerosTraits = (m) => m.frise.reperes.flatMap((r) => r.numeros).map(numeroCercle);
+const numerosLignes = (m) => m.traitement.map((l) => (l.match(CERCLE) || [])[0]).filter(Boolean).reverse();
+
+const FICHES = [
+  fiche('g', '2026-10-14', 'retour à la dose initiale'),
+  fiche('a', '2026-10-13', 'passage à la dose du soir'),
+  fiche('b', '2026-10-12', null, { effetRessenti: 'effetRessenti:moins_bien' }), // des effets seulement : pas de repère
+  fiche('c', '2026-10-06', 'ajout d\'une prise le matin'),
+  fiche('f', '2026-08-10', 'essai d\'un horaire décalé'), // dans la frise, mais sans ligne : ni trait, ni numéro
+];
+
+test('v6 · repères : les lignes de la section Traitement reprennent leur numéro, et seules elles sont tracées', () => {
+  const m = casReperes(FICHES);
+  assert.deepEqual(m.traitement, [
+    '③ mer 14/10 · retour à la dose initiale',
+    '② mar 13/10 · passage à la dose du soir',
+    'lun 12/10 · Moins bien',
+    '① mar 06/10 · ajout d\'une prise le matin',
+  ]);
+  // Le 13 et le 14 sont dans la même semaine : un seul trait.
+  assert.deepEqual(m.frise.reperes.map((r) => [r.cle, r.etiquette]), [['2026-10-05', '①'], ['2026-10-12', '②–③']]);
+  // Avec un traitement actuel, 3 lignes : le 06/10 n'a plus de ligne, donc plus de trait, et la numérotation suit.
+  const avec = casReperes(FICHES, { actuel: true });
+  assert.deepEqual(avec.traitement, ['② mer 14/10 · retour à la dose initiale', '① mar 13/10 · passage à la dose du soir', 'lun 12/10 · Moins bien']);
+  assert.deepEqual(avec.frise.reperes.map((r) => r.etiquette), ['①–②']);
+});
+
+test('v6 · repères : aucun trait sans légende, aucune ligne numérotée sans trait', () => {
+  const cas2 = [
+    casReperes(FICHES), casReperes(FICHES, { actuel: true }),
+    // Une ligne d'avant la frise (le 20/07, dans les 90 jours) : sans numéro, et rien sur la frise.
+    casReperes([fiche('d', '2026-07-20', 'arrêt de la prise du midi'), fiche('b', '2026-10-12', null, { effetRessenti: 'effetRessenti:moins_bien' })]),
+    casReperes([]),
+  ];
+  for (const m of cas2) {
+    assert.deepEqual(numerosTraits(m), numerosLignes(m));
+    for (const r of m.frise.reperes) assert.ok(m.frise.colonnes[r.i] && m.frise.colonnes[r.i].cle === r.cle, 'le trait est dans une colonne de la frise');
+  }
+  assert.deepEqual(cas2[2].traitement, ['lun 12/10 · Moins bien', 'lun 20/07 · arrêt de la prise du midi']);
+  assert.deepEqual(cas2[2].frise.reperes, []);
+});
+
+test('v6 · repères : sur la page, la frise porte les traits et sa légende les annonce ; la page reste unique', () => {
+  const m = casReperes(FICHES);
+  const { ops, hauteur } = mettreEnPage(m);
+  const op = ops.find((o) => o.type === 'frise');
+  assert.deepEqual(op.frise.reperes.map((r) => r.etiquette), ['①', '②–③']);
+  const textes = ops.filter((o) => o.type === 'texte').map((o) => o.texte);
+  assert.match(textes.join(' '), /trait numéroté : changement de traitement/);
+  for (const ligne of m.traitement) assert.ok(textes.includes(ligne), ligne);
+  assert.ok(hauteur <= A4.hauteurMax);
+  // Sans repère, la légende n'en parle pas.
+  assert.doesNotMatch(mettreEnPage(casReperes([])).ops.filter((o) => o.type === 'texte').map((o) => o.texte).join(' '), /trait numéroté/);
+});
+
+test('v6 · repères : le cas extrême porte des traits et des lignes numérotées, et tient sur une seule page', () => {
+  const m = cas({ extreme: true });
+  assert.equal(m.traitement.length, 3);
+  assert.ok(m.traitement.every((l) => CERCLE.test(l)), 'les trois lignes sont numérotées');
+  assert.deepEqual(numerosTraits(m), numerosLignes(m));
+  const { hauteur } = mettreEnPage(m);
+  assert.ok(hauteur <= A4.hauteurMax, `hauteur ${hauteur.toFixed(1)} mm`);
 });

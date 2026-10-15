@@ -274,7 +274,7 @@ export function Analyse() {
     <${Tendances} t=${r.tendances} replie=${pourInfo} />
 
     <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
-    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
+    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
     ${r.moments[fenetre].statut === 'ok'
       ? html`<${TaJournee} key=${`journee-${fenetre}`} profil=${r.moments[fenetre]} carte=${carte} />`
       : r.moments.tout.statut === 'ok' && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.moments} /></section>`}

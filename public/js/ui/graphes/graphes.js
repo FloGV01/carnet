@@ -67,20 +67,27 @@ export function detailColonne(pas, c, lib) {
   return m;
 }
 
-export function MesJours({ frise: f, carte, aujourdhui }) {
+const SANS_REPERE = { traits: [], legende: [] };
+
+// reperes (v6, analyse/reperes.js) : les changements de traitement de la période, en traits numérotés.
+export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
-  // La rangée « énergie basse » n'existe que si un relevé d'énergie est noté sur la période.
-  const d = f.avecEnergie ? DIM_FRISE_ENERGIE : DIM_FRISE;
-  const g = geometrieFrise(f, d);
+  // La rangée « énergie basse » n'existe que si un relevé d'énergie est noté sur la période. Les repères
+  // ajoutent une bande en haut : les dimensions dessinées sont celles que rend la géométrie.
+  const g = geometrieFrise({ ...f, reperes: reperes.traits }, f.avecEnergie ? DIM_FRISE_ENERGIE : DIM_FRISE);
+  const d = g.dim;
   const humeurs = f.colonnes.map((c) => c.humeur).filter((h) => h != null);
   const unite = { jour: 'Humeur', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
   const resume = humeurs.length ? `${unite} entre ${nombre(Math.min(...humeurs))} et ${nombre(Math.max(...humeurs))}.` : '';
   const col = choix != null ? f.colonnes.find((c) => c.cle === choix) : null;
   const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
   const avec = f.colonnes.filter((c) => c.aDonnee);
+  // Sous le graphique comme sous le tableau : « ① 12/10 · changement : … ».
+  const legendeReperes = reperes.legende.length > 0 && html`<ul class="legende-reperes" aria-label="Changements de traitement">
+    ${reperes.legende.map((r) => html`<li>${r.texte}</li>`)}</ul>`;
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
-    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>`;
+    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
   const legende = html`<p class="legende-graphe legende-frise">
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'humeur' : 'moyenne'}</span>
     ${g.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>du plus bas au plus haut</span>`}
@@ -89,13 +96,15 @@ export function MesJours({ frise: f, carte, aujourdhui }) {
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-expl"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>explosion</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-ep"><circle class="g-autre" cx="6" cy="6" r="3" /></svg>autre épisode</span>
     ${f.avecEnergie && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>${f.pas === 'jour' ? 'énergie basse' : 'jours d\'énergie basse'}</span>`}
-  </p>`;
+  </p>${legendeReperes}`;
   const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}
     ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
   return html`<${Cadre} titre="Mes jours" rubrique="humeur" resume=${resume} tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Mes jours. ${resume} Touche une colonne pour son détail, ou « Voir en tableau ».`}>
     <${Axe} graduations=${g.graduations} filets=${g.filets} dim=${d} />
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${d.axeY - 10} rx="3" />`}
+    ${g.reperes.map((r) => html`<line class="g-changement" x1=${r.x} x2=${r.x} y1=${r.y1} y2=${r.y2} />
+      <text class="g-changement-num" x=${r.texteX} y=${r.texteY} text-anchor="middle">${r.etiquette}</text>`)}
     <g class="teinte-humeur">
       ${g.moyenne.map((s) => html`<line class=${f.pas === 'jour' ? 'g-moyenne' : 'g-ligne'} x1=${s.x1} y1=${s.y1} x2=${s.x2} y2=${s.y2} />`)}
       ${g.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}

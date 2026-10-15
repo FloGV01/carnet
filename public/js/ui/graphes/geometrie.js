@@ -16,16 +16,46 @@ export function geometrieHaltere(p1, p2, largeur = 306, marge = 8) {
 // DIM_FRISE est celle du PDF. L'écran ajoute, quand un relevé d'énergie est noté sur la période, la rangée
 // « énergie basse » (v6) sous les autres épisodes : DIM_FRISE_ENERGIE, la seule à avoir energieY. Sans
 // energieY, aucune marque d'énergie : la frise du PDF ne change pas.
+// Repères de traitement (v6, analyse/reperes.js) : un trait fin au centre de chaque colonne qui porte un
+// changement, son numéro (①, ①–②) en haut, dans une bande ajoutée au-dessus de l'humeur : toutes les rangées
+// descendent d'autant, et `dim` rend les dimensions ainsi décalées (celles du viewBox). Deux numéros trop
+// proches passent sur un second rang. Sans repère, `dim` est la dimension reçue et rien ne bouge.
 export const DIM_FRISE = { largeur: 326, gauche: 22, droite: 6, haut: 8, basHumeur: 104, nuitY: 114, nuitH: 12, explY: 132, explH: 20, axeY: 168, hauteur: 172 };
 export const DIM_FRISE_ENERGIE = { ...DIM_FRISE, energieY: 168, energieH: 12, axeY: 194, hauteur: 198 };
 const CLASSE_NUIT = { 'sommeil:mal': 'sommeil-1', 'sommeil:moyen': 'sommeil-2', 'sommeil:bien': 'sommeil-3' };
 const MOIS_AXE = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+// Taille des numéros (unités du graphique) : la même à l'écran (ecrans.css, .g-changement-num) et sur le PDF.
+export const TAILLE_REPERE = 11;
+const REPERE = { taille: TAILLE_REPERE, rang: 13, marge: 3, ecart: 2, rangsMax: 2 };
+const Y_FRISE = ['haut', 'basHumeur', 'nuitY', 'explY', 'energieY', 'axeY', 'hauteur'];
+const CERCLES = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]/u;
+// Largeur estimée d'un numéro : un chiffre cerclé fait environ un cadratin, le tiret et les chiffres moins.
+const largeurNumero = (t) => [...t].reduce((s, c) => s + (CERCLES.test(c) ? 1 : 0.6), 0) * REPERE.taille;
 
-export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
+// Les numéros, de gauche à droite : chacun sur le premier rang où il ne touche pas le précédent, ramené
+// dans le cadre au bord droit (son trait reste à sa date).
+function placerNumeros(reperes, centre, largeur) {
+  const fins = [];
+  return reperes.map((r) => {
+    const x = r1(centre(r.i));
+    const w = largeurNumero(r.etiquette);
+    const texteX = r1(Math.min(largeur - w / 2, Math.max(w / 2, x)));
+    let rang = fins.findIndex((fin) => texteX - w / 2 >= fin + REPERE.ecart);
+    if (rang < 0) rang = fins.length < REPERE.rangsMax ? fins.length : fins.indexOf(Math.min(...fins));
+    fins[rang] = texteX + w / 2;
+    return { cle: r.cle, etiquette: r.etiquette, x, texteX, rang };
+  });
+}
+
+export function geometrieFrise({ pas, colonnes, reperes = [] }, base = DIM_FRISE) {
   const n = Math.max(1, colonnes.length);
-  const largeurUtile = d.largeur - d.gauche - d.droite;
+  const largeurUtile = base.largeur - base.gauche - base.droite;
   const l = largeurUtile / n;
-  const centre = (i) => d.gauche + l * (i + 0.5);
+  const centre = (i) => base.gauche + l * (i + 0.5);
+  const numeros = placerNumeros(reperes, centre, base.largeur);
+  const rangs = numeros.length ? Math.max(...numeros.map((r) => r.rang)) + 1 : 0;
+  const bande = rangs ? rangs * REPERE.rang + REPERE.marge : 0;
+  const d = bande ? Object.fromEntries(Object.entries(base).map(([k, v]) => [k, Y_FRISE.includes(k) ? v + bande : v])) : base;
   const y = (v) => r1(d.haut + ((10 - v) / 9) * (d.basHumeur - d.haut));
   const larg = r1(Math.min(10, Math.max(2, l * 0.6)));
   const points = [];
@@ -81,9 +111,12 @@ export function geometrieFrise({ pas, colonnes }, d = DIM_FRISE) {
     return `${Number(c.cle.slice(8))}/${c.cle.slice(5, 7)}`;
   };
   const etiquettes = colonnes.map((c, i) => ({ x: r1(centre(i)), texte: texte(c), visible: (n - 1 - i) % pasEtiquette === 0 })).filter((e) => e.visible);
+  // Le trait part sous son numéro et descend jusqu'au-dessus de l'axe, à travers toutes les rangées.
+  const traitsReperes = numeros.map((r) => ({ ...r, texteY: (r.rang + 1) * REPERE.rang - 2, y1: (r.rang + 1) * REPERE.rang + 1, y2: d.axeY - 10 }));
   return {
     points, traits, moyenne, nuits, encoches, autres, energieBasse, zones, etiquettes, largeurColonne: r1(l),
     filets: [4, 7].map((v) => ({ v, y: y(v) })), graduations: [1, 4, 7, 10].map((v) => ({ v, y: y(v) })),
+    reperes: traitsReperes, dim: d,
   };
 }
 
