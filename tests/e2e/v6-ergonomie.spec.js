@@ -23,7 +23,13 @@ function luminance(couleur) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 const contraste = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-const styleDe = (loc) => loc.evaluate((e) => { const s = getComputedStyle(e); return { fond: s.backgroundColor, texte: s.color, graisse: s.fontWeight }; });
+// Les couleurs finales : un choix qu'on vient de toucher passe par un fondu (var(--duree)), lu à mi-chemin sur
+// une machine chargée. On attend la fin des transitions de l'élément et de ce qu'il contient.
+const styleDe = (loc) => loc.evaluate(async (e) => {
+  await Promise.all(e.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
+  const s = getComputedStyle(e);
+  return { fond: s.backgroundColor, texte: s.color, graisse: s.fontWeight };
+});
 // Couleur vue d'un texte posé à l'opacité `a` sur un fond plein : le mélange des deux, canal par canal.
 const melange = (texte, fond, a) => {
   const [t, f] = [texte, fond].map((c) => c.match(/[\d.]+/g).slice(0, 3).map(Number));
