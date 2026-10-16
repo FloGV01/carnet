@@ -3,11 +3,13 @@
 import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
-import { trierRdv } from '../domain/soins.js';
+import { trierRdv, rdvReference } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
-import { journalAvecExplosions } from '../domain/explosions.js';
+import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { frise } from '../analyse/frise.js';
+import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
+import { reperesTraitement } from '../analyse/reperes.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -16,7 +18,7 @@ function lignesIndicateurs(colonnes, lib) {
   const v = (f, fn) => fn(f);
   const sur = (n, unite = 'j') => (n ? ` (sur ${n} ${unite})` : '');
   const defs = [
-    ['Humeur moyenne (min-max)', (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${f.humeur.min}-${f.humeur.max}, sur ${f.humeur.n} j)` : '·')],
+    ['Humeur moyenne (min-max)', (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${nombre(f.humeur.minReleve)}-${nombre(f.humeur.maxReleve)}, sur ${f.humeur.n} j)` : '·')],
     ['Journées à 7 ou plus / à 4 ou moins', (f) => (f.humeur.n ? `${f.humeur.haut} / ${f.humeur.bas}` : '·')],
     ['Explosions (jours avec)', (f) => (f.explosions.n ? `${f.explosions.total} (${f.explosions.jours})` : '·')],
     [`Nuits ${lib('sommeil:mal')}`, (f) => (f.nuits.n ? `${f.nuits.mal}${sur(f.nuits.n, 'nuits')}` : '·')],
@@ -34,11 +36,14 @@ function lignesIndicateurs(colonnes, lib) {
 
 export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
   const lib = (id) => (carte && carte.get(id)) || id;
-  const premier = premiereDate(data, aujourdhui);
-  data = { ...data, journal: journalAvecExplosions(data.journal, data.episodes || [], { zeroDepuis }) };
-  const { aVenir, passes } = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui);
-  const dernierRdv = passes[0] || null;
-  const prochain = aVenir[0] || null;
+  // Humeur du jour (v6, analyse/humeur-jour.js) : moyenne des relevés de chaque journée, sinon
+  // l'humeur du soir. Un jour qui n'a que des relevés compte, mais jamais pour « 0 explosion ».
+  const journal = avecHumeurDuJour(data.journal, data.humeurs || []);
+  const premier = premiereDate({ ...data, journal }, aujourdhui);
+  data = { ...data, journal: journalAvecExplosions(journal, data.episodes || [], { zeroDepuis, jourNote: saisieDuSoir(data.journal) }) };
+  // Le dernier rendez-vous : la même référence que « La dernière fois » (domain/soins.js), comptée depuis aujourd'hui.
+  const dernierRdv = rdvReference(rdvs, { professionnel, avant: aujourdhui });
+  const prochain = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui).aVenir[0] || null;
   const colonnes = [
     { titre: '7 j', f: indicateurs(data, addDays(aujourdhui, -6), aujourdhui) },
     { titre: '30 j', f: indicateurs(data, addDays(aujourdhui, -29), aujourdhui) },
@@ -69,26 +74,36 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     while (m < 1) { m += 12; a -= 1; }
     duFrise = `${a}-${String(m).padStart(2, '0')}-01`;
   }
-  const f = frise(data, duFrise, aujourdhui);
-
-  const debut90 = addDays(aujourdhui, -89);
-  const lignesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
-    .sort((a, b) => `${b.date}${b.createdAt || ''}`.localeCompare(`${a.date}${a.createdAt || ''}`)).slice(0, 4)
-    .map((t) => [formaterJourCourt(t.date), couper(t.changement, 80), t.effetRessenti && lib(t.effetRessenti),
-      (t.effetsSecondaires || []).map(lib).join(', ')].filter(Boolean).join(' · '));
+  // Sans les relevés : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni les colonnes ni aDonnee.
+  const f = frise({ journal: data.journal, episodes: data.episodes }, duFrise, aujourdhui);
 
   const actuel = normaliserTraitement(traitementActuel).lignes.slice(0, 4).map((l) => couper(`${l.nom || '·'} : ${resumeLigne(l) || '·'}`, 70));
+  // Les changements datés des 90 derniers jours : 4 lignes au plus, 3 sous un traitement actuel.
+  const debut90 = addDays(aujourdhui, -89);
+  const fichesTraitement = traitements.filter((t) => t.date >= debut90 && t.date <= aujourdhui)
+    .sort((a, b) => `${b.date}${b.createdAt || ''}`.localeCompare(`${a.date}${a.createdAt || ''}`)).slice(0, actuel.length ? 3 : 4);
+  // Repères (v6, analyse/reperes.js) : seuls les changements qui ont une ligne ci-dessous sont numérotés et
+  // tracés sur la frise, et leur ligne reprend le numéro. Aucun trait sans légende.
+  const reperesFrise = reperesTraitement(traitements, f.colonnes, { lignes: fichesTraitement.map((t) => t.id) });
+  const symbole = new Map(reperesFrise.legende.map((r) => [r.id, r.symbole]));
+  const lignesTraitement = fichesTraitement.map((t) => {
+    const ligne = [formaterJourCourt(t.date), couper(t.changement, 80), t.effetRessenti && lib(t.effetRessenti),
+      (t.effetsSecondaires || []).map(lib).join(', ')].filter(Boolean).join(' · ');
+    return symbole.has(t.id) ? `${symbole.get(t.id)} ${ligne}` : ligne;
+  });
   return {
     entete: `Suivi quotidien${prenom ? ` · ${prenom}` : ''} · édité le ${formaterDateNumerique(aujourdhui)}${premier ? ` · données depuis le ${formaterDateNumerique(premier)}` : ''}`,
     sousTitre: 'Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.',
+    noteHumeur: 'Humeur : moyenne des relevés de chaque journée.',
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
-    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, ...c }) => c) },
+    // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran.
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c), reperes: reperesFrise.traits },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     reperes,
-    traitement: actuel.length ? lignesTraitement.slice(0, 3) : lignesTraitement,
+    traitement: lignesTraitement,
     traitementActuel: actuel,
     rdv: {
       professionnel: professionnel ? lib(professionnel) : null,

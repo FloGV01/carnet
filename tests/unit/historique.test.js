@@ -22,6 +22,14 @@ test('filtres des jours : humeur absente jamais comptée comme basse', () => {
   assert.deepEqual(filtrerJours(jours, { avecNotes: true, du: '2026-09-22' }).map((j) => j.date), ['2026-09-23']);
 });
 
+test('v6 : filtres d\'humeur sur l\'humeur du jour, ≤ 4, entre les deux, ≥ 7, décimales comprises', () => {
+  const decimales = [4, 4.3, 5, 6.9, 7, 8.5, null].map((humeur, i) => ({ date: `2026-10-0${i + 1}`, humeur }));
+  const humeurs = (f) => filtrerJours(decimales, { humeur: f }).map((j) => j.humeur);
+  assert.deepEqual(humeurs('bas'), [4]);
+  assert.deepEqual(humeurs('moyen'), [4.3, 5, 6.9]);
+  assert.deepEqual(humeurs('haut'), [7, 8.5]);
+});
+
 test('filtres des épisodes : jour logique et intensité', () => {
   const eps = [{ date: '2026-10-01', heure: '01:00', emotion: 'emotion:colere', intensite: 8 }, { date: '2026-10-01', heure: '12:00', emotion: 'emotion:joie', intensite: 3 }];
   assert.equal(filtrerEpisodes(eps, { au: '2026-09-30' }).length, 1);

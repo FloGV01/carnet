@@ -30,6 +30,13 @@
   --c-trt: #5A4E8C; --t-trt: #ECE9F5;
   --c-pos: #7A6214; --t-pos: #F4EED6;
 
+  /* Fond plein d'un choix sélectionné, de « + Épisode » et de « Terminer » (--p-*), et son texte. En clair,
+     la couleur pleine de la rubrique ; en sombre (v6), une version moins lumineuse sous un texte clair, AA. */
+  --texte-plein: var(--accent-texte);
+  --p-accent: var(--accent);
+  --p-lieu: var(--c-lieu); --p-sommeil: var(--c-sommeil); --p-humeur: var(--c-humeur); --p-contact: var(--c-contact);
+  --p-sport: var(--c-sport); --p-expl: var(--c-expl); --p-trt: var(--c-trt); --p-pos: var(--c-pos);
+
   --texture: radial-gradient(rgba(128, 118, 104, .10) 0.7px, transparent 0.8px),
              radial-gradient(rgba(128, 118, 104, .07) 0.6px, transparent 0.7px);
 
@@ -64,6 +71,8 @@
   --cible-grille: 48px;
   --cible-bouton: 52px;
   --marge: 16px;
+  /* Hauteur de la barre d'onglets, sans la zone du bas de l'iPhone : 1 de filet, 4 de marge, 45 d'onglet. */
+  --hauteur-onglets: 50px;
 
   /* Durées */
   --duree: 150ms;
@@ -95,21 +104,26 @@
     --c-expl: #E6B47A; --t-expl: #33281B;
     --c-trt: #B9AEE6; --t-trt: #2A2638;
     --c-pos: #DCC57A; --t-pos: #312B19;
+    /* Sélections adoucies (v6) : contraste ≥ 5:1 avec --texte-plein, et ≥ 2,5:1 avec --surface. */
+    --texte-plein: #F5F2ED;
+    --p-accent: #4D6091;
+    --p-lieu: #6E6352; --p-sommeil: #4D6091; --p-humeur: #80507B; --p-contact: #2E6F75;
+    --p-sport: #5F6629; --p-expl: #8F5A1C; --p-trt: #65579E; --p-pos: #7C6519;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --duree: 0ms; --duree-glisse: 0ms; }
 }
 
-/* Teinte locale par rubrique : les composants lisent var(--c) et var(--t), sans style en ligne. */
-.teinte-lieu { --c: var(--c-lieu); --t: var(--t-lieu); }
-.teinte-sommeil { --c: var(--c-sommeil); --t: var(--t-sommeil); }
-.teinte-humeur { --c: var(--c-humeur); --t: var(--t-humeur); }
-.teinte-contact { --c: var(--c-contact); --t: var(--t-contact); }
-.teinte-sport { --c: var(--c-sport); --t: var(--t-sport); }
-.teinte-expl { --c: var(--c-expl); --t: var(--t-expl); }
-.teinte-trt { --c: var(--c-trt); --t: var(--t-trt); }
-.teinte-pos { --c: var(--c-pos); --t: var(--t-pos); }
-.teinte-ep { --c: var(--c-humeur); --t: var(--t-humeur); }
-.teinte-sy { --c: var(--c-contact); --t: var(--t-contact); }
-.teinte-jour { --c: var(--c-sommeil); --t: var(--t-sommeil); }
+/* Teinte locale par rubrique : les composants lisent var(--c), var(--t) et var(--p), sans style en ligne. */
+.teinte-lieu { --c: var(--c-lieu); --t: var(--t-lieu); --p: var(--p-lieu); }
+.teinte-sommeil { --c: var(--c-sommeil); --t: var(--t-sommeil); --p: var(--p-sommeil); }
+.teinte-humeur { --c: var(--c-humeur); --t: var(--t-humeur); --p: var(--p-humeur); }
+.teinte-contact { --c: var(--c-contact); --t: var(--t-contact); --p: var(--p-contact); }
+.teinte-sport { --c: var(--c-sport); --t: var(--t-sport); --p: var(--p-sport); }
+.teinte-expl { --c: var(--c-expl); --t: var(--t-expl); --p: var(--p-expl); }
+.teinte-trt { --c: var(--c-trt); --t: var(--t-trt); --p: var(--p-trt); }
+.teinte-pos { --c: var(--c-pos); --t: var(--t-pos); --p: var(--p-pos); }
+.teinte-ep { --c: var(--c-humeur); --t: var(--t-humeur); --p: var(--p-humeur); }
+.teinte-sy { --c: var(--c-contact); --t: var(--t-contact); --p: var(--p-contact); }
+.teinte-jour { --c: var(--c-sommeil); --t: var(--t-sommeil); --p: var(--p-sommeil); }

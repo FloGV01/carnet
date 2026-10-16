@@ -35,11 +35,17 @@ export const SEUILS = Object.freeze({
   frise: { joursJusqua: 31, semainesJusqua: 26, minMoyenne7: 4, semainePleine: 3, moisMin: 3, moisPlein: 10 },
   // v5 · Ta journée heure par heure : anneau (moyenne fragile) sous 5 jours.
   journee: { minJoursPlein: 5 },
-  // v5 · Tendances (humeur du soir) : R = 28 derniers jours, B = 56 jours d'avant ; échelle tirée
-  // des fenêtres de 28 jours de l'année précédente. zEntree, zSortie calibrés (docs/decisions.md).
+  // v5 · Tendances (humeur du jour depuis la v6) : R = 28 derniers jours, B = 56 jours d'avant ;
+  // échelle tirée des fenêtres de 28 jours de l'année précédente. zEntree, zSortie calibrés
+  // (docs/decisions.md).
   tendances: {
     recent: 28, avant: 56, lot: 28, pasLots: 7, historique: 365, minLotHumeurs: 16, minLots: 6,
     varPlancher: 0.04, facteur: 1.5, minRecent: 10, minAvant: 20, tauxSaisie: 0.6, minJoursHistoire: 84,
     zEntree: 3.5, zSortie: 2, ecartMin: 1, ecartSortie: 0.7, joursStables: 7,
   },
+  // v6 · Comprendre (spec §2) : un graphique aligné à partir de 3 événements (jours d'explosion, jours à
+  // énergie basse, retours au bureau) ; « peu de valeurs » sous 3 ; un graphique en colonnes à partir de 2
+  // colonnes d'au moins 3 valeurs ; une activité à partir de 3 relevés avec énergie ; un élément pesé ou
+  // rechargé à partir de 3 jours notés sur la période.
+  comprendre: { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3 },
 });

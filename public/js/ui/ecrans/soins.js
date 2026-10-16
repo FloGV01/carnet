@@ -1,19 +1,20 @@
-// Soins : rendez-vous (par défaut) et traitement.
+// Soins : rendez-vous (par défaut), notes en vrac et traitement ; l'onglet utilisé en dernier se rouvre.
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
-import { QuestionsACocher, AjoutQuestion, BoutonConsultation } from '../composants/questions.js';
+import { QuestionsACocher, AjoutQuestion, BoutonConsultation, DerniereFois } from '../composants/questions.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterJour, formaterJourComplet, formaterJourAbrege } from '../../domain/dates.js';
-import { trierRdv } from '../../domain/soins.js';
+import { trierRdv, derniereFois, reprendreQuestion } from '../../domain/soins.js';
 import { versHash } from '../../routeur.js';
 import { PIED_TRAITEMENT } from './traitement.js';
 import { CarteTraitementActuel } from '../composants/traitement-actuel.js';
+import { NotesEnVrac } from '../composants/notes.js';
 
-const ONGLETS = [{ valeur: 'rdv', libelle: 'Rendez-vous' }, { valeur: 'traitement', libelle: 'Traitement' }];
+const ONGLETS = [{ valeur: 'rdv', libelle: 'Rendez-vous' }, { valeur: 'notes', libelle: 'Notes' }, { valeur: 'traitement', libelle: 'Traitement' }];
 
 // « Psychiatre · mercredi 14 oct. 10:30 » (ligne d'Aujourd'hui).
 export function libelleRdv(r, carte) {
@@ -32,8 +33,7 @@ export function Soins() {
   const [onglet, setOnglet] = useState(() => lireLocal('carnet:soins:onglet', 'rdv'));
   const choisir = (v) => { if (v) { setOnglet(v); ecrireLocal('carnet:soins:onglet', v); } };
   const { donnees } = useDonnees(async () => {
-    const [rdv, traitements, items, audios] = await Promise.all([repo.rdv.tous(), repo.traitements.tous(), repo.listes.items(), repo.audios.metas()]);
-    const avecMemo = new Set(audios.map((a) => `${a.parentStore}:${a.parentId}`));
+    const [rdv, traitements, items, avecMemo] = await Promise.all([repo.rdv.tous(), repo.traitements.tous(), repo.listes.items(), repo.audios.parents()]);
     return { rdv, traitements, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
   if (!donnees) return html`<main class="ecran soins"><${Entete} titre="Soins" /></main>`;
@@ -61,9 +61,13 @@ export function Soins() {
         <${BoutonConsultation} href=${versHash('consultation', { id: prochain.id })} />
         <${QuestionsACocher} questions=${prochain.questions} surChanger=${majQuestions(prochain)} />
         <${AjoutQuestion} surAjouter=${(t) => repo.rdv.modifier(prochain.id, { questions: [...(prochain.questions || []), { texte: t, abordee: false }] })} />
+        <${DerniereFois} derniere=${derniereFois(prochain, donnees.rdv, aujourdhui)} questions=${prochain.questions}
+          surReprendre=${(q) => repo.rdv.modifier(prochain.id, { questions: reprendreQuestion(prochain, q) })} />
       </section>`}
       ${autres.length > 0 && html`<ul class="liste carte carte-groupe">${autres.map(ligne)}</ul>`}
       ${passes.length > 0 && html`<h2 class="libelle-section passes">Passés</h2><ul class="liste carte carte-groupe">${passes.map(ligne)}</ul>`}`;
+  } else if (onglet === 'notes') {
+    contenu = html`<${NotesEnVrac} />`;
   } else {
     const liste = [...donnees.traitements].sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`));
     contenu = html`

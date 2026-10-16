@@ -16,6 +16,7 @@ import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Icones } from '../icones.js';
 import { FeuillePlan } from '../composants/mon-plan.js';
+import { EnParler } from '../composants/en-parler.js';
 import { options } from './aujourdhui.js';
 
 const INTENSITES = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
@@ -29,7 +30,7 @@ export function libelleDate(date, maintenant) {
 }
 
 // Résumé d'un Après coup sur la ligne du récapitulatif (le contenu, jamais un état « fait »).
-function resumeApresCoup(a, carte) {
+export function resumeApresCoup(a, carte) {
   if (!a) return null;
   return [(a.types || []).map((id) => libelle(carte, id)).join(', '), a.repereA != null && `remarqué à ${a.repereA}/10`,
     (a.siJe || a.alorsJe) && `si ${a.siJe || '…'}, alors ${a.alorsJe || '…'}`].filter(Boolean).join(' · ') || null;
@@ -58,6 +59,8 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const suivant = useRef(null);
   const glisse = useRef({ etape: null, classe: '' });
   const maintenant = repo.maintenant();
+  // Fiche rouverte (et non nouvelle fiche saisie à chaud) : elle seule montre « Après coup » en haut.
+  const rouvert = Boolean(idRoute) && idRoute !== 'nouveau';
 
   useEffect(() => {
     let actif = true;
@@ -151,8 +154,23 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   const phrase = phraseResume(store === 'episodes' ? 'episode' : 'symptome', fiche, carte);
   const rendrePhrase = (classe) => phrase.length > 0 && html`<p class=${classe}>${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>`;
 
-  // « Mon plan » : une ligne fixe sous la date, à chaque étape et au récapitulatif (épisodes).
-  const lignePlan = avecPlan && html`<div class="ligne-plan"><button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => setVoirPlan(true)}>${Icones.listes()}Mon plan</button></div>`;
+  // Vers l'Après coup : l'épisode est créé d'abord s'il ne l'est pas encore. La fiche garde son
+  // origine et son état de départ pour le retour (Annuler reste juste).
+  const hrefApresCoup = idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui';
+  const ouvrirApresCoup = async (e) => {
+    const garder = () => etatApp.maj({ retourEpisode: { id: idRef.current, origine: origine.current || etatApp.lire().routePrecedente, instantane: instantane.current } });
+    if (idRef.current) { garder(); return; }
+    e.preventDefault(); await ecrire({}); await file.current;
+    if (idRef.current) { garder(); location.hash = versHash('apres-coup', { id: idRef.current }); }
+  };
+
+  // « Mon plan » : une ligne fixe sous la date, à chaque étape et au récapitulatif (épisodes). Sur une
+  // fiche rouverte, « Après coup » est à côté : visible sans défiler. À chaud, rien n'y est ajouté.
+  const lignePlan = avecPlan && html`<div class="ligne-plan">
+    <button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => setVoirPlan(true)}>${Icones.listes()}Mon plan</button>
+    ${rouvert && html`<span class="separateur-plan" aria-hidden="true">·</span>
+      <a class="btn-lien" href=${hrefApresCoup} onClick=${ouvrirApresCoup}>Après coup</a>`}
+  </div>`;
   const feuillePlan = voirPlan && html`<${FeuillePlan} surFermer=${() => setVoirPlan(false)} retourFocus=${boutonPlan} />`;
   const ligneDate = html`<div class="ligne-date">
     <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => setEditionDate(!editionDate)}>
@@ -184,16 +202,11 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:${t.champ}` : null}
         surEnregistrer=${(v) => { setFiche((f) => ({ ...f, [t.champ]: v })); return ecrireTexte({ [t.champ]: v }); }} /></div>`)}
       ${memo && memo({ id: idRef.current, date: fiche.date, assurerFiche: async () => { if (!idRef.current) await ecrire({}); await file.current; return idRef.current; } })}
-      ${avecPlan && html`<a class="ligne-carte carte lien-apres-coup" href=${idRef.current ? versHash('apres-coup', { id: idRef.current }) : '#/aujourdhui'}
-        onClick=${async (e) => {
-          const garder = () => etatApp.maj({ retourEpisode: { id: idRef.current, origine: origine.current || etatApp.lire().routePrecedente, instantane: instantane.current } });
-          if (idRef.current) { garder(); return; }
-          e.preventDefault(); await ecrire({}); await file.current;
-          if (idRef.current) { garder(); location.hash = versHash('apres-coup', { id: idRef.current }); }
-        }}>
-        <span class="ligne-libelle"><span class="titre-apres-coup">Après coup</span>
-          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid sur cet épisode, étape par étape.'}</span></span>
+      ${avecPlan && html`<a class="ligne-carte carte lien-apres-coup bouton-apres-coup" href=${hrefApresCoup} onClick=${ouvrirApresCoup}>
+        <span class="ligne-libelle"><span class="titre-apres-coup">Après coup · TCC</span>
+          <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.'}</span></span>
         ${Icones.chevron({ trait: 2 })}</a>`}
+      <${EnParler} store=${store} element=${{ ...fiche, id: idRef.current }} carte=${carte} />
       ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
       ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}
         texte="Ses mémos vocaux sont supprimés aussi." action="Supprimer"

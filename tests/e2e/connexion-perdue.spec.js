@@ -5,7 +5,7 @@ test('connexion à la base fermée de force : réouverture et « Enregistré »'
   await page.goto('/');
   await viderBase(page);
   await page.evaluate(async () => { const db = await window.__carnet.repo.ouvrir(); db.close(); });
-  await toucher(page, 'Humeur', '5');
+  await toucher(page, 'Lieu', 'Bureau');
   await expect(page.getByText('Enregistré')).toBeVisible();
-  await expect.poll(async () => (await entreeDuJour(page))?.humeur).toBe(5);
+  await expect.poll(async () => (await entreeDuJour(page))?.lieu).toBe('lieu:bureau');
 });

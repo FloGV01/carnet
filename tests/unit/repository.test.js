@@ -2,14 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nouveauRepo } from '../aides/repo.js';
 import { ErreurValidation } from '../../public/js/domain/champs.js';
+import { versDateHeure } from '../../public/js/domain/dates.js';
 
-test('base neuve : 173 éléments de liste (v1 et v4), aujourd\'hui suit le jour logique', async () => {
+test('base neuve : 197 éléments de liste (v1, v4 et v6), aujourd\'hui suit le jour logique', async () => {
   const { repo, horloge } = nouveauRepo();
-  assert.equal((await repo.listes.items()).length, 173);
+  assert.equal((await repo.listes.items()).length, 197);
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 3);
+  assert.equal(await repo.meta.lire('schema'), 4);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {
@@ -272,6 +273,43 @@ test('v4 : humeurs du moment par jour logique, références vérifiées, suppres
   assert.equal((await repo.humeurs.lire(a.id)).humeur, 4);
 });
 
+test('v6 : un relevé déjà créé passe à « vers » : date, heure et vers changent ensemble, le jour logique suit', async () => {
+  const { repo, horloge } = nouveauRepo();
+  horloge.t = new Date(2026, 9, 13, 1, 30);
+  const jour = repo.aujourdhui();
+  assert.equal(jour, '2026-10-12');
+  // Créé « maintenant » (01:30 le 13), donc au jour logique du 12.
+  const r = await repo.humeurs.creer({ date: '2026-10-13', heure: '01:30', humeur: 6, energie: 'energie:basse' });
+  assert.deepEqual([r.vers, r.faisais], [null, null]);
+  // « Vers 22 h » : 2026-10-12 22:00.
+  const a = await repo.humeurs.modifier(r.id, { ...versDateHeure(horloge.t, 22), vers: true });
+  assert.deepEqual([a.date, a.heure, a.vers, a.humeur, a.energie], ['2026-10-12', '22:00', true, 6, 'energie:basse']);
+  assert.equal(a.createdAt, r.createdAt);
+  // Puis « vers 0 h » : 2026-10-13 00:00, toujours au jour logique du 12.
+  const b = await repo.humeurs.modifier(r.id, { ...versDateHeure(horloge.t, 0), vers: true });
+  assert.deepEqual([b.date, b.heure, b.vers], ['2026-10-13', '00:00', true]);
+  assert.deepEqual((await repo.humeurs.parJour(jour, jour)).map((h) => [h.id, h.date, h.heure]), [[r.id, '2026-10-13', '00:00']]);
+  assert.deepEqual(await repo.humeurs.parJour('2026-10-13', '2026-10-13'), [], 'pas au 13');
+  // Retour à « maintenant » : vers repasse à null (jamais false).
+  const c = await repo.humeurs.modifier(r.id, { date: '2026-10-13', heure: '01:31', vers: null });
+  assert.deepEqual([c.heure, c.vers], ['01:31', null]);
+  assert.equal((await repo.humeurs.modifier(r.id, { vers: false })).vers, null);
+  assert.equal((await repo.humeurs.tous()).length, 1, 'un seul relevé, jamais de doublon');
+});
+
+test('v6 : un relevé « vers » vidé est supprimé ; « vers » et activités seuls ne le gardent pas', async () => {
+  const { repo } = nouveauRepo();
+  const r = await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', vers: true, humeur: 5, energie: 'energie:basse' });
+  const sansHumeur = await repo.humeurs.modifier(r.id, { humeur: null, faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
+  assert.deepEqual([sansHumeur.energie, sansHumeur.vers, sansHumeur.faisais], ['energie:basse', true, ['activiteMoment:travail', 'activiteMoment:trajet']]);
+  assert.equal(await repo.humeurs.modifier(r.id, { energie: null }), null, 'vers et activités seuls : le relevé part');
+  assert.equal(await repo.humeurs.lire(r.id), null);
+  assert.deepEqual(await repo.humeurs.tous(), []);
+  // Les activités sont des références de liste vérifiées.
+  const s = await repo.humeurs.creer({ date: '2026-09-30', heure: '16:00', vers: true, humeur: 4 });
+  await assert.rejects(repo.humeurs.modifier(s.id, { faisais: ['pese:bruit'] }), ErreurValidation);
+});
+
 test('v4 : activités, contact et après coup enregistrés, références imbriquées refusées si inconnues', async () => {
   const { repo } = nouveauRepo();
   const j = await repo.journal.patch('2026-09-30', { sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }] });
@@ -281,4 +319,26 @@ test('v4 : activités, contact et après coup enregistrés, références imbriqu
   const m = await repo.episodes.modifier(e.id, { apresCoup: { types: ['typeExplosion:surcharge'], tropDe: ['sourceSurcharge:bruit'], repereA: 7 } });
   assert.deepEqual(m.apresCoup.tropDe, ['sourceSurcharge:bruit']);
   await assert.rejects(repo.episodes.modifier(e.id, { apresCoup: { signes: ['signe:nexistepas'] } }), ErreurValidation);
+});
+
+test('v6 : notes en vrac, créer et modifier, jour logique, texte effacé supprime la note', async () => {
+  const { repo, horloge, changements } = nouveauRepo();
+  const n = await repo.notes.creer({ date: '2026-10-01', heure: '01:30', texte: '  Une idée, en vrac  ' });
+  assert.match(n.id, /^no_[0-9a-f]{16}$/);
+  assert.equal(n.texte, 'Une idée, en vrac');
+  assert.ok(n.createdAt && n.updatedAt);
+  await repo.notes.creer({ date: '2026-09-30', heure: '14:00', texte: 'Autre idée' });
+  await repo.notes.creer({ date: '2026-10-01', heure: '09:00', texte: 'Le lendemain' });
+  assert.deepEqual((await repo.notes.parJour('2026-09-30', '2026-09-30')).map((x) => x.heure), ['14:00', '01:30'], 'avant 04:00, c\'est la veille');
+  await assert.rejects(repo.notes.creer({ date: '2026-09-30', texte: 'Sans heure' }), ErreurValidation, 'date et heure posées par l\'app');
+
+  horloge.t = new Date(2026, 9, 1, 8, 0);
+  const m = await repo.notes.modifier(n.id, { texte: 'Idée reprise' });
+  assert.deepEqual({ date: m.date, heure: m.heure, texte: m.texte, createdAt: m.createdAt }, { date: '2026-10-01', heure: '01:30', texte: 'Idée reprise', createdAt: n.createdAt });
+  assert.equal(m.updatedAt, horloge.t.toISOString());
+  assert.equal((await repo.notes.lire(n.id)).texte, 'Idée reprise');
+  assert.equal(await repo.notes.modifier(n.id, { texte: '   ' }), null);
+  assert.equal(await repo.notes.lire(n.id), null);
+  assert.equal((await repo.notes.tous()).length, 2);
+  assert.equal(changements.filter((c) => c.store === 'notes').length, 5, 'trois créations, deux modifications');
 });

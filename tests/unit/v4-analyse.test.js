@@ -60,6 +60,14 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
   const seul = analyze({ ...data, episodes: [{ id: 'e0', date: '2026-09-20', heure: '18:00', reaction: 'reaction:explosion' }, ...episodes] },
     { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.equal(seul.fenetres['30'].explosions.total, 2);
+  // v6 : un jour qui n'a que des humeurs du moment a une humeur du jour, mais pas de saisie du soir :
+  // son compte d'explosions reste inconnu (jamais 0), dans les fenêtres, la frise et le signal.
+  const releves = analyze({ ...data, humeurs: [{ id: 'h1', date: '2026-09-28', heure: '10:00', humeur: 4, energie: null }] },
+    { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
+  const f7 = releves.fenetres['7'];
+  assert.deepEqual([f7.humeur.n, f7.explosions.n, f7.explosions.total], [3, 2, 1]);
+  const jour = releves.frise['7'].colonnes.find((c) => c.cle === '2026-09-28');
+  assert.deepEqual([jour.humeur, jour.explosions, jour.aDonnee], [4, null, true]);
 });
 
 test('export PSY v4 : détails sport et contact, humeurs du moment, après coup sous l\'épisode', () => {
@@ -70,7 +78,8 @@ test('export PSY v4 : détails sport et contact, humeurs du moment, après coup 
     apresCoup: { types: ['typeExplosion:colere'], fragilites: ['fragilite:fatigue'], signes: ['signe:chaleur'], repereA: 6, pensees: 'il le fait exprès', siJe: 'je sens la chaleur', alorsJe: 'je sors cinq minutes', tensionApres: 3 } }];
   const humeurs = [{ id: 'h1', date: '2026-09-30', heure: '10:05', humeur: 5, energie: 'energie:basse' }, { id: 'h2', date: '2026-09-30', heure: '14:00', humeur: 7, energie: null }];
   const t = exportPsy({ journal, episodes, symptomes: [], humeurs }, { aujourdhui: '2026-09-30', carte });
-  assert.match(t, /mer 30\/09 · humeur 6 · contact oui \(famille, collègues : coûteux ; amis : ressourçant\) · sport oui \(Marche 30 à 60 min, Vélo\) · explosions 1/);
+  // v6 : la ligne du jour dit l'humeur du jour (relevés 5 et 7), le soir (6) n'y est pas mêlé.
+  assert.match(t, /mer 30\/09 · humeur 6 \(de 5 à 7\) · contact oui \(famille, collègues : coûteux ; amis : ressourçant\) · sport oui \(Marche 30 à 60 min, Vélo\) · explosions 1/);
   assert.match(t, /\n {2}humeur du moment : 10:05 5 \(énergie basse\) · 14:00 7/);
   assert.match(t, /\n {2}après coup :\n {4}c'était plutôt : colère · ce qui me fragilisait déjà : fatigue\n {4}premiers signes : chaleur · remarqué à 6\/10/);
   assert.match(t, /pour la prochaine fois : si je sens la chaleur, alors je sors cinq minutes/);
@@ -84,14 +93,14 @@ test('export PSY v4 : après coup tardif sur un épisode ancien, jour avec seule
   const humeurs = [{ id: 'h1', date: '2026-09-11', heure: '00:30', humeur: 4, energie: null }];
   const t = exportPsy({ journal: [], episodes, symptomes: [], humeurs }, { aujourdhui: '2026-09-12', carte });
   assert.match(t, /APRÈS COUP \(épisodes plus anciens\)\nsam 05\/09 18:00 · Colère · réaction : Explosion\n {2}après coup :\n {4}pour la prochaine fois : si je serre les poings, alors je sors/);
-  assert.match(t, /JOURS\njeu 10\/09\n {2}humeur du moment : 00:30 4/, 'relevé de 00:30 rattaché à la veille');
+  assert.match(t, /JOURS\njeu 10\/09 · humeur 4\n {2}humeur du moment : 00:30 4/, 'relevé de 00:30 rattaché à la veille, humeur du jour comprise');
   assert.doesNotMatch(t, /ÉPISODES/);
   const tard = exportPsy({ journal: [], episodes, symptomes: [], humeurs: [] }, { aujourdhui: '2026-09-20', carte });
   assert.doesNotMatch(tard, /APRÈS COUP/);
   // Un jour noté sans compteur ni épisode : pas de « explosions 0 » sur sa ligne (rien n'a été saisi),
   // mais la semaine compte bien 0 explosion depuis la v4.
   const sansRien = exportPsy({ journal: [{ date: '2026-09-11', humeur: 6 }], episodes: [], symptomes: [], humeurs: [] }, { aujourdhui: '2026-09-12', carte, zeroDepuis: '2026-09-01' });
-  assert.match(sansRien, /\nven 11\/09 · humeur 6\n/);
+  assert.match(sansRien, /\nven 11\/09 · humeur du soir 6\n/);
   assert.match(sansRien, /cette semaine : humeur moyenne 6 \(de 6 à 6\) · explosions 0/);
 });
 

@@ -56,7 +56,9 @@ test('effacer une journée : confirmation, épisodes conservés, Annuler', async
   await expect(boite.getByText('Les épisodes et symptômes de ce jour sont conservés.')).toBeVisible();
   await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Humeur', exact: true }).getByRole('button', { name: 'Humeur 4' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');
+  // v6 : le champ Humeur du soir, masqué par défaut, n'est affiché que tant qu'il porte une valeur.
+  await expect(page.getByRole('group', { name: 'Humeur', exact: true })).toHaveCount(0);
   expect((await page.evaluate(() => window.__carnet.repo.episodes.tous())).length).toBe(1);
   await page.getByRole('button', { name: 'Annuler' }).click();
   await expect(page.getByRole('group', { name: 'Humeur', exact: true }).getByRole('button', { name: 'Humeur 4' })).toHaveAttribute('aria-pressed', 'true');

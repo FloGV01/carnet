@@ -72,7 +72,7 @@ test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas »
   const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-03', heure: '20:00', emotion: 'emotion:colere', reaction: 'reaction:retrait_isolement' })).id);
   await page.evaluate((i) => { location.hash = `#/episode/${i}`; }, id);
   await expect(page.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
-  await page.getByRole('link', { name: /Après coup/ }).click();
+  await page.getByRole('link', { name: /Après coup · TCC/ }).click();
   const vue = page.getByRole('dialog', { name: 'Après coup' });
   await expect(vue.getByRole('heading', { name: 'C\'était plutôt…' })).toBeVisible();
   await vue.getByRole('button', { name: 'Colère' }).click();
@@ -99,14 +99,16 @@ test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas »
   expect((await repo(page, () => window.__carnet.repo.meta.lire('monPlan'))).siAlors).toEqual([{ si: 'je serre les poings', alors: 'je sors cinq minutes' }]);
   await vue.getByRole('button', { name: 'Terminer' }).click();
   const episode = page.getByRole('dialog', { name: 'Épisode' });
-  await expect(episode.getByRole('link', { name: /Après coup/ })).toContainText('si je serre les poings');
+  await expect(episode.getByRole('link', { name: /Après coup · TCC/ })).toContainText('si je serre les poings');
   await episode.getByRole('button', { name: 'Terminer' }).click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 });
 
-test('Réglages › Ma journée : afficher le compteur, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
+test('Réglages › Ma journée : afficher le compteur et l\'humeur du soir, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
   await page.evaluate(() => { location.hash = '#/reglages/journee'; });
   await page.getByRole('switch', { name: 'Afficher Explosions (compteur du soir)' }).click();
+  // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici.
+  await page.getByRole('switch', { name: 'Afficher Humeur' }).click();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
   await expect(page.getByRole('button', { name: 'Monter Humeur' })).toBeFocused();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
@@ -144,12 +146,12 @@ test('après coup ouvert depuis l\'Historique : Terminer ramène à l\'Historiqu
   await aller(page, '#/historique');
   await expect(page.getByRole('heading', { name: 'Historique' })).toBeVisible();
   await page.evaluate((i) => { location.hash = `#/episode/${i}`; }, id);
-  await page.getByRole('link', { name: /Après coup/ }).click();
+  await page.getByRole('link', { name: /Après coup · TCC/ }).click();
   const vue = page.getByRole('dialog', { name: 'Après coup' });
   await vue.getByRole('button', { name: 'Colère' }).click();
   await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
   const episode = page.getByRole('dialog', { name: 'Épisode' });
-  await expect(episode.getByRole('link', { name: /Après coup/ })).toContainText('Colère');
+  await expect(episode.getByRole('link', { name: /Après coup · TCC/ })).toContainText('Colère');
   await episode.getByRole('button', { name: 'Terminer' }).click();
   await expect(page).toHaveURL(/#\/historique$/);
 });

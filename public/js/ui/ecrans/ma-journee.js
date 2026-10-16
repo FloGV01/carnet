@@ -5,7 +5,7 @@ import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
-import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, HEURE_MIN, HEURE_MAX } from '../../domain/journee.js';
+import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, HEURE_MIN, HEURE_MAX } from '../../domain/journee.js';
 
 const HEURES = Array.from({ length: HEURE_MAX - HEURE_MIN + 1 }, (_, i) => i + HEURE_MIN);
 
@@ -45,7 +45,13 @@ export function MaJournee() {
       </div>
       <${Interrupteur} etiquette=${`Afficher ${NOMS_CHAMPS[c]}`} actif=${!j.masques.includes(c)}
         surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== c) : [...x.masques, c] }))} />
-    </li>`)}</ul>
+    </li>`)}
+      <li class="ligne-champ-reglage">
+        <span class="ligne-libelle">${NOM_PESE_RECHARGE}</span>
+        <${Interrupteur} etiquette=${`Afficher ${NOM_PESE_RECHARGE}`} actif=${!j.masques.includes(MASQUE_PESE_RECHARGE)}
+          surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== MASQUE_PESE_RECHARGE) : [...x.masques, MASQUE_PESE_RECHARGE] }))} />
+      </li>
+    </ul>
     <h2 class="libelle-section">Humeur du moment</h2>
     <p class="texte-secondaire">Les heures où tu veux un rappel. L'iPhone ne laisse pas une app web envoyer ses propres rappels : Réglages › Rappels te montre comment les créer dans Raccourcis.</p>
     <div class="pastilles souples heures-moment" role="group" aria-label="Heures des rappels">

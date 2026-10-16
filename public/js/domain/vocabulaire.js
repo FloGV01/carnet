@@ -1,6 +1,6 @@
 // Vocabulaire par défaut des listes, repris du tableau Numbers, SANS lissage.
-// SEED_V1 est FIGÉ une fois publié : tout ajout futur passe par SEED_V2_AJOUTS (empreinte
-// vérifiée par tests/unit/migrations-figees.test.js).
+// SEED_V1 est FIGÉ une fois publié : tout ajout futur passe par une liste d'ajouts versionnée,
+// SEED_V2_AJOUTS puis SEED_V4_AJOUTS (empreintes vérifiées par tests/unit/migrations-figees.test.js).
 // [slug, libellé, alias?, options?]  hc = horsClassement, ag = agreable, ex = exclusif
 export const SEED_V1 = Object.freeze({
   lieu: [['bureau', 'Bureau'], ['teletravail', 'Télétravail'], ['conge_repos', 'Congé / repos'],
@@ -70,6 +70,19 @@ export const SEED_V2_AJOUTS = Object.freeze({
   consequenceCourt: [['soulagement', 'Soulagement'], ['tension_tombee', 'La tension est tombée'], ['rien', 'Rien de spécial'], ['empire', 'Ça a empiré']],
   consequenceLong: [['regret', 'Regret'], ['honte', 'Honte'], ['conflit', 'Conflit'], ['fatigue', 'Fatigue'],
     ['rien', 'Rien de spécial'], ['reparer', "J'ai pu réparer"]],
+});
+
+// Ajouts de la v6 (DB_VERSION 4), FIGÉS une fois publiés comme SEED_V1. Versés par
+// MIGRATIONS[4] et par la mise à niveau des sauvegardes de format 3, sans écraser l'existant.
+// Ni « Je ne sais pas » ni « Aucun » : un champ vide est une donnée valide.
+export const SEED_V4_AJOUTS = Object.freeze({
+  pese: [['bruit', 'Bruit'], ['lumiere', 'Lumière'], ['monde', 'Monde'], ['changement', 'Changement'],
+    ['attente', 'Attente'], ['demandes', 'Trop de demandes'], ['fatigue', 'Fatigue'],
+    ['masquer', 'Masquer (faire comme si)'], ['trajets', 'Trajets'], ['demarches', 'Démarches']],
+  recharge: [['seul', 'Être seul'], ['calme', 'Calme'], ['interet', 'Intérêt spécifique'], ['bouger', 'Bouger'],
+    ['dehors', 'Dehors / nature'], ['stimmer', 'Stimmer'], ['musique', 'Musique'], ['sieste', 'Sieste / repos']],
+  activiteMoment: [['travail', 'Travail'], ['trajet', 'Trajet'], ['courses', 'Courses / démarches'],
+    ['maison', 'Chez moi'], ['monde', 'Avec du monde'], ['repos', 'Repos']],
 });
 
 export function seedItems(seed, horodatage) {

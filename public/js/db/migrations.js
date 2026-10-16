@@ -1,11 +1,11 @@
 // Schéma versionné de la base « carnet ». Une migration publiée est FIGÉE : elle ne lit
 // aucune constante vivante (empreintes dans tests/unit/migrations.lock.json).
 // Règles : uniquement des ajouts, jamais de suppression de store ou d'index portant des données.
-import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { DataError } from './erreurs.js';
 
-export const DB_VERSION = 3;
-export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs'];
+export const DB_VERSION = 4;
+export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs', 'notes'];
 export const MAX_SNAPSHOTS = 3;
 
 export const MIGRATIONS = {
@@ -56,6 +56,28 @@ export const MIGRATIONS = {
       c.continue();
     };
     tx.objectStore('meta').put({ cle: 'schema', valeur: 3 });
+  },
+  // v6 : notes en vrac, nouvelles listes (sans écraser un id existant). Le champ Humeur du soir
+  // est masqué seulement si des champs masqués sont déjà réglés (sinon la valeur par défaut
+  // s'applique à la lecture) : seule la méta journee peut alors être réécrite, aucune fiche de
+  // l'utilisateur n'est transformée. Synchrone, comme la 2.
+  4(db, tx, ctx) {
+    db.createObjectStore('notes', { keyPath: 'id' }).createIndex('date', 'date');
+    const listes = tx.objectStore('listes');
+    for (const item of seedItems(SEED_V4_AJOUTS, ctx.horodatage)) {
+      const r = listes.get(item.id);
+      r.onsuccess = () => { if (!r.result) listes.put(item); };
+    }
+    const meta = tx.objectStore('meta');
+    const lu = meta.get('journee');
+    lu.onsuccess = () => {
+      const journee = lu.result;
+      const masques = journee && journee.valeur && journee.valeur.masques;
+      if (Array.isArray(masques) && !masques.includes('humeur')) {
+        meta.put({ ...journee, valeur: { ...journee.valeur, masques: [...masques, 'humeur'] } });
+      }
+    };
+    meta.put({ cle: 'schema', valeur: 4 });
   },
 };
 

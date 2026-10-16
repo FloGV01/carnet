@@ -1,6 +1,7 @@
 // Toutes les phrases de l'analyse, en trois voix : « tu » (app), « je » (export PSY),
 // « neutre » (vue soignants). Factuelles, jamais causales, jamais évaluatives.
 import { extremesFiables } from './sommeil.js';
+import { SEUILS } from './seuils.js';
 
 export const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
 export const REGLES = {
@@ -9,16 +10,33 @@ export const REGLES = {
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
   moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
-  tendances: "La règle : comparer l'humeur du soir des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
+  tendances: "La règle : comparer l'humeur des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
+};
+// v6 · Comprendre (spec §2.1) : sous son seuil, chaque graphique donne sa règle fixe, sans aucun décompte. Les
+// nombres viennent de SEUILS.comprendre, jamais recopiés ; aucun libellé de liste modifiable n'y paraît.
+const C = SEUILS.comprendre;
+const REGLE_EXPLOSIONS = `La règle : au moins ${C.minEvenements} jours avec une explosion sur la période.`;
+const regleColonnes = (quoi) => `La règle : au moins ${C.minColonnes} ${quoi} qui ont chacun au moins ${C.minValeurs} valeurs pour la mesure choisie.`;
+export const REGLES_COMPRENDRE = {
+  explosionsAvant: REGLE_EXPLOSIONS,
+  explosionsApres: REGLE_EXPLOSIONS,
+  energieAvant: `La règle : au moins ${C.minEvenements} jours à énergie basse sur la période.`,
+  retoursBureau: `La règle : au moins ${C.minEvenements} retours au bureau sur la période (une journée au bureau dont la veille a un autre lieu noté).`,
+  semaine: regleColonnes('jours de la semaine'),
+  lieu: regleColonnes('lieux'),
+  mois: regleColonnes('mois'),
+  nuits: `La règle : au moins ${C.minColonnes} soirs de la semaine qui ont chacun au moins ${C.minValeurs} nuits avec l'heure du coucher et du lever (« Nuit en détail »).`,
+  activites: `La règle : une activité de « Ce que je faisais » apparaît à partir de ${C.minActivite} relevés avec une énergie.`,
+  peseRecharge: 'La règle : au moins un élément de « Ce qui a pesé » ou de « Ce qui a rechargé », noté sur la période.',
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 export const PIED_TENDANCES = 'Une observation sur tes chiffres, pas une explication.';
-export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les soirs où une humeur est notée.";
+export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les jours où une humeur est notée.";
 export const SANS_ECART = "Pas d'écart net entre ces 4 semaines et les 8 d'avant.";
 
 // Tendances (v5) : même tournure dans les deux sens, sans adjectif ni jugement.
 export function phraseTendance(c, voix = 'tu', { court = false } = {}) {
-  const qui = { tu: 'ton humeur du soir est', je: 'mon humeur du soir est', neutre: "l'humeur du soir est" }[voix];
+  const qui = { tu: 'ton humeur est', je: 'mon humeur est', neutre: "l'humeur est" }[voix];
   const sens = c.sens === 'haut' ? 'plus haute' : 'plus basse';
   if (court) return `${qui} ${sens} : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
   return `Ces 4 dernières semaines, ${qui} ${sens} que sur les 8 semaines d'avant : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
@@ -35,6 +53,11 @@ export function nombre(x, decimales = 1) {
   if (x == null || Number.isNaN(x)) return '·';
   return x.toFixed(decimales).replace('.', ',').replace(/,0$/, '');
 }
+// Humeur du jour (v6) : « de 3 à 8 » porte sur les valeurs notées (relevés, ou soir d'un jour sans
+// relevé : minReleve, maxReleve), la moyenne sur les humeurs du jour.
+const etendueHumeur = (h) => (h.minReleve === h.maxReleve ? nombre(h.minReleve) : `de ${nombre(h.minReleve)} à ${nombre(h.maxReleve)}`);
+// Ma semaine : « Humeur : de 3 à 8, 5,6 en moyenne ».
+export const ligneHumeurSemaine = (h) => `Humeur : ${etendueHumeur(h)}, ${uneDecimale(h.moyenne)} en moyenne${h.fragile ? ' (peu de valeurs)' : ''}`;
 // Une valeur 5 vaut « 5 ou plus » : la moyenne n'est alors qu'une borne basse.
 export const moyenneReveils = (r) => (r && r.n ? `${r.plafonne ? 'au moins ' : ''}${nombre(r.moyenne)}` : '·');
 

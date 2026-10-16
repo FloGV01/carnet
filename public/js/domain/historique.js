@@ -18,14 +18,15 @@ export function grouperParSemaine(elements, jourDe) {
     .map(([lundi, liste]) => ({ lundi, elements: liste.sort((a, b) => jourDe(b).localeCompare(jourDe(a))) }));
 }
 
-export const TRANCHES_HUMEUR = { bas: [1, 4], moyen: [5, 6], haut: [7, 10] };
+// Humeur du jour (v6), décimale : « 1-4 » se lit ≤ 4, « 7-10 » ≥ 7, « 5-6 » entre les deux.
+const TRANCHES_HUMEUR = { bas: (h) => h <= 4, moyen: (h) => h > 4 && h < 7, haut: (h) => h >= 7 };
 
 export function filtrerJours(jours, f = {}) {
   return jours.filter((j) => {
     if (f.du && j.date < f.du) return false;
     if (f.au && j.date > f.au) return false;
     if (f.lieu && j.lieu !== f.lieu) return false;
-    if (f.humeur) { const [a, b] = TRANCHES_HUMEUR[f.humeur]; if (j.humeur == null || j.humeur < a || j.humeur > b) return false; }
+    if (f.humeur && (j.humeur == null || !TRANCHES_HUMEUR[f.humeur](j.humeur))) return false;
     // explosionsDe (v4) : valeur affichée du jour, épisodes « Explosion » compris (domain/explosions.js).
     if (f.avecExplosions && !((f.explosionsDe ? f.explosionsDe(j) : j.explosions) > 0)) return false;
     if (f.avecNotes && !j.notes) return false;

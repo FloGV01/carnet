@@ -1,15 +1,16 @@
-// « Tendances » (v5) : une phrase quand l'humeur du soir des 4 dernières semaines s'écarte
-// nettement de celle des 8 semaines d'avant. Une seule famille (l'humeur du soir), des fenêtres
+// « Tendances » (v5) : une phrase quand l'humeur des 4 dernières semaines s'écarte nettement de
+// celle des 8 semaines d'avant. Une seule famille (l'humeur du jour, v6), des fenêtres
 // fixes jamais choisies après coup, et une échelle tirée de l'historique de l'utilisateur.
 // Version prudente : peu de phrases, très rarement à tort (calibration : tests/calibration).
 // La phrase dit ce que montrent les chiffres, jamais pourquoi. Pur.
 import { addDays, diffDays } from '../domain/dates.js';
 import { moyenne } from './stats.js';
 import { SEUILS } from './seuils.js';
+import { estHumeur } from './humeur-jour.js';
 
 const S = SEUILS.tendances;
 
-const humeurValide = (j) => j && Number.isInteger(j.humeur) && j.humeur >= 1 && j.humeur <= 10;
+const humeurValide = (j) => j && estHumeur(j.humeur);
 
 function valeurs(parDate, du, au) {
   const res = [];
@@ -28,7 +29,7 @@ export function ecartTendance(parDate, J) {
   const finB = addDays(J, -S.recent);
   const R = valeurs(parDate, addDays(J, -(S.recent - 1)), J);
   const B = valeurs(parDate, addDays(J, -(S.recent + S.avant - 1)), finB);
-  // Trop peu de soirs notés dans R ou B : on ne compare rien et on ne dit rien.
+  // Trop peu de jours avec une humeur dans R ou B : on ne compare rien et on ne dit rien.
   if (R.length < S.minRecent || B.length < S.minAvant) return { calculable: false, peu: true };
   // Garde silencieuse : un rythme de saisie très différent entre R et B fausserait les moyennes.
   const tauxR = R.length / S.recent;

@@ -20,7 +20,8 @@ export async function analyserChoix(fichiers) {
     const lus = await Promise.all(fichiers.map(async (f) => ({ nom: f.name, octets: new Uint8Array(await f.arrayBuffer()) })));
     const analyse = analyserFichiers(lus);
     const actuel = await lireTout(repo);
-    const base = actuel.journal.length + actuel.episodes.length + actuel.symptomes.length + actuel.traitements.length + actuel.rdv.length + actuel.humeurs.length;
+    const base = actuel.journal.length + actuel.episodes.length + actuel.symptomes.length + actuel.traitements.length + actuel.rdv.length
+      + actuel.humeurs.length + actuel.notes.length;
     importEnAttente = { analyse, perte: base ? chiffrerPerte(actuel, analyse) : null, metaRemplacee: metaRemplacee(actuel.meta, analyse.valides.meta) };
   } catch (err) {
     importEnAttente = { erreur: err && err.code ? err.message : 'Ce fichier est illisible.' };

@@ -1,21 +1,25 @@
-// Écran Analyse (v5) : Ma semaine, Tendances, puis, selon la période : Mes jours, ta journée heure
-// par heure, contacts et mouvement, tes moments ; ensuite les constats sur tout l'historique.
+// Écran Analyse (v5) : en haut, la ligne « Comprendre › » (v6) ; Ma semaine, Tendances, puis, selon la
+// période : Mes jours, ta journée heure par heure, contacts et mouvement, tes moments ; ensuite les constats
+// sur tout l'historique.
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache
 // jusqu'à la prochaine écriture.
 import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { Repli } from '../composants/repli.js';
+import { Pourquoi } from '../composants/pourquoi.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
 import { SEUILS } from '../../analyse/seuils.js';
-import { nombre, uneDecimale, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, PAS_ASSEZ, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, POURQUOI_TENDANCE, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
+import { nombre, uneDecimale, ligneHumeurSemaine, duree, moyenneReveils, phraseConstat, phrasesSommeil, phraseSommeilSemaine, phraseClassement, piedObservations, REGLES, PIED_EXPLOSIONS, PIED_TENDANCES, POURQUOI_TENDANCE, SANS_ECART, phraseTendance } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { JOURS, jourSemaine } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
 import { geometrieHaltere } from '../graphes/geometrie.js';
+import { dernierOnglet } from './comprendre.js';
+import { versHash } from '../../routeur.js';
 
 const FENETRES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }, { valeur: '90', libelle: '3 mois' }, { valeur: 'tout', libelle: 'Tout' }];
 const NOMS_CLASSEMENT = { declencheur: 'Déclencheur', dessous: 'En dessous', emotion: 'Émotion', reaction: 'Réaction', symptome: 'Symptôme', effetSecondaire: 'Effet secondaire' };
@@ -79,7 +83,7 @@ function MaSemaine({ f, frise7, positifs, sommeil, carte, sansPhrase }) {
   const phrase = !sansPhrase && phraseSommeilSemaine(sommeil, carte);
   const joursExpl = frise7.colonnes.filter((c) => c.explosions > 0).map((c) => JOURS[jourSemaine(c.cle)]);
   const lignes = [];
-  if (f.humeur.n) lignes.push(`Humeur du soir : ${f.humeur.min === f.humeur.max ? f.humeur.min : `de ${f.humeur.min} à ${f.humeur.max}`}, ${uneDecimale(f.humeur.moyenne)} en moyenne${f.humeur.fragile ? ' (peu de valeurs)' : ''}`);
+  if (f.humeur.n) lignes.push(ligneHumeurSemaine(f.humeur));
   if (f.nuits.n) lignes.push(`Nuits ${lib('sommeil:mal')} : ${f.nuits.mal}`);
   const expl = f.explosions.n ? `Explosions : ${f.explosions.total}${joursExpl.length && joursExpl.length <= 2 ? ` (${joursExpl.join(', ')})` : ''}` : null;
   const eps = f.episodes.nombre ? `Épisodes : ${f.episodes.nombre}` : null;
@@ -178,12 +182,6 @@ const Tuile = ({ titre, valeur, detail, fragile, rubrique }) => html`<div class=
   ${(detail || fragile) && html`<span class="tuile-detail">${detail || ''}${detail && fragile ? ' ' : ''}${fragile ? '(peu de valeurs)' : ''}</span>`}
 </div>`;
 
-function Pourquoi({ regle, texte = PAS_ASSEZ }) {
-  const [ouvert, setOuvert] = useState(false);
-  return html`<p class="texte-secondaire">${texte} <button type="button" class="btn-lien pourquoi" aria-expanded=${ouvert ? 'true' : 'false'} onClick=${() => setOuvert(!ouvert)}>Pourquoi ?</button></p>
-    ${ouvert && html`<p class="encadre-regle">${regle}</p>`}`;
-}
-
 function Haltere({ c }) {
   const g = geometrieHaltere(c.a / c.n1, c.b / c.n2);
   return html`<svg class="haltere" viewBox="0 0 306 34" role="img" aria-label=${`${c.a} sur ${c.n1}, contre ${c.b} sur ${c.n2}`}>
@@ -201,7 +199,7 @@ function Tuiles({ f, carte }) {
   const h = f.humeur;
   const r = f.nuits.reveils;
   return html`<div class="tuiles">
-    <${Tuile} rubrique="humeur" titre="Humeur moyenne" valeur=${h.n ? uneDecimale(h.moyenne) : '·'} detail=${h.n ? `de ${h.min} à ${h.max}` : ''} fragile=${h.n > 0 && h.fragile} />
+    <${Tuile} rubrique="humeur" titre="Humeur moyenne" valeur=${h.n ? uneDecimale(h.moyenne) : '·'} detail=${h.n ? `de ${nombre(h.minReleve)} à ${nombre(h.maxReleve)}` : ''} fragile=${h.n > 0 && h.fragile} />
     <${Tuile} rubrique="humeur" titre="Journées à 7 ou plus" valeur=${h.n ? String(h.haut) : '·'} />
     <${Tuile} rubrique="humeur" titre="Journées à 4 ou moins" valeur=${h.n ? String(h.bas) : '·'} />
     <${Tuile} rubrique="expl" titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />
@@ -251,13 +249,18 @@ function PointsSommeil({ moyennes, carte }) {
   </div>`;
 }
 
+// v6 : l'écran Comprendre, rouvert sur son dernier onglet.
+const LigneComprendre = () => html`<ul class="liste carte carte-groupe">
+  <li><a class="ligne-carte" href=${versHash('comprendre', { onglet: dernierOnglet() })}><span class="ligne-libelle">Comprendre</span>${Icones.chevron({ trait: 2 })}</a></li>
+</ul>`;
+
 export function Analyse() {
   const version = useEtatApp((e) => e.versionDonnees || 0);
   const [fenetre, setFenetre] = useState('30');
   const [etat, setEtat] = useState(null);
   useEffect(() => { let actif = true; calculerAnalyse().then((v) => { if (actif) setEtat(v); }); return () => { actif = false; }; }, [version]);
 
-  if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><p class="texte-secondaire centre">Calcul…</p></main>`;
+  if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><${LigneComprendre} /><p class="texte-secondaire centre">Calcul…</p></main>`;
   const { resultat: r, carte, items, signalMasque } = etat;
   const f = r.fenetres[fenetre];
   const cl = r.classements[fenetre];
@@ -265,12 +268,13 @@ export function Analyse() {
 
   return html`<main class="ecran analyse">
     <${Entete} titre="Analyse" />
+    <${LigneComprendre} />
     ${pourInfo && html`<${CartePourInfo} signal=${r.signal} carte=${carte} />`}
     <${MaSemaine} f=${r.fenetres['7']} frise7=${r.frise['7']} positifs=${r.semaine.positifs} sommeil=${r.sommeil} carte=${carte} sansPhrase=${pourInfo} />
     <${Tendances} t=${r.tendances} replie=${pourInfo} />
 
     <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
-    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
+    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
     ${r.moments[fenetre].statut === 'ok'
       ? html`<${TaJournee} key=${`journee-${fenetre}`} profil=${r.moments[fenetre]} carte=${carte} />`
       : r.moments.tout.statut === 'ok' && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.moments} /></section>`}

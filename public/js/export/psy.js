@@ -1,11 +1,12 @@
 // Export vers le projet Claude « PSY » : texte brut des 7 derniers jours, voix « je ».
 // Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
-import { addDays, formaterJourCourt, formaterDateNumerique, jourEvenement } from '../domain/dates.js';
+import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
 import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
-import { journalAvecExplosions } from '../domain/explosions.js';
+import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
+import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
 import { resumeContacts } from '../domain/contacts.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
@@ -25,6 +26,20 @@ function detailContact(j, lib) {
   return resumeContacts(j.contacts, lib, { minuscule, pourExport: true });
 }
 
+// Humeur du jour (v6) : « humeur 5,6 (de 3 à 8) » sur les relevés du jour, « humeur du soir 6 » pour
+// un jour sans relevé.
+function phraseHumeur(j) {
+  if (j.humeurSource === 'soir') return `humeur du soir ${nombre(j.humeur)}`;
+  return `humeur ${nombre(j.humeur)}${j.humeurMin !== j.humeurMax ? ` (de ${j.humeurMin} à ${j.humeurMax})` : ''}`;
+}
+
+// Un relevé d'humeur du moment : « 18:42 7 (énergie moyenne) » ; noté après coup, « vers 14 h 5
+// (énergie basse ; travail, trajet) » : l'énergie, puis ce que je faisais, entre parenthèses.
+function releveMoment(h, lib) {
+  const details = [h.energie && `énergie ${minuscule(lib(h.energie))}`, h.faisais && h.faisais.length > 0 && listeLib(h.faisais, lib)].filter(Boolean).join(' ; ');
+  return [h.vers ? formaterVers(h.heure) : h.heure, h.humeur != null && `${h.humeur}`, details && `(${details})`].filter(Boolean).join(' ');
+}
+
 function ligneJour(j, lib, moments = []) {
   const m = [formaterJourCourt(j.date)];
   if (j.lieu) m.push(lib(j.lieu));
@@ -35,15 +50,18 @@ function ligneJour(j, lib, moments = []) {
   }
   const h = [j.heureCoucher && `coucher ${j.heureCoucher}`, j.heureLever && `lever ${j.heureLever}`].filter(Boolean).join(' ');
   if (h) m.push(h);
-  if (j.humeur != null) m.push(`humeur ${j.humeur}`);
+  if (j.humeur != null) m.push(phraseHumeur(j));
   const contact = detailContact(j, lib);
   if (j.contactHumain != null || contact) m.push(`contact${j.contactHumain != null ? ` ${ouiNon(j.contactHumain)}` : ''}${contact ? ` (${contact})` : ''}`);
   const sport = detailSport(j, lib);
   if (j.sportMouvement != null || sport) m.push(`sport${j.sportMouvement != null ? ` ${ouiNon(j.sportMouvement)}` : ''}${sport ? ` (${sport})` : ''}`);
   if (j.explosions != null) m.push(`explosions ${j.explosions}`);
+  // Ce qui a pesé, ce qui a rechargé (v6) : chacun seulement s'il est noté.
+  if (j.pese && j.pese.length) m.push(`a pesé : ${listeLib(j.pese, lib)}`);
+  if (j.recharge && j.recharge.length) m.push(`a rechargé : ${listeLib(j.recharge, lib)}`);
   const lignes = [m.join(' · ')];
   if (moments.length) {
-    lignes.push(`  humeur du moment : ${moments.map((h) => [h.heure, h.humeur != null && `${h.humeur}`, h.energie && `(énergie ${minuscule(lib(h.energie))})`].filter(Boolean).join(' ')).join(' · ')}`);
+    lignes.push(`  humeur du moment : ${moments.map((h) => releveMoment(h, lib)).join(' · ')}`);
   }
   if (j.pointsPositifs) lignes.push(`  + ${couper(j.pointsPositifs)}`);
   if (j.notes) lignes.push(`  note : ${couper(j.notes)}`);
@@ -92,7 +110,7 @@ function ligneSymptome(s, lib) {
 
 function compteurs(f, complet, lib) {
   const m = [];
-  if (f.humeur.n) m.push(`humeur moyenne ${nombre(f.humeur.moyenne)}${complet ? ` (de ${f.humeur.min} à ${f.humeur.max})` : ''}`);
+  if (f.humeur.n) m.push(`humeur moyenne ${nombre(f.humeur.moyenne)}${complet ? ` (de ${nombre(f.humeur.minReleve)} à ${nombre(f.humeur.maxReleve)})` : ''}`);
   if (f.explosions.n) m.push(`explosions ${f.explosions.total}`);
   if (f.lieux.n) m.push(`jours au bureau ${f.lieux.bureau}`);
   if (complet) {
@@ -124,13 +142,15 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   const lib = (id) => carte.get(id) || id;
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;
-  // Jours listés : ceux du journal, et ceux qui n'ont que des humeurs du moment (ligne de date
-  // seule, puis les relevés). Explosions (v4) : sur une ligne de jour, la règle d'affichage (le
-  // compteur s'il est noté, sinon les épisodes « Explosion », jamais un 0 non saisi) ; dans les
-  // COMPTEURS, la règle de l'analyse (0 pour un jour noté depuis la v4).
-  const notes = new Set(journal.map((j) => j.date));
-  const journalExpl = journalAvecExplosions(journal, episodes, { zeroDepuis });
-  const journalAffiche = journalAvecExplosions(journal, episodes, { zeroSiNote: false, ajouterJours: false });
+  // Jours listés : ceux du journal, et ceux qui n'ont que des humeurs du moment (ligne de date,
+  // puis les relevés). Humeur du jour (v6, analyse/humeur-jour.js) partout, lignes et COMPTEURS.
+  // Explosions (v4) : sur une ligne de jour, la règle d'affichage (le compteur s'il est noté, sinon
+  // les épisodes « Explosion », jamais un 0 non saisi) ; dans les COMPTEURS, la règle de l'analyse
+  // (0 pour un jour noté le soir depuis la v4, jamais pour un jour qui n'a que des relevés).
+  const duJour = avecHumeurDuJour(journal, humeurs);
+  const journalExpl = journalAvecExplosions(duJour, episodes, { zeroDepuis, jourNote: saisieDuSoir(journal) });
+  const journalAffiche = journalAvecExplosions(duJour, episodes, { zeroSiNote: false, ajouterJours: false });
+  const datesListees = new Set(journalAffiche.map((j) => j.date));
   const momentsDu = new Map();
   for (const h of humeurs) {
     const j = jourEvenement(h.date, h.heure);
@@ -141,7 +161,7 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   for (const liste of momentsDu.values()) liste.sort((a, b) => `${a.date} ${a.heure || ''}`.localeCompare(`${b.date} ${b.heure || ''}`));
   const jours = [
     ...journalAffiche.filter((j) => dans(j.date)),
-    ...[...momentsDu.keys()].filter((d) => !notes.has(d)).map((date) => ({ date })),
+    ...[...momentsDu.keys()].filter((d) => !datesListees.has(d)).map((date) => ({ date })),
   ].sort((a, b) => a.date.localeCompare(b.date));
   const parHeure = (a, b) => `${a.date} ${a.heure || ''}`.localeCompare(`${b.date} ${b.heure || ''}`);
   const eps = episodes.filter((e) => dans(jourEvenement(e.date, e.heure))).sort(parHeure);

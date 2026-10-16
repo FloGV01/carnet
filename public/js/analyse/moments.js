@@ -10,7 +10,9 @@ const ENERGIES = ['energie:basse', 'energie:moyenne', 'energie:haute'];
 
 export function profilJournee(humeurs, du, au) {
   // Humeur et énergie sont facultatives : un relevé compte dès qu'il porte l'une des deux.
-  const dans = (humeurs || []).filter((h) => h && h.heure && (h.humeur != null || h.energie != null)
+  // Un relevé « vers » (v6) est noté après coup pour une heure passée : il ne dit rien de l'heure
+  // où on l'a noté, donc il reste hors du profil (l'humeur du jour, elle, le compte).
+  const dans = (humeurs || []).filter((h) => h && h.heure && !h.vers && (h.humeur != null || h.energie != null)
     && (() => { const j = jourEvenement(h.date, h.heure); return j >= du && j <= au; })());
   const parCreneau = new Map();
   for (const h of dans) {

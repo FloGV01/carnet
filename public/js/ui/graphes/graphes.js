@@ -3,13 +3,15 @@
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
-import { DIM_FRISE, DIM_JOURNEE, geometrieFrise, geometrieJournee } from './geometrie.js';
+import { DIM_FRISE, DIM_FRISE_ENERGIE, DIM_JOURNEE, geometrieFrise, geometrieJournee } from './geometrie.js';
 import { nombre, uneDecimale } from '../../analyse/textes.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
 
-function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim, aria, children }) {
+// Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
+// `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
+export function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
   const [voirTableau, setVoirTableau] = useState(false);
   return html`<figure class=${`graphe teinte-${rubrique}`}>
     <figcaption>
@@ -17,12 +19,13 @@ function Cadre({ titre, rubrique, droite, resume, tableau, legende, detail, dim,
         ${droite && html`<span class="graphe-droite">${droite}</span>`}</span>
       ${resume && html`<span class="graphe-resume">${resume}</span>`}
     </figcaption>
-    ${voirTableau ? tableau : html`<svg viewBox=${`0 0 ${dim.largeur} ${dim.hauteur}`} role="img" aria-label=${aria}>${children}</svg>${legende}${detail}`}
+    ${voirTableau ? tableau : html`${corps || html`<svg viewBox=${`0 0 ${dim.largeur} ${dim.hauteur}`} role="img" aria-label=${aria}>${children}</svg>`}${legende}${detail}`}
     <button type="button" class="btn-lien bascule-graphe" onClick=${() => setVoirTableau(!voirTableau)}>${voirTableau ? 'Voir le graphe' : 'Voir en tableau'}</button>
+    ${pied && html`<p class="pied-section">${pied}</p>`}
   </figure>`;
 }
 
-const Axe = ({ graduations, filets, dim }) => html`
+export const Axe = ({ graduations, filets, dim }) => html`
   ${graduations.map((t) => html`<text class="g-axe g-graduation" x="0" y=${t.y}>${t.v}</text>`)}
   ${filets.map((f) => html`<line class="g-filet" x1=${dim.gauche} x2=${dim.largeur} y1=${f.y} y2=${f.y} />`)}`;
 
@@ -39,13 +42,17 @@ function nomColonne(pas, c) {
 // Détail d'une colonne touchée : seulement ce qui est noté.
 export function detailColonne(pas, c, lib) {
   const m = [];
-  if (c.humeur != null) m.push(pas === 'jour' ? `humeur du soir ${c.humeur}` : `humeur du soir ${uneDecimale(c.humeur)} en moyenne${c.fragile ? ' (peu de valeurs)' : ''}`);
+  if (c.humeur != null) {
+    m.push(pas === 'jour' ? `humeur ${nombre(c.humeur)}${c.humeurMin != null && c.humeurMax > c.humeurMin ? ` (de ${c.humeurMin} à ${c.humeurMax})` : ''}`
+      : `humeur ${uneDecimale(c.humeur)} en moyenne${c.fragile ? ' (peu de valeurs)' : ''}`);
+  }
   if (pas === 'jour') {
     const e = c.entree || {};
     if (c.nuit) m.push(`nuit ${lib(c.nuit).toLowerCase()}`);
     if (e.reveilsNocturnes != null) m.push(e.reveilsNocturnes === 5 ? '5 réveils ou plus' : pluriel(e.reveilsNocturnes, 'réveil', 'réveils'));
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
+    if (c.energieBasse === true) m.push('énergie basse');
     if (e.lieu) m.push(lib(e.lieu));
     const contacts = resumeContacts(e.contacts, lib);
     if (contacts) m.push(contacts);
@@ -55,43 +62,58 @@ export function detailColonne(pas, c, lib) {
     if (c.nuits) m.push(`nuits : ${['mal', 'moyen', 'bien'].filter((k) => c.nuits[k]).map((k) => `${lib(`sommeil:${k}`)} ${c.nuits[k]}`).join(' · ')}`);
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
+    if (c.energieBasse > 0) m.push(`${pluriel(c.energieBasse, 'jour', 'jours')} d'énergie basse`);
   }
   return m;
 }
 
-export function MesJours({ frise: f, carte, aujourdhui }) {
+const SANS_REPERE = { traits: [], legende: [] };
+
+// reperes (v6, analyse/reperes.js) : les changements de traitement de la période, en traits numérotés.
+export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
-  const g = geometrieFrise(f);
-  const d = DIM_FRISE;
+  // La rangée « énergie basse » n'existe que si un relevé d'énergie est noté sur la période. Les repères
+  // ajoutent une bande en haut : les dimensions dessinées sont celles que rend la géométrie.
+  const g = geometrieFrise({ ...f, reperes: reperes.traits }, f.avecEnergie ? DIM_FRISE_ENERGIE : DIM_FRISE);
+  const d = g.dim;
   const humeurs = f.colonnes.map((c) => c.humeur).filter((h) => h != null);
-  const unite = { jour: 'Humeur du soir', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
+  const unite = { jour: 'Humeur', semaine: 'Moyenne par semaine', mois: 'Moyenne par mois' }[f.pas];
   const resume = humeurs.length ? `${unite} entre ${nombre(Math.min(...humeurs))} et ${nombre(Math.max(...humeurs))}.` : '';
   const col = choix != null ? f.colonnes.find((c) => c.cle === choix) : null;
   const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
   const avec = f.colonnes.filter((c) => c.aDonnee);
+  // Sous le graphique comme sous le tableau : « ① 12/10 · changement : … ».
+  const legendeReperes = reperes.legende.length > 0 && html`<ul class="legende-reperes" aria-label="Changements de traitement">
+    ${reperes.legende.map((r) => html`<li>${r.texte}</li>`)}</ul>`;
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
-    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>`;
+    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
   const legende = html`<p class="legende-graphe legende-frise">
-    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'humeur du soir' : 'moyenne'}</span>
+    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'humeur' : 'moyenne'}</span>
+    ${g.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>du plus bas au plus haut</span>`}
     ${f.pas === 'jour' && html`<span><svg viewBox="0 0 16 12" aria-hidden="true" class="teinte-humeur"><line class="g-moyenne" x1="1" x2="15" y1="6" y2="6" /></svg>moyenne des 7 jours</span>`}
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-sommeil-1" x="1" y="1" width="10" height="10" /></svg>nuit ${lib('sommeil:mal').toLowerCase()}, ${lib('sommeil:moyen').toLowerCase()}, ${lib('sommeil:bien').toLowerCase()}, du clair au foncé</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-expl"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>explosion</span>
     <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-ep"><circle class="g-autre" cx="6" cy="6" r="3" /></svg>autre épisode</span>
-  </p>`;
+    ${f.avecEnergie && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>${f.pas === 'jour' ? 'énergie basse' : 'jours d\'énergie basse'}</span>`}
+  </p>${legendeReperes}`;
   const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}
     ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
   return html`<${Cadre} titre="Mes jours" rubrique="humeur" resume=${resume} tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Mes jours. ${resume} Touche une colonne pour son détail, ou « Voir en tableau ».`}>
     <${Axe} graduations=${g.graduations} filets=${g.filets} dim=${d} />
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${d.axeY - 10} rx="3" />`}
+    ${g.reperes.map((r) => html`<line class="g-changement" x1=${r.x} x2=${r.x} y1=${r.y1} y2=${r.y2} />
+      <text class="g-changement-num" x=${r.texteX} y=${r.texteY} text-anchor="middle">${r.etiquette}</text>`)}
     <g class="teinte-humeur">
       ${g.moyenne.map((s) => html`<line class=${f.pas === 'jour' ? 'g-moyenne' : 'g-ligne'} x1=${s.x1} y1=${s.y1} x2=${s.x2} y2=${s.y2} />`)}
+      ${g.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
       ${g.points.map((p) => html`<circle class=${p.plein ? 'g-point' : 'g-anneau'} cx=${p.x} cy=${p.y} r=${f.pas === 'jour' && g.largeurColonne < 12 ? 2.5 : 4} />`)}
     </g>
     ${g.nuits.map((n) => html`<rect class=${`g-${n.classe}`} x=${n.x} y=${n.y} width=${n.l} height=${n.h} rx="1.5" />`)}
     <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-autre" cx=${a.x} cy=${a.y} r="2.5" />`)}</g>
+    <g class="teinte-humeur">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${d.axeY} text-anchor="middle">${e.texte}</text>`)}
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;

@@ -7,7 +7,7 @@ export const ETAPES_SYMPTOME = [
   { champ: 'intensite', type: 'intensite', question: 'Intensité', sousQuestion: '1 = à peine, 10 = maximum', recap: 'Intensité' },
   { champ: 'duree', liste: 'duree', question: 'Combien de temps ?', recap: 'Durée' },
 ];
-const TEXTES = [
+export const TEXTES_SYMPTOME = [
   { champ: 'contexte', etiquette: 'Contexte', icone: 'note', placeholder: 'Où, quand, avec qui…' },
   { champ: 'note', etiquette: 'Note', icone: 'note', placeholder: '' },
 ];
@@ -15,5 +15,5 @@ const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="sym
 
 export function Symptome({ id }) {
   return html`<${ParcoursFiche} store="symptomes" route="symptome" titre="Symptôme" nomFiche="Symptôme" etapes=${ETAPES_SYMPTOME}
-    textes=${TEXTES} avecHeure=${false} id=${id} memo=${memo} teinte="sy" />`;
+    textes=${TEXTES_SYMPTOME} avecHeure=${false} id=${id} memo=${memo} teinte="sy" />`;
 }

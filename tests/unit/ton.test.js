@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { RACINE, lister, rel, lire, chainesJs } from '../aides/fichiers.js';
-import { trouverInterdits } from '../aides/mots-interdits.js';
-import { SEED_V2_AJOUTS } from '../../public/js/domain/vocabulaire.js';
+import { trouverInterdits, normaliser } from '../aides/mots-interdits.js';
+import { SEED_V2_AJOUTS, SEED_V4_AJOUTS } from '../../public/js/domain/vocabulaire.js';
+import { LISTES } from '../../public/js/domain/listes-def.js';
 
 // Les libellés des listes (vocabulaire clinique) sont exemptés : ils ne se lissent pas.
 const EXEMPTES = new Set(['public/js/domain/vocabulaire.js']);
@@ -27,10 +28,43 @@ test('aucune formulation interdite dans les listes v4', () => {
   assert.deepEqual(fautes, []);
 });
 
+// Les listes de la v6 (SEED_V4_AJOUTS) et leurs titres : mêmes règles.
+test('aucune formulation interdite dans les listes de la v6', () => {
+  const textes = [...Object.values(SEED_V4_AJOUTS).flat().map(([, libelle]) => libelle), ...['pese', 'recharge', 'activiteMoment'].map((n) => LISTES[n].libelle)];
+  assert.equal(textes.length, 27);
+  const fautes = textes.map((t) => [t, trouverInterdits(t)]).filter(([, f]) => f.length);
+  assert.deepEqual(fautes, []);
+});
+
 test('aucune formulation interdite dans le pas-à-pas du rappel', () => {
   const doc = join(RACINE, 'docs', 'rappel-du-soir.md');
   if (!existsSync(doc)) return;
   assert.deepEqual(trouverInterdits(lire(doc)), []);
+});
+
+// v6 · La page d'aide iPhone (spec §6) : texte fixe qui dit comment régler, jamais quand s'en servir ni ce qui
+// vaut mieux. Elle suit déjà la règle générale ci-dessus ; ces formulations de conseil s'y ajoutent.
+const CONSEILS = [/essaie/, /recommand/, /conseil/, /mieux/, /ideal/, /utile/, /efficace/, /en cas de/, /quand tu es/, /si tu es/, /t'aider/];
+const trouverConseils = (texte) => CONSEILS.filter((re) => re.test(normaliser(texte))).map(String);
+
+test('la page d\'aide iPhone décrit les réglages, sans recommander de stratégie', () => {
+  const page = join(RACINE, 'public', 'js', 'ui', 'ecrans', 'aide-iphone.js');
+  assert.ok(existsSync(page), 'écran manquant : public/js/ui/ecrans/aide-iphone.js');
+  const texte = chainesJs(lire(page));
+  assert.deepEqual(trouverInterdits(texte), []);
+  assert.deepEqual(trouverConseils(texte), []);
+  // Les six rubriques de la spec, dans l'ordre.
+  const rubriques = ["Sons d'arrière-plan", 'Bruit sombre', 'Concentration', 'Moment difficile', 'Réduire le point blanc', 'Parole en direct', 'Toucher le dos', 'Sieste'];
+  const n = normaliser(texte);
+  const places = rubriques.map((r) => n.indexOf(normaliser(r)));
+  assert.ok(places.every((p) => p >= 0), `rubrique absente : ${rubriques.filter((_, i) => places[i] < 0)}`);
+  assert.deepEqual(places, [...places].sort((a, b) => a - b), 'ordre des rubriques');
+});
+
+test('le détecteur de conseils repère les formulations visées', () => {
+  assert.deepEqual(trouverConseils('Essaie le bruit sombre'), ['/essaie/']);
+  assert.deepEqual(trouverConseils('Si tu es en colère, c\'est mieux'), ['/mieux/', '/si tu es/']);
+  assert.deepEqual(trouverConseils('Ouvre Réglages, touche « + », nomme-le « Sieste ».'), []);
 });
 
 test('le détecteur repère bien les formulations visées', () => {

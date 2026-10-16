@@ -1,5 +1,5 @@
-// Les listes de l'app (12 en v1, 13 de plus en v4). sensFixe : on peut renommer, mais pas
-// compléter, archiver ni réordonner.
+// Les listes de l'app (12 en v1, 13 de plus en v4, 3 de plus en v6). sensFixe : on peut renommer,
+// mais pas compléter, archiver ni réordonner.
 export const LISTES = {
   lieu: { libelle: 'Lieu' },
   sommeil: { libelle: 'Sommeil ressenti', sensFixe: true },
@@ -27,6 +27,10 @@ export const LISTES = {
   besoin: { libelle: 'Besoins' },
   consequenceCourt: { libelle: 'Sur le moment' },
   consequenceLong: { libelle: 'Plus tard' },
+  // v6
+  pese: { libelle: 'Ce qui a pesé' },
+  recharge: { libelle: 'Ce qui a rechargé' },
+  activiteMoment: { libelle: 'Ce que je faisais' },
 };
 export const NOMS_LISTES = Object.keys(LISTES);
 export const estListe = (nom) => Object.prototype.hasOwnProperty.call(LISTES, nom);

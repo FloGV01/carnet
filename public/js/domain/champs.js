@@ -5,6 +5,8 @@ import { listeDe } from './listes-def.js';
 
 const T = {
   date: { type: 'date' }, heure: { type: 'heure' }, texte: { type: 'texte' }, bool: { type: 'bool' },
+  // true ou null : false veut dire « pas noté », donc null.
+  vrai: { type: 'vrai' },
   int: (min, max) => ({ type: 'int', min, max }), ref: (liste) => ({ type: 'ref', liste }),
   refs: (liste) => ({ type: 'refs', liste }), questions: { type: 'questions' },
   // Objet de sous-champs (vide → null) et lignes d'objets (lignes vides retirées, aucune → null).
@@ -34,7 +36,7 @@ export const SCHEMAS = {
       lieu: T.ref('lieu'), sommeilRessenti: T.ref('sommeil'), humeur: T.int(1, 10), contactHumain: T.bool,
       sportMouvement: T.bool, explosions: T.int(0, 5), traitementPris: T.ref('traitementPris'), pointsPositifs: T.texte,
       heureCoucher: T.heure, heureLever: T.heure, reveilsNocturnes: T.int(0, 5), notes: T.texte,
-      activites: T.lignes(ACTIVITE), contacts: T.lignes(CONTACT),
+      activites: T.lignes(ACTIVITE), contacts: T.lignes(CONTACT), pese: T.refs('pese'), recharge: T.refs('recharge'),
     },
   },
   episodes: {
@@ -54,9 +56,15 @@ export const SCHEMAS = {
     saisis: { changement: T.texte, effetsSecondaires: T.refs('effetSecondaire'), effetRessenti: T.ref('effetRessenti'), notes: T.texte },
   },
   // Humeur du moment (v4) : date calendaire réelle et heure, rattachées au jour par jourEvenement.
+  // vers (v6) : relevé noté après coup, pour une heure passée. faisais : ce que je faisais.
   humeurs: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
-    saisis: { humeur: T.int(1, 10), energie: T.ref('energie') },
+    saisis: { humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
+  },
+  // Note du moment (v6) : comme l'humeur du moment, date calendaire réelle et heure.
+  notes: {
+    cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
+    saisis: { texte: T.texte },
   },
   rdv: {
     cles: { id: { type: 'id' } },
@@ -81,7 +89,18 @@ function vide(v) {
   return v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (Array.isArray(v) && v.length === 0);
 }
 
-function normaliserChamp(nom, def, v, origine, erreurs) {
+// Magasins qu'un lien de question de rendez-vous peut viser (v6).
+const STORES_LIEN = new Set(['episodes', 'symptomes', 'traitements']);
+
+// Lien d'une question vers un élément : { store, id }, reconstruit. null si le lien n'est pas valide.
+// L'existence de la cible n'est pas vérifiée.
+function lienValide(l) {
+  if (!l || typeof l !== 'object' || Array.isArray(l)) return null;
+  if (!STORES_LIEN.has(l.store) || typeof l.id !== 'string' || l.id.trim() === '') return null;
+  return { store: l.store, id: l.id };
+}
+
+function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
   if (vide(v)) return null;
   switch (def.type) {
     case 'date':
@@ -100,6 +119,10 @@ function normaliserChamp(nom, def, v, origine, erreurs) {
     case 'bool':
       if (v === true || v === false) return v;
       erreurs.push(`${nom} : oui ou non attendu`); return null;
+    case 'vrai':
+      if (v === true) return true;
+      if (v === false) return null;
+      erreurs.push(`${nom} : vrai ou vide attendu`); return null;
     case 'int':
       if (!Number.isInteger(v) || v < def.min || v > def.max) { erreurs.push(`${nom} : entier de ${def.min} à ${def.max} attendu`); return null; }
       return v;
@@ -115,17 +138,25 @@ function normaliserChamp(nom, def, v, origine, erreurs) {
     case 'questions': {
       if (!Array.isArray(v)) { erreurs.push(`${nom} : liste attendue`); return null; }
       const res = [];
-      for (const q of v) {
+      for (const [i, q] of v.entries()) {
         if (!q || typeof q.texte !== 'string') { erreurs.push(`${nom} : question invalide`); return null; }
         const texte = q.texte.normalize('NFC').trim();
-        if (texte) res.push({ texte, abordee: q.abordee === true });
+        if (!texte) continue;
+        const question = { texte, abordee: q.abordee === true };
+        // Un lien invalide est retiré sans rejeter la question.
+        if (q.lien !== undefined && q.lien !== null) {
+          const lien = lienValide(q.lien);
+          if (lien) question.lien = lien;
+          else avertissements.push(`${nom}[${i}].lien : lien invalide retiré`);
+        }
+        res.push(question);
       }
       return res.length ? res : null;
     }
     case 'objet': {
       if (typeof v !== 'object' || Array.isArray(v)) { erreurs.push(`${nom} : objet attendu`); return null; }
       const res = {};
-      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], origine, erreurs);
+      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], origine, erreurs, avertissements);
       const contexte = def.contexte || [];
       return Object.entries(res).some(([k, x]) => x !== null && !contexte.includes(k)) ? res : null;
     }
@@ -135,7 +166,7 @@ function normaliserChamp(nom, def, v, origine, erreurs) {
       v.forEach((ligne, i) => {
         if (!ligne || typeof ligne !== 'object') { erreurs.push(`${nom}[${i}] : ligne invalide`); return; }
         const l = {};
-        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], origine, erreurs);
+        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], origine, erreurs, avertissements);
         if (Object.values(l).some((x) => x !== null)) res.push(l);
       });
       return res.length ? res : null;
@@ -169,11 +200,11 @@ export function normaliser(store, brut, { origine = 'app' } = {}) {
       valeur[nom] = src[nom] ?? null;
     } else {
       const avant = erreurs.length;
-      valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs);
+      valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
       if (valeur[nom] === null && erreurs.length === avant) erreurs.push(`${nom} : absente`);
     }
   }
-  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs);
+  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
   for (const nom of CHAMPS_TECHNIQUES) if (typeof src[nom] === 'string') valeur[nom] = src[nom];
   const connus = new Set([...Object.keys(schema.cles), ...Object.keys(schema.saisis), ...CHAMPS_TECHNIQUES]);
   for (const nom of Object.keys(src)) if (!connus.has(nom)) avertissements.push(`${nom} : champ inconnu ignoré`);
@@ -194,7 +225,7 @@ export function valider(store, brut, options) {
 }
 
 // Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
-const CONTEXTE = { episodes: ['heure'] };
+const CONTEXTE = { episodes: ['heure'], humeurs: ['vers', 'faisais'] };
 
 export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];

@@ -15,12 +15,17 @@ import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
 import { Moment } from './ui/ecrans/moment.js';
 import { MomentDifficile } from './ui/ecrans/moment-difficile.js';
+import { Ressourcer } from './ui/ecrans/ressourcer.js';
 import { MonPlan } from './ui/ecrans/mon-plan.js';
 import { ApresCoup } from './ui/ecrans/apres-coup.js';
+import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
 import { MaJournee } from './ui/ecrans/ma-journee.js';
+import { ReglagesMomentDifficile } from './ui/ecrans/reglages-moment-difficile.js';
+import { ReglagesRessourcer } from './ui/ecrans/reglages-ressourcer.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
+import { AideIphone } from './ui/ecrans/aide-iphone.js';
 import { Historique } from './ui/ecrans/historique.js';
 import { Soins } from './ui/ecrans/soins.js';
 import { Rdv } from './ui/ecrans/rdv.js';
@@ -28,6 +33,7 @@ import { Consultation } from './ui/ecrans/consultation.js';
 import { Traitement } from './ui/ecrans/traitement.js';
 import { Symptome } from './ui/ecrans/symptome.js';
 import { Analyse } from './ui/ecrans/analyse.js';
+import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
@@ -37,9 +43,13 @@ const ECRANS = {
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
   moment: () => html`<${Moment} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
+  ressourcer: () => html`<${Ressourcer} />`,
   'mon-plan': () => html`<${MonPlan} />`,
+  'apres-coup-liste': () => html`<${ApresCoupListe} />`,
   'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
   'reglages-journee': () => html`<${MaJournee} />`,
+  'reglages-moment-difficile': () => html`<${ReglagesMomentDifficile} />`,
+  'reglages-ressourcer': () => html`<${ReglagesRessourcer} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   historique: () => html`<${Historique} />`,
   soins: () => html`<${Soins} />`,
@@ -51,8 +61,10 @@ const ECRANS = {
   'reglages-sauvegarde': () => html`<${Sauvegarde} />`,
   'reglages-effacer': () => html`<${Effacer} />`,
   'reglages-rappel': () => html`<${Rappel} />`,
+  'reglages-aide-iphone': () => html`<${AideIphone} />`,
   diagnostic: () => html`<${Diagnostic} />`,
   analyse: () => html`<${Analyse} />`,
+  comprendre: (p) => html`<${Comprendre} onglet=${p.onglet} />`,
   'export-psy': () => html`<${ExportPsy} />`,
   'listes-index': () => html`<${IndexListes} />`,
   soignants: () => html`<${Soignants} />`,

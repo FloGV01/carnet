@@ -48,9 +48,69 @@ test('formats français', () => {
   assert.equal(D.formaterJourComplet('2026-10-01'), 'jeudi 1er octobre');
   assert.equal(D.formaterJourAbrege('2026-09-16'), 'mer. 16 sept.');
   assert.equal(D.formaterJourCourt('2026-09-21'), 'lun 21/09');
+  assert.equal(D.formaterJourCourt('2026-10-03', { zero: false }), 'sam 3/10');
+  assert.equal(D.formaterJourMois('2026-09-10'), '10/09');
+  assert.equal(D.formaterJourMois('2026-10-02', { zero: false }), '2/10');
+  assert.equal(D.formaterHeure('18:00'), '18 h');
+  assert.equal(D.formaterHeure('09:05'), '9 h 05');
+  assert.equal(D.formaterHeure('00:30'), '0 h 30');
   assert.equal(D.formaterDateLongue('2026-10-01'), '1er octobre 2026');
   assert.equal(D.formaterSemaine('2026-09-21'), 'Semaine du 21 septembre');
   assert.equal(D.formaterDuree(24400), '0:24');
   assert.equal(D.formaterDuree(300000), '5:00');
   assert.deepEqual(D.plageJours('2026-09-29', '2026-10-01'), ['2026-09-29', '2026-09-30', '2026-10-01']);
+});
+
+// ---------- v6 : « C'était vers… » ----------
+
+const a = (jour, h, min) => new Date(2026, 9, jour, h, min);
+
+test('vers : les heures proposées suivent le jour logique, heure en cours comprise', () => {
+  assert.deepEqual(D.heuresVers(a(13, 4, 30)), [], 'à 04:30 : aucune');
+  assert.deepEqual(D.heuresVers(a(13, 5, 59)), [], 'à 05:59 : aucune');
+  assert.deepEqual(D.heuresVers(a(13, 6, 0)), [6]);
+  assert.deepEqual(D.heuresVers(a(13, 14, 5)), [6, 8, 10, 12, 14]);
+  assert.deepEqual(D.heuresVers(a(13, 21, 59)), [6, 8, 10, 12, 14, 16, 18, 20]);
+  assert.deepEqual(D.heuresVers(a(13, 22, 0)), [6, 8, 10, 12, 14, 16, 18, 20, 22]);
+  // Après minuit, on est encore dans la journée d'hier : minuit est atteint, 2 h pas encore.
+  assert.deepEqual(D.heuresVers(a(13, 1, 30)), [6, 8, 10, 12, 14, 16, 18, 20, 22, 0]);
+  assert.deepEqual(D.heuresVers(a(13, 3, 59)), [6, 8, 10, 12, 14, 16, 18, 20, 22, 0, 2]);
+  assert.deepEqual(D.heuresVers(a(13, 0, 0)), [6, 8, 10, 12, 14, 16, 18, 20, 22, 0]);
+  assert.deepEqual(D.heuresVers(a(13, 1, 59)), [6, 8, 10, 12, 14, 16, 18, 20, 22, 0]);
+  assert.deepEqual(D.heuresVers(a(13, 2, 0)), [6, 8, 10, 12, 14, 16, 18, 20, 22, 0, 2]);
+});
+
+test('vers : le couple (date, heure) écrit, le 13/10 à 01:30', () => {
+  const maintenant = a(13, 1, 30);
+  assert.deepEqual(D.versDateHeure(maintenant, 22), { date: '2026-10-12', heure: '22:00' });
+  assert.deepEqual(D.versDateHeure(maintenant, 0), { date: '2026-10-13', heure: '00:00' });
+  assert.deepEqual(D.versDateHeure(a(13, 3, 59), 2), { date: '2026-10-13', heure: '02:00' });
+  assert.deepEqual(D.versDateHeure(a(13, 14, 5), 6), { date: '2026-10-13', heure: '06:00' });
+  // Les deux relevés de la nuit sont au jour logique du 12.
+  assert.equal(D.jourEvenement('2026-10-12', '22:00'), '2026-10-12');
+  assert.equal(D.jourEvenement('2026-10-13', '00:00'), '2026-10-12');
+});
+
+test('vers : le couple traverse un changement de mois et d\'année', () => {
+  assert.deepEqual(D.versDateHeure(new Date(2026, 10, 1, 0, 30), 0), { date: '2026-11-01', heure: '00:00' });
+  assert.deepEqual(D.versDateHeure(new Date(2026, 10, 1, 0, 30), 22), { date: '2026-10-31', heure: '22:00' });
+  assert.deepEqual(D.versDateHeure(new Date(2027, 0, 1, 1, 0), 0), { date: '2027-01-01', heure: '00:00' });
+  assert.deepEqual(D.versDateHeure(new Date(2027, 0, 1, 1, 0), 22), { date: '2026-12-31', heure: '22:00' });
+});
+
+test('vers : chaque heure proposée donne un relevé du jour logique d\'aujourd\'hui', () => {
+  for (const [jour, h, min] of [[13, 1, 30], [13, 3, 59], [13, 14, 5], [13, 22, 0], [25, 3, 30], [29, 2, 30]]) {
+    const maintenant = a(jour, h, min);
+    for (const heure of D.heuresVers(maintenant)) {
+      const { date, heure: hhmm } = D.versDateHeure(maintenant, heure);
+      assert.equal(D.jourEvenement(date, hhmm), D.jourLogique(maintenant), `${jour}/10 ${h}:${min} vers ${heure} h`);
+    }
+  }
+});
+
+test('vers : « vers 14 h »', () => {
+  assert.equal(D.formaterVers('14:00'), 'vers 14 h');
+  assert.equal(D.formaterVers('06:00'), 'vers 6 h');
+  assert.equal(D.formaterVers('00:00'), 'vers 0 h');
+  assert.equal(D.formaterVers('02:00'), 'vers 2 h');
 });

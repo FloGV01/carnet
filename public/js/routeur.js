@@ -3,12 +3,16 @@ export const ROUTE_ACCUEIL = 'aujourdhui';
 
 const ID = '([A-Za-z0-9_-]+)';
 const DATE = '(\\d{4}-\\d{2}-\\d{2})';
+// Les onglets de l'écran Comprendre (v6, spec §2.1).
+export const ONGLETS_COMPRENDRE = ['explosions', 'energie', 'rythmes'];
 export const ROUTES = [
   { nom: 'aujourdhui', motif: '/aujourdhui' },
   { nom: 'jour', motif: `/jour/${DATE}`, params: ['date'] },
   { nom: 'moment', motif: '/moment' },
   { nom: 'moment-difficile', motif: '/moment-difficile' },
+  { nom: 'ressourcer', motif: '/ressourcer' },
   { nom: 'mon-plan', motif: '/mon-plan' },
+  { nom: 'apres-coup-liste', motif: '/apres-coup' },
   { nom: 'apres-coup', motif: `/apres-coup/${ID}`, params: ['id'] },
   { nom: 'episode', motif: `/episode/${ID}`, params: ['id'] },
   { nom: 'symptome', motif: `/symptome/${ID}`, params: ['id'] },
@@ -22,10 +26,14 @@ export const ROUTES = [
   { nom: 'reglages-effacer', motif: '/reglages/effacer' },
   { nom: 'reglages-rappel', motif: '/reglages/rappel' },
   { nom: 'reglages-journee', motif: '/reglages/journee' },
+  { nom: 'reglages-moment-difficile', motif: '/reglages/moment-difficile' },
+  { nom: 'reglages-ressourcer', motif: '/reglages/ressourcer' },
+  { nom: 'reglages-aide-iphone', motif: '/reglages/aide-iphone' },
   { nom: 'listes-index', motif: '/reglages/listes' },
   { nom: 'listes', motif: `/reglages/listes/${ID}`, params: ['liste'] },
   { nom: 'diagnostic', motif: '/diagnostic' },
   { nom: 'analyse', motif: '/analyse' },
+  { nom: 'comprendre', motif: `/comprendre/(${ONGLETS_COMPRENDRE.join('|')})`, params: ['onglet'] },
   { nom: 'export-psy', motif: '/export-psy' },
   { nom: 'soignants', motif: '/soignants' },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
@@ -53,8 +61,8 @@ export function versHash(nom, params = {}) {
 
 // Onglet actif pour une route donnée.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
-  if (['analyse', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
+  if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'ressourcer', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['analyse', 'comprendre', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
   if (nom === 'historique') return 'historique';
   if (['soins', 'rdv', 'consultation', 'traitement'].includes(nom)) return 'soins';
   return 'reglages';

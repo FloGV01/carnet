@@ -8,6 +8,9 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/episode/nouveau').params.id, 'nouveau');
   assert.equal(lireRoute('#/episode/ep_abc-12').params.id, 'ep_abc-12');
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
+  assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
+  assert.equal(lireRoute('#/reglages/ressourcer').nom, 'reglages-ressourcer');
+  assert.equal(lireRoute('#/reglages/aide-iphone').nom, 'reglages-aide-iphone');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
 
@@ -20,7 +23,7 @@ test('hash vide ou inconnu : retour sur Aujourd\'hui', () => {
 });
 
 test('aller-retour versHash / lireRoute pour chaque route', () => {
-  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion' };
+  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes' };
   for (const r of ROUTES) {
     const params = Object.fromEntries((r.params || []).map((p) => [p, exemples[p]]));
     const lu = lireRoute(versHash(r.nom, params));
@@ -32,10 +35,52 @@ test('aller-retour versHash / lireRoute pour chaque route', () => {
 test('onglet actif', () => {
   assert.equal(ongletDe('episode'), 'aujourdhui');
   assert.equal(ongletDe('apres-coup'), 'aujourdhui');
+  assert.equal(ongletDe('apres-coup-liste'), 'aujourdhui');
   assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-journee'), 'reglages');
+  assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
+  assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
+  assert.equal(ongletDe('ressourcer'), 'aujourdhui', 'Me ressourcer s\'ouvre depuis Moment difficile');
+  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'les réglages ne sont pas l\'écran Me ressourcer');
+  assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
   assert.equal(ongletDe('export-psy'), 'analyse');
+  assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v6 · Comprendre : /comprendre/ID avec ID parmi explosions, energie, rythmes', () => {
+  for (const onglet of ['explosions', 'energie', 'rythmes']) {
+    assert.deepEqual(lireRoute(`#/comprendre/${onglet}`), { nom: 'comprendre', params: { onglet }, chemin: `/comprendre/${onglet}` });
+    assert.equal(versHash('comprendre', { onglet }), `#/comprendre/${onglet}`);
+  }
+  for (const h of ['#/comprendre', '#/comprendre/', '#/comprendre/autre', '#/comprendre/Energie']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
+});
+
+test('v6 · Après coup : la liste (/apres-coup) et un épisode (/apres-coup/ID) ne se confondent pas', () => {
+  assert.deepEqual(lireRoute('#/apres-coup'), { nom: 'apres-coup-liste', params: {}, chemin: '/apres-coup' });
+  assert.deepEqual(lireRoute('#/apres-coup/ep_abc-12'), { nom: 'apres-coup', params: { id: 'ep_abc-12' }, chemin: '/apres-coup/ep_abc-12' });
+  assert.equal(versHash('apres-coup-liste'), '#/apres-coup');
+  assert.equal(versHash('apres-coup', { id: 'ep_x' }), '#/apres-coup/ep_x');
+  assert.equal(lireRoute('#/apres-coup/').inconnue, true);
+});
+
+test('v6 · Me ressourcer : l\'écran (/ressourcer) et ses réglages (/reglages/ressourcer) ne se confondent pas', () => {
+  assert.deepEqual(lireRoute('#/ressourcer'), { nom: 'ressourcer', params: {}, chemin: '/ressourcer' });
+  assert.deepEqual(lireRoute('#/reglages/ressourcer'), { nom: 'reglages-ressourcer', params: {}, chemin: '/reglages/ressourcer' });
+  assert.equal(versHash('ressourcer'), '#/ressourcer');
+  assert.equal(versHash('reglages-ressourcer'), '#/reglages/ressourcer');
+  assert.equal(lireRoute('#/ressourcer/').inconnue, true);
+  assert.equal(lireRoute('#/ressourcer/autre').inconnue, true);
+});
+
+test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => {
+  assert.deepEqual(lireRoute('#/reglages/aide-iphone'), { nom: 'reglages-aide-iphone', params: {}, chemin: '/reglages/aide-iphone' });
+  assert.equal(versHash('reglages-aide-iphone'), '#/reglages/aide-iphone');
+  for (const h of ['#/reglages/aide-iphone/', '#/reglages/aide-iphone/autre', '#/aide-iphone']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
 });

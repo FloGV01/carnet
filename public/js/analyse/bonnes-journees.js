@@ -4,6 +4,7 @@
 import { SEUILS } from './seuils.js';
 import { testPermutationRapide, benjaminiHochberg, newcombe } from './stats.js';
 import { calendrierTests } from './calendrier.js';
+import { estHumeur } from './humeur-jour.js';
 import { addDays } from '../domain/dates.js';
 
 const S = SEUILS.bonnesJournees;
@@ -33,7 +34,8 @@ function proportions(groupes, serie) {
 // Évalue tous les facteurs sur les données arrêtées à `fin` (incluse).
 export function evaluer(journal, fin) {
   const { entrees } = calendrierTests(journal, fin, SEUILS.calendrier.trouMaxJours);
-  const humeur = (j) => (j && Number.isInteger(j.humeur) && j.humeur >= 1 && j.humeur <= 10 ? j.humeur : null);
+  // Humeur du jour (v6), décimale : groupes à 7,0 ou plus et à 4,0 ou moins.
+  const humeur = (j) => (j && estHumeur(j.humeur) ? j.humeur : null);
   const groupes = entrees.map((j) => { const h = humeur(j); return h == null ? null : h >= S.haut ? 'H' : h <= S.bas ? 'B' : null; });
   const nH = groupes.filter((g) => g === 'H').length;
   const nB = groupes.filter((g) => g === 'B').length;

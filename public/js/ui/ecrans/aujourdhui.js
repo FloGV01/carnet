@@ -3,6 +3,7 @@ import { html, useEffect, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour } from '../../domain/dates.js';
+import { episodesRecents, premierJourRecent } from '../../domain/apres-coup.js';
 import { versHash } from '../../routeur.js';
 import { EnteteJour } from '../composants/entete-jour.js';
 import { Pastilles } from '../composants/pastilles.js';
@@ -15,8 +16,9 @@ import { MemoVocal } from '../composants/memo-vocal.js';
 import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { Rubrique } from '../composants/rubrique.js';
-import { phraseResume } from '../../domain/phrase.js';
-import { normaliserJournee, champsAffiches } from '../../domain/journee.js';
+import { phraseResume, minusculeInitiale } from '../../domain/phrase.js';
+import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
+import { normaliserJournee, champsAffiches, repliAffiche, NOM_PESE_RECHARGE } from '../../domain/journee.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
@@ -98,6 +100,12 @@ function resumeNuit(e) {
   return morceaux.join(' · ');
 }
 
+// Ce qui a pesé, ce qui a rechargé (v6) : « pesé : bruit, trajets · rechargé : calme ».
+function resumePeseRecharge(e, carte) {
+  const liste = (ids) => ids.map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
+  return [e.pese?.length && `pesé : ${liste(e.pese)}`, e.recharge?.length && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
+}
+
 export function Aujourdhui({ date: dateRoute }) {
   useEtatApp((e) => e.horloge || 0);
   const maintenant = repo.maintenant();
@@ -126,11 +134,15 @@ export function Aujourdhui({ date: dateRoute }) {
   useEffect(() => { if (donnees) setEntree(donnees.entree); }, [donnees]);
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
-    const [episodes, symptomes, items, rdvs, audios] = await Promise.all([
-      repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.metas(),
+    // Les 7 derniers jours ne se lisent que sur la page d'aujourd'hui : ils font la ligne « Après coup » (v6).
+    const [episodes, symptomes, items, rdvs, avecMemo, humeurs, recents] = await Promise.all([
+      repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.parents(),
+      repo.humeurs.parJour(date, date), date === aujourdhui ? repo.episodes.parJour(premierJourRecent(aujourdhui), aujourdhui) : [],
     ]);
-    const avecMemo = new Set(audios.map((a) => `${a.parentStore}:${a.parentId}`));
-    return { episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo };
+    return {
+      episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo, humeurs,
+      avecApresCoup: episodesRecents(recents, aujourdhui).length > 0,
+    };
   }, [date]);
 
   const aller = (cible) => {
@@ -163,7 +175,11 @@ export function Aujourdhui({ date: dateRoute }) {
 
   const carte = carteLibelles(items);
   const nExplosions = evenements ? evenements.episodes.filter(estExplosion).length : 0;
-  const phrase = phraseResume('jour', entree, carte, { nExplosions });
+  // Humeur du jour (v6) : le résumé dit la moyenne des humeurs du moment du jour, sinon l'humeur du
+  // soir. Les champs, eux, gardent l'entrée du soir telle quelle. Pendant un changement de jour, les
+  // relevés encore chargés sont ceux de l'autre jour : seule l'entrée de ce jour-ci compte.
+  const duJour = avecHumeurDuJour([entree], evenements ? evenements.humeurs : []).find((j) => j.date === date);
+  const phrase = phraseResume('jour', duJour, carte, { nExplosions });
   const resume = phrase.map((x) => x.texte).join('');
   const replie = fini && date === aujourdhui && !vide;
   const visibles = champsAffiches(journee, entree);
@@ -253,6 +269,16 @@ export function Aujourdhui({ date: dateRoute }) {
           <${Pastilles} etiquette="Réveils" ariaPrefixe="Réveils" options=${REVEILS} valeur=${entree.reveilsNocturnes} surChoix=${ecrire('reveilsNocturnes')} colonnes=${6} classe="chiffres reveils" teinte="sommeil" />
         </div>
       </${Repli}>`}
+      ${repliAffiche(journee, entree) && html`<${Repli} cle="pese" titre=${NOM_PESE_RECHARGE} resume=${resumePeseRecharge(entree, carte)} resumeSous=${true}>
+        <div class="champ-jour">
+          <span class="etiquette">Ce qui a pesé</span>
+          <${PastillesMultiples} etiquette="Ce qui a pesé" options=${options(items, 'pese', entree.pese)} valeurs=${entree.pese} surChoix=${ecrire('pese')} />
+        </div>
+        <div class="champ-jour">
+          <span class="etiquette">Ce qui a rechargé</span>
+          <${PastillesMultiples} etiquette="Ce qui a rechargé" options=${options(items, 'recharge', entree.recharge)} valeurs=${entree.recharge} surChoix=${ecrire('recharge')} />
+        </div>
+      </${Repli}>`}
       ${visibles.includes('sport') && html`<${Repli} cle="sport" titre="Sport en détail" resume=${resumeSport(entree, carte)} memoriser=${false}>
         <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
       </${Repli}>`}
@@ -277,6 +303,8 @@ export function Aujourdhui({ date: dateRoute }) {
           'sy', evenements.avecMemo.has(`symptomes:${sy.id}`)))}
       </ul>
       <a class="btn-lien action ajout-symptome" href="#/symptome/nouveau">${Icones.plus({ trait: 2 })}Symptôme</a>
+      ${date === aujourdhui && evenements.avecApresCoup && html`<a class="ligne-apres-coup-jour" href=${versHash('apres-coup-liste')}>
+        <span>Après coup (TCC) · tes épisodes récents</span>${Icones.chevron({ trait: 2 })}</a>`}
       ${evenements.rdv && html`<a class="ligne-rdv" href=${versHash('rdv', { id: evenements.rdv.id })}>
         ${Icones.soins()}<span>Prochain RDV : ${libelleRdv(evenements.rdv, evenements.carte)}</span></a>`}
     </section>`}

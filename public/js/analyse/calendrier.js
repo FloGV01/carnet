@@ -1,5 +1,6 @@
 // Série calendaire continue (un élément par jour, null si rien n'est noté).
 import { addDays, diffDays } from '../domain/dates.js';
+import { estHumeur } from './humeur-jour.js';
 
 export function calendrier(journal, fin) {
   const jours = journal.filter((j) => !fin || j.date <= fin);
@@ -13,7 +14,7 @@ export function calendrier(journal, fin) {
   return { debut, fin: dernier, entrees };
 }
 
-const humeurValide = (j) => j && Number.isInteger(j.humeur) && j.humeur >= 1 && j.humeur <= 10;
+const humeurValide = (j) => j && estHumeur(j.humeur);
 
 // Série des tests par permutation : part du premier jour où l'humeur est notée (une entrée vide en
 // tête ne décale rien), et retire les trous de plus de `trouMax` jours sans rien (une date aberrante

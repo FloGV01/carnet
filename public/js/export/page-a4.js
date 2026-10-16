@@ -36,6 +36,7 @@ export function mettreEnPage(m) {
 
   texte(m.entete, { taille: 12, gras: true });
   texte(m.sousTitre, { taille: 8, couleur: 'secondaire' });
+  texte(m.noteHumeur, { taille: 8, couleur: 'secondaire' });
 
   titreSection('Indicateurs');
   const lNom = 54;
@@ -54,7 +55,10 @@ export function mettreEnPage(m) {
   ops.push({ type: 'frise', y, hauteur: 36, largeur, x: x0, frise: m.frise });
   y += 36 + 1;
   const [mal, moyen, bien] = m.libellesSommeil;
-  texte(`Point : humeur moyenne (1 à 10 ; anneau : peu de valeurs) · nuits ${mal}, ${moyen}, ${bien}, du plus clair au plus foncé · barre : explosions · rond : autres épisodes.`, { taille: 6.5, couleur: 'secondaire' });
+  // Repères de traitement (v6) : leur légende est la ligne numérotée de la section Traitement. Cette phrase
+  // tient sur la seconde ligne de la légende : la page ne grandit pas.
+  const reperes = m.frise.reperes && m.frise.reperes.length ? ' · trait numéroté : changement de traitement (voir Traitement)' : '';
+  texte(`Point : humeur moyenne (1 à 10 ; anneau : peu de valeurs) · nuits ${mal}, ${moyen}, ${bien}, du plus clair au plus foncé · barre : explosions · rond : autres épisodes${reperes}.`, { taille: 6.5, couleur: 'secondaire' });
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;

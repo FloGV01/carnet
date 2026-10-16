@@ -56,6 +56,15 @@ test('journée v4 : les épisodes « Explosion » s\'affichent sans jamais s\'ad
   assert.equal(texte(phraseResume('jour', { humeur: 6 }, carte, { nExplosions: 0 })), 'humeur 6', 'rien à montrer sans compteur ni épisode');
 });
 
+test('journée v6 : l\'humeur du jour s\'écrit avec une décimale au plus', () => {
+  assert.equal(texte(phraseResume('jour', { humeur: 5.6 }, carte)), 'humeur 5,6');
+  assert.equal(texte(phraseResume('jour', { humeur: 17 / 3 }, carte)), 'humeur 5,7');
+  assert.equal(texte(phraseResume('jour', { humeur: 6 }, carte)), 'humeur 6', 'une humeur ronde reste sans décimale');
+  assert.equal(texte(phraseResume('jour', { humeur: 6.04 }, carte)), 'humeur 6');
+  assert.deepEqual(valeurs(phraseResume('jour', { lieu: 'lieu:bureau', humeur: 5.5 }, carte)), ['Bureau', 'humeur 5,5']);
+  assert.equal(texte(phraseResume('jour', { humeur: '7' }, carte)), 'humeur 7', 'une valeur abîmée ne casse pas la phrase');
+});
+
 test('réglages du soir : un champ masqué reste affiché tant qu\'il porte une valeur', async () => {
   const { normaliserJournee, champsAffiches, champsVisibles } = await import('../../public/js/domain/journee.js');
   const j = normaliserJournee({ masques: ['explosions', 'sport'] });

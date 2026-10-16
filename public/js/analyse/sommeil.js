@@ -5,6 +5,7 @@
 import { SEUILS } from './seuils.js';
 import { spearman, spearmanPartielle, testPermutationRapide, moyenne, rangsEntiers, pearsonTableaux } from './stats.js';
 import { calendrierTests } from './calendrier.js';
+import { estHumeur } from './humeur-jour.js';
 import { addDays } from '../domain/dates.js';
 
 const S = SEUILS.sommeil;
@@ -42,11 +43,17 @@ function moyennesPar(paires) {
 export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}) {
   const { entrees, consecutif } = calendrierTests(journal, fin, SEUILS.calendrier.trouMaxJours);
   const s = entrees.map((j) => (j && j.sommeilRessenti in CODE_SOMMEIL ? CODE_SOMMEIL[j.sommeilRessenti] : null));
-  const h = entrees.map((j) => (j && Number.isInteger(j.humeur) && j.humeur >= 1 && j.humeur <= 10 ? j.humeur : null));
+  const h = entrees.map((j) => (j && estHumeur(j.humeur) ? j.humeur : null));
   const opts = { permutations: S.permutations, blocJours: S.blocJours, seed: S.seed };
   const n = s.length;
   const sT = Float64Array.from(s, (v) => (v == null ? NaN : v));
-  const hT = Float64Array.from(h, (v) => (v == null ? NaN : v));
+  // Humeur du jour (v6), décimale : chaque valeur devient son rang parmi les valeurs distinctes.
+  // L'ordre et les ex aequo sont gardés, donc les rangs moyens (ceux de `rangs`) se comptent comme
+  // pour des entiers, sans tri à chaque permutation.
+  const distinctes = [...new Set(h.filter((v) => v != null))].sort((a, b) => a - b);
+  const codeHumeur = new Map(distinctes.map((v, i) => [v, i]));
+  const maxH = Math.max(0, distinctes.length - 1);
+  const hT = Float64Array.from(h, (v) => (v == null ? NaN : codeHumeur.get(v)));
   // Tampons réutilisés par les statistiques rapides (rangs par comptage : valeurs entières).
   const bx = new Int32Array(n); const by = new Int32Array(n); const bz = new Int32Array(n);
   const rx = new Float64Array(n); const ry = new Float64Array(n); const rz = new Float64Array(n);
@@ -54,7 +61,7 @@ export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}
   const statMeme = (t) => {
     let k = 0;
     for (let i = 0; i < n; i++) { const a = t[i]; const b = hT[i]; if (a === a && b === b) { bx[k] = a; by[k] = b; k++; } }
-    const r = corr(k, 2, 10);
+    const r = corr(k, 2, maxH);
     return r == null ? null : Math.abs(r);
   };
   const statLendemain = (t) => {
@@ -65,7 +72,7 @@ export function evaluer(journal, fin, { decalages = ['meme', 'lendemain'] } = {}
       if (a === a && b === b && c === c) { bx[k] = a; by[k] = b; bz[k] = c; k++; }
     }
     if (k < 3) return null;
-    const rxy = pearsonTableaux(rangsEntiers(bx, k, 2, rx), rangsEntiers(by, k, 10, ry), k);
+    const rxy = pearsonTableaux(rangsEntiers(bx, k, 2, rx), rangsEntiers(by, k, maxH, ry), k);
     const rxz = pearsonTableaux(rx, rangsEntiers(bz, k, 2, rz), k);
     const ryz = pearsonTableaux(ry, rz, k);
     if (rxy == null) return null;

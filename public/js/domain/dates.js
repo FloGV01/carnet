@@ -52,6 +52,27 @@ export function jourEvenement(date, heure) {
   return date;
 }
 
+// « C'était vers… » (v6) : un relevé d'humeur noté après coup pour une heure paire du jour logique.
+// Heures proposables dans l'ordre de la journée, de 4 h à 4 h : de 6 h à 22 h, puis minuit et 2 h.
+const HEURES_VERS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 0, 2];
+const rangDansJour = (h) => (h - BASCULE_HEURE + 24) % 24;
+
+// Celles déjà atteintes à `maintenant`, l'heure en cours comprise ; aucune avant 6 h.
+export function heuresVers(maintenant) {
+  const rang = rangDansJour(maintenant.getHours());
+  return HEURES_VERS.filter((h) => rangDansJour(h) <= rang);
+}
+// Le couple écrit pour « vers h h » : minuit et 2 h tombent le lendemain du jour logique, en date
+// calendaire (le relevé reste rattaché à ce jour logique par jourEvenement).
+export function versDateHeure(maintenant, h) {
+  const jour = jourLogique(maintenant);
+  return { date: h < BASCULE_HEURE ? addDays(jour, 1) : jour, heure: `${pad(h)}:00` };
+}
+// « vers 14 h », à partir de l'heure ronde d'un relevé « vers » ('14:00').
+export function formaterVers(heure) {
+  return `vers ${Number(heure.slice(0, 2))} h`;
+}
+
 export function plageJours(du, au) {
   const res = [];
   for (let c = du; c <= au; c = addDays(c, 1)) res.push(c);
@@ -72,9 +93,9 @@ export function formaterJourAbrege(cle) {
   const [, m, j] = cle.split('-').map(Number);
   return `${JOURS_COURTS[jourSemaine(cle)]}. ${j} ${MOIS_COURTS[m - 1]}`;
 }
-export function formaterJourCourt(cle) {
-  const [, m, j] = cle.split('-').map(Number);
-  return `${JOURS_COURTS[jourSemaine(cle)]} ${pad(j)}/${pad(m)}`;
+// « lun 21/09 » ; sans zéro : « sam 3/10 ».
+export function formaterJourCourt(cle, { zero = true } = {}) {
+  return `${JOURS_COURTS[jourSemaine(cle)]} ${formaterJourMois(cle, { zero })}`;
 }
 export function formaterDateLongue(cle) {
   const [a, m, j] = cle.split('-').map(Number);
@@ -83,6 +104,16 @@ export function formaterDateLongue(cle) {
 export function formaterDateNumerique(cle) {
   const [a, m, j] = cle.split('-').map(Number);
   return `${pad(j)}/${pad(m)}/${a}`;
+}
+// « 12/10 », « 03/10 » ; sans zéro : « 3/10 ».
+export function formaterJourMois(cle, { zero = true } = {}) {
+  const [, m, j] = cle.split('-').map(Number);
+  return zero ? `${pad(j)}/${pad(m)}` : `${j}/${m}`;
+}
+// « 18 h », « 9 h 05 »
+export function formaterHeure(heure) {
+  const [h, m] = heure.split(':').map(Number);
+  return `${h} h${m ? ` ${pad(m)}` : ''}`;
 }
 export function formaterSemaine(lundi) {
   const [, m, j] = lundi.split('-').map(Number);
