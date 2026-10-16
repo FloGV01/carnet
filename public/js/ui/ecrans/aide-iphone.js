@@ -58,7 +58,7 @@ const RUBRIQUES = [
       'Ajoute « Définir les sons d\'arrière-plan » et choisis « Bruit sombre ».',
       'Pour le lancer, touche-le dans Raccourcis, ajoute-le à l\'écran d\'accueil ou associe-le à Toucher le dos.',
     ],
-    note: 'Le minuteur ne coupe ni la Concentration ni les sons : ils restent allumés jusqu\'à ce que tu les éteignes, depuis le Centre de contrôle. À la fin, c\'est le minuteur de l\'iPhone qui sonne. Carnet n\'envoie rien.',
+    note: 'Par défaut, le minuteur ne coupe ni la Concentration ni les sons : ils restent allumés jusqu\'à ce que tu les éteignes, depuis le Centre de contrôle. À la fin, c\'est le minuteur de l\'iPhone qui sonne. Carnet n\'envoie rien.',
   },
 ];
 

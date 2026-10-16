@@ -77,6 +77,23 @@ test('derniereFois : avant sa date, ou avant aujourd\'hui s\'il est « Date à f
   assert.equal(derniereFois(vide[1], [vide[1]], '2026-10-15'), null, 'aucune référence');
 });
 
+test('derniereFois : jamais un rendez-vous à venir, même pour un rendez-vous plus lointain (aujourd\'hui, le 15/10)', () => {
+  const liste = [
+    { id: 'passe', date: '2026-09-10', professionnel: PSY, compteRendu: 'on garde la dose' },
+    { id: 'du-jour', date: '2026-10-15', professionnel: PSY, compteRendu: 'ce matin' },
+    { id: 'proche', date: '2026-10-20', professionnel: PSY, questions: [{ texte: 'Question préparée', abordee: false }] },
+    { id: 'loin', date: '2026-11-15', professionnel: PSY },
+  ];
+  const loin = derniereFois(liste[3], liste, '2026-10-15');
+  assert.equal(loin.rdv.id, 'passe', 'celui du 15/11 compte depuis aujourd\'hui : ni le 20/10, ni celui du jour');
+  assert.deepEqual(loin.questions, []);
+  assert.equal(derniereFois(liste[2], liste, '2026-10-15').rdv.id, 'passe');
+  // Le lendemain, celui du 15/10 est passé : il devient la référence.
+  assert.equal(derniereFois(liste[3], liste, '2026-10-16').rdv.id, 'du-jour');
+  // Sans rendez-vous passé, rien : jamais le prochain à la place.
+  assert.equal(derniereFois(liste[3], liste.slice(1), '2026-10-14'), null);
+});
+
 test('vue soignants : « Depuis le RDV » et la prochaine étape viennent de la même référence', () => {
   const items = seedItems(SEED_V1, 'x');
   const data = { journal: [{ date: '2026-10-01', humeur: 6 }], episodes: [], symptomes: [], traitements: [] };

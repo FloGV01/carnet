@@ -178,6 +178,35 @@ test('✕ supprime la note, Annuler la rend', async ({ page }) => {
   expect(gardees).toMatchObject([{ date: '2026-10-14', heure: '18:40', texte: 'Première' }, { date: '2026-10-14', heure: '19:10', texte: 'Seconde' }]);
 });
 
+test('✕ quand la suppression échoue : la note reste, rien n\'est dit à tort, et ✕ marche au toucher suivant', async ({ page }) => {
+  await creerNote(page, { date: '2026-10-14', heure: '18:40', texte: 'Une idée à garder' });
+  await page.reload();
+  await ouvrirNotes(page);
+  // Le premier appel échoue, les suivants passent.
+  await page.evaluate(() => {
+    const repoNotes = window.__carnet.repo.notes;
+    const supprimerVraiment = repoNotes.supprimer;
+    let essais = 0;
+    repoNotes.supprimer = (id) => (essais++ === 0 ? Promise.reject(new Error('suppression refusée')) : supprimerVraiment(id));
+    window.__essais = () => essais;
+  });
+  const croix = lignes(page).first().getByRole('button', { name: 'Supprimer la note du 14/10' });
+  await croix.click();
+  await expect.poll(() => page.evaluate(() => window.__essais())).toBe(1);
+  await page.waitForTimeout(200);
+  await expect(lignes(page)).toHaveCount(1);
+  await expect(texteDe(lignes(page).first())).toHaveValue('Une idée à garder');
+  await expect(page.getByText('Note supprimée')).toHaveCount(0);
+  expect(await notes(page)).toHaveLength(1);
+
+  await croix.click();
+  await expect(page.getByText('Note supprimée')).toBeVisible();
+  await expect(lignes(page)).toHaveCount(0);
+  expect(await notes(page)).toEqual([]);
+  await annuler(page).click();
+  await expect(texteDe(lignes(page).first())).toHaveValue('Une idée à garder');
+});
+
 test('Soins rouvre le dernier onglet utilisé', async ({ page }) => {
   await ouvrirNotes(page);
   await page.getByRole('link', { name: "Aujourd'hui" }).click();

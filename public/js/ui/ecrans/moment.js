@@ -3,7 +3,7 @@
 // une fois les deux choisis, l'écran se referme, sauf si « Ce que je faisais » est ouvert ou si la règle
 // « Me ressourcer » joue : sous les choix, « Pour récupérer, je… » (domain/ressourcer.js).
 // L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
-import { html, useEffect, useRef, useState } from '../lib.js';
+import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useIndicateur, ecrireAvecEssais, lireLocal } from '../hooks.js';
 import { cleLocale, heureLocale, heuresVers, versDateHeure, formaterVers } from '../../domain/dates.js';
@@ -65,6 +65,7 @@ export function Moment() {
   const [releve, setReleve] = useState(NEUF);
   const [faisaisOuvert, setFaisaisOuvert] = useState(() => lireLocal(CLE_FAISAIS, false) === true);
   const [, signaler] = useIndicateur();
+  const [, rafraichir] = useReducer((n) => n + 1, 0);
   const idRef = useRef(null);
   const file = useRef(Promise.resolve());
   const fermeture = useRef(null);
@@ -118,9 +119,12 @@ export function Moment() {
     if (seFermeSeul(suivant, { faisaisOuvert, ressourcer: regle(suivant) })) fermeture.current = setTimeout(terminer, DELAI_FERMETURE_MS);
   };
   // Une heure de « vers » (ou « Maintenant ») : sans relevé encore, rien n'est écrit, l'heure reste à
-  // l'écran et sera posée à la création ; avec un relevé, il change d'heure.
+  // l'écran et sera posée à la création ; avec un relevé, il change d'heure. La liste a pu s'ouvrir avant 4 h et
+  // se toucher après : une heure qui n'est plus proposée est celle du jour d'avant, elle est ignorée (sinon elle
+  // tomberait sur le nouveau jour) et la liste se rafraîchit.
   const choisirQuand = (h) => {
     const maintenant = repo.maintenant();
+    if (h != null && !heuresVers(maintenant).includes(h)) { rafraichir(); return; }
     const quand = h == null ? null : versDateHeure(maintenant, h);
     if (cleQuand(quand) === cleQuand(releve.quand)) return;
     const suivant = { ...releve, quand };

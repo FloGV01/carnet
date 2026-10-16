@@ -43,7 +43,7 @@ Rien ne s'y saisit, rien de réel n'y entre : ni journal, ni épisode, ni mémo,
    - Dans Carnet TEST : Réglages, puis Sauvegarde, puis Importer, avec un témoin.
    - Puis Réglages, un appui long sur la version, puis « Vérifier mes données » : des nombres seulement, par table.
    - « Mémos sans fiche » et « Fiches illisibles » valent 0 pour un témoin.
-   - Les tables de données (`journal`, `episodes`, `symptomes`, `traitements`, `rdv`, `humeurs`, `audios`) ont les nombres de `counts` dans l'en-tête du fichier. Un `format-1` n'a pas de `humeurs` : 0.
+   - Les tables de données (`journal`, `episodes`, `symptomes`, `traitements`, `rdv`, `humeurs`, `notes`, `audios`) ont les nombres de `counts` dans l'en-tête du fichier. Un `format-1` n'a pas de `humeurs` : 0. Aucun témoin n'a de `notes` (elles datent du format 4) : 0.
    - `listes` et `meta` peuvent être plus grandes que dans `counts` : l'import ajoute les listes par défaut absentes et garde les clés techniques de l'app. Ce n'est pas une perte.
 5. **Essai d'un changement de base**, quand une version qui change la base va arriver sur `dev` :
    - avant de la pousser, « Carnet TEST » est déjà installé avec la version précédente de `dev`, et un témoin y est importé (étape 4) ;

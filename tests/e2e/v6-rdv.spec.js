@@ -84,6 +84,20 @@ test('« La dernière fois » : un rendez-vous passé rouvert cite celui d\'avan
   }
 });
 
+test('« La dernière fois » ne cite jamais un rendez-vous à venir : celui du 15/11 compte depuis aujourd\'hui, pas depuis le 20/10', async ({ page }) => {
+  const preparee = { texte: 'Une question préparée pour le 20/10', abordee: false };
+  await creerRdv(page, [...SUIVI.slice(0, 3), { ...SUIVI[3], questions: [preparee] }, { id: 'rdv-nov', date: '2026-11-15', professionnel: PSY }]);
+  await aller(page, '#/consultation/rdv-nov');
+  const vue = page.getByRole('dialog', { name: 'En consultation' });
+  const repli = vue.getByRole('button', { name: /^La dernière fois/ });
+  await expect(repli).toHaveText(/La dernière fois · 10\/09/);
+  await repli.click();
+  await expect(vue.getByText('Noter les réveils')).toBeVisible();
+  await expect(vue.getByText(preparee.texte)).toHaveCount(0);
+  await expect(vue.getByRole('button', { name: /^Reprendre/ })).toHaveText('Reprendre');
+  await expect(vue.getByRole('button', { name: 'Reprendre : Les réveils de 4 h' })).toBeVisible();
+});
+
 test('« En parler au rendez-vous » depuis un épisode : question déjà écrite, rendez-vous choisi, « Voir » en consultation, le PDF', async ({ page }) => {
   await creerRdv(page, [SUIVI[3], { id: 'rdv-fixer', professionnel: NEURO }]);
   await page.evaluate(() => window.__carnet.repo.episodes.creer({ date: '2026-10-03', heure: '18:00', emotion: 'emotion:colere', intensite: 8,

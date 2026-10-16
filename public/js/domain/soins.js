@@ -32,11 +32,13 @@ export function rdvReference(rdvs, { professionnel = null, avant, exclure = null
   return ref;
 }
 
-// « La dernière fois » d'un rendez-vous : sa référence, comptée depuis sa date (ou depuis aujourd'hui s'il est
-// « Date à fixer »), et les questions qui n'y ont pas été abordées. null sans soignant ou s'il n'y a rien à montrer.
+// « La dernière fois » d'un rendez-vous : sa référence, et les questions qui n'y ont pas été abordées. C'est
+// toujours un rendez-vous passé : compté depuis la date du rendez-vous s'il est passé, sinon (à venir ou
+// « Date à fixer ») depuis aujourd'hui. null sans soignant ou s'il n'y a rien à montrer.
 export function derniereFois(rdv, rdvs, aujourdhui) {
   if (!rdv || !rdv.professionnel) return null;
-  const ref = rdvReference(rdvs, { professionnel: rdv.professionnel, avant: rdv.date || aujourdhui, exclure: rdv.id });
+  const avant = rdv.date && rdv.date < aujourdhui ? rdv.date : aujourdhui;
+  const ref = rdvReference(rdvs, { professionnel: rdv.professionnel, avant, exclure: rdv.id });
   if (!ref) return null;
   const questions = (ref.questions || []).filter((q) => !q.abordee);
   if (!ref.compteRendu && !ref.prochaineEtape && questions.length === 0) return null;

@@ -328,7 +328,9 @@ Sans plan, le lien « Écrire mon plan » remplace la phrase actuelle. Avec un p
 
 - **Où** : sur la carte du prochain rendez-vous et en haut de « En consultation », un repli fermé « La dernière fois · 10/09 ».
 - **Contenu** : il reprend, tels qu'écrits, « Ce qui a été dit / décidé » et « Prochaine étape » du rendez-vous de référence.
-- **Rendez-vous de référence** : le dernier rendez-vous du même soignant, autre que celui-ci, daté avant ce rendez-vous (ou avant aujourd'hui s'il est « Date à fixer »).
+- **Rendez-vous de référence** : toujours un rendez-vous passé. C'est le dernier du même soignant, autre que celui-ci, daté avant la plus ancienne de deux dates : celle de ce rendez-vous et aujourd'hui.
+  - Un rendez-vous à venir, ou « Date à fixer », compte donc depuis aujourd'hui : il ne cite jamais un autre rendez-vous à venir, ni celui du jour.
+  - Un rendez-vous passé qu'on rouvre compte depuis sa propre date.
   - La fonction est commune avec la vue soignants. Elle prend la date de référence et l'identifiant à exclure.
 - **Questions non abordées** de ce rendez-vous : chacune a un bouton « Reprendre ».
   - Il la copie une fois sur le rendez-vous en cours, lien compris (§7.3).

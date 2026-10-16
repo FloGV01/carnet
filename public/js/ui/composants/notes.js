@@ -65,8 +65,13 @@ function LigneNote({ note }) {
   const date = dateNote(note);
   const vide = useRef(false);
   const retiree = useRef(false);
-  // Une seule suppression par note : en sortant du champ, en changeant d'écran, ou par ✕.
-  const supprimer = () => { if (!retiree.current) { retiree.current = true; retirer(note.id); } };
+  // Une seule suppression à la fois par note : en sortant du champ, en changeant d'écran, ou par ✕. Si elle
+  // échoue, la note reste affichée et ✕ (ou la sortie du champ) la supprime au toucher suivant.
+  const supprimer = async () => {
+    if (retiree.current) return;
+    retiree.current = true;
+    try { await retirer(note.id); } catch { retiree.current = false; }
+  };
   const supprimerSiVide = () => { if (vide.current) supprimer(); };
   useEffect(() => supprimerSiVide, []);
   const enregistrer = async (texte) => {

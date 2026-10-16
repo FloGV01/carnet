@@ -43,8 +43,9 @@ export function saisieDuSoir(journal) {
 // d'explosions uniquement. Jamais pour le calendrier, les bonnes journées, le sommeil ni le signal.
 // jourNote : l'entrée a-t-elle une saisie du soir ? (v6 : une entrée qui ne porte que l'humeur du
 // jour, faite de relevés, n'en a pas, et ne vaut donc jamais 0.) Un journal enrichi de l'humeur du
-// jour passe toujours saisieDuSoir(journal brut).
-export function journalAvecExplosions(journal, episodes, { zeroSiNote = true, zeroDepuis = null, ajouterJours = true, jourNote = () => true } = {}) {
+// jour passe toujours saisieDuSoir(journal brut). Sans prédicat, aucun jour n'est dit noté : pas de zéro
+// fabriqué, les jours restent « inconnus ».
+export function journalAvecExplosions(journal, episodes, { zeroSiNote = true, zeroDepuis = null, ajouterJours = true, jourNote = () => false } = {}) {
   const parJour = explosionsParJour(episodes);
   const res = (journal || []).map((j) => {
     const v = valeurExplosions(j.explosions ?? null, parJour.get(j.date) || 0, { jourNote: jourNote(j), zeroSiNote, date: j.date, zeroDepuis });

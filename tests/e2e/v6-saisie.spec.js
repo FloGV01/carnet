@@ -195,6 +195,26 @@ test('C\'était vers… après minuit : « vers 22 h » et « vers 0 h » resten
   await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('vers 0 h humeur 4');
 });
 
+test('C\'était vers… ouverte avant 4 h, touchée après : l\'heure d\'hier n\'est pas posée sur le nouveau jour, la liste se rafraîchit', async ({ page }) => {
+  await page.clock.setSystemTime(new Date(2026, 9, 15, 3, 30));
+  await aller(page, '#/moment');
+  const vue = vueMoment(page);
+  const liste = vue.getByRole('group', { name: 'C\'était vers…' });
+  await vue.getByRole('button', { name: 'Maintenant' }).click();
+  // 03:30 est encore le jour logique du 14 : 22 h, 0 h et 2 h sont proposées.
+  await expect(liste.getByRole('button')).toHaveText([...HEURES, '22 h', '0 h', '2 h']);
+  // La liste reste ouverte pendant que le jour logique change.
+  await page.clock.setSystemTime(new Date(2026, 9, 15, 6, 30));
+  await heure(vue, '22 h').click();
+  await expect(vue.getByRole('button', { name: /^C'était vers/ })).toHaveCount(0);
+  // Le 22 h d'hier n'est plus proposé : la liste est celle de 6 h 30.
+  await vue.getByRole('button', { name: 'Maintenant' }).click();
+  await expect(liste.getByRole('button')).toHaveText(['Maintenant', '6 h']);
+  await heure(vue, 'Maintenant').click();
+  await vue.getByRole('button', { name: 'Humeur 6' }).click();
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: expect.stringMatching(/^06:\d\d$/), vers: null, humeur: 6 }]);
+});
+
 test('C\'était vers… avant 6 h : « Maintenant » seul, sans flèche, qui ne se touche pas', async ({ page }) => {
   await page.clock.setSystemTime(new Date(2026, 9, 15, 5, 30));
   await aller(page, '#/moment');

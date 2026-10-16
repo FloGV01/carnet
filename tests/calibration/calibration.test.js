@@ -139,7 +139,7 @@ calibration('signal : au plus 2 affichages par an sur des données sans signatur
 // dans analyze). « rupture » : compteur jusqu'au jour 300, puis la moitié des explosions en épisodes.
 calibration('signal v4 : compteur masqué, puis rupture compteur → épisodes, toujours au plus 2 jours par an', async (forme) => {
   const { ressemblance } = await import('../../public/js/analyse/ressemblance.js');
-  const { journalAvecExplosions } = await import('../../public/js/domain/explosions.js');
+  const { journalAvecExplosions, saisieDuSoir } = await import('../../public/js/domain/explosions.js');
   const { addDays } = await import('../../public/js/domain/dates.js');
   const items = seedItems(SEED_V1, 'x');
   for (const mode of ['masque', 'rupture']) {
@@ -152,7 +152,7 @@ calibration('signal v4 : compteur masqué, puis rupture compteur → épisodes, 
         if (j.explosions > 0 && (mode === 'masque' || i % 2 === 0)) episodes.push({ id: `e${i}`, date: j.date, heure: '18:00', reaction: 'reaction:explosion' });
         return { ...j, explosions: null };
       });
-      const regle = journalAvecExplosions(journal, episodes, { zeroDepuis: brut[0].date, ajouterJours: false });
+      const regle = journalAvecExplosions(journal, episodes, { zeroDepuis: brut[0].date, ajouterJours: false, jourNote: saisieDuSoir(journal) });
       const debut = brut[135].date;
       for (let k = 0; k < 365; k += 3) {
         const r = ressemblance({ journal: regle }, { aujourdhui: addDays(debut, k), items });

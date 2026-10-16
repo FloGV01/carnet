@@ -41,7 +41,8 @@ test('Sieste : la page dit que la Concentration et les sons restent allumés, et
   const sieste = page.locator('section', { has: page.getByRole('heading', { name: 'Raccourci « Sieste »', level: 2 }) });
   await expect(sieste.getByText('un réglage donne la fin', { exact: false })).toBeVisible();
   await expect(sieste.getByText('reste allumée jusqu\'à ce que tu l\'éteignes', { exact: false })).toBeVisible();
-  await expect(sieste.getByText('ne coupe ni la Concentration ni les sons', { exact: false })).toBeVisible();
+  // La note s'accorde avec l'étape du réglage de la fin : « par défaut », jamais un absolu.
+  await expect(sieste.getByText('Par défaut, le minuteur ne coupe ni la Concentration ni les sons', { exact: false })).toBeVisible();
   await expect(sieste.getByText('c\'est le minuteur de l\'iPhone qui sonne', { exact: false })).toBeVisible();
   const pointBlanc = page.locator('section', { has: page.getByRole('heading', { name: 'Réduire le point blanc', level: 2 }) });
   await expect(pointBlanc.getByText('plusieurs raccourcis sont cochés', { exact: false })).toBeVisible();
