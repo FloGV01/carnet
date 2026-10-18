@@ -16,6 +16,8 @@ export const ROUTES = [
   { nom: 'episode', motif: `/episode/${ID}`, params: ['id'] },
   { nom: 'symptome', motif: `/symptome/${ID}`, params: ['id'] },
   { nom: 'historique', motif: '/historique' },
+  // Un jour ouvert depuis l'Historique (v6.1) : même écran que /jour, avec « Retour » vers l'Historique.
+  { nom: 'historique-jour', motif: `/historique/jour/${DATE}`, params: ['date'] },
   { nom: 'soins', motif: '/soins' },
   { nom: 'rdv', motif: `/rdv/${ID}`, params: ['id'] },
   { nom: 'consultation', motif: `/consultation/${ID}`, params: ['id'] },
@@ -58,11 +60,12 @@ export function versHash(nom, params = {}) {
   return `#${chemin}`;
 }
 
-// Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins (v6.1).
+// Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins, un jour ouvert depuis
+// l'Historique garde l'onglet Historique (v6.1).
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre'].includes(nom)) return 'analyse';
-  if (nom === 'historique') return 'historique';
+  if (['historique', 'historique-jour'].includes(nom)) return 'historique';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

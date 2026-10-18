@@ -1,13 +1,14 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
 // n'existent pas ici : ni ligne vide, ni décompte. L'humeur d'un jour (ligne et filtre) est
 // l'humeur du jour (v6) : un jour qui n'a que des humeurs du moment a sa ligne.
-import { html, useState, useRef } from '../lib.js';
+import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
-import { useDonnees } from '../hooks.js';
+import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
+import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
 import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
@@ -22,6 +23,20 @@ const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 
 const HUMEURS = [{ valeur: 'bas', libelle: '1-4' }, { valeur: 'moyen', libelle: '5-6' }, { valeur: 'haut', libelle: '7-10' }];
 const AVANT_EXTRAIT = 18;
 const APRES_EXTRAIT = 28;
+
+// État de l'écran gardé pour la session (v6.1, P15) : segment, filtres, recherche et position survivent aux
+// allers-retours (un jour, un épisode, un symptôme, un autre onglet), pas à un redémarrage. Le segment est aussi
+// gardé sur cet appareil, comme le dernier onglet de Soins.
+const CLE_SEGMENT = 'carnet:historique:segment';
+let memoire = null;
+const memoriser = (changement) => { memoire = { ...memoire, ...changement }; };
+function depart() {
+  if (memoire) return memoire;
+  const segment = lireLocal(CLE_SEGMENT);
+  return { segment: SEGMENTS.some((s) => s.valeur === segment) ? segment : 'jours', requete: '', rechercheOuverte: false, filtresOuverts: false, f: {}, position: 0 };
+}
+// « Tout effacer » : rien de ce qui a été cherché ou filtré ne reste en mémoire.
+export function reinitialiserHistorique() { memoire = null; }
 
 function Extrait({ ex }) {
   if (!ex) return null;
@@ -42,13 +57,23 @@ function GroupeFiltre({ titre, children }) {
 }
 
 export function Historique() {
-  const [segment, setSegment] = useState('jours');
-  const [requete, setRequete] = useState('');
-  const [rechercheOuverte, setRechercheOuverte] = useState(false);
-  const [filtresOuverts, setFiltresOuverts] = useState(false);
-  const [f, setF] = useState({});
+  const [initial] = useState(depart);
+  const [segment, setSegment] = useState(initial.segment);
+  const [requete, setRequete] = useState(initial.requete);
+  const [rechercheOuverte, setRechercheOuverte] = useState(initial.rechercheOuverte);
+  const [filtresOuverts, setFiltresOuverts] = useState(initial.filtresOuverts);
+  const [f, setF] = useState(initial.f);
   const champRecherche = useRef(null);
+  const restaure = useRef(false);
   const majF = (cle) => (v) => setF((x) => ({ ...x, [cle]: v || null }));
+  useEffect(() => { memoriser({ segment, requete, rechercheOuverte, filtresOuverts, f }); }, [segment, requete, rechercheOuverte, filtresOuverts, f]);
+  // La position n'est notée qu'une fois rendue celle d'avant, et seulement tant que l'Historique est l'écran
+  // affiché : le retour en haut d'un changement d'écran (main.js) ne l'écrase pas.
+  useEffect(() => {
+    const noter = () => { if (restaure.current && etatApp.lire().route.nom === 'historique') memoriser({ position: window.scrollY }); };
+    window.addEventListener('scroll', noter, { passive: true });
+    return () => window.removeEventListener('scroll', noter);
+  }, []);
 
   const { donnees } = useDonnees(async () => {
     const [journal, episodes, symptomes, items, avecMemo, humeurs] = await Promise.all([
@@ -56,6 +81,13 @@ export function Historique() {
     ]);
     return { journal: avecHumeurDuJour(journal, humeurs), episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
+  // Avant que l'écran ne s'affiche : la liste revient là où on l'avait laissée.
+  useLayoutEffect(() => {
+    if (!donnees || restaure.current) return;
+    restaure.current = true;
+    if (initial.position > 0) window.scrollTo(0, initial.position);
+    memoriser({ position: window.scrollY });
+  }, [donnees]);
 
   if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" /></main>`;
   const { carte, items, avecMemo, aujourdhui } = donnees;
@@ -89,7 +121,7 @@ export function Historique() {
             if (t) note.push(t);
           }
           if (j.pointsPositifs) note.push(`« ${debutTexte(j.pointsPositifs, 34)} »`);
-          return html`<li><a class="ligne-carte ligne-hist" href=${j.date === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: j.date })}>
+          return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
               ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<span class=${`puce teinte-${p.rubrique}`}>${p.texte}</span>`)}</span>`}
@@ -144,7 +176,7 @@ export function Historique() {
   return html`<main class="ecran historique">
     <${Entete} titre="Historique" />
     <${Segmente} etiquette="Afficher" options=${SEGMENTS} valeur=${segment} classe="large" sansVide=${true}
-      surChoix=${(v) => { if (v && v !== segment) { setSegment(v); setF({}); } }} />
+      surChoix=${(v) => { if (v && v !== segment) { setSegment(v); setF({}); ecrireLocal(CLE_SEGMENT, v); } }} />
     <div class="barre-recherche">
       <button type="button" class="bouton-loupe" aria-label="Rechercher" aria-expanded=${rechercheOuverte ? 'true' : 'false'} onClick=${basculerRecherche}>${Icones.loupe()}</button>
       ${rechercheOuverte && html`<input ref=${champRecherche} type="search" class="champ-recherche" aria-label="Rechercher dans les textes" placeholder="Rechercher"

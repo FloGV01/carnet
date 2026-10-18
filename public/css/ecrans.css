@@ -314,6 +314,9 @@
 .aujourdhui { gap: 5px; padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
 .entete-jour { display: flex; flex-direction: column; gap: 6px; }
 .ligne-jour { display: flex; align-items: center; min-height: var(--cible); margin: 0 -12px; }
+/* Jour ouvert depuis l'Historique (v6.1) : « ‹ Retour » juste au-dessus, son chevron aligné sur celui du jour précédent. */
+.entete-jour > .barre-retour { margin: 0 -12px -6px; }
+.entete-jour .retour { padding-left: 11px; }
 .nav-jour { width: var(--cible); height: var(--cible); flex: none; border: 0; background: none; color: var(--text); display: grid; place-items: center; padding: 0; }
 .nav-jour svg { width: 22px; height: 22px; }
 .nav-jour[disabled] { color: var(--hairline); cursor: default; }

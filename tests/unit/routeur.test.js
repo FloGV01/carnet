@@ -95,3 +95,15 @@ test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => 
     assert.equal(lireRoute(h).inconnue, true, h);
   }
 });
+
+test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour/DATE) garde l\'onglet Historique ; /jour/DATE garde Aujourd\'hui', () => {
+  assert.deepEqual(lireRoute('#/historique/jour/2026-09-21'), { nom: 'historique-jour', params: { date: '2026-09-21' }, chemin: '/historique/jour/2026-09-21' });
+  assert.equal(versHash('historique-jour', { date: '2026-09-21' }), '#/historique/jour/2026-09-21');
+  assert.equal(ongletDe('historique-jour'), 'historique');
+  assert.equal(ongletDe('historique'), 'historique');
+  assert.equal(ongletDe('jour'), 'aujourdhui', 'ouvert autrement, le jour garde l\'onglet Aujourd\'hui');
+  assert.deepEqual(lireRoute('#/historique'), { nom: 'historique', params: {}, chemin: '/historique' });
+  for (const h of ['#/historique/jour', '#/historique/jour/', '#/historique/jour/2026-9-21', '#/historique/2026-09-21']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
+});

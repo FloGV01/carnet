@@ -40,6 +40,7 @@ import { Soignants } from './ui/ecrans/soignants.js';
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
+  'historique-jour': (p) => html`<${Aujourdhui} date=${p.date} depuisHistorique=${true} />`,
   moment: () => html`<${Moment} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
   'mon-plan': () => html`<${MonPlan} />`,

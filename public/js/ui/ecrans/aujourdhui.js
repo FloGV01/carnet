@@ -115,7 +115,10 @@ function texteReleve(h, carte) {
 // heure avant 4 h tombe le lendemain en date calendaire, donc après celles de la soirée.
 const cleHeure = (x) => `${x.date} ${x.heure || ''}`;
 
-export function Aujourdhui({ date: dateRoute }) {
+// depuisHistorique (v6.1) : le jour a été ouvert depuis l'Historique. « ‹ Retour » y ramène, à la même position,
+// et ‹ › changent de jour sans quitter l'onglet Historique ; « Revenir à aujourd'hui » laisse la place à Retour
+// (l'onglet Aujourd'hui fait la même chose).
+export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   useEtatApp((e) => e.horloge || 0);
   const maintenant = repo.maintenant();
   const aujourdhui = repo.aujourdhui();
@@ -159,11 +162,13 @@ export function Aujourdhui({ date: dateRoute }) {
     if (cible === 'precedent') d = addDays(date, -1);
     if (cible === 'suivant') d = addDays(date, 1);
     if (d > aujourdhui) return;
-    location.hash = d === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: d });
+    if (depuisHistorique) location.hash = versHash('historique-jour', { date: d });
+    else location.hash = d === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: d });
   };
+  const retour = depuisHistorique ? () => { location.hash = versHash('historique'); } : null;
 
   if (!donnees || !entree || entree.date !== date) {
-    return html`<main class="ecran aujourdhui"><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" /></main>`;
+    return html`<main class="ecran aujourdhui"><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;
   }
 
   const { items, baseVide, journee } = donnees;
@@ -278,9 +283,9 @@ export function Aujourdhui({ date: dateRoute }) {
   const finiBouton = date === aujourdhui && !vide ? html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>` : null;
 
   return html`<main class="ecran aujourdhui">
-    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} />
+    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} surRetour=${retour} />
     ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
-    ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
+    ${date !== aujourdhui && !depuisHistorique && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
     ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
       <p class="phrase-recap">${phrase.map((s) => (s.valeur ? html`<span class=${`valeur teinte-${s.rubrique}`}>${s.texte}</span>` : s.texte))}</p>
