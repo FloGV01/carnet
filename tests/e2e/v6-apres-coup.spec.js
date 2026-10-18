@@ -63,7 +63,7 @@ test('fiche rouverte : la carte du bas a son cadre, teinté comme les épisodes 
   await expect(carteRemplie).not.toContainText('Retour à froid');
 });
 
-test('nouvel épisode, à chaud : pas de ligne « Après coup » en haut ; au récapitulatif, la carte du bas est encadrée comme sur une fiche rouverte', async ({ page }) => {
+test('nouvel épisode, à chaud : pas de ligne « Après coup » ni « En parler » en haut ; la réaction choisie ramène à Aujourd\'hui, la carte du bas attend la fiche rouverte', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
   const fiche = page.getByRole('dialog', { name: 'Épisode' });
   await fiche.getByRole('button', { name: 'Conflit' }).click();
@@ -73,21 +73,16 @@ test('nouvel épisode, à chaud : pas de ligne « Après coup » en haut ; au r�
   await fiche.getByRole('button', { name: 'Colère' }).click();
   await fiche.getByRole('button', { name: 'Intensité 7' }).click();
   await fiche.getByRole('button', { name: 'Injustice' }).click();
-  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
-  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
   await expect(fiche.locator('.ligne-plan')).toHaveText('Mon plan');
-  const carte = fiche.getByRole('link', { name: /Après coup/ });
-  await expect(carte).toHaveCount(1);
+  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(fiche).toHaveCount(0);
+  await page.getByRole('link', { name: /21:00\s+Colère · 7 · Conflit/ }).click();
+  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
+  await expect(fiche.locator('.ligne-plan')).toContainText(/Mon plan\s*·\s*Après coup\s*·\s*En parler/);
+  const carte = fiche.getByRole('link', { name: /Après coup · TCC/ });
   await carte.scrollIntoViewIfNeeded();
-  await expect(carte.locator('.titre-apres-coup')).toHaveText('Après coup · TCC');
   await expect(carte).toContainText('Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.');
-  const cadre = await carte.evaluate((el) => {
-    const s = getComputedStyle(el);
-    return { bord: s.borderTopWidth, couleurBord: s.borderTopColor, fond: s.backgroundColor, point: getComputedStyle(document.querySelector('.point-teinte')).backgroundColor };
-  });
-  expect(cadre.bord).toBe('1px');
-  expect(cadre.fond).not.toBe('rgba(0, 0, 0, 0)');
-  expect(cadre.couleurBord, 'même teinte que le point des épisodes').toBe(cadre.point);
 });
 
 test('Aujourd\'hui : la ligne n\'apparaît que s\'il y a un épisode sur les sept derniers jours logiques, jamais sur un jour passé', async ({ page }) => {
