@@ -28,5 +28,6 @@ export function phaseRespiration(ecouleMs, rythme = RESPIRATION_DEFAUT.rythme, d
   return ecouleMs % CYCLE_MS < inspiration ? 'inspire' : 'expire';
 }
 
-export const texteAvant = (minutes) => `Cohérence cardiaque · ${minutes} minutes`;
-export const texteFin = (minutes) => `${minutes} minutes de respiration.`;
+// « 5 minutes » ne se coupe pas : une espace insécable entre le nombre et l'unité (v6.1).
+export const texteAvant = (minutes) => `Cohérence cardiaque · ${minutes}\u00a0minutes`;
+export const texteFin = (minutes) => `${minutes}\u00a0minutes de respiration.`;

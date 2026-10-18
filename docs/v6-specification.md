@@ -600,3 +600,11 @@ Construite le 15/10, en 26 tâches, sur la branche `dev`. Version 6.0.0, base `D
 - Le signal sonore de la respiration, en silencieux et avec de la musique.
 - Les chemins de la page d'aide iPhone et les noms d'actions de Raccourcis, écrits pour iOS 26.
 - Les zones de texte qui grandissent, et la sortie d'une note vidée quand l'app passe en arrière-plan.
+
+## 14. v6.1 (18/10)
+
+Version 6.1.0, construite le 18/10 en 8 tâches sur la branche `dev`, d'après l'état des lieux du 18/10. Elle apporte quatorze changements d'organisation et de rapidité (P1 à P4, P7 à P16) et ne touche ni à l'apparence générale ni à la base (`DB_VERSION` 4, `FORMAT_VERSION` 4).
+
+Là où elle s'écarte de cette spécification, la v6.1 fait foi. Par exemple, l'écran « Me ressourcer » est retiré, Réglages › « Ma journée » devient « Le soir », et Comprendre s'ouvre par trois portes depuis l'Analyse.
+
+Le détail, les arbitrages A1 à A5 et ce qui attend Claude Design (P5, P6) sont dans `docs/decisions.md`, à l'entrée du 18/10.

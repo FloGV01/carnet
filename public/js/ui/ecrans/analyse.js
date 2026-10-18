@@ -169,7 +169,7 @@ function DetailsBarres({ f, items, carte }) {
   const durees = [...ordre('dureeSport').map((id, i) => ({ id, classe: `rampe-${Math.min(4, i + 1)}`, nom: lib(id).toLowerCase() })), { id: 'aucun', classe: 'rampe-0', nom: 'durée non précisée' }];
   if (!contacts.length && !sport.length) return null;
   return html`<section class="section-analyse">
-    <h2 class="titre-section">Avec qui, comment c'était · Mouvement</h2>
+    <h2 class="titre-section equilibre">Avec qui, comment c'était · Mouvement</h2>
     ${contacts.length > 0 && html`<${Barres} titre="Avec qui, comment c'était" rubrique="contact" lignes=${contacts} precisions=${effets} lib=${lib} pied="En jours, selon tes réponses à « Comment c'était »." />`}
     ${sport.length > 0 && html`<${Barres} titre="Mouvement" rubrique="sport" lignes=${sport} precisions=${durees} lib=${lib} pied="En jours, par durée notée." />`}
   </section>`;

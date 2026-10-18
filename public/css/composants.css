@@ -12,7 +12,7 @@
 .section { margin-top: 20px; }
 .section > h2 {
   font-size: var(--t-note); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2);
-  font-weight: 600; padding-left: 4px; margin-bottom: 10px;
+  font-weight: 600; margin-bottom: 10px;
 }
 .note-carte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); margin: 8px 4px 0; }
 
@@ -249,8 +249,9 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .ligne-heure { display: flex; gap: 0; align-items: center; flex: none; }
 .ligne-heure input { min-height: var(--cible); width: auto; padding: 0 10px; font-variant-numeric: tabular-nums; }
 .ligne-heure:not(:has(.effacer)) { padding-right: var(--cible); }
-.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
-.effacer svg { width: 18px; height: 18px; }
+/* Le bouton ✕ seulement (v6.1) : l'écran « Tout effacer » porte aussi la classe « effacer ». */
+button.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
+button.effacer svg { width: 18px; height: 18px; }
 
 /* Replis */
 .repli { border-top: 1.5px dashed var(--hairline); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
