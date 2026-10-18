@@ -152,7 +152,7 @@ test('règle allumée : passer de « maintenant » à « vers » retire la carte
   await vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: '12 h', exact: true }).click();
   await expect(vue.getByRole('button', { name: 'C\'était vers 12 h' })).toBeVisible();
   await expect(carte(vue)).toHaveCount(0);
-  await vue.getByRole('button', { name: 'C\'était vers 12 h' }).click();
+  // La liste reste ouverte après un choix (v6.1).
   await vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: 'Maintenant', exact: true }).click();
   await expect(carte(vue)).toBeVisible();
 });
