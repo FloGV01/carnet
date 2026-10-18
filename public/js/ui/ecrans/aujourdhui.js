@@ -2,7 +2,7 @@
 import { html, useEffect, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
-import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour } from '../../domain/dates.js';
+import { addDays, JOURS, jourSemaine, estAvantBascule, formaterJour, formaterVers } from '../../domain/dates.js';
 import { episodesRecents, premierJourRecent } from '../../domain/apres-coup.js';
 import { versHash } from '../../routeur.js';
 import { EnteteJour } from '../composants/entete-jour.js';
@@ -105,6 +105,15 @@ function resumePeseRecharge(e, carte) {
   const liste = (ids) => ids.map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
   return [e.pese?.length && `pesé : ${liste(e.pese)}`, e.recharge?.length && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
 }
+
+// Une humeur du moment dans « Ma journée » (v6.1) : « humeur 6 · énergie moyenne », un champ absent omis.
+// L'heure (« 10:20 », ou « vers 14 h ») est dans sa colonne.
+function texteReleve(h, carte) {
+  return [h.humeur != null && `humeur ${h.humeur}`, h.energie && `énergie ${minusculeInitiale(libelle(carte, h.energie))}`].filter(Boolean).join(' · ');
+}
+// Ordre de « Ma journée » : date puis heure, comme les relevés et épisodes sont rangés (repo.parJour). Une
+// heure avant 4 h tombe le lendemain en date calendaire, donc après celles de la soirée.
+const cleHeure = (x) => `${x.date} ${x.heure || ''}`;
 
 export function Aujourdhui({ date: dateRoute }) {
   useEtatApp((e) => e.horloge || 0);
@@ -240,12 +249,33 @@ export function Aujourdhui({ date: dateRoute }) {
     }
     return blocs;
   };
-  const ligneEvenement = (href, heure, texte, teinte, memo) => html`<li><a class="ligne-evenement" href=${href}>
+  const ligneEvenement = (cle, href, heure, texte, teinte, memo) => html`<li key=${cle}><a class="ligne-evenement" href=${href}>
     <span class=${`point-evenement teinte-${teinte}`} aria-hidden="true"></span>
     <span class="heure">${heure || ''}</span>
     <span class="resume">${texte}</span>
     ${memo && html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`}
     ${Icones.chevron({ trait: 2 })}</a></li>`;
+  // Un relevé n'a ni lien ni chevron : il s'efface dans l'écran Humeur du moment. Le même point creux pour
+  // tous, quelle que soit l'humeur.
+  const ligneReleve = (h) => html`<li key=${h.id}><div class="ligne-evenement releve">
+    <span class="point-evenement point-releve teinte-humeur" aria-hidden="true"></span>
+    <span class="heure">${h.vers ? formaterVers(h.heure) : h.heure}</span>
+    <span class="resume">${texteReleve(h, evenements.carte)}</span></div></li>`;
+  // Ma journée (v6.1) : humeurs du moment et épisodes du jour logique rangés par heure, puis les symptômes,
+  // qui n'ont pas d'heure. Rien pour un jour sans rien.
+  const lignesJournee = () => {
+    const parHeure = [
+      ...evenements.humeurs.map((h) => ({ cle: cleHeure(h), rendu: ligneReleve(h) })),
+      ...evenements.episodes.map((ep) => ({ cle: cleHeure(ep), rendu: ligneEvenement(ep.id, versHash('episode', { id: ep.id }), ep.heure,
+        [libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode',
+        'ep', evenements.avecMemo.has(`episodes:${ep.id}`)) })),
+    ].sort((a, b) => a.cle.localeCompare(b.cle));
+    return [...parHeure.map((x) => x.rendu), ...evenements.symptomes.map((sy) => ligneEvenement(sy.id, versHash('symptome', { id: sy.id }), null,
+      [libelle(evenements.carte, sy.symptome), sy.intensite, libelle(evenements.carte, sy.duree)].filter((x) => x != null).join(' · ') || 'Symptôme',
+      'sy', evenements.avecMemo.has(`symptomes:${sy.id}`)))];
+  };
+  // « J'ai fini pour ce soir » (v6.1) : à droite de « Mémo vocal », après un premier choix du soir.
+  const finiBouton = date === aujourdhui && !vide ? html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>` : null;
 
   return html`<main class="ecran aujourdhui">
     <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} />
@@ -258,9 +288,11 @@ export function Aujourdhui({ date: dateRoute }) {
       <button type="button" class="btn-lien action" onClick=${() => terminer(false)}>Rouvrir la saisie</button>
     </section>`}
     ${!replie && html`${rendreChamps()}
-    <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} />
+    <${MemoVocal} key=${`memo-${date}-${generation}`} parentStore="journal" parentId=${date} date=${date} aCote=${finiBouton} />`}
+    ${date === aujourdhui && evenements && evenements.avecApresCoup && html`<a class="ligne-apres-coup-jour" href=${versHash('apres-coup-liste')}>
+      <span>Après coup (TCC) · tes épisodes récents</span>${Icones.chevron({ trait: 2 })}</a>`}
 
-    <div class="replis">
+    ${!replie && html`<div class="replis">
       ${(visibles.includes('sommeil') || resumeNuit(entree)) && html`<${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)}>
         <${ChampHeure} id="coucher" etiquette="Coucher" sous="la veille" valeur=${entree.heureCoucher} surChoix=${ecrire('heureCoucher')} />
         <${ChampHeure} id="lever" etiquette="Lever" valeur=${entree.heureLever} surChoix=${ecrire('heureLever')} />
@@ -269,14 +301,14 @@ export function Aujourdhui({ date: dateRoute }) {
           <${Pastilles} etiquette="Réveils" ariaPrefixe="Réveils" options=${REVEILS} valeur=${entree.reveilsNocturnes} surChoix=${ecrire('reveilsNocturnes')} colonnes=${6} classe="chiffres reveils" teinte="sommeil" />
         </div>
       </${Repli}>`}
-      ${repliAffiche(journee, entree) && html`<${Repli} cle="pese" titre=${NOM_PESE_RECHARGE} resume=${resumePeseRecharge(entree, carte)} resumeSous=${true}>
+      ${repliAffiche(journee, entree) && html`<${Repli} cle="pese" titre=${NOM_PESE_RECHARGE} resume=${resumePeseRecharge(entree, carte)} resumeSous=${true} caler=${true}>
         <div class="champ-jour">
           <span class="etiquette">Ce qui a pesé</span>
-          <${PastillesMultiples} etiquette="Ce qui a pesé" options=${options(items, 'pese', entree.pese)} valeurs=${entree.pese} surChoix=${ecrire('pese')} />
+          <${PastillesMultiples} etiquette="Ce qui a pesé" options=${options(items, 'pese', entree.pese)} valeurs=${entree.pese} surChoix=${ecrire('pese')} classe="colonnes-2 grille-choix pese-recharge" />
         </div>
         <div class="champ-jour">
           <span class="etiquette">Ce qui a rechargé</span>
-          <${PastillesMultiples} etiquette="Ce qui a rechargé" options=${options(items, 'recharge', entree.recharge)} valeurs=${entree.recharge} surChoix=${ecrire('recharge')} />
+          <${PastillesMultiples} etiquette="Ce qui a rechargé" options=${options(items, 'recharge', entree.recharge)} valeurs=${entree.recharge} surChoix=${ecrire('recharge')} classe="colonnes-2 grille-choix pese-recharge" />
         </div>
       </${Repli}>`}
       ${visibles.includes('sport') && html`<${Repli} cle="sport" titre="Sport en détail" resume=${resumeSport(entree, carte)} memoriser=${false}>
@@ -289,22 +321,12 @@ export function Aujourdhui({ date: dateRoute }) {
         <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${3}
           cleBrouillon=${`carnet:brouillon:${date}:notes`} surEnregistrer=${ecrireTexte('notes')} />
       </${Repli}>
-    </div>
-    ${date === aujourdhui && !vide && html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>`}`}
+    </div>`}
 
     ${evenements && html`<section class="evenements-jour">
-      <h2 class="libelle-section">Épisodes et symptômes</h2>
-      <ul class="liste-evenements">
-        ${evenements.episodes.map((ep) => ligneEvenement(versHash('episode', { id: ep.id }), ep.heure,
-          [libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode',
-          'ep', evenements.avecMemo.has(`episodes:${ep.id}`)))}
-        ${evenements.symptomes.map((sy) => ligneEvenement(versHash('symptome', { id: sy.id }), null,
-          [libelle(evenements.carte, sy.symptome), sy.intensite, libelle(evenements.carte, sy.duree)].filter((x) => x != null).join(' · ') || 'Symptôme',
-          'sy', evenements.avecMemo.has(`symptomes:${sy.id}`)))}
-      </ul>
+      <h2 class="libelle-section">Ma journée</h2>
+      <ul class="liste-evenements">${lignesJournee()}</ul>
       <a class="btn-lien action ajout-symptome" href="#/symptome/nouveau">${Icones.plus({ trait: 2 })}Symptôme</a>
-      ${date === aujourdhui && evenements.avecApresCoup && html`<a class="ligne-apres-coup-jour" href=${versHash('apres-coup-liste')}>
-        <span>Après coup (TCC) · tes épisodes récents</span>${Icones.chevron({ trait: 2 })}</a>`}
       ${evenements.rdv && html`<a class="ligne-rdv" href=${versHash('rdv', { id: evenements.rdv.id })}>
         ${Icones.soins()}<span>Prochain RDV : ${libelleRdv(evenements.rdv, evenements.carte)}</span></a>`}
     </section>`}

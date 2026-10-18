@@ -93,24 +93,27 @@ test('nouvel épisode, à chaud : pas de ligne « Après coup » en haut ; au r�
 test('Aujourd\'hui : la ligne n\'apparaît que s\'il y a un épisode sur les sept derniers jours logiques, jamais sur un jour passé', async ({ page }) => {
   const ligne = page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ });
   await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
   // Trop anciens : le 8 (huit jours) et 02:00 le 9 (jour logique du 8).
   await creer(page, { date: '2026-10-08', heure: '12:00', ...COLERE });
   await creer(page, { date: '2026-10-09', heure: '02:00', ...COLERE });
   await aller(page, '#/analyse');
   await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
   // 02:00 le 10 : jour logique du 9, le plus ancien des sept jours.
   await creer(page, { date: '2026-10-10', heure: '02:00', ...COLERE });
   await expect(ligne).toBeVisible();
   await expect(ligne).toHaveAttribute('href', '#/apres-coup');
-  await expect(page.locator('.evenements-jour').getByRole('link', { name: /Après coup/ })).toHaveCount(1);
+  // v6.1 : juste sous la ligne « Mémo vocal », avant les replis du soir, hors de Ma journée.
+  await expect(page.locator('.evenements-jour').getByRole('link', { name: /Après coup/ })).toHaveCount(0);
+  expect(await ligne.evaluate((a) => Boolean(document.querySelector('#points-positifs').compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING)
+    && a.nextElementSibling.matches('.replis'))).toBe(true);
   await expect(ligne).toHaveText(/^\s*Après coup \(TCC\) · tes épisodes récents\s*$/);
   // Une page de jour passé ne l'a pas, même avec un épisode ce jour-là.
   await aller(page, '#/jour/2026-10-09');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
 });
 

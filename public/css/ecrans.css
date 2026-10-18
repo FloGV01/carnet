@@ -324,6 +324,11 @@
 .aujourdhui .deux-colonnes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .aujourdhui .segmente button { font-size: var(--t-pastille); }
 .aujourdhui .memo-vocal { margin-top: 0; }
+/* v6.1 : « J'ai fini pour ce soir » sur la ligne de « Mémo vocal », à droite, à la hauteur du bouton. */
+.memo-ligne > .fini-bouton { margin-left: auto; min-height: var(--cible); }
+/* « Ce qui a pesé · ce qui a rechargé » (v6.1) : deux colonnes régulières, comme les étapes d'un épisode, un peu
+   moins hautes pour que le repli ouvert tienne sur un écran. */
+.pastilles.pese-recharge .pastille { min-height: var(--cible); padding: 6px 10px; }
 .pastilles.reveils { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.6fr); }
 .replis { margin-top: 6px; border-bottom: 1.5px dashed var(--hairline); }
 .evenements-jour { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
@@ -333,10 +338,12 @@
   min-height: var(--cible-grille); display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
   font-size: var(--t-sous); border-bottom: 1.5px dashed var(--hairline);
 }
-.ligne-evenement .heure { width: 40px; flex: none; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ligne-evenement .heure { min-width: 40px; flex: none; white-space: nowrap; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
 .ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
 .point-evenement { width: 8px; height: 8px; border-radius: 4px; background: var(--c); flex: none; }
+/* Ma journée (v6.1) : une humeur du moment, point creux, la même pour toutes ; ni lien ni chevron. */
+.point-releve { background: none; border: 2px solid var(--c); }
 .ajout-symptome { align-self: flex-start; font-size: var(--t-corps); }
 .ligne-rdv {
   display: flex; align-items: center; gap: 8px; min-height: var(--cible); margin-top: 8px; padding: 8px 12px; border-radius: var(--r-moyen);
@@ -534,7 +541,6 @@
 .reglages-ressourcer .ligne-interrupteur { padding-top: 12px; padding-bottom: 12px; }
 .reglages-ressourcer .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); line-height: 1.35; }
 /* « J'ai fini pour ce soir » (v5) */
-.fini-bouton { align-self: stretch; margin-top: 4px; }
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .fini-soir .phrase-recap { margin-top: 0; }
 .fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }
