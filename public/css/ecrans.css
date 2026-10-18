@@ -532,8 +532,9 @@
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 .plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
-.plan-moment .lien-discret { display: inline-flex; align-items: center; }
-.plan-moment .contenu-plan + .lien-discret { margin-top: 6px; }
+/* Mon plan (v6.1) : « Modifier mon plan » à droite du titre, aligné sur sa ligne, en cible de 44 pt. */
+.plan-moment-tete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); }
+.plan-moment-tete .lien-discret { flex: none; display: inline-flex; align-items: center; min-width: var(--cible); }
 /* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
    texte est long, les boutons restent à l'écran. Aucun repère de position : rien n'est compté. */
 .une-chose { height: 100%; display: flex; flex-direction: column; }
@@ -543,14 +544,12 @@
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; }
-/* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), en grand sur
-   l'écran, plus sobre dans la carte de l'Humeur du moment. */
+/* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
+   de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }
 .ressourcer-rubrique { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
 .ressourcer-texte { font: 600 1.35rem/1.35 var(--police-titre); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
-.ressourcer-liste.grand .ressourcer-texte { font-size: clamp(1.75rem, 8vw, 2.5rem); line-height: 1.25; }
 .ressourcer-liste .respiration { padding-top: 0; }
-.ressourcer .lien-discret { align-self: flex-start; display: inline-flex; align-items: center; }
 .reglages-ressourcer .ligne-interrupteur { padding-top: 12px; padding-bottom: 12px; }
 .reglages-ressourcer .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); line-height: 1.35; }
 /* « J'ai fini pour ce soir » (v5) */

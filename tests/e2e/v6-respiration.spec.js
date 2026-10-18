@@ -21,8 +21,9 @@ const ouvrir = async (page) => {
 };
 const bouton = (page, nom) => page.getByRole('button', { name: nom, exact: true });
 
-// Monte la respiration comme le fera « Me ressourcer », avec `demarrerTout`. `prepare` : l'appelant a appelé
-// `preparerSon()` dans son toucher, avant le montage (synchrone, sans attendre la lecture des réglages).
+// Monte la respiration comme le fait « Respirer » (carte « Pour récupérer, je… »), avec `demarrerTout`.
+// `prepare` : l'appelant a appelé `preparerSon()` dans son toucher, avant le montage (synchrone, sans
+// attendre la lecture des réglages).
 const monterAuto = (page, prepare) => page.evaluate(async (avecPrepa) => {
   const { html, render } = await import('/js/ui/lib.js');
   const { Respiration } = await import('/js/ui/composants/respiration.js');
@@ -312,7 +313,7 @@ test('l\'écran reste allumé pendant l\'exercice, puis le verrou est rendu', as
   await expect.poll(() => page.evaluate(() => window.__verrou)).toEqual({ demandes: 1, rendus: 1 });
 });
 
-test('démarrer tout de suite (Me ressourcer) : la respiration part sans toucher, avec les réglages', async ({ page }) => {
+test('démarrer tout de suite (Respirer) : la respiration part sans toucher, avec les réglages', async ({ page }) => {
   await ecrire(page, { duree: 2, rythme: '4-6', son: false });
   await monterAuto(page, false);
   const hote = page.locator('#essai-respiration');

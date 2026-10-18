@@ -40,8 +40,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
-  assert.equal(ongletDe('ressourcer'), 'aujourdhui', 'Me ressourcer s\'ouvre depuis Moment difficile');
-  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'les réglages ne sont pas l\'écran Me ressourcer');
+  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
@@ -79,13 +78,14 @@ test('v6 · Après coup : la liste (/apres-coup) et un épisode (/apres-coup/ID)
   assert.equal(lireRoute('#/apres-coup/').inconnue, true);
 });
 
-test('v6 · Me ressourcer : l\'écran (/ressourcer) et ses réglages (/reglages/ressourcer) ne se confondent pas', () => {
-  assert.deepEqual(lireRoute('#/ressourcer'), { nom: 'ressourcer', params: {}, chemin: '/ressourcer' });
+test('v6.1 · Me ressourcer : l\'écran (/ressourcer) n\'existe plus et ramène sur Aujourd\'hui ; ses réglages restent', () => {
+  assert.equal(ROUTES.some((r) => r.nom === 'ressourcer'), false);
+  for (const h of ['#/ressourcer', '#/ressourcer/', '#/ressourcer/autre']) {
+    assert.deepEqual(lireRoute(h), { nom: 'aujourdhui', params: {}, chemin: '/aujourdhui', inconnue: true }, h);
+  }
+  assert.equal(versHash('ressourcer'), '#/aujourdhui');
   assert.deepEqual(lireRoute('#/reglages/ressourcer'), { nom: 'reglages-ressourcer', params: {}, chemin: '/reglages/ressourcer' });
-  assert.equal(versHash('ressourcer'), '#/ressourcer');
   assert.equal(versHash('reglages-ressourcer'), '#/reglages/ressourcer');
-  assert.equal(lireRoute('#/ressourcer/').inconnue, true);
-  assert.equal(lireRoute('#/ressourcer/autre').inconnue, true);
 });
 
 test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => {
