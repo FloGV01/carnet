@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
+import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub.js';
 import { generer } from '../fixtures/generateur.js';
 import { addDays } from '../../public/js/domain/dates.js';
 
@@ -101,6 +102,74 @@ test('Vue soignants depuis Soins : onglet Soins, le prénom réglé sur l\'écra
   const analyse = page.getByRole('region', { name: 'Analyse' });
   await expect(analyse.getByRole('switch')).toHaveCount(2);
   await expect(page.getByRole('textbox', { name: /Prénom/ })).toHaveCount(0);
+});
+
+// Le PDF d'avant ne part jamais avec un prénom qu'on vient de taper : la sortie du champ le retire aussitôt, avant
+// que le toucher sur le bouton n'arrive. Sur iPhone, toucher un bouton ne fait pas toujours sortir du champ : le
+// clic arrive alors le champ encore actif (dispatchEvent ci-dessous), le prénom est appliqué et rien ne part.
+test('Vue soignants : prénom tapé puis « Partager en PDF » touché aussitôt, le PDF d\'avant (sans ce prénom) n\'est pas repartagé', async ({ page }) => {
+  test.setTimeout(60000);
+  await installerPartageFactice(page);
+  await page.reload();
+  await aller(page, '#/soignants');
+  const partager = page.getByRole('button', { name: 'Partager en PDF' });
+  const nombre = () => page.evaluate(() => window.__partages.length);
+  await expect(partager).toBeEnabled({ timeout: 15000 });
+  await partager.tap();
+  await expect.poll(nombre, { timeout: 15000 }).toBe(1);
+
+  // Tapé, puis le bouton touché directement : le prénom est enregistré, aucun partage, le PDF se refait.
+  const champ = page.getByLabel('Prénom sur la page');
+  await champ.fill(PRENOM);
+  await partager.tap();
+  await expect.poll(() => lireMeta(page, 'prenomSoignants')).toBe(PRENOM);
+  await expect(partager).toBeEnabled({ timeout: 15000 });
+  expect(await nombre()).toBe(1);
+
+  // Le champ encore actif au moment du clic : même chose.
+  await champ.fill(`${PRENOM}-bis`);
+  await partager.dispatchEvent('click');
+  await expect(champ).toBeFocused();
+  await expect.poll(() => lireMeta(page, 'prenomSoignants')).toBe(`${PRENOM}-bis`);
+  await expect(partager).toBeEnabled({ timeout: 15000 });
+  expect(await nombre()).toBe(1);
+
+  // Une fois la page prête, un nouveau toucher partage le PDF refait, qui n'est plus celui d'avant.
+  await partager.tap();
+  await expect.poll(nombre, { timeout: 15000 }).toBe(2);
+  const [avant, apres] = await fichiersPartages(page);
+  expect(Buffer.from(apres.octets).equals(Buffer.from(avant.octets))).toBe(false);
+});
+
+test('Vue soignants : « Imprimer » n\'imprime pas l\'aperçu d\'avant un prénom qu\'on vient de taper', async ({ page }) => {
+  test.setTimeout(60000);
+  await page.addInitScript(() => { window.__impressions = 0; window.print = () => { window.__impressions += 1; }; });
+  await page.reload();
+  await aller(page, '#/soignants');
+  const imprimer = page.getByRole('button', { name: 'Imprimer', exact: true });
+  const impressions = () => page.evaluate(() => window.__impressions);
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled({ timeout: 15000 });
+  await expect(imprimer).toBeEnabled();
+
+  // Tapé, puis « Imprimer » touché directement : le prénom est enregistré, rien ne s'imprime avant l'aperçu refait.
+  const champ = page.getByLabel('Prénom sur la page');
+  await champ.fill(PRENOM);
+  await imprimer.tap();
+  await expect.poll(() => lireMeta(page, 'prenomSoignants')).toBe(PRENOM);
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled({ timeout: 15000 });
+  expect(await impressions()).toBe(0);
+
+  // Le champ encore actif au moment du clic : même chose.
+  await champ.fill(`${PRENOM}-bis`);
+  await imprimer.dispatchEvent('click');
+  await expect(champ).toBeFocused();
+  await expect.poll(() => lireMeta(page, 'prenomSoignants')).toBe(`${PRENOM}-bis`);
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled({ timeout: 15000 });
+  expect(await impressions()).toBe(0);
+
+  // L'aperçu refait : un toucher imprime.
+  await imprimer.tap();
+  await expect.poll(impressions).toBe(1);
 });
 
 // 120 jours inventés qui finissent aujourd'hui, avec un contact et une activité un jour sur trois : toutes les
