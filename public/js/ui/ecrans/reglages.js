@@ -1,5 +1,6 @@
-// Réglages : sauvegarde (exporter, importer, revenir), listes, rappel, analyse, à propos,
-// et la zone sensible.
+// Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes,
+// rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me ressourcer,
+// aide iPhone), puis analyse, à propos et la zone sensible (v6.1).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
@@ -85,10 +86,15 @@ export function Reglages() {
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 
-    <ul class="liste carte carte-groupe espace-haut">
-      <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Ma journée" />
+    <h2 id="titre-ma-saisie" class="libelle-section">Ma saisie</h2>
+    <ul class="liste carte carte-groupe" aria-labelledby="titre-ma-saisie">
+      <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Le soir" />
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
       <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
+    </ul>
+
+    <h2 id="titre-moment-difficile" class="libelle-section">Moment difficile</h2>
+    <ul class="liste carte carte-groupe" aria-labelledby="titre-moment-difficile">
       <${LigneLien} href="#/mon-plan" icone="bulle" titre="Mon plan" />
       <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
       <${LigneLien} href="#/reglages/ressourcer" icone="positifs" titre="Me ressourcer" />

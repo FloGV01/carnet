@@ -1,10 +1,11 @@
 // Réglages › Listes : ajouter, renommer, réordonner (↑ ↓), archiver, restaurer.
 // Rien n'est jamais supprimé : un élément archivé reste lisible dans l'historique.
+// L'index range les listes par écran, sous des intertitres (v6.1).
 import { html, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { repo } from '../../donnees.js';
 import { useDonnees } from '../hooks.js';
-import { LISTES, NOMS_LISTES } from '../../domain/listes-def.js';
+import { LISTES, GROUPES_LISTES } from '../../domain/listes-def.js';
 import { afficherToast } from '../composants/toast.js';
 import { Icones } from '../icones.js';
 
@@ -14,8 +15,10 @@ const message = (e) => MESSAGES[e && e.code] || "Le changement n'a pas pu être 
 export function IndexListes() {
   return html`<main class="ecran listes">
     <${Entete} titre="Listes" retour=${() => { location.hash = '#/reglages'; }} />
-    <ul class="liste carte carte-groupe">${NOMS_LISTES.map((nom) => html`<li><a class="ligne-carte" href=${`#/reglages/listes/${nom}`}>
-      <span class="ligne-libelle">${LISTES[nom].libelle}</span>${Icones.chevron({ trait: 2 })}</a></li>`)}</ul>
+    ${GROUPES_LISTES.map(({ ecran, listes }, i) => html`
+      <h2 id=${`groupe-listes-${i}`} class="libelle-section">${ecran}</h2>
+      <ul class="liste carte carte-groupe" aria-labelledby=${`groupe-listes-${i}`}>${listes.map((nom) => html`<li><a class="ligne-carte" href=${`#/reglages/listes/${nom}`}>
+        <span class="ligne-libelle">${LISTES[nom].libelle}</span>${Icones.chevron({ trait: 2 })}</a></li>`)}</ul>`)}
   </main>`;
 }
 

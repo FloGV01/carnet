@@ -40,9 +40,9 @@ export function phrasePerte(p) {
   return `${enumerer(m)} ${accord('présent')} ici et ${accord('absent')} du fichier ${auPluriel ? 'seront' : 'sera'} ${accord('effacé')}.`;
 }
 
-// « Mon plan et les réglages de Ma journée seront remplacés par ceux du fichier. »
+// « Mon plan et les réglages du soir et des rappels seront remplacés par ce que contient le fichier. »
 const NOMS_META = {
-  monPlan: 'Mon plan', journee: 'les réglages de Ma journée', traitementActuel: 'ton traitement actuel',
+  monPlan: 'Mon plan', journee: 'les réglages du soir et des rappels', traitementActuel: 'ton traitement actuel',
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
   respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
   ressourcer: 'les réglages de « Me ressourcer »',

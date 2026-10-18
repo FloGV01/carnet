@@ -33,5 +33,17 @@ export const LISTES = {
   activiteMoment: { libelle: 'Ce que je faisais' },
 };
 export const NOMS_LISTES = Object.keys(LISTES);
+
+// Réglages › Listes (v6.1) : chaque liste sous l'écran où on la choisit, dans l'ordre où elle y vient.
+// Une liste qui sert à plusieurs écrans va sous le premier : Déclencheur sous Épisode (puis Après coup),
+// Professionnel sous Soins (rendez-vous, puis Vue soignants). Toutes les listes y sont, une seule fois.
+export const GROUPES_LISTES = [
+  { ecran: 'Le soir', listes: ['lieu', 'sommeil', 'contactAvec', 'contactEffet', 'typeSport', 'dureeSport', 'traitementPris', 'pese', 'recharge'] },
+  { ecran: 'Humeur du moment', listes: ['energie', 'activiteMoment'] },
+  { ecran: 'Épisode', listes: ['declencheur', 'emotion', 'dessous', 'reaction'] },
+  { ecran: 'Après coup', listes: ['typeExplosion', 'fragilite', 'signe', 'piegePensee', 'sourceSurcharge', 'besoin', 'consequenceCourt', 'consequenceLong'] },
+  { ecran: 'Symptôme', listes: ['symptome', 'duree'] },
+  { ecran: 'Soins', listes: ['professionnel', 'effetSecondaire', 'effetRessenti'] },
+];
 export const estListe = (nom) => Object.prototype.hasOwnProperty.call(LISTES, nom);
 export const listeDe = (id) => (typeof id === 'string' && id.includes(':') ? id.slice(0, id.indexOf(':')) : null);

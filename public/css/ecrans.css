@@ -395,7 +395,6 @@
 .ligne-carte.action[disabled] { color: var(--text-2); }
 .aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0 4px; }
 .aide-carte .lien { display: flex; }
-.espace-haut { margin-top: 6px; }
 .ligne-interrupteur { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
 .libelle-carte { font-size: var(--t-sous); }
 .a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); }
@@ -473,7 +472,7 @@
   .actions-flottantes .moment .libelle-action { display: none; }
 }
 
-/* Réglages › Ma journée, Mon plan, Après coup, Humeur du moment (v4) */
+/* Réglages › Le soir, Rappels, Mon plan, Après coup, Humeur du moment (v4) */
 .ligne-champ-reglage { display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 12px 0 16px; }
 .ligne-champ-reglage .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); }
 .heures-moment .pastille { min-width: 56px; justify-content: center; }

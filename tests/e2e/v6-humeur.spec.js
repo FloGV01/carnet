@@ -31,7 +31,7 @@ test('le soir sans champ Humeur : 5 touchers, sans défilement à 390 × 797, en
   expect(await entreeDuJour(page)).toMatchObject({ humeur: null });
 });
 
-test('un jour passé noté le soir garde son champ Humeur ; Réglages › Ma journée le réaffiche', async ({ page }) => {
+test('un jour passé noté le soir garde son champ Humeur ; Réglages › Le soir le réaffiche', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-13', { humeur: 5, lieu: 'lieu:bureau' }));
   await aller(page, '#/jour/2026-10-13');
   await expect(groupe(page, 'Humeur').getByRole('button', { name: 'Humeur 5' })).toHaveAttribute('aria-pressed', 'true');

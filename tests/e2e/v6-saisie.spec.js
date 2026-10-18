@@ -57,7 +57,7 @@ test('replié, le repli résume ce qui est noté ; sans rien de noté, il ne dit
   await expect(repli(page).locator('.repli-resume')).toHaveText('rechargé : calme');
 });
 
-test('masqué dans Réglages › Ma journée, le repli reste affiché un jour où il porte des valeurs', async ({ page }) => {
+test('masqué dans Réglages › Le soir, le repli reste affiché un jour où il porte des valeurs', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-13', { lieu: 'lieu:bureau', pese: ['pese:bruit'] }));
   await aller(page, '#/reglages/journee');
   const interrupteur = page.getByRole('switch', { name: `Afficher ${TITRE}` });

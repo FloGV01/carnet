@@ -330,3 +330,8 @@ test('v6 : aperçu de l\'import, les notes et les nouveaux réglages ont leurs m
     'Mon plan, les réglages de « Une chose à la fois » et les réglages de « Me ressourcer » seront remplacés par ce que contient le fichier.');
   assert.equal(phraseMeta(['monPlan']), 'Mon plan sera remplacé par ce que contient le fichier.');
 });
+
+test('v6.1 : les réglages de meta.journee se nomment d\'après Le soir et Rappels, plus d\'après « Ma journée »', () => {
+  assert.equal(phraseMeta(['journee']), 'Les réglages du soir et des rappels seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan', 'journee']), 'Mon plan et les réglages du soir et des rappels seront remplacés par ce que contient le fichier.');
+});
