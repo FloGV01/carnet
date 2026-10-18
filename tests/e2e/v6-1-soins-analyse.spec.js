@@ -238,3 +238,40 @@ test('Analyse : chaque onglet de Comprendre en deux touchers depuis Aujourd\'hui
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
   await expect(page).toHaveURL(/#\/analyse$/);
 });
+
+// Chaque porte : son texte, mesuré par une Range, dans la boîte de son contenu (bordure et rembourrage ôtés).
+const mesurerPortes = (page) => page.locator('.portes .porte').evaluateAll((els) => els.map((p) => {
+  const r = document.createRange();
+  r.selectNodeContents(p);
+  const t = r.getBoundingClientRect();
+  const b = p.getBoundingClientRect();
+  const s = getComputedStyle(p);
+  const gauche = b.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+  const droite = b.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+  return { texte: p.textContent, dedans: t.left >= gauche - 0.5 && t.right <= droite + 0.5, haut: Math.round(b.top), largeur: Math.round(b.width), hauteur: b.height };
+}));
+
+test('Analyse : en grand texte, les portes passent à la ligne et le texte de chacune reste dans sa boîte', async ({ page }) => {
+  await nav(page, 'Analyse').click();
+  await expect(page.getByRole('region', { name: 'Comprendre' }).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);
+  // Tailles du texte d'iOS (html suit -apple-system-body) : par défaut, xLarge, xxLarge, xxxLarge, puis la première
+  // des grandes tailles d'accessibilité. Posées par le CSSOM, que la CSP laisse passer.
+  for (const largeur of [390, 375, 320]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    for (const taille of [17, 19, 21, 23, 28]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+      const portes = await mesurerPortes(page);
+      expect(portes).toHaveLength(3);
+      for (const p of portes) {
+        expect(p.dedans, `« ${p.texte} » à ${largeur} de large, texte de ${taille} px`).toBe(true);
+        expect(p.hauteur).toBeGreaterThanOrEqual(44);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      // Au texte par défaut, à 375 comme à 390 de large : les trois sur une ligne, de même largeur.
+      if (taille === 17 && largeur >= 375) {
+        expect(new Set(portes.map((p) => p.haut)).size, `une ligne à ${largeur} de large`).toBe(1);
+        expect(new Set(portes.map((p) => p.largeur)).size).toBe(1);
+      }
+    }
+  }
+});

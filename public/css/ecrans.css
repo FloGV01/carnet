@@ -183,8 +183,10 @@
    (son bloc, .selon-periode) ; « Sur tout ton historique » vient après. */
 .portes-comprendre { display: flex; flex-direction: column; gap: 6px; }
 .portes-comprendre .libelle-section { padding: 0; }
-.portes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.porte { min-height: var(--cible); padding: 0 6px; color: var(--accent); font-weight: 600; }
+/* Les portes passent à la ligne quand la place manque (grand texte d'iOS, écran étroit) : « Explosions » ne se
+   coupe pas. 6,25 em : les trois tiennent sur une ligne au texte par défaut, à 375 comme à 390 de large. */
+.portes { display: flex; flex-wrap: wrap; gap: 8px; }
+.porte { flex: 1 1 6.25em; min-height: var(--cible); padding: 0 6px; color: var(--accent); font-weight: 600; }
 .selon-periode, .tout-historique { display: flex; flex-direction: column; gap: 16px; }
 .tout-historique { padding-top: 12px; }
 .tout-historique > .libelle-section { padding: 0; margin-bottom: -8px; }
