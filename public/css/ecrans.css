@@ -464,8 +464,9 @@
 .heures-moment .pastille { min-width: 56px; justify-content: center; }
 .ma-journee, .mon-plan { gap: 14px; }
 .ligne-plan { padding: 0 var(--marge); flex: none; display: flex; align-items: center; gap: 8px; }
-.ligne-plan .btn-lien { font-size: var(--t-sous); }
-.ligne-plan .btn-lien svg { width: 16px; height: 16px; }
+/* Enfants directs seulement : la feuille « En parler » s'ouvre dans la ligne et doit garder son aspect (v6.1). */
+.ligne-plan > .btn-lien { font-size: var(--t-sous); }
+.ligne-plan > .btn-lien svg { width: 16px; height: 16px; }
 .separateur-plan { color: var(--text-2); font-size: var(--t-sous); }
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }
 .feuille {

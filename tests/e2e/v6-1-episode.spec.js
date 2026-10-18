@@ -9,6 +9,11 @@ const episodes = (page) => page.evaluate(() => window.__carnet.repo.episodes.tou
 const creer = (page, e) => page.evaluate(async (x) => (await window.__carnet.repo.episodes.creer(x)).id, e);
 const COLERE = { date: '2026-10-15', heure: '18:42', declencheur: 'declencheur:conflit', emotion: 'emotion:colere', intensite: 7,
   dessous: 'dessous:injustice', reaction: 'reaction:retrait_isolement' };
+// Aspect des boutons d'une feuille : nom, taille du texte, taille de l'icône.
+const aspectBoutons = (feuille) => feuille.evaluate((f) => [...f.querySelectorAll('button')].map((b) => {
+  const icone = b.querySelector('svg');
+  return [b.textContent.trim(), getComputedStyle(b).fontSize, icone ? `${icone.getBoundingClientRect().width}×${icone.getBoundingClientRect().height}` : null];
+}));
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
@@ -150,9 +155,17 @@ test('épisode rouvert : « Mon plan · Après coup · En parler » en haut, en 
   expect(mesure.deborde).toBe(0);
   expect(mesure.droite).toBeLessThanOrEqual(mesure.largeur - 16);
 
+  // Les liens de la ligne gardent leur taille réduite (texte de la ligne de date, icône de 16 px).
+  const taille = (loc) => loc.evaluate((e) => getComputedStyle(e).fontSize);
+  expect(await taille(ligne.getByRole('button', { name: 'Mon plan' }))).toBe(await taille(fiche.locator('.ligne-date > .btn-lien')));
+  expect(await taille(enParler)).toBe(await taille(fiche.locator('.ligne-date > .btn-lien')));
+  expect(await ligne.getByRole('button', { name: 'Mon plan' }).locator('svg').evaluate((s) => s.getBoundingClientRect().width)).toBe(16);
+
   await enParler.click();
   const feuille = page.getByRole('dialog', { name: 'En parler au rendez-vous' });
   await expect(feuille.getByRole('textbox', { name: 'Question' })).toHaveValue('Épisode du jeu 15/10, 18 h 42 · Colère 7/10 · Retrait / isolement');
+  await expect(feuille.getByRole('button', { name: 'Nouveau rendez-vous' })).toBeVisible();
+  const aspectHaut = await aspectBoutons(feuille);
   await page.keyboard.press('Escape');
   await expect(feuille).toHaveCount(0);
   await expect(enParler).toBeFocused();
@@ -162,4 +175,9 @@ test('épisode rouvert : « Mon plan · Après coup · En parler » en haut, en 
   await expect(bas).toHaveCount(1);
   await bas.click();
   await expect(feuille.getByRole('textbox', { name: 'Question' })).toHaveValue('Épisode du jeu 15/10, 18 h 42 · Colère 7/10 · Retrait / isolement');
+  // Même aspect, quel que soit le lien qui l'ouvre : la ligne du haut ne rapetisse pas « Fermer » ni « Nouveau rendez-vous ».
+  await expect(feuille.getByRole('button', { name: 'Nouveau rendez-vous' })).toBeVisible();
+  const aspectBas = await aspectBoutons(feuille);
+  expect(aspectBas.map(([nom]) => nom)).toEqual(expect.arrayContaining(['Fermer', 'Nouveau rendez-vous']));
+  expect(aspectHaut).toEqual(aspectBas);
 });
