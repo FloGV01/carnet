@@ -144,13 +144,54 @@ test('Ma journée : relevés (dont un « vers ») et épisodes rangés par heure
   await expect(page.locator('.evenements-jour')).toHaveText(/^\s*Ma journée\s*Symptôme\s*$/);
 });
 
-// Enregistre chaque calage de la page (scrollIntoView), posé avant le chargement de l'app.
+test('Ma journée d\'un jour passé : un épisode sans heure vient après les relevés, avant les symptômes ; un relevé sans humeur ni énergie dit ce que je faisais, un relevé vide n\'a pas de ligne', async ({ page }) => {
+  await repo(page, async () => {
+    const r = window.__carnet.repo;
+    await r.symptomes.creer({ date: '2026-10-12', symptome: 'symptome:ruminations', intensite: 4 });
+    await r.humeurs.creer({ date: '2026-10-12', heure: '19:00', humeur: 4, energie: null });
+    // Noté depuis la page du jour passé : sans heure (parcours-fiche.js).
+    await r.episodes.creer({ date: '2026-10-12', heure: null, declencheur: 'declencheur:conflit' });
+    await r.humeurs.creer({ date: '2026-10-12', heure: '10:20', humeur: 6, energie: null });
+    await r.humeurs.creer({ date: '2026-10-12', heure: '15:40', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
+    await r.humeurs.creer({ date: '2026-10-12', heure: '17:00' });
+  });
+  await aller(page, '#/jour/2026-10-12');
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
+  await expect.poll(() => lignes(page)).toEqual([
+    { heure: '10:20', texte: 'humeur 6', lien: false, chevron: false },
+    { heure: '15:40', texte: 'ce que je faisais : travail, trajet', lien: false, chevron: false },
+    { heure: '19:00', texte: 'humeur 4', lien: false, chevron: false },
+    { heure: '', texte: 'Conflit', lien: true, chevron: true },
+    { heure: '', texte: 'Ruminations · 4', lien: true, chevron: true },
+  ]);
+  await expect(page.locator('.evenements-jour')).not.toContainText(/17:00|NaN|undefined|null/);
+});
+
+test('« Effacer cette journée » : la confirmation dit que les humeurs du moment restent, et elles restent dans Ma journée', async ({ page }) => {
+  await repo(page, async () => {
+    const r = window.__carnet.repo;
+    await r.journal.patch('2026-10-15', { lieu: 'lieu:bureau' });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '10:20', humeur: 6, energie: null });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Effacer cette journée' }).click();
+  const boite = page.getByRole('alertdialog', { name: 'Effacer la journée du jeudi 15 oct. ?' });
+  await expect(boite.getByText('Les épisodes, symptômes et humeurs du moment de ce jour sont conservés.', { exact: true })).toBeVisible();
+  await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
+  await expect(page.getByText('Journée effacée')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => lignes(page)).toEqual([{ heure: '10:20', texte: 'humeur 6', lien: false, chevron: false }]);
+  expect(await repo(page, () => window.__carnet.repo.humeurs.tous())).toHaveLength(1);
+});
+
+// Enregistre chaque calage de la page (window.scrollTo avec ses options), posé avant le chargement de l'app. Les
+// retours en haut d'un changement d'écran (scrollTo(0, 0)) ne comptent pas.
 const espionnerCalage = (page) => page.addInitScript(() => {
   window.__calages = [];
-  const origine = Element.prototype.scrollIntoView;
-  Element.prototype.scrollIntoView = function caler(options) {
-    window.__calages.push({ ...options, repli: this.classList.contains('repli') });
-    return origine.call(this, options);
+  const origine = window.scrollTo;
+  window.scrollTo = function caler(...args) {
+    if (args[0] && typeof args[0] === 'object') window.__calages.push({ behavior: args[0].behavior });
+    return origine.apply(this, args);
   };
 });
 const calages = (page) => page.evaluate(() => window.__calages);
@@ -164,7 +205,7 @@ test('« Ce qui a pesé · ce qui a rechargé » : à l\'ouverture, la page se c
   const repli = page.locator('.repli', { has: titre });
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await titre.click();
-  await expect.poll(() => calages(page)).toEqual([{ block: 'start', behavior: 'smooth', repli: true }]);
+  await expect.poll(() => calages(page)).toEqual([{ behavior: 'smooth' }]);
   // En haut de l'écran (à sa marge près), et entier au-dessus de la bande du bas.
   await expect.poll(() => hautDuRepli(page)).toBe(8);
   const bas = await repli.evaluate((e) => e.getBoundingClientRect().bottom);
@@ -206,6 +247,31 @@ test('« Réduire les animations » : le calage est un saut', async ({ page }) =
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload();
   await page.getByRole('button', { name: TITRE_PESE }).click();
-  await expect.poll(() => calages(page)).toEqual([{ block: 'start', behavior: 'auto', repli: true }]);
+  await expect.poll(() => calages(page)).toEqual([{ behavior: 'auto' }]);
   expect(await hautDuRepli(page)).toBe(8);
+});
+
+test('avec le bandeau « Nouvelle version prête » collé en haut, le repli se cale dessous, son titre et « Ce qui a pesé » visibles', async ({ page }) => {
+  await espionnerCalage(page);
+  await page.reload();
+  await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+  const bandeau = page.locator('.bandeau');
+  await expect(bandeau).toBeVisible();
+  const hauteur = await bandeau.evaluate((b) => b.getBoundingClientRect().height);
+  expect(hauteur).toBeGreaterThan(44);
+  const titre = page.getByRole('button', { name: TITRE_PESE });
+  await titre.click();
+  await expect.poll(() => calages(page)).toEqual([{ behavior: 'smooth' }]);
+  // Le bandeau reste en haut ; le repli vient 8 px sous son bord (au pixel près), et rien de lui n'est caché dessous.
+  await expect.poll(async () => Math.abs((await hautDuRepli(page)) - (hauteur + 8))).toBeLessThanOrEqual(1);
+  const mesure = await page.evaluate(() => {
+    const bas = document.querySelector('.bandeau').getBoundingClientRect();
+    const etiquette = [...document.querySelectorAll('.repli .etiquette')].find((e) => e.textContent === 'Ce qui a pesé').getBoundingClientRect();
+    const premiere = document.querySelector('[aria-label="Ce qui a pesé"] .pastille').getBoundingClientRect();
+    return { bandeauHaut: Math.round(bas.top), bandeauBas: bas.bottom, etiquette: etiquette.top, pastille: premiere.top };
+  });
+  expect(mesure.bandeauHaut).toBe(0);
+  expect((await titre.boundingBox()).y).toBeGreaterThanOrEqual(mesure.bandeauBas);
+  expect(mesure.etiquette).toBeGreaterThanOrEqual(mesure.bandeauBas);
+  expect(mesure.pastille).toBeGreaterThanOrEqual(mesure.bandeauBas);
 });

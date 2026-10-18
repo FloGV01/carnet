@@ -23,27 +23,30 @@ test.beforeEach(async ({ page }) => {
 
 test('nouvel épisode depuis Aujourd\'hui : « + Épisode », 5 choix, puis le retour automatique ; le toast « Épisode enregistré · Annuler »', async ({ page }) => {
   const fiche = page.getByRole('dialog', { name: 'Épisode' });
-  let touchers = 0;
-  const toucher = async (loc) => { await loc.click(); touchers += 1; };
-  await toucher(page.getByRole('link', { name: 'Épisode', exact: true }));
+  // Les touchers sont comptés par la page (un écouteur sur le document), pas par le test : un toucher de plus,
+  // sur « Terminer » ou ailleurs, ferait échouer le compte.
+  await page.evaluate(() => { window.__touchers = 0; document.addEventListener('click', () => { window.__touchers += 1; }, true); });
+  await page.getByRole('link', { name: 'Épisode', exact: true }).click();
   for (const [question, choix] of [['Ça a démarré avec…', 'Conflit'], ['Ça ressemblait plutôt à…', 'Colère'], ['Intensité', 'Intensité 7'],
     ['Et en dessous, il y avait peut-être…', 'Injustice']]) {
     await expect(fiche.getByRole('heading', { name: question, exact: true })).toBeVisible();
     await expect(fiche.getByRole('button', { name: 'Terminer' })).toHaveCount(0);
-    await toucher(fiche.getByRole('button', { name: choix, exact: true }));
+    await fiche.getByRole('button', { name: choix, exact: true }).click();
   }
   await expect(fiche.getByRole('heading', { name: 'Ta réaction' })).toBeVisible();
+  await expect(fiche.getByRole('button', { name: 'Terminer' })).toHaveCount(0);
+  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toHaveCount(0);
   // L'horloge s'arrête : le choix reste visible 250 ms, puis la fiche se ferme.
   await page.clock.pauseAt(new Date(2026, 9, 15, 21, 1));
   const reaction = fiche.getByRole('button', { name: 'Retrait / isolement' });
-  await toucher(reaction);
+  await reaction.click();
   await expect(reaction).toHaveAttribute('aria-pressed', 'true');
   await page.clock.runFor(200);
   await expect(fiche).toBeVisible();
   await page.clock.runFor(100);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(fiche).toHaveCount(0);
-  expect(touchers).toBe(6);
+  expect(await page.evaluate(() => window.__touchers)).toBe(6);
   const toast = page.getByRole('status').filter({ hasText: 'Épisode enregistré' });
   await expect(toast).toBeVisible();
   await expect(toast.getByRole('button', { name: 'Annuler' })).toBeVisible();
@@ -58,6 +61,39 @@ test('nouvel épisode depuis Aujourd\'hui : « + Épisode », 5 choix, puis le r
   await toast.getByRole('button', { name: 'Annuler' }).click();
   await expect.poll(async () => (await episodes(page)).length).toBe(0);
   await expect(page.getByRole('link', { name: /Colère · 7 · Conflit/ })).toHaveCount(0);
+});
+
+test('nouvel épisode : « Retour » ou « Mon plan » touché pendant les 250 ms qui suivent la réaction annule la fermeture', async ({ page }) => {
+  const fiche = page.getByRole('dialog', { name: 'Épisode' });
+  await page.getByRole('link', { name: 'Épisode', exact: true }).click();
+  for (const choix of ['Conflit', 'Colère', 'Intensité 7', 'Injustice']) await fiche.getByRole('button', { name: choix, exact: true }).click();
+  await expect(fiche.getByRole('heading', { name: 'Ta réaction' })).toBeVisible();
+  // Horloge arrêtée : la réaction, puis « Retour » dans le délai. La fiche reste ouverte, sur l'étape d'avant.
+  await page.clock.pauseAt(new Date(2026, 9, 15, 21, 1));
+  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
+  await fiche.getByRole('button', { name: 'Retour', exact: true }).click();
+  await page.clock.runFor(400);
+  await expect(fiche.getByRole('heading', { name: 'Et en dessous, il y avait peut-être…' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/episode\/ep_/);
+  await expect(page.locator('.toast')).toHaveCount(0);
+  await expect.poll(async () => (await episodes(page))[0]?.reaction).toBe('reaction:retrait_isolement');
+
+  // Même chose avec « Mon plan » : la feuille s'ouvre, la fiche reste derrière, sur « Ta réaction ».
+  await fiche.getByRole('button', { name: 'Passer', exact: true }).click();
+  await expect(fiche.getByRole('heading', { name: 'Ta réaction' })).toBeVisible();
+  await fiche.getByRole('button', { name: 'Explosion', exact: true }).click();
+  await fiche.getByRole('button', { name: 'Mon plan' }).click();
+  await page.clock.runFor(400);
+  await expect(page.getByRole('dialog', { name: 'Mon plan' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/episode\/ep_/);
+  await page.keyboard.press('Escape');
+  await expect(fiche.getByRole('heading', { name: 'Ta réaction' })).toBeVisible();
+  await expect(page.locator('.toast')).toHaveCount(0);
+  // Sans rien toucher pendant le délai, le choix suivant ferme la fiche comme d'habitude.
+  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
+  await page.clock.runFor(400);
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByRole('status').filter({ hasText: 'Épisode enregistré' })).toBeVisible();
 });
 
 test('nouvel épisode : « Passer » sur « Ta réaction » ferme aussi ; sans aucun choix, rien n\'est créé et aucun toast', async ({ page }) => {

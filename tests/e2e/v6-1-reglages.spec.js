@@ -101,10 +101,10 @@ test('Rappels : les heures de l\'humeur du moment s\'y choisissent d\'un toucher
 const GROUPES = [
   ['Le soir', ['Lieu', 'Sommeil ressenti', 'Contact : avec qui', 'Contact : comment c\'était', 'Types de sport', 'Durée du sport', 'Traitement pris', 'Ce qui a pesé', 'Ce qui a rechargé']],
   ['Humeur du moment', ['Énergie', 'Ce que je faisais']],
-  ['Épisode', ['Déclencheur', 'Émotion', 'Ce qu\'il y avait dessous', 'Réaction']],
+  ['Épisode', ['Déclencheur', 'Émotion', 'Ce qu\'il y avait dessous', 'Réaction', 'Professionnel']],
   ['Après coup', ['C\'était plutôt', 'Fragilités', 'Premiers signes', 'Ça ressemble à', 'Ce qui était trop', 'Besoins', 'Sur le moment', 'Plus tard']],
   ['Symptôme', ['Symptôme', 'Durée']],
-  ['Soins', ['Professionnel', 'Effet secondaire', 'Effet ressenti']],
+  ['Soins', ['Effet secondaire', 'Effet ressenti']],
 ];
 
 test('Listes : l\'index rangé par écran sous six intertitres, toutes les listes encore là, une fois chacune', async ({ page }) => {

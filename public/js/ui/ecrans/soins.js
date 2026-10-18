@@ -28,9 +28,10 @@ export const nomRdv = (r, carte) => (r.professionnel ? libelle(carte, r.professi
 export const quandRdv = (r) => (r.date ? `${formaterJourComplet(r.date)}${r.heure ? ` · ${r.heure}` : ''}` : 'Date à fixer');
 const quandCourt = (r) => (r.date ? `${formaterJourAbrege(r.date)}${r.heure ? ` · ${r.heure}` : ''}` : 'Date à fixer');
 
-// Deux liens de 44 pt sur une ligne, entre le titre et les segments.
+// Deux liens de 44 pt, entre le titre et les segments. Quand la ligne ne tient pas (petit écran, grand texte),
+// elle se coupe après « Pour mes soignants : » : les deux liens et leur « · » passent ensemble dessous.
 const PourSoignants = () => html`<p class="pour-soignants"><span>Pour mes soignants :</span>
-  <a class="lien" href=${versHash('export-psy')}>Export PSY</a><span aria-hidden="true">·</span><a class="lien" href=${versHash('soignants')}>Vue soignants</a></p>`;
+  <span class="liens-soignants"><a class="lien" href=${versHash('export-psy')}>Export PSY</a><span aria-hidden="true">·</span><a class="lien" href=${versHash('soignants')}>Vue soignants</a></span></p>`;
 
 const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`;
 

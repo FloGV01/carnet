@@ -3,8 +3,9 @@ import { viderBase, aller } from '../aides/saisie.js';
 
 // v6.1 · finitions (P1, A3) : des défauts sans question de goût, vérifiés sur les styles calculés. Les
 // interrupteurs de Réglages vont à droite ; « Tout effacer » n'est plus centré (la règle du bouton ✕ ne vise
-// plus que les boutons) ; les titres de section sont sur le bord des cartes ; « 5 minutes » ne se coupe pas et
-// « · Mouvement » ne commence plus une ligne ; la colonne des heures a une largeur fixe. Données inventées.
+// plus que les boutons) ; les titres de section et les textes d'aide sont sur le bord des cartes ; « 5 minutes »
+// ne se coupe pas et « · Mouvement » ne commence plus une ligne ; la colonne des heures a une largeur fixe. Données
+// inventées.
 // Horloge : jeudi 15 octobre 2026, 21:00 (écran de 390 × 844, celui du projet).
 const repo = (page, f, arg) => page.evaluate(f, arg);
 
@@ -87,7 +88,7 @@ const bordTitreEtCarte = (titre, carte) => titre.evaluate((t, sel) => {
   return { padding: getComputedStyle(t).paddingLeft, titre: Math.round(texte.getClientRects()[0].left), carte: Math.round(suivante.getBoundingClientRect().left) };
 }, carte);
 
-test('titres de section sur le bord des cartes : Réglages, Soins, Listes, Historique, Diagnostic', async ({ page }) => {
+test('titres de section et textes d\'aide sur le bord des cartes : Réglages, Soins, Listes, Historique, Diagnostic', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     await r.rdv.creer({ date: '2026-10-20', heure: '10:30', professionnel: 'professionnel:psychiatre' });
@@ -110,6 +111,26 @@ test('titres de section sur le bord des cartes : Réglages, Soins, Listes, Histo
   await verifier(page.locator('.titre-semaine').first());
   await aller(page, '#/diagnostic');
   await verifier(page.getByRole('heading', { name: 'Mes données', level: 2 }), '.btn');
+
+  // Les textes d'aide sous les cartes, sur le même bord que les titres et les cartes : Réglages (Sauvegarde),
+  // › Moment difficile, › Me ressourcer, et les Listes (liste qui se renomme seulement, éléments archivés).
+  await repo(page, () => window.__carnet.repo.listes.archiver('lieu:bureau'));
+  for (const [route, nombre] of [['#/reglages', 2], ['#/reglages/moment-difficile', 1], ['#/reglages/ressourcer', 1], ['#/reglages/listes/sommeil', 1], ['#/reglages/listes/lieu', 1]]) {
+    await aller(page, route);
+    await expect(page.locator('main .aide-carte').nth(nombre - 1)).toBeVisible();
+    const bords = await page.locator('main').evaluate((m) => {
+      const texte = (e) => { const r = document.createRange(); r.selectNodeContents(e); return Math.round(r.getClientRects()[0].left); };
+      return { carte: Math.round(m.querySelector('.carte').getBoundingClientRect().left),
+        aides: [...m.querySelectorAll('.aide-carte')].map((a) => ({ marge: getComputedStyle(a).marginLeft, texte: texte(a) })) };
+    });
+    for (const a of bords.aides) {
+      expect(a.marge, route).toBe('0px');
+      expect(a.texte, route).toBe(bords.carte);
+    }
+  }
+  await aller(page, '#/reglages');
+  const sauvegarde = await bordTitreEtCarte(page.getByRole('heading', { name: 'Sauvegarde', level: 2 }), '.aide-carte');
+  expect(sauvegarde.titre).toBe(sauvegarde.carte);
 });
 
 // Les rectangles d'un morceau du texte d'un élément : un seul rectangle, le morceau tient sur une ligne.

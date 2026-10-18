@@ -7,6 +7,7 @@ import { formaterJour } from '../../domain/dates.js';
 import { afficherToast } from '../composants/toast.js';
 import { useSauvegarde, analyserChoix, lireImportEnAttente, oublierImport } from '../sauvegarde.js';
 import { dateIso } from './reglages.js';
+import { reinitialiserHistorique } from './historique.js';
 
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const enumerer = (m) => (m.length > 1 ? `${m.slice(0, -1).join(', ')} et ${m[m.length - 1]}` : m[0]);
@@ -69,6 +70,8 @@ export function Sauvegarde() {
   };
   const appliquer = async () => {
     await remplacer(repo, etat.analyse);
+    // Un filtre de l'Historique pourrait viser un élément absent du fichier : l'Historique repart de zéro.
+    reinitialiserHistorique();
     oublierImport();
     afficherToast('Import terminé.', null, 3000);
     location.hash = '#/reglages';

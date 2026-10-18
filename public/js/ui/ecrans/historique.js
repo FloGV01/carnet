@@ -35,7 +35,7 @@ function depart() {
   const segment = lireLocal(CLE_SEGMENT);
   return { segment: SEGMENTS.some((s) => s.valeur === segment) ? segment : 'jours', requete: '', rechercheOuverte: false, filtresOuverts: false, f: {}, position: 0 };
 }
-// « Tout effacer » : rien de ce qui a été cherché ou filtré ne reste en mémoire.
+// « Tout effacer » et une sauvegarde importée : rien de ce qui a été cherché ou filtré ne reste en mémoire.
 export function reinitialiserHistorique() { memoire = null; }
 
 function Extrait({ ex }) {
@@ -94,7 +94,8 @@ export function Historique() {
   const periode = f.periode === '7' ? addDays(aujourdhui, -6) : f.periode === '30' ? addDays(aujourdhui, -29) : null;
   const q = requete.trim();
   const filtre = q || Object.values(f).some(Boolean);
-  const optionsListe = (liste) => options(items, liste, null);
+  // Un élément choisi puis archivé (Réglages › Listes) reste proposé, pressé, pour qu'un toucher retire le filtre.
+  const optionsListe = (liste) => options(items, liste, f[liste] ?? null);
 
   let contenu;
   if (segment === 'jours') {

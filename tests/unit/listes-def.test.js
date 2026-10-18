@@ -17,7 +17,8 @@ test('v6.1 · index des listes : une liste qui sert à plusieurs écrans va sous
   const ecranDe = (nom) => GROUPES_LISTES.find((g) => g.listes.includes(nom)).ecran;
   assert.equal(ecranDe('declencheur'), 'Épisode', 'Déclencheur : Épisode, puis Après coup');
   assert.equal(ecranDe('dessous'), 'Épisode');
-  assert.equal(ecranDe('professionnel'), 'Soins', 'Professionnel : rendez-vous, puis Vue soignants');
+  assert.equal(ecranDe('professionnel'), 'Épisode', 'Professionnel : « En parler au rendez-vous » d\'un épisode, avant le rendez-vous et la Vue soignants');
+  assert.equal(GROUPES_LISTES.find((g) => g.ecran === 'Épisode').listes.at(-1), 'professionnel', 'en dernier, au récapitulatif');
   assert.equal(ecranDe('energie'), 'Humeur du moment');
   assert.equal(ecranDe('activiteMoment'), 'Humeur du moment');
   assert.equal(ecranDe('pese'), 'Le soir');

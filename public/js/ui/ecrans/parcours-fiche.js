@@ -143,7 +143,9 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     else setEtape('recap');
   };
 
-  // Le délai laisse voir le choix fait avant l'étape suivante (ou, à la dernière, la sortie).
+  // Le délai laisse voir le choix fait avant l'étape suivante (ou, à la dernière, la sortie). « Retour », « Mon plan »
+  // ou la ligne de date touchés pendant ce délai l'annulent : la fiche reste où on l'a menée.
+  const annulerSuivant = () => clearTimeout(suivant.current);
   const choisir = (i, champ) => (valeur) => {
     setFiche((f) => ({ ...f, [champ]: valeur }));
     ecrire({ [champ]: valeur });
@@ -181,7 +183,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   // fiche rouverte, « Après coup » et « En parler » (v6.1) sont à côté : visibles sans défiler. À chaud,
   // rien n'y est ajouté. « En parler » ouvre la même feuille que le lien du bas.
   const lignePlan = avecPlan && html`<div class="ligne-plan">
-    <button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => setVoirPlan(true)}>${Icones.listes()}Mon plan</button>
+    <button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => { annulerSuivant(); setVoirPlan(true); }}>${Icones.listes()}Mon plan</button>
     ${rouvert && html`<span class="separateur-plan" aria-hidden="true">·</span>
       <a class="btn-lien" href=${hrefApresCoup} onClick=${ouvrirApresCoup}>Après coup</a>
       <span class="separateur-plan" aria-hidden="true">·</span>
@@ -189,7 +191,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   </div>`;
   const feuillePlan = voirPlan && html`<${FeuillePlan} surFermer=${() => setVoirPlan(false)} retourFocus=${boutonPlan} />`;
   const ligneDate = html`<div class="ligne-date">
-    <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => setEditionDate(!editionDate)}>
+    <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => { annulerSuivant(); setEditionDate(!editionDate); }}>
       ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
     ${editionDate && html`<div class="edition-date">
       <input type="date" class="champ-ligne" aria-label="Date" value=${fiche.date} max=${cleLocale(maintenant)}
@@ -240,7 +242,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
   return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
-    pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
+    pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => { annulerSuivant(); setEtape(etape - 1); }}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
     <div class=${`etape ${glisse.current.classe}`} key=${etape}>
     ${phraseEtape}

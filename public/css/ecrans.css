@@ -62,8 +62,11 @@
 .ajout-lien svg { width: 18px; height: 18px; }
 .soins .libelle-section { margin-bottom: -6px; }
 .soins .libelle-section.passes { padding-top: 6px; }
-/* « Pour mes soignants : Export PSY · Vue soignants » (v6.1) : deux liens de 44 pt entre le titre et les segments. */
+/* « Pour mes soignants : Export PSY · Vue soignants » (v6.1) : deux liens de 44 pt entre le titre et les segments.
+   Trop longue pour l'écran, la ligne se coupe après « : » ; les liens restent ensemble, et ne se séparent qu'en
+   très grand texte (le « · » finit alors la première ligne). */
 .pour-soignants { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: -8px 0 -4px; font-size: var(--t-sous); color: var(--text-2); }
+.liens-soignants { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; }
 .carte-prochain { display: flex; flex-direction: column; gap: 10px; }
 .tete-prochain { display: flex; align-items: center; gap: 8px; min-height: var(--cible); color: var(--text); text-decoration: none; }
 .tete-prochain-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -398,7 +401,8 @@
 .ligne-carte.action.petite { font-size: var(--t-sous); min-height: var(--cible); }
 .ligne-carte.action svg { width: 20px; height: 20px; }
 .ligne-carte.action[disabled] { color: var(--text-2); }
-.aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0 4px; }
+/* Sur le bord, comme les titres de section et les cartes (v6.1). */
+.aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0; }
 .aide-carte .lien { display: flex; }
 .ligne-interrupteur { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
 /* Le libellé prend la place : l'interrupteur va à droite, comme dans Réglages › Le soir (v6.1). */

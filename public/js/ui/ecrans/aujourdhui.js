@@ -100,24 +100,29 @@ function resumeNuit(e) {
   return morceaux.join(' · ');
 }
 
+// Libellés d'une liste en minuscules, séparés par des virgules : « bruit, trajets ».
+const enMinuscules = (ids, carte) => (ids || []).map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
+
 // Ce qui a pesé, ce qui a rechargé (v6) : « pesé : bruit, trajets · rechargé : calme ».
 function resumePeseRecharge(e, carte) {
-  const liste = (ids) => ids.map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
-  return [e.pese?.length && `pesé : ${liste(e.pese)}`, e.recharge?.length && `rechargé : ${liste(e.recharge)}`].filter(Boolean).join(' · ');
+  return [e.pese?.length && `pesé : ${enMinuscules(e.pese, carte)}`, e.recharge?.length && `rechargé : ${enMinuscules(e.recharge, carte)}`].filter(Boolean).join(' · ');
 }
 
 // Une humeur du moment dans « Ma journée » (v6.1) : « humeur 6 · énergie moyenne », un champ absent omis.
-// L'heure (« 10:20 », ou « vers 14 h ») est dans sa colonne.
+// Sans humeur ni énergie, ce que je faisais : « ce que je faisais : travail, trajet ». Un relevé vide n'a pas de
+// texte, et pas de ligne. L'heure (« 10:20 », ou « vers 14 h ») est dans sa colonne.
 function texteReleve(h, carte) {
-  return [h.humeur != null && `humeur ${h.humeur}`, h.energie && `énergie ${minusculeInitiale(libelle(carte, h.energie))}`].filter(Boolean).join(' · ');
+  const texte = [h.humeur != null && `humeur ${h.humeur}`, h.energie && `énergie ${minusculeInitiale(libelle(carte, h.energie))}`].filter(Boolean).join(' · ');
+  if (texte) return texte;
+  const faisais = enMinuscules(h.faisais, carte);
+  return faisais ? `ce que je faisais : ${faisais}` : '';
 }
 // Ordre de « Ma journée » : date puis heure, comme les relevés et épisodes sont rangés (repo.parJour). Une
 // heure avant 4 h tombe le lendemain en date calendaire, donc après celles de la soirée.
-const cleHeure = (x) => `${x.date} ${x.heure || ''}`;
+const cleHeure = (x) => `${x.date} ${x.heure}`;
 
 // depuisHistorique (v6.1) : le jour a été ouvert depuis l'Historique. « ‹ Retour » y ramène, à la même position,
-// et ‹ › changent de jour sans quitter l'onglet Historique ; « Revenir à aujourd'hui » laisse la place à Retour
-// (l'onglet Aujourd'hui fait la même chose).
+// et ‹ › changent de jour sans quitter l'onglet Historique. « Revenir à aujourd'hui » reste, comme ouvert autrement.
 export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   useEtatApp((e) => e.horloge || 0);
   const maintenant = repo.maintenant();
@@ -266,18 +271,20 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     <span class="point-evenement point-releve teinte-humeur" aria-hidden="true"></span>
     <span class="heure">${h.vers ? formaterVers(h.heure) : h.heure}</span>
     <span class="resume">${texteReleve(h, evenements.carte)}</span></div></li>`;
-  // Ma journée (v6.1) : humeurs du moment et épisodes du jour logique rangés par heure, puis les symptômes,
-  // qui n'ont pas d'heure. Rien pour un jour sans rien.
+  // Ma journée (v6.1) : humeurs du moment et épisodes du jour logique rangés par heure ; puis ce qui n'a pas
+  // d'heure, les épisodes notés depuis la page d'un jour passé, et enfin les symptômes. Rien pour un jour sans rien.
   const lignesJournee = () => {
-    const parHeure = [
-      ...evenements.humeurs.map((h) => ({ cle: cleHeure(h), rendu: ligneReleve(h) })),
-      ...evenements.episodes.map((ep) => ({ cle: cleHeure(ep), rendu: ligneEvenement(ep.id, versHash('episode', { id: ep.id }), ep.heure,
+    const elements = [
+      ...evenements.humeurs.filter((h) => texteReleve(h, evenements.carte)).map((h) => ({ x: h, rendu: ligneReleve(h) })),
+      ...evenements.episodes.map((ep) => ({ x: ep, rendu: ligneEvenement(ep.id, versHash('episode', { id: ep.id }), ep.heure,
         [libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode',
         'ep', evenements.avecMemo.has(`episodes:${ep.id}`)) })),
-    ].sort((a, b) => a.cle.localeCompare(b.cle));
-    return [...parHeure.map((x) => x.rendu), ...evenements.symptomes.map((sy) => ligneEvenement(sy.id, versHash('symptome', { id: sy.id }), null,
+    ];
+    const parHeure = elements.filter((e) => e.x.heure).sort((a, b) => cleHeure(a.x).localeCompare(cleHeure(b.x)));
+    const sansHeure = elements.filter((e) => !e.x.heure);
+    return [...parHeure, ...sansHeure].map((e) => e.rendu).concat(evenements.symptomes.map((sy) => ligneEvenement(sy.id, versHash('symptome', { id: sy.id }), null,
       [libelle(evenements.carte, sy.symptome), sy.intensite, libelle(evenements.carte, sy.duree)].filter((x) => x != null).join(' · ') || 'Symptôme',
-      'sy', evenements.avecMemo.has(`symptomes:${sy.id}`)))];
+      'sy', evenements.avecMemo.has(`symptomes:${sy.id}`))));
   };
   // « J'ai fini pour ce soir » (v6.1) : à droite de « Mémo vocal », après un premier choix du soir.
   const finiBouton = date === aujourdhui && !vide ? html`<button type="button" class="btn fini-bouton" onClick=${() => terminer(true)}>J'ai fini pour ce soir</button>` : null;
@@ -285,7 +292,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   return html`<main class="ecran aujourdhui">
     <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} surRetour=${retour} />
     ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
-    ${date !== aujourdhui && !depuisHistorique && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
+    ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
     ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
       <p class="phrase-recap">${phrase.map((s) => (s.valeur ? html`<span class=${`valeur teinte-${s.rubrique}`}>${s.texte}</span>` : s.texte))}</p>
@@ -340,7 +347,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     ${!vide && html`<button type="button" class="lien-discret effacer-jour" onClick=${() => setConfirmerEffacer(true)}>Effacer cette journée</button>`}
     ${baseVide && vide && html`<a class="lien importer" href="#/reglages/sauvegarde">Importer une sauvegarde</a>`}
     ${confirmerEffacer && html`<${Confirmation} titre=${`Effacer la journée du ${formaterJour(date)} ?`}
-      texte=${`Les épisodes et symptômes de ce jour sont conservés.${evenements && evenements.avecMemo.has(`journal:${date}`) ? ' Le mémo vocal de cette journée est effacé aussi.' : ''}`}
+      texte=${`Les épisodes, symptômes et humeurs du moment de ce jour sont conservés.${evenements && evenements.avecMemo.has(`journal:${date}`) ? ' Le mémo vocal de cette journée est effacé aussi.' : ''}`}
       action="Effacer" surAnnuler=${() => setConfirmerEffacer(false)} surConfirmer=${effacerJournee} />`}
     <div class="actions-flottantes">
       <a class="pilule moment-difficile" href="#/moment-difficile" aria-label="Moment difficile">${Icones.respiration()}<span class="libelle-action">Moment difficile</span></a>

@@ -59,7 +59,8 @@ export function Soignants() {
 
   // Même clé et même enregistrement que l'ancien champ de Réglages : à la sortie du champ, vide = aucun prénom.
   // Quand on touche « Partager en PDF » en sortant du champ, le nouveau prénom a désactivé le bouton avant que le
-  // clic n'arrive : le PDF d'avant ne part pas.
+  // clic n'arrive : le PDF d'avant ne part pas. Le champ, « Prénom sur la page », a l'icône d'une page : celle
+  // d'une personne est déjà à « Pour qui ».
   const changerPrenom = (valeur) => {
     const v = valeur.trim();
     if (v === prenom) return false;
@@ -94,7 +95,7 @@ export function Soignants() {
     <button type="button" class="btn btn-plein" disabled=${!fichier} onClick=${partagerPdf}>${Icones.partager()}${fichier ? 'Partager en PDF' : 'Préparation…'}</button>
     ${!estModeApp() && html`<button type="button" class="btn" disabled=${!fichier} onClick=${imprimer}>Imprimer</button>`}
     ${message && html`<p class="statut-centre" role="status">${message}</p>`}
-    ${prenom != null && html`<div class="champ-fiche champ-prenom"><${LibelleChamp} icone="personne" pour="prenom-soignants">Prénom sur la page</${LibelleChamp}>
+    ${prenom != null && html`<div class="champ-fiche champ-prenom"><${LibelleChamp} icone="note" pour="prenom-soignants">Prénom sur la page</${LibelleChamp}>
       <input ref=${champPrenom} id="prenom-soignants" class="champ-ligne" autocomplete="off" enterkeyhint="done" defaultValue=${prenom}
         onBlur=${(e) => changerPrenom(e.target.value)} onKeyDown=${(e) => { if (e.key === 'Enter') e.target.blur(); }} /></div>`}
   </main>`;

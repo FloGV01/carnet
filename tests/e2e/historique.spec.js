@@ -53,7 +53,7 @@ test('effacer une journée : confirmation, épisodes conservés, Annuler', async
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
   await page.getByRole('button', { name: 'Effacer cette journée' }).click();
   const boite = page.getByRole('alertdialog', { name: 'Effacer la journée du lundi 21 sept. ?' });
-  await expect(boite.getByText('Les épisodes et symptômes de ce jour sont conservés.')).toBeVisible();
+  await expect(boite.getByText('Les épisodes, symptômes et humeurs du moment de ce jour sont conservés.')).toBeVisible();
   await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');

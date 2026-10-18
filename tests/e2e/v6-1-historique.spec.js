@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
+import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub.js';
 
 // v6.1 · Historique (P15, A5) : segment, filtres, recherche et position gardés pour la session, après un aller-retour
 // par un jour, un épisode ou un symptôme ; seul le segment survit à un redémarrage. Un jour ouvert depuis l'Historique
@@ -119,11 +120,11 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   await expect(onglet(page, 'Aujourd\'hui')).not.toHaveAttribute('aria-current', 'page');
   const retour = page.getByRole('button', { name: 'Retour', exact: true });
   await expect(retour).toBeVisible();
-  // Retour en haut, au-dessus de ‹ jour › ; « Revenir à aujourd'hui » lui laisse la place.
+  // Retour en haut, au-dessus de ‹ jour › ; « Revenir à aujourd'hui » reste, comme sur un jour ouvert autrement.
   const [r, p] = await Promise.all([retour.boundingBox(), page.getByRole('button', { name: 'Jour précédent' }).boundingBox()]);
   expect(r.y + r.height).toBeLessThanOrEqual(p.y + 1);
   expect(r.height).toBeGreaterThanOrEqual(44);
-  await expect(page.getByRole('link', { name: 'Revenir à aujourd\'hui' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Revenir à aujourd\'hui' })).toBeVisible();
 
   // ‹ et › changent de jour, sans quitter l'Historique.
   await page.getByRole('button', { name: 'Jour précédent' }).click();
@@ -142,6 +143,72 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   await expect(page.locator('.resume-filtres')).toHaveText('Bureau');
   await expect.poll(async () => Math.abs((await positionY(page)) - y)).toBeLessThanOrEqual(1);
   await expect(lien).toBeInViewport();
+});
+
+test('un jour ouvert depuis l\'Historique : « Revenir à aujourd\'hui » mène à Aujourd\'hui, onglet Aujourd\'hui allumé', async ({ page }) => {
+  await ouvrirHistorique(page);
+  await page.getByRole('link', { name: /jeudi 10 sept\./ }).click();
+  await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-10$/);
+  await expect(page.getByRole('button', { name: 'Retour', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Revenir à aujourd\'hui' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByRole('heading', { name: /^Aujourd'hui · jeudi 15 oct\./, level: 1 })).toBeVisible();
+  await expect(onglet(page, 'Aujourd\'hui')).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Retour', exact: true })).toHaveCount(0);
+});
+
+test('un filtre sur un élément archivé ensuite reste pressé dans « Filtrer », et un toucher le retire', async ({ page }) => {
+  await ouvrirHistorique(page);
+  await page.getByRole('button', { name: 'Filtrer' }).click();
+  const bureau = page.getByRole('group', { name: 'Lieu' }).getByRole('button', { name: 'Bureau', exact: true });
+  await bureau.click();
+  await expect(page.locator('.resume-filtres')).toHaveText('Bureau');
+
+  // Bureau archivé dans Réglages › Listes, puis retour à l'Historique.
+  await aller(page, '#/reglages/listes/lieu');
+  await page.locator('.element-liste', { hasText: 'Bureau' }).getByRole('button', { name: 'Archiver' }).click();
+  await expect(page.locator('.element-liste.archive', { hasText: 'Bureau' })).toBeVisible();
+  await ouvrirHistorique(page);
+  await expect(page.locator('.resume-filtres')).toHaveText('Bureau');
+  await expect(page.getByRole('button', { name: 'Filtrer' })).toHaveAttribute('aria-expanded', 'true');
+  // Encore proposé, pressé, en dernier ; un toucher retire le filtre, et l'élément archivé n'est plus proposé.
+  await expect(bureau).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Lieu' }).getByRole('button').last()).toHaveText('Bureau');
+  await bureau.click();
+  await expect(page.locator('.resume-filtres')).toHaveCount(0);
+  await expect(bureau).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /jeudi 10 sept\./ })).toBeVisible();
+});
+
+test('une sauvegarde importée : l\'Historique repart sans filtre ni recherche (un filtre pouvait viser un élément absent du fichier)', async ({ page }) => {
+  await installerPartageFactice(page);
+  await page.reload();
+  await appPrete(page);
+  await aller(page, '#/reglages');
+  await page.getByRole('button', { name: 'Exporter', exact: true }).click();
+  await expect(page.getByText('Sauvegarde faite.')).toBeVisible();
+  const [f] = await fichiersPartages(page);
+
+  // Un lieu créé après la sauvegarde, et un filtre dessus.
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    const atelier = await r.listes.creer('lieu', 'Atelier inventé');
+    await r.journal.patch('2026-10-15', { lieu: atelier.id });
+  });
+  await ouvrirHistorique(page);
+  await page.getByRole('button', { name: 'Filtrer' }).click();
+  await page.getByRole('group', { name: 'Lieu' }).getByRole('button', { name: 'Atelier inventé', exact: true }).click();
+  await expect(page.locator('.resume-filtres')).toHaveText('Atelier inventé');
+
+  await aller(page, '#/reglages');
+  await page.locator('input[type=file]').setInputFiles({ name: f.nom, mimeType: 'application/json', buffer: Buffer.from(f.octets) });
+  await page.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(page.getByText('Import terminé.')).toBeVisible();
+  await ouvrirHistorique(page);
+  await expect(page.locator('.resume-filtres')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Lieu' })).toHaveCount(0);
+  await expect(page.getByText('Élément sans libellé')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /jeudi 10 sept\./ })).toBeVisible();
 });
 
 test('un épisode ouvert d\'un jour de l\'Historique ramène à ce jour, puis Retour à l\'Historique', async ({ page }) => {

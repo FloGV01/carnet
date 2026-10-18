@@ -48,6 +48,68 @@ test('Soins : « Pour mes soignants » sous le titre et au-dessus des segments, 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+// La ligne « Pour mes soignants » : ses deux liens (boîte et texte, mesuré par une Range), son « · », sa première partie.
+const mesurerLigneSoignants = (page) => ligneSoignants(page).evaluate((p) => {
+  const boite = p.getBoundingClientRect();
+  const liens = [...p.querySelectorAll('a')].map((a) => {
+    const r = document.createRange();
+    r.selectNodeContents(a);
+    const t = r.getBoundingClientRect();
+    const b = a.getBoundingClientRect();
+    return { texte: a.textContent, haut: Math.round(b.top), gauche: b.left, droite: b.right, hauteur: b.height, largeur: b.width,
+      texteDedans: t.left >= b.left - 0.5 && t.right <= b.right + 0.5 && t.top >= b.top - 0.5 && t.bottom <= b.bottom + 0.5 };
+  });
+  const point = p.querySelector('.liens-soignants > span[aria-hidden="true"]').getBoundingClientRect();
+  const intro = p.firstElementChild.getBoundingClientRect();
+  return { gauche: boite.left, droite: boite.right, bas: boite.bottom, debordement: p.scrollWidth - p.clientWidth, liens,
+    point: { gauche: point.left, haut: Math.round(point.top) }, intro: { haut: Math.round(intro.top), droite: intro.right } };
+});
+
+test('Soins : à 320 et 375 de large, et en grand texte, « Pour mes soignants » passe sur deux lignes sans rien couper ; liens de 44 pt', async ({ page }) => {
+  await nav(page, 'Soins').click();
+  await expect(ligneSoignants(page)).toBeVisible();
+  // Tailles du texte d'iOS (html suit -apple-system-body) : par défaut, xLarge, xxLarge, xxxLarge, puis la première
+  // des grandes tailles d'accessibilité. Posées par le CSSOM, que la CSP laisse passer.
+  for (const largeur of [390, 375, 320]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    for (const taille of [17, 19, 21, 23, 28]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+      const cas = `${largeur} de large, texte de ${taille} px`;
+      const m = await mesurerLigneSoignants(page);
+      expect(m.debordement, cas).toBe(0);
+      expect(m.liens.map((l) => l.texte)).toEqual(['Export PSY', 'Vue soignants']);
+      for (const l of m.liens) {
+        expect(l.gauche, `${l.texte}, ${cas}`).toBeGreaterThanOrEqual(m.gauche - 0.5);
+        expect(l.droite, `${l.texte}, ${cas}`).toBeLessThanOrEqual(m.droite + 0.5);
+        expect(l.texteDedans, `${l.texte}, ${cas}`).toBe(true);
+        expect(l.hauteur, `${l.texte}, ${cas}`).toBeGreaterThanOrEqual(44);
+        expect(l.largeur, `${l.texte}, ${cas}`).toBeGreaterThanOrEqual(44);
+      }
+      // Le « · » ne commence jamais une ligne ; la ligne reste au-dessus des segments.
+      expect(m.point.gauche, cas).toBeGreaterThan(m.gauche + 20);
+      const segments = await page.getByRole('group', { name: 'Soins', exact: true }).boundingBox();
+      expect(m.bas, cas).toBeLessThanOrEqual(segments.y);
+      expect(m.droite, cas).toBeLessThanOrEqual(largeur);
+      // La page entière, au texte par défaut (en très grand texte à 320, ce sont les segments qui débordent).
+      if (taille === 17) expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), cas).toBe(true);
+      // Au texte par défaut : sur une ligne à 390 ; à 375 et 320, la coupure se fait après « Pour mes soignants : »,
+      // les deux liens et leur « · » ensemble dessous.
+      if (taille === 17) {
+        if (largeur === 390) {
+          expect(m.liens[0].haut, cas).toBe(m.liens[1].haut);
+          expect(m.liens[0].gauche, cas).toBeGreaterThan(m.intro.droite);
+        } else {
+          expect(m.liens[0].haut, cas).toBe(m.liens[1].haut);
+          expect(m.liens[0].haut, cas).toBeGreaterThan(m.intro.haut);
+          expect(Math.round(m.liens[0].gauche), cas).toBe(Math.round(m.gauche));
+        }
+      }
+    }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  await page.setViewportSize({ width: 390, height: 844 });
+});
+
 test('Export PSY depuis Soins : deux touchers, l\'onglet Soins reste allumé, « Retour » ramène à Soins sur le même segment', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { humeur: 6, explosions: 0 }));
   await nav(page, 'Soins').click();
@@ -72,6 +134,10 @@ test('Vue soignants depuis Soins : onglet Soins, le prénom réglé sur l\'écra
   await expect(nav(page, 'Soins')).toHaveAttribute('aria-current', 'page');
   const partager = page.getByRole('button', { name: 'Partager en PDF' });
   await expect(partager).toBeEnabled({ timeout: 15000 });
+
+  // « Prénom sur la page » n'a pas l'icône de « Pour qui » (une personne) : celle d'une page.
+  const icone = (texte) => page.locator('.libelle-champ', { hasText: texte }).locator('svg path').getAttribute('d');
+  expect(await icone('Prénom sur la page')).not.toBe(await icone('Pour qui'));
 
   // Vide au départ ; à la sortie du champ (Entrée), la clé prenomSoignants est écrite et l'aperçu se redessine.
   const champ = page.getByLabel('Prénom sur la page');

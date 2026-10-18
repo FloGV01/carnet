@@ -120,8 +120,8 @@ La ligne « Maintenant · 18:42 » devient « Maintenant ▾ ».
 
 ### 2.1 Accès et structure
 
-- **Accès** : une ligne « Comprendre › » en haut de l'Analyse.
-  - Elle mène à `#/comprendre/<onglet>`, où l'onglet est le dernier consulté (`carnet:comprendre:onglet`), Explosions par défaut.
+- **Accès** (état v6.1, §14) : trois portes en haut de l'Analyse, Explosions · Énergie · Rythmes.
+  - Chacune mène à `#/comprendre/<onglet>`. L'onglet n'est plus gardé : c'est la porte touchée qui le choisit. La clé `carnet:comprendre:onglet` de la v6.0 n'est plus lue.
   - Route `comprendre` (`/comprendre/ID` avec ID ∈ `explosions`, `energie`, `rythmes`). `ongletDe('comprendre')` donne « analyse ».
   - Écran poussé avec « ‹ Retour ».
 - **Sélecteur** : « 3 mois · Tout », sur « Tout » par défaut et gardé (`carnet:comprendre:periode`).
@@ -605,6 +605,10 @@ Construite le 15/10, en 26 tâches, sur la branche `dev`. Version 6.0.0, base `D
 
 Version 6.1.0, construite le 18/10 en 8 tâches sur la branche `dev`, d'après l'état des lieux du 18/10. Elle apporte quatorze changements d'organisation et de rapidité (P1 à P4, P7 à P16) et ne touche ni à l'apparence générale ni à la base (`DB_VERSION` 4, `FORMAT_VERSION` 4).
 
-Là où elle s'écarte de cette spécification, la v6.1 fait foi. Par exemple, l'écran « Me ressourcer » est retiré, Réglages › « Ma journée » devient « Le soir », et Comprendre s'ouvre par trois portes depuis l'Analyse.
+Là où elle s'écarte de cette spécification, la v6.1 fait foi. Par exemple :
+- l'écran « Me ressourcer » est retiré, et Réglages › « Ma journée » devient « Le soir » ;
+- Comprendre s'ouvre par trois portes depuis l'Analyse et ne garde plus le dernier onglet (§2.1) ;
+- Export PSY et Vue soignants ne sont plus au bas de l'Analyse. Ils s'ouvrent depuis Soins, par la ligne « Pour mes soignants », et l'onglet Soins reste allumé ;
+- le prénom de la page se règle dans la Vue soignants (« Prénom sur la page »), et non plus dans Réglages › Analyse.
 
 Le détail, les arbitrages A1 à A5 et ce qui attend Claude Design (P5, P6) sont dans `docs/decisions.md`, à l'entrée du 18/10.
