@@ -1,4 +1,5 @@
 // Soins : rendez-vous (par défaut), notes en vrac et traitement ; l'onglet utilisé en dernier se rouvre.
+// Au-dessus des segments, quel que soit l'onglet, « Pour mes soignants » : Export PSY et Vue soignants (v6.1).
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -27,6 +28,10 @@ export const nomRdv = (r, carte) => (r.professionnel ? libelle(carte, r.professi
 export const quandRdv = (r) => (r.date ? `${formaterJourComplet(r.date)}${r.heure ? ` · ${r.heure}` : ''}` : 'Date à fixer');
 const quandCourt = (r) => (r.date ? `${formaterJourAbrege(r.date)}${r.heure ? ` · ${r.heure}` : ''}` : 'Date à fixer');
 
+// Deux liens de 44 pt sur une ligne, entre le titre et les segments.
+const PourSoignants = () => html`<p class="pour-soignants"><span>Pour mes soignants :</span>
+  <a class="lien" href=${versHash('export-psy')}>Export PSY</a><span aria-hidden="true">·</span><a class="lien" href=${versHash('soignants')}>Vue soignants</a></p>`;
+
 const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`;
 
 export function Soins() {
@@ -36,7 +41,7 @@ export function Soins() {
     const [rdv, traitements, items, avecMemo] = await Promise.all([repo.rdv.tous(), repo.traitements.tous(), repo.listes.items(), repo.audios.parents()]);
     return { rdv, traitements, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
-  if (!donnees) return html`<main class="ecran soins"><${Entete} titre="Soins" /></main>`;
+  if (!donnees) return html`<main class="ecran soins"><${Entete} titre="Soins" /><${PourSoignants} /></main>`;
   const { carte, aujourdhui, avecMemo } = donnees;
 
   let contenu;
@@ -86,6 +91,7 @@ export function Soins() {
   }
   return html`<main class="ecran soins">
     <${Entete} titre="Soins" />
+    <${PourSoignants} />
     <${Segmente} etiquette="Soins" options=${ONGLETS} valeur=${onglet} surChoix=${choisir} classe="large" sansVide=${true} />
     ${contenu}
   </main>`;

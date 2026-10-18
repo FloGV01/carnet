@@ -3,8 +3,8 @@ import { viderBase, aller } from '../aides/saisie.js';
 import { generer } from '../fixtures/generateur.js';
 import { addDays } from '../../public/js/domain/dates.js';
 
-// v6 · Comprendre (spec §2) : un écran ouvert depuis l'Analyse, trois onglets, graphiques seulement.
-// Données inventées (aucune donnée réelle).
+// v6 · Comprendre (spec §2) : un écran ouvert depuis l'Analyse, trois onglets, graphiques seulement. Depuis la
+// v6.1, l'Analyse l'ouvre par trois portes, une par onglet. Données inventées (aucune donnée réelle).
 const AUJ = '2026-10-15';
 const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
 const repo = (page, f, arg) => page.evaluate(f, arg);
@@ -13,6 +13,8 @@ const bouton = (page, nom, libelle) => groupe(page, nom).getByRole('button', { n
 // La carte d'un graphique, par son titre.
 const carte = (page, titre) => page.locator('figure.graphe', { has: page.getByText(titre, { exact: true }) });
 const lireLocal = (page, cle) => page.evaluate((c) => JSON.parse(localStorage.getItem(c)), cle);
+// Une des trois portes de Comprendre, en haut de l'Analyse (v6.1).
+const porte = (page, nom) => page.getByRole('region', { name: 'Comprendre' }).getByRole('link', { name: nom, exact: true });
 // Sous son seuil, une carte dit « Pas encore assez » ; « Pourquoi ? » déplie sa règle, sans décompte.
 async function pasAssez(page, titre) {
   const c = carte(page, titre);
@@ -55,10 +57,10 @@ async function charger180(page) {
   }, jours180());
 }
 
-test('accès depuis l\'Analyse, trois onglets, le dernier rouvert ; sans données, « Pas encore assez » partout', async ({ page }) => {
+test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore assez » partout', async ({ page }) => {
   await demarrer(page);
   await page.getByRole('link', { name: 'Analyse' }).click();
-  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await porte(page, 'Explosions').click();
   await expect(page).toHaveURL(/#\/comprendre\/explosions$/);
   await expect(page.getByRole('heading', { name: 'Comprendre' })).toBeVisible();
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Analyse' })).toHaveAttribute('aria-current', 'page');
@@ -83,27 +85,24 @@ test('accès depuis l\'Analyse, trois onglets, le dernier rouvert ; sans donnée
   for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Tes nuits selon le jour', 'Selon le mois']) {
     await pasAssez(page, titre);
   }
-  expect(await lireLocal(page, 'carnet:comprendre:onglet')).toBe('rythmes');
 
-  // « ‹ Retour » ramène à l'Analyse ; la ligne « Comprendre › » rouvre le dernier onglet.
+  // « ‹ Retour » ramène à l'Analyse ; chaque porte mène à son onglet.
   await page.getByRole('button', { name: 'Retour' }).click();
   await expect(page).toHaveURL(/#\/analyse$/);
-  await expect(page.getByRole('link', { name: 'Comprendre' })).toHaveAttribute('href', '#/comprendre/rythmes');
-  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await porte(page, 'Rythmes').click();
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
+  await expect(bouton(page, 'Comprendre', 'Rythmes')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
 });
 
-test('un choix gardé qui n\'est plus valable revient au défaut : Explosions, Tout, Humeur', async ({ page }) => {
+test('un choix gardé qui n\'est plus valable revient au défaut : Tout, Humeur', async ({ page }) => {
   await demarrer(page);
   await page.evaluate(() => {
-    localStorage.setItem('carnet:comprendre:onglet', JSON.stringify('autre'));
     localStorage.setItem('carnet:comprendre:periode', JSON.stringify('90'));
     localStorage.setItem('carnet:comprendre:mesure', '{illisible');
   });
   await aller(page, '#/analyse');
-  await expect(page.getByRole('link', { name: 'Comprendre' })).toHaveAttribute('href', '#/comprendre/explosions');
-  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await porte(page, 'Explosions').click();
   await expect(bouton(page, 'Comprendre', 'Explosions')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Période', 'Tout')).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', JSON.stringify('humeurs')));
@@ -112,7 +111,7 @@ test('un choix gardé qui n\'est plus valable revient au défaut : Explosions, T
   // Une mesure illisible ou inconnue : Humeur, même relue à une nouvelle ouverture de l'écran.
   await aller(page, '#/analyse');
   await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', '{illisible'));
-  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await porte(page, 'Rythmes').click();
   await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => localStorage.getItem('carnet:comprendre:periode'))).toBe('"90"');
 });
@@ -180,7 +179,7 @@ test('180 jours inventés : les graphiques des trois onglets, les choix gardés,
 
   await page.reload();
   await aller(page, '#/analyse');
-  await page.getByRole('link', { name: 'Comprendre' }).click();
+  await porte(page, 'Rythmes').click();
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
   await expect(bouton(page, 'Mesure', 'Explosions')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Période', '3 mois')).toHaveAttribute('aria-pressed', 'true');

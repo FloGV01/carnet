@@ -59,11 +59,11 @@ export function versHash(nom, params = {}) {
   return `#${chemin}`;
 }
 
-// Onglet actif pour une route donnée.
+// Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins (v6.1).
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'ressourcer', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
-  if (['analyse', 'comprendre', 'export-psy', 'soignants'].includes(nom)) return 'analyse';
+  if (['analyse', 'comprendre'].includes(nom)) return 'analyse';
   if (nom === 'historique') return 'historique';
-  if (['soins', 'rdv', 'consultation', 'traitement'].includes(nom)) return 'soins';
+  if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

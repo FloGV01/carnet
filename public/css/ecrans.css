@@ -62,6 +62,8 @@
 .ajout-lien svg { width: 18px; height: 18px; }
 .soins .libelle-section { margin-bottom: -6px; padding-left: 4px; }
 .soins .libelle-section.passes { padding-top: 6px; }
+/* « Pour mes soignants : Export PSY · Vue soignants » (v6.1) : deux liens de 44 pt entre le titre et les segments. */
+.pour-soignants { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: -8px 0 -4px; font-size: var(--t-sous); color: var(--text-2); }
 .carte-prochain { display: flex; flex-direction: column; gap: 10px; }
 .tete-prochain { display: flex; align-items: center; gap: 8px; min-height: var(--cible); color: var(--text); text-decoration: none; }
 .tete-prochain-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -177,6 +179,15 @@
 /* Analyse */
 .analyse { gap: 16px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
 .analyse > .entete-onglet { margin-bottom: 0; }
+/* v6.1 : Comprendre en trois portes ; le sélecteur de période ne colle que sur les sections qu'il règle
+   (son bloc, .selon-periode) ; « Sur tout ton historique » vient après. */
+.portes-comprendre { display: flex; flex-direction: column; gap: 6px; }
+.portes-comprendre .libelle-section { padding: 0; }
+.portes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.porte { min-height: var(--cible); padding: 0 6px; color: var(--accent); font-weight: 600; }
+.selon-periode, .tout-historique { display: flex; flex-direction: column; gap: 16px; }
+.tout-historique { padding-top: 12px; }
+.tout-historique > .libelle-section { padding: 0; margin-bottom: -8px; }
 .centre { text-align: center; margin: 12px 0; }
 .texte-secondaire { font-size: var(--t-sous); color: var(--text-2); line-height: 1.4; }
 .pourquoi { font-size: var(--t-sous); min-height: var(--cible); vertical-align: middle; }
@@ -294,7 +305,7 @@
 
 .apercu-page { width: 100%; height: auto; display: block; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: #FFFFFF; }
 @media print {
-  .onglets, .entete-pousse, .entete-onglet, .actions-col, .soignants .pastilles, .bandeau, .toast { display: none !important; }
+  .onglets, .entete-pousse, .entete-onglet, .actions-col, .soignants .champ-fiche, .bandeau, .toast { display: none !important; }
   .apercu-page { border: 0; width: 100%; }
   body, html { background: #FFFFFF; }
 }
@@ -383,7 +394,6 @@
 .aide-carte .lien { display: flex; }
 .espace-haut { margin-top: 6px; }
 .ligne-interrupteur { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
-.champ-carte { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border-top: 1px solid var(--hairline); }
 .libelle-carte { font-size: var(--t-sous); }
 .a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); }
 .a-propos .ligne-info > span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
@@ -405,6 +415,8 @@
 .statut-centre { font-size: var(--t-sous); text-align: center; margin-top: -4px; }
 .lien-centre { align-self: center; font-size: var(--t-sous); }
 .soignants .apercu-page { box-shadow: 0 1px 6px rgba(0, 0, 0, .08); }
+/* Le prénom de la page (v6.1, venu de Réglages) : sous les boutons, réglé une fois. */
+.soignants .champ-prenom { margin-top: var(--esp-3); }
 
 /* Traitement actuel */
 .carte-traitement { display: flex; flex-direction: column; gap: 10px; }

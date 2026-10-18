@@ -34,8 +34,8 @@ export function Reglages() {
   const horsLigne = typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller;
   useEffect(() => {
     etatStockage().then(setStockage);
-    Promise.all([repo.audios.metas(), repo.meta.lire('prenomSoignants'), repo.meta.lire('reglages')]).then(([metas, prenom, reglages]) =>
-      setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0), prenom, reglages }));
+    Promise.all([repo.audios.metas(), repo.meta.lire('reglages')]).then(([metas, reglages]) =>
+      setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0), reglages }));
   }, []);
   const appui = useAppuiLong(() => { location.hash = '#/diagnostic'; });
   const chercher = async () => {
@@ -107,11 +107,6 @@ export function Reglages() {
         <${Interrupteur} etiquette="Tendances" actif=${tendances} surChanger=${basculer('tendances')} />
       </div>
       <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
-      <div class="champ-carte">
-        <label class="libelle-carte" for="prenom-soignants">Prénom pour la vue soignants</label>
-        <input id="prenom-soignants" class="champ-ligne" autocomplete="off" defaultValue=${infos.prenom || ''}
-          onBlur=${(e) => repo.meta.ecrire('prenomSoignants', e.target.value.trim() || null)} />
-      </div>
     </section>
 
     <h2 class="libelle-section">À propos</h2>

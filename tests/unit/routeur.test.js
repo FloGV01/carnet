@@ -46,8 +46,19 @@ test('onglet actif', () => {
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
-  assert.equal(ongletDe('export-psy'), 'analyse');
   assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v6.1 · « Pour mes soignants » : Export PSY et Vue soignants allument l\'onglet Soins, l\'Analyse garde Comprendre', () => {
+  assert.equal(ongletDe('export-psy'), 'soins');
+  assert.equal(ongletDe('soignants'), 'soins');
+  assert.equal(ongletDe('soins'), 'soins');
+  assert.equal(ongletDe('analyse'), 'analyse');
+  assert.equal(ongletDe('comprendre'), 'analyse');
+  assert.equal(lireRoute('#/export-psy').nom, 'export-psy');
+  assert.equal(lireRoute('#/soignants').nom, 'soignants');
+  assert.equal(versHash('export-psy'), '#/export-psy');
+  assert.equal(versHash('soignants'), '#/soignants');
 });
 
 test('v6 · Comprendre : /comprendre/ID avec ID parmi explosions, energie, rythmes', () => {
