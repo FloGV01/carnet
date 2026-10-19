@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('un épisode en 7 touchers après l\'icône : créé au premier choix, récapitulatif, Terminer', async ({ page }) => {
+test('un épisode nouveau : créé au premier choix, la réaction choisie ramène à Aujourd\'hui sans Terminer', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
   await expect(page.getByRole('heading', { name: 'Ça a démarré avec…' })).toBeVisible();
   await expect(page.getByRole('navigation')).toHaveCount(0);
@@ -22,8 +22,8 @@ test('un épisode en 7 touchers après l\'icône : créé au premier choix, réc
   await grille(page).getByRole('button', { name: 'Intensité 7' }).click();
   await grille(page).getByRole('button', { name: 'Injustice' }).click();
   await grille(page).getByRole('button', { name: 'Retrait / isolement' }).click();
-  await expect(grille(page).getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
-  await grille(page).getByRole('button', { name: 'Terminer' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByRole('dialog', { name: 'Épisode' })).toHaveCount(0);
   await expect(page.getByText('Épisode enregistré')).toBeVisible();
   await expect(page.getByRole('link', { name: /18:42\s+Colère · 7 · Me sentir pris pour un con/ })).toBeVisible();
   const [ep] = await episodes(page);
@@ -48,9 +48,13 @@ test('fermer sans rien choisir ne crée rien', async ({ page }) => {
   expect((await episodes(page)).length).toBe(0);
 });
 
-test('Passer, textes facultatifs, modification depuis le récapitulatif', async ({ page }) => {
+test('Passer, puis rouvert : textes facultatifs, modification depuis le récapitulatif', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
-  for (let i = 0; i < 5; i++) await grille(page).getByRole('button', { name: 'Passer', exact: true }).click();
+  await grille(page).getByRole('button', { name: 'Conflit' }).click();
+  await expect(page.getByRole('heading', { name: 'Ça ressemblait plutôt à…' })).toBeVisible();
+  for (let i = 0; i < 4; i++) await grille(page).getByRole('button', { name: 'Passer', exact: true }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await page.getByRole('link', { name: /18:42\s+Conflit/ }).click();
   await expect(grille(page).getByRole('button', { name: 'Terminer' })).toBeVisible();
   await page.locator('#episodes-situation').fill('remarque en réunion');
   await expect.poll(async () => (await episodes(page))[0]?.situation).toBe('remarque en réunion');

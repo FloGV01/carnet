@@ -1,19 +1,30 @@
-// Réglages › Ma journée (v4) : afficher / masquer et ordonner les champs du soir, choisir les
-// heures de l'humeur du moment. Un champ masqué garde ses données passées.
+// Réglages › Le soir (v4, « Ma journée » jusqu'à la v6.1) : afficher / masquer et ordonner les champs
+// du soir. Un champ masqué garde ses données passées. Les heures de l'humeur du moment, rangées dans la
+// même méta, se choisissent depuis la v6.1 dans Réglages › Rappels. La route reste /reglages/journee.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
-import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, HEURE_MIN, HEURE_MAX } from '../../domain/journee.js';
+import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE } from '../../domain/journee.js';
 
-const HEURES = Array.from({ length: HEURE_MAX - HEURE_MIN + 1 }, (_, i) => i + HEURE_MIN);
-
-export function MaJournee() {
+// meta.journee, lue puis changée par « Le soir » et par Rappels : chaque changement passe par une file
+// et se fait sur la valeur relue en base, pour que deux touchers rapprochés ne s'écrasent pas.
+export function useJournee() {
   const [j, setJ] = useState(null);
   const file = useRef(Promise.resolve());
-  const focusApres = useRef(null);
   useEffect(() => { repo.meta.lire('journee').then((v) => setJ(normaliserJournee(v))); }, []);
+  const changer = (modifier) => {
+    file.current = file.current.then(async () => {
+      setJ(await repo.meta.modifier('journee', (v) => normaliserJournee(modifier(normaliserJournee(v)))));
+    }).catch(() => {});
+  };
+  return [j, changer];
+}
+
+export function MaJournee() {
+  const [j, changer] = useJournee();
+  const focusApres = useRef(null);
   // Après un déplacement, le focus suit la flèche du champ déplacé (VoiceOver, clavier).
   useEffect(() => {
     if (!focusApres.current) return;
@@ -21,11 +32,6 @@ export function MaJournee() {
     focusApres.current = null;
     if (b) b.focus();
   }, [j]);
-  const changer = (modifier) => {
-    file.current = file.current.then(async () => {
-      setJ(await repo.meta.modifier('journee', (v) => normaliserJournee(modifier(normaliserJournee(v)))));
-    }).catch(() => {});
-  };
   // Les flèches restent focalisables en bout de liste (aria-disabled) : le focus ne tombe pas.
   const deplacer = (c, sens, bloque) => () => {
     if (bloque) return;
@@ -33,9 +39,9 @@ export function MaJournee() {
     changer((x) => deplacerChamp(x, c, sens));
   };
   const retour = () => { location.hash = '#/reglages'; };
-  if (!j) return html`<main class="ecran fiche"><${Entete} titre="Ma journée" retour=${retour} /></main>`;
+  if (!j) return html`<main class="ecran fiche"><${Entete} titre="Le soir" retour=${retour} /></main>`;
   return html`<main class="ecran fiche ma-journee">
-    <${Entete} titre="Ma journée" retour=${retour} />
+    <${Entete} titre="Le soir" retour=${retour} />
     <p class="texte-secondaire">Les champs de la saisie du soir. Un champ masqué garde ses données passées.</p>
     <ul class="liste carte carte-groupe">${j.ordre.map((c, i) => html`<li class="ligne-champ-reglage" key=${c}>
       <span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
@@ -52,16 +58,5 @@ export function MaJournee() {
           surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== MASQUE_PESE_RECHARGE) : [...x.masques, MASQUE_PESE_RECHARGE] }))} />
       </li>
     </ul>
-    <h2 class="libelle-section">Humeur du moment</h2>
-    <p class="texte-secondaire">Les heures où tu veux un rappel. L'iPhone ne laisse pas une app web envoyer ses propres rappels : Réglages › Rappels te montre comment les créer dans Raccourcis.</p>
-    <div class="pastilles souples heures-moment" role="group" aria-label="Heures des rappels">
-      ${HEURES.map((h) => {
-        const choisi = j.heuresMoment.includes(h);
-        return html`<button type="button" class="pastille" aria-pressed=${choisi ? 'true' : 'false'} aria-label=${`${h} h`}
-          onClick=${() => changer((x) => ({ ...x, heuresMoment: choisi ? x.heuresMoment.filter((y) => y !== h) : [...x.heuresMoment, h] }))}>
-          <span class="texte-pastille"><span>${h} h</span></span></button>`;
-      })}
-    </div>
-    <a class="btn-lien action" href="#/reglages/rappel">${Icones.rappel()}Créer les rappels</a>
   </main>`;
 }

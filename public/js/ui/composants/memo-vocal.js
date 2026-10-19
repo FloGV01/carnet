@@ -60,7 +60,10 @@ function Puce({ audio, surSupprimer }) {
   </div>`;
 }
 
-export function MemoVocal({ parentStore, parentId, date, assurerParent }) {
+// `aCote` (v6.1) : un élément posé à droite du bouton, sur sa ligne (« J'ai fini pour ce soir » d'Aujourd'hui,
+// null tant qu'il n'a pas lieu d'être). Il reste affiché sans micro ni mémo, et passe à la ligne pendant un
+// enregistrement. Sans `aCote`, le bouton est posé seul, comme avant.
+export function MemoVocal({ parentStore, parentId, date, assurerParent, aCote }) {
   const [memos, setMemos] = useState([]);
   const [etat, setEtat] = useState({ mode: 'repos' });
   const [duree, setDuree] = useState(0);
@@ -138,19 +141,20 @@ export function MemoVocal({ parentStore, parentId, date, assurerParent }) {
     afficherToast('Mémo supprimé', { libelle: 'Annuler', faire: async () => { await repo.audios.restaurer(sauve); await recharger(); } });
   };
 
-  if (!microDisponible() && memos.length === 0) return null;
+  if (!microDisponible() && memos.length === 0) return aCote ? html`<div class="memo-vocal"><div class="memo-ligne">${aCote}</div></div>` : null;
   const enCours = etat.mode === 'enregistrement';
   const ouverture = etat.mode === 'ouverture';
-  return html`<div class="memo-vocal">
-    ${memos.map((m) => html`<${Puce} key=${m.id} audio=${m} surSupprimer=${supprimer} />`)}
-    ${microDisponible() && (enCours
+  const bouton = microDisponible() && (enCours
     ? html`<div class="memo-en-cours">
         <button type="button" class="btn-arreter" onClick=${() => enreg.current && enreg.current.arreter('utilisateur')}>${Icones.stop()}Arrêter</button>
         <span class="duree" role="timer" aria-live="off">${formaterDuree(duree)}</span>
         <span class="onde-memo" aria-hidden="true">${ONDE.map((i) => html`<i key=${i}></i>`)}</span>
       </div>`
     : html`<button type="button" class="btn-memo" disabled=${ouverture} aria-busy=${ouverture ? 'true' : null} onClick=${demarrer}>
-        ${Icones.onde()}<span>Mémo vocal</span></button>`)}
+        ${Icones.onde()}<span>Mémo vocal</span></button>`);
+  return html`<div class="memo-vocal">
+    ${memos.map((m) => html`<${Puce} key=${m.id} audio=${m} surSupprimer=${supprimer} />`)}
+    ${aCote !== undefined ? html`<div class="memo-ligne">${bouton}${aCote}</div>` : bouton}
     ${etat.mode === 'erreur' && html`<p class="memo-erreur" role="status">${etat.message}</p>`}
   </div>`;
 }

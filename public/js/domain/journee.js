@@ -5,7 +5,7 @@ export const NOMS_CHAMPS = {
   lieu: 'Lieu', sommeil: 'Sommeil', humeur: 'Humeur', contact: 'Contact humain', sport: 'Sport / mouvement',
   explosions: 'Explosions (compteur du soir)', traitement: 'Traitement pris', positifs: 'Mes points positifs',
 };
-// Heures proposées pour l'humeur du moment (Réglages › Ma journée) : de 6 h à 23 h.
+// Heures proposées pour l'humeur du moment (Réglages › Rappels depuis la v6.1) : de 6 h à 23 h.
 export const HEURE_MIN = 6;
 export const HEURE_MAX = 23;
 // Le repli « Ce qui a pesé · ce qui a rechargé » (v6) se masque comme un champ, mais n'a pas de place

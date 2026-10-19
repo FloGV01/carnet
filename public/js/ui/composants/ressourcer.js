@@ -1,6 +1,6 @@
 // « Me ressourcer » (v6) : « Pour récupérer, je… » tel que l'utilisateur l'a écrit dans Mon plan, avec
-// « Respirer ». Partagé par l'écran Me ressourcer et par la carte de l'Humeur du moment (la règle). Rien
-// n'y est calculé, compté ni gardé.
+// « Respirer », dans la carte de l'Humeur du moment (la règle). L'écran « Me ressourcer » est parti en v6.1 :
+// son contenu est dans Mon plan, sur Moment difficile. Rien n'y est calculé, compté ni gardé.
 import { html, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { normaliserRessourcer, TITRE_RECUPERER } from '../../domain/ressourcer.js';
@@ -20,9 +20,8 @@ function Respirer() {
   return html`<button type="button" class="btn btn-plein" onClick=${() => { preparerSon(); setAffichee(true); }}>${Icones.respiration()}Respirer</button>`;
 }
 
-// `grand` : l'écran Me ressourcer (texte en grand). Sinon, la carte de l'Humeur du moment.
-export function PourRecuperer({ texte, grand = false }) {
-  return html`<section class=${`ressourcer-liste${grand ? ' grand' : ' carte'}`} aria-labelledby="titre-ressourcer">
+export function PourRecuperer({ texte }) {
+  return html`<section class="ressourcer-liste carte" aria-labelledby="titre-ressourcer">
     <h2 class="ressourcer-rubrique" id="titre-ressourcer">${TITRE_RECUPERER}</h2>
     <p class="ressourcer-texte">${texte}</p>
     <${Respirer} />

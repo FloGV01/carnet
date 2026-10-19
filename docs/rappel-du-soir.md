@@ -9,7 +9,7 @@ L'app n'envoie aucune notification. Les rappels sont des automatisations de l'ap
 
 ## Humeur du moment (si tu veux)
 
-Les heures se choisissent dans Réglages › Ma journée. Pour chacune, refaire les mêmes 4 étapes avec cette
+Les heures se choisissent dans Réglages › Rappels. Pour chacune, refaire les mêmes 4 étapes avec cette
 heure-là et le texte : « Humeur du moment, si tu veux. » Ensuite, ouvrir Carnet et toucher « Humeur », en bas d'Aujourd'hui.
 Les heures ne servent qu'à ce pas-à-pas : rien dans l'app ne compare les heures aux relevés.
 

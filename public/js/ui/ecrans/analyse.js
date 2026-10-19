@@ -1,6 +1,6 @@
-// Écran Analyse (v5) : en haut, la ligne « Comprendre › » (v6) ; Ma semaine, Tendances, puis, selon la
-// période : Mes jours, ta journée heure par heure, contacts et mouvement, tes moments ; ensuite les constats
-// sur tout l'historique.
+// Écran Analyse (v5) : en haut, les trois portes de Comprendre (v6.1) ; Ma semaine, Tendances, puis, selon la
+// période : Mes jours, ta journée heure par heure, contacts et mouvement, tes moments, les plus fréquents, tous
+// les chiffres ; enfin, sous « Sur tout ton historique », les constats qui ne dépendent pas de la période.
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache
 // jusqu'à la prochaine écriture.
 import { html, useEffect, useState } from '../lib.js';
@@ -8,7 +8,6 @@ import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { Repli } from '../composants/repli.js';
 import { Pourquoi } from '../composants/pourquoi.js';
-import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
@@ -18,7 +17,7 @@ import { carteLibelles } from '../../domain/libelles.js';
 import { JOURS, jourSemaine } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
 import { geometrieHaltere } from '../graphes/geometrie.js';
-import { dernierOnglet } from './comprendre.js';
+import { ONGLETS as PORTES_COMPRENDRE } from './comprendre.js';
 import { versHash } from '../../routeur.js';
 
 const FENETRES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }, { valeur: '90', libelle: '3 mois' }, { valeur: 'tout', libelle: 'Tout' }];
@@ -170,7 +169,7 @@ function DetailsBarres({ f, items, carte }) {
   const durees = [...ordre('dureeSport').map((id, i) => ({ id, classe: `rampe-${Math.min(4, i + 1)}`, nom: lib(id).toLowerCase() })), { id: 'aucun', classe: 'rampe-0', nom: 'durée non précisée' }];
   if (!contacts.length && !sport.length) return null;
   return html`<section class="section-analyse">
-    <h2 class="titre-section">Avec qui, comment c'était · Mouvement</h2>
+    <h2 class="titre-section equilibre">Avec qui, comment c'était · Mouvement</h2>
     ${contacts.length > 0 && html`<${Barres} titre="Avec qui, comment c'était" rubrique="contact" lignes=${contacts} precisions=${effets} lib=${lib} pied="En jours, selon tes réponses à « Comment c'était »." />`}
     ${sport.length > 0 && html`<${Barres} titre="Mouvement" rubrique="sport" lignes=${sport} precisions=${durees} lib=${lib} pied="En jours, par durée notée." />`}
   </section>`;
@@ -249,10 +248,11 @@ function PointsSommeil({ moyennes, carte }) {
   </div>`;
 }
 
-// v6 : l'écran Comprendre, rouvert sur son dernier onglet.
-const LigneComprendre = () => html`<ul class="liste carte carte-groupe">
-  <li><a class="ligne-carte" href=${versHash('comprendre', { onglet: dernierOnglet() })}><span class="ligne-libelle">Comprendre</span>${Icones.chevron({ trait: 2 })}</a></li>
-</ul>`;
+// v6.1 : Comprendre en trois portes, une par onglet (deux touchers pour chacun).
+const PortesComprendre = () => html`<section class="portes-comprendre" aria-labelledby="titre-comprendre">
+  <h2 id="titre-comprendre" class="libelle-section">Comprendre</h2>
+  <div class="portes">${PORTES_COMPRENDRE.map((o) => html`<a class="btn porte" href=${versHash('comprendre', { onglet: o.valeur })}>${o.libelle}</a>`)}</div>
+</section>`;
 
 export function Analyse() {
   const version = useEtatApp((e) => e.versionDonnees || 0);
@@ -260,7 +260,7 @@ export function Analyse() {
   const [etat, setEtat] = useState(null);
   useEffect(() => { let actif = true; calculerAnalyse().then((v) => { if (actif) setEtat(v); }); return () => { actif = false; }; }, [version]);
 
-  if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><${LigneComprendre} /><p class="texte-secondaire centre">Calcul…</p></main>`;
+  if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><${PortesComprendre} /><p class="texte-secondaire centre">Calcul…</p></main>`;
   const { resultat: r, carte, items, signalMasque } = etat;
   const f = r.fenetres[fenetre];
   const cl = r.classements[fenetre];
@@ -268,57 +268,55 @@ export function Analyse() {
 
   return html`<main class="ecran analyse">
     <${Entete} titre="Analyse" />
-    <${LigneComprendre} />
+    <${PortesComprendre} />
     ${pourInfo && html`<${CartePourInfo} signal=${r.signal} carte=${carte} />`}
     <${MaSemaine} f=${r.fenetres['7']} frise7=${r.frise['7']} positifs=${r.semaine.positifs} sommeil=${r.sommeil} carte=${carte} sansPhrase=${pourInfo} />
     <${Tendances} t=${r.tendances} replie=${pourInfo} />
 
-    <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
-    <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
-    ${r.moments[fenetre].statut === 'ok'
-      ? html`<${TaJournee} key=${`journee-${fenetre}`} profil=${r.moments[fenetre]} carte=${carte} />`
-      : r.moments.tout.statut === 'ok' && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.moments} /></section>`}
-    <${DetailsBarres} f=${f} items=${items} carte=${carte} />
+    <div class="selon-periode">
+      <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
+      <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
+      ${r.moments[fenetre].statut === 'ok'
+        ? html`<${TaJournee} key=${`journee-${fenetre}`} profil=${r.moments[fenetre]} carte=${carte} />`
+        : r.moments.tout.statut === 'ok' && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.moments} /></section>`}
+      <${DetailsBarres} f=${f} items=${items} carte=${carte} />
 
-    <section class="section-analyse">
-      <h2 class="titre-section">Tes moments, étape par étape</h2>
-      <${TesMoments} key=${`moments-${fenetre}`} m=${r.tesMoments[fenetre]} carte=${carte} />
-    </section>
+      <section class="section-analyse">
+        <h2 class="titre-section">Tes moments, étape par étape</h2>
+        <${TesMoments} key=${`moments-${fenetre}`} m=${r.tesMoments[fenetre]} carte=${carte} />
+      </section>
 
-    <section class="section-analyse">
-      <h2 class="titre-section">Ce que tes journées à 7 ou plus ont en commun</h2>
-      <p class="note-carte-interne">Sur tout ton historique.</p>
-      ${r.bonnesJournees.constats.length
-        ? html`${r.bonnesJournees.constats.map((c) => html`<div class="constat"><p>${phraseConstat(c, carte, 'tu')}</p><${Haltere} c=${c} /></div>`)}
-            <p class="pied-section">Plein : journées à 7 ou plus · creux : journées à 4 ou moins. ${piedObservations('tu')}</p>`
-        : r.bonnesJournees.statut === 'insuffisant'
-          ? html`<${Pourquoi} regle=${REGLES.bonnesJournees} />`
-          : html`<p class="texte-secondaire">Pas d'écart net pour l'instant.</p><p class="pied-section">${piedObservations('tu')}</p>`}
-    </section>
+      <section class="section-analyse">
+        <h2 class="titre-section">Les plus fréquents</h2>
+        <ul class="liste carte carte-groupe classements">${Object.entries(NOMS_CLASSEMENT).map(([liste, nom]) => html`<li class="ligne-classement">
+          <span class="nom-classement">${nom}</span><span>${phraseClassement(liste, cl[liste], carte)}</span></li>`)}</ul>
+      </section>
 
-    <section class="section-analyse">
-      <h2 class="titre-section">Sommeil et humeur</h2>
-      <p class="note-carte-interne">Sur tout ton historique.</p>
-      ${r.sommeil.meme.statut !== 'ok' && r.sommeil.lendemain.statut !== 'ok'
-        ? html`<${Pourquoi} regle=${REGLES.sommeil} />`
-        : html`${r.sommeil.meme.statut === 'ok' && html`<${PointsSommeil} moyennes=${r.sommeil.meme.moyennes} carte=${carte} />`}
-            ${phrasesSommeil(r.sommeil, carte).map((p) => html`<p class="phrase">${p}</p>`)}`}
-    </section>
+      <${Repli} cle="tous-chiffres" titre="Tous les chiffres" memoriser=${false}>
+        <${Tuiles} f=${f} carte=${carte} />
+        <${Chiffres} f=${f} />
+      </${Repli}>
+    </div>
 
-    <section class="section-analyse">
-      <h2 class="titre-section">Les plus fréquents</h2>
-      <ul class="liste carte carte-groupe classements">${Object.entries(NOMS_CLASSEMENT).map(([liste, nom]) => html`<li class="ligne-classement">
-        <span class="nom-classement">${nom}</span><span>${phraseClassement(liste, cl[liste], carte)}</span></li>`)}</ul>
-    </section>
+    <div class="tout-historique">
+      <h2 class="libelle-section">Sur tout ton historique</h2>
+      <section class="section-analyse">
+        <h3 class="titre-section">Ce que tes journées à 7 ou plus ont en commun</h3>
+        ${r.bonnesJournees.constats.length
+          ? html`${r.bonnesJournees.constats.map((c) => html`<div class="constat"><p>${phraseConstat(c, carte, 'tu')}</p><${Haltere} c=${c} /></div>`)}
+              <p class="pied-section">Plein : journées à 7 ou plus · creux : journées à 4 ou moins. ${piedObservations('tu')}</p>`
+          : r.bonnesJournees.statut === 'insuffisant'
+            ? html`<${Pourquoi} regle=${REGLES.bonnesJournees} />`
+            : html`<p class="texte-secondaire">Pas d'écart net pour l'instant.</p><p class="pied-section">${piedObservations('tu')}</p>`}
+      </section>
 
-    <${Repli} cle="tous-chiffres" titre="Tous les chiffres" memoriser=${false}>
-      <${Tuiles} f=${f} carte=${carte} />
-      <${Chiffres} f=${f} />
-    </${Repli}>
-
-    <ul class="liste carte carte-groupe">
-      <li><a class="ligne-carte" href="#/export-psy"><span class="ligne-libelle">Export PSY</span>${Icones.chevron({ trait: 2 })}</a></li>
-      <li><a class="ligne-carte" href="#/soignants"><span class="ligne-libelle">Vue soignants</span>${Icones.chevron({ trait: 2 })}</a></li>
-    </ul>
+      <section class="section-analyse">
+        <h3 class="titre-section">Sommeil et humeur</h3>
+        ${r.sommeil.meme.statut !== 'ok' && r.sommeil.lendemain.statut !== 'ok'
+          ? html`<${Pourquoi} regle=${REGLES.sommeil} />`
+          : html`${r.sommeil.meme.statut === 'ok' && html`<${PointsSommeil} moyennes=${r.sommeil.meme.moyennes} carte=${carte} />`}
+              ${phrasesSommeil(r.sommeil, carte).map((p) => html`<p class="phrase">${p}</p>`)}`}
+      </section>
+    </div>
   </main>`;
 }

@@ -2,9 +2,10 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { espionnerAudio, audio } from '../aides/audio.js';
 
-// v6 · « Me ressourcer » (spec §5) : l'écran qui montre « Pour récupérer, je… » tel qu'écrit, et la règle,
-// éteinte au départ : quand l'utilisateur note lui-même, maintenant, une énergie basse, sa liste s'affiche sous
-// les choix de l'Humeur du moment et l'écran ne se ferme pas seul. Rien n'est calculé, compté ni gardé.
+// v6 · « Me ressourcer » (spec §5) : la règle, éteinte au départ. Quand l'utilisateur note lui-même, maintenant,
+// une énergie basse, « Pour récupérer, je… » s'affiche tel qu'écrit sous les choix de l'Humeur du moment et l'écran
+// ne se ferme pas seul. L'écran « Me ressourcer » est parti en v6.1 (P14) : la carte et la règle restent. Rien
+// n'est calculé, compté ni gardé.
 // Mots inventés pour le test (jamais de donnée réelle).
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 20, 30) });
@@ -152,7 +153,7 @@ test('règle allumée : passer de « maintenant » à « vers » retire la carte
   await vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: '12 h', exact: true }).click();
   await expect(vue.getByRole('button', { name: 'C\'était vers 12 h' })).toBeVisible();
   await expect(carte(vue)).toHaveCount(0);
-  await vue.getByRole('button', { name: 'C\'était vers 12 h' }).click();
+  // La liste reste ouverte après un choix (v6.1).
   await vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: 'Maintenant', exact: true }).click();
   await expect(carte(vue)).toBeVisible();
 });
@@ -243,139 +244,33 @@ test('Respirer dans la carte : la respiration démarre sur place, et le contexte
   await expect(page).toHaveURL(/#\/moment$/);
 });
 
-// ---------- L'écran « Me ressourcer » ----------
-
-const ouvrirRessourcer = async (page) => {
-  await aller(page, '#/ressourcer');
-  await expect(page.getByRole('heading', { name: 'Me ressourcer', level: 1 })).toBeVisible();
-  return page.getByRole('region', { name: 'Pour récupérer, je…' });
-};
-
-test('l\'écran : « Pour récupérer, je… » en grand, tel qu\'écrit, avec Respirer et Modifier', async ({ page }) => {
+test('Respirer dans la carte, signal éteint : le contexte audio naît quand même dans le toucher, puis se rendort', async ({ page }) => {
   await ecrirePlan(page);
-  const liste = await ouvrirRessourcer(page);
-  await expect(page.getByRole('link', { name: 'Aujourd\'hui', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(liste.getByRole('heading', { name: 'Pour récupérer, je…' })).toBeVisible();
-  // Tel qu'écrit : les deux lignes, dans l'ordre, sans puce ni numéro.
-  expect(await liste.locator('.ressourcer-texte').innerText()).toBe('je m\'allonge\nje ferme les yeux');
-  const taille = await liste.locator('.ressourcer-texte').evaluate((p) => parseFloat(getComputedStyle(p).fontSize));
-  expect(taille).toBeGreaterThanOrEqual(28);
-  await expect(respirer(page)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Modifier', exact: true })).toBeVisible();
-  // Rien d'autre : ni compteur, ni conseil, ni invitation.
-  await expect(page.locator('main')).not.toContainText(/\d/);
-  await expect(page.locator('main')).not.toContainText(/Rien d'écrit|Écrire ce qui me recharge/);
-  await expect(page.locator('.respiration')).toHaveCount(0);
-  // Aucune trace : la lecture n'écrit rien.
-  expect(await lireRegle(page)).toBeNull();
-});
-
-test('Respirer : la respiration s\'affiche sur place et démarre aussitôt, sans second toucher', async ({ page }) => {
-  await ecrirePlan(page);
-  const liste = await ouvrirRessourcer(page);
-  await respirer(page).click();
-  await expect(liste.locator('.phase-respiration')).toHaveText('Inspire');
-  await expect(liste.getByRole('button', { name: 'Arrêter' })).toBeVisible();
-  await expect(respirer(page)).toHaveCount(0);
-  await expect(page).toHaveURL(/#\/ressourcer$/);
-  // La liste reste là, et la respiration suit ses réglages (durée, rythme).
-  await expect(liste.locator('.ressourcer-texte')).toContainText('je m\'allonge');
-  await page.clock.runFor(5400);
-  await expect(liste.locator('.phase-respiration')).toHaveText('Expire');
-  await liste.getByRole('button', { name: 'Arrêter' }).click();
-  await expect(liste.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
-});
-
-test('Respirer sur l\'écran : le contexte audio naît dans le toucher, même signal éteint (il se rendort alors)', async ({ page }) => {
-  await ecrirePlan(page);
-  await ecrireRespiration(page, { duree: 2, rythme: '5-5', son: true });
-  await espionnerAudio(page, { session: true });
-  await ouvrirRessourcer(page);
-  expect((await audio(page)).contextes).toBe(0);
-  await respirer(page).click();
-  expect(await audio(page)).toMatchObject({ contextes: 1, montees: [false], session: 'ambient' });
-  await expect(page.locator('.phase-respiration')).toHaveText('Inspire');
-  await expect.poll(async () => (await audio(page)).notes.length).toBe(1);
-
-  // Signal éteint : le toucher prépare quand même le contexte (sans regarder le réglage), qui se rendort aussitôt.
+  await ecrireRegle(page);
   await ecrireRespiration(page, { duree: 2, rythme: '5-5', son: false });
-  await aller(page, '#/aujourdhui');
-  await ouvrirRessourcer(page);
-  await respirer(page).click();
-  await expect(page.locator('.phase-respiration')).toHaveText('Inspire');
+  await espionnerAudio(page, { session: true });
+  const vue = await noterBasse(page);
+  await expect(carte(vue)).toBeVisible();
+  expect((await audio(page)).contextes).toBe(0);
+  // Le toucher prépare le contexte sans regarder le réglage ; la respiration le rendort aussitôt, sans une note.
+  await respirer(carte(vue)).click();
+  await expect(carte(vue).locator('.phase-respiration')).toHaveText('Inspire');
   await page.clock.runFor(2000);
   expect(await audio(page)).toMatchObject({ contextes: 1, montees: [false], etat: 'suspended' });
-  expect((await audio(page)).notes).toHaveLength(1);
+  expect((await audio(page)).notes).toHaveLength(0);
 });
 
-test('Modifier ouvre Mon plan, et Retour en revient sur Me ressourcer', async ({ page }) => {
-  await ecrirePlan(page);
-  await ouvrirRessourcer(page);
-  await page.getByRole('link', { name: 'Modifier', exact: true }).click();
-  await expect(page).toHaveURL(/#\/mon-plan$/);
-  await expect(page.getByRole('textbox', { name: 'Pour récupérer, je…' })).toHaveValue('je m\'allonge\nje ferme les yeux');
-  await page.getByRole('button', { name: 'Retour' }).click();
-  await expect(page).toHaveURL(/#\/ressourcer$/);
-});
-
-test('vide : « Rien d\'écrit pour l\'instant. » et « Écrire ce qui me recharge », qui ouvre Mon plan', async ({ page }) => {
-  // Ni plan, puis un plan sans « Pour récupérer, je… » : le même état.
-  for (const plan of [null, { quandCaMonte: 'je sors marcher', siAlors: [] }]) {
-    await page.evaluate((p) => window.__carnet.repo.meta.ecrire('monPlan', p), plan);
-    await aller(page, '#/aujourdhui');
-    await ouvrirRessourcer(page);
-    await expect(page.getByText('Rien d\'écrit pour l\'instant.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Écrire ce qui me recharge' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Modifier', exact: true })).toHaveCount(0);
-    await expect(respirer(page)).toHaveCount(0);
-    await expect(page.locator('.ressourcer-texte')).toHaveCount(0);
-  }
-  await page.getByRole('link', { name: 'Écrire ce qui me recharge' }).click();
-  await expect(page).toHaveURL(/#\/mon-plan$/);
-  await expect(page.getByRole('textbox', { name: 'Pour récupérer, je…' })).toBeVisible();
-});
-
-test('lecture du plan impossible : l\'écran reste utilisable, il dit que rien n\'est écrit', async ({ page }) => {
-  await ecrirePlan(page);
-  await page.evaluate(() => {
-    const meta = window.__carnet.repo.meta;
-    const lireVraiment = meta.lire;
-    meta.lire = (cle) => (cle === 'monPlan' ? Promise.reject(new Error('lecture refusée')) : lireVraiment(cle));
-  });
-  await ouvrirRessourcer(page);
-  await expect(page.getByText('Rien d\'écrit pour l\'instant.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Écrire ce qui me recharge' })).toBeVisible();
-});
-
-test('un texte long reste lisible : il passe à la ligne, sans déborder, et Respirer reste atteignable', async ({ page }) => {
+test('un texte long dans la carte reste lisible : il passe à la ligne, sans déborder, et Respirer reste atteignable', async ({ page }) => {
   const long = Array.from({ length: 80 }, (_, i) => `mot${i}`).join(' ');
   await ecrirePlan(page, { pourRecuperer: `${long}\nune ligne courte`, siAlors: [] });
-  await ouvrirRessourcer(page);
+  await ecrireRegle(page);
+  const vue = await noterBasse(page);
+  await expect(carte(vue)).toContainText('une ligne courte');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await respirer(page).scrollIntoViewIfNeeded();
-  await expect(respirer(page)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Modifier', exact: true })).toBeVisible();
-});
-
-test('Retour ramène sur Moment difficile', async ({ page }) => {
-  await ecrirePlan(page);
-  await ouvrirRessourcer(page);
-  await page.getByRole('button', { name: 'Retour' }).click();
-  await expect(page).toHaveURL(/#\/moment-difficile$/);
-  await expect(page.getByRole('dialog', { name: 'Moment difficile' })).toBeVisible();
-});
-
-test('Moment difficile : « Me ressourcer » ouvre l\'écran, avec ou sans plan', async ({ page }) => {
-  await aller(page, '#/moment-difficile');
-  const vue = page.getByRole('dialog', { name: 'Moment difficile' });
-  await vue.getByRole('link', { name: 'Me ressourcer', exact: true }).click();
-  await expect(page).toHaveURL(/#\/ressourcer$/);
-  await expect(page.getByText('Rien d\'écrit pour l\'instant.')).toBeVisible();
-
-  await ecrirePlan(page);
-  await aller(page, '#/moment-difficile');
-  await vue.getByRole('link', { name: 'Me ressourcer', exact: true }).click();
-  await expect(page.locator('.ressourcer-texte')).toContainText('je m\'allonge');
+  const largeur = await carte(vue).locator('.ressourcer-texte').evaluate((p) => p.scrollWidth <= p.clientWidth);
+  expect(largeur).toBe(true);
+  await respirer(carte(vue)).scrollIntoViewIfNeeded();
+  await expect(respirer(carte(vue))).toBeInViewport();
 });
 
 // ---------- Réglages › Me ressourcer ----------

@@ -1,8 +1,8 @@
 // Écran Comprendre (v6, spec §2) : ouvert depuis l'Analyse, trois onglets, Explosions · Énergie · Rythmes.
 // Graphiques seulement, aucune phrase calculée. Les calculs sont ceux, purs, d'analyse/comprendre.js ; sous un
-// seuil, chaque graphique dit « Pas encore assez de données pour le dire. ». L'onglet, la période et la mesure
-// sont gardés d'une ouverture à l'autre.
-import { html, useEffect, useState } from '../lib.js';
+// seuil, chaque graphique dit « Pas encore assez de données pour le dire. ». La période et la mesure sont gardées
+// d'une ouverture à l'autre ; l'onglet vient de la porte touchée dans l'Analyse (v6.1).
+import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { repo } from '../../donnees.js';
@@ -14,21 +14,18 @@ import {
   parColonnes, nuitsParSoir, energieParActivite, peseRecharge,
 } from '../../analyse/comprendre.js';
 import { GrapheAligne, GrapheColonnes, GrapheNuits, GrapheActivites, GraphePeseRecharge, PasAssez, nomMesure } from '../graphes/comprendre.js';
-import { ONGLETS_COMPRENDRE, versHash } from '../../routeur.js';
+import { versHash } from '../../routeur.js';
 
-const CLE_ONGLET = 'carnet:comprendre:onglet';
 const CLE_PERIODE = 'carnet:comprendre:periode';
 const CLE_MESURE = 'carnet:comprendre:mesure';
 
-const ONGLETS = [{ valeur: 'explosions', libelle: 'Explosions' }, { valeur: 'energie', libelle: 'Énergie' }, { valeur: 'rythmes', libelle: 'Rythmes' }];
+// Les onglets, aussi les trois portes de l'Analyse (v6.1).
+export const ONGLETS = [{ valeur: 'explosions', libelle: 'Explosions' }, { valeur: 'energie', libelle: 'Énergie' }, { valeur: 'rythmes', libelle: 'Rythmes' }];
 const CHOIX_PERIODE = [{ valeur: '3mois', libelle: '3 mois' }, { valeur: 'tout', libelle: 'Tout' }];
 const COTES = [{ valeur: 'avant', libelle: 'Avant' }, { valeur: 'apres', libelle: 'Après' }];
 
 // Un choix gardé, relu seulement s'il est encore valable.
 const lireChoix = (cle, valeurs, defaut) => { const v = lireLocal(cle); return valeurs.includes(v) ? v : defaut; };
-
-// Le dernier onglet consulté, Explosions par défaut : la ligne « Comprendre › » de l'Analyse y mène.
-export const dernierOnglet = () => lireChoix(CLE_ONGLET, ONGLETS_COMPRENDRE, 'explosions');
 
 async function charger() {
   const [journal, episodes, humeurs, items, zeroDepuis] = await Promise.all([
@@ -88,7 +85,6 @@ export function Comprendre({ onglet }) {
   const [choixPeriode, setChoixPeriode] = useState(() => lireChoix(CLE_PERIODE, PERIODES, 'tout'));
   const [mesure, setMesure] = useState(() => lireChoix(CLE_MESURE, MESURES, 'humeur'));
   const [cote, setCote] = useState('avant');
-  useEffect(() => { ecrireLocal(CLE_ONGLET, onglet); }, [onglet]);
   const { donnees: d } = useDonnees(charger, []);
   const garder = (cle, set) => (v) => { if (v) { set(v); ecrireLocal(cle, v); } };
 

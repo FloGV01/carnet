@@ -38,7 +38,7 @@
 .groupe-filtre { display: flex; flex-direction: column; gap: 6px; }
 .titre-filtre { font-size: var(--t-note); color: var(--text-2); }
 .semaine { display: flex; flex-direction: column; gap: 6px; margin-top: var(--esp-3); }
-.titre-semaine { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); padding-top: 8px; padding-left: 4px; }
+.titre-semaine { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); padding-top: 8px; }
 .ligne-hist { min-height: 56px; padding: 10px 10px 10px 16px; align-items: center; }
 .hist-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hist-date { font-size: var(--t-sous); font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -60,8 +60,13 @@
 .soins > .entete-onglet { margin-bottom: 0; }
 .ajout-lien { align-self: flex-start; font-size: var(--t-corps); }
 .ajout-lien svg { width: 18px; height: 18px; }
-.soins .libelle-section { margin-bottom: -6px; padding-left: 4px; }
+.soins .libelle-section { margin-bottom: -6px; }
 .soins .libelle-section.passes { padding-top: 6px; }
+/* « Pour mes soignants : Export PSY · Vue soignants » (v6.1) : deux liens de 44 pt entre le titre et les segments.
+   Trop longue pour l'écran, la ligne se coupe après « : » ; les liens restent ensemble, et ne se séparent qu'en
+   très grand texte (le « · » finit alors la première ligne). */
+.pour-soignants { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: -8px 0 -4px; font-size: var(--t-sous); color: var(--text-2); }
+.liens-soignants { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; }
 .carte-prochain { display: flex; flex-direction: column; gap: 10px; }
 .tete-prochain { display: flex; align-items: center; gap: 8px; min-height: var(--cible); color: var(--text); text-decoration: none; }
 .tete-prochain-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -177,6 +182,17 @@
 /* Analyse */
 .analyse { gap: 16px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
 .analyse > .entete-onglet { margin-bottom: 0; }
+/* v6.1 : Comprendre en trois portes ; le sélecteur de période ne colle que sur les sections qu'il règle
+   (son bloc, .selon-periode) ; « Sur tout ton historique » vient après. */
+.portes-comprendre { display: flex; flex-direction: column; gap: 6px; }
+.portes-comprendre .libelle-section { padding: 0; }
+/* Les portes passent à la ligne quand la place manque (grand texte d'iOS, écran étroit) : « Explosions » ne se
+   coupe pas. 6,25 em : les trois tiennent sur une ligne au texte par défaut, à 375 comme à 390 de large. */
+.portes { display: flex; flex-wrap: wrap; gap: 8px; }
+.porte { flex: 1 1 6.25em; min-height: var(--cible); padding: 0 6px; color: var(--accent); font-weight: 600; }
+.selon-periode, .tout-historique { display: flex; flex-direction: column; gap: 16px; }
+.tout-historique { padding-top: 12px; }
+.tout-historique > .libelle-section { padding: 0; margin-bottom: -8px; }
 .centre { text-align: center; margin: 12px 0; }
 .texte-secondaire { font-size: var(--t-sous); color: var(--text-2); line-height: 1.4; }
 .pourquoi { font-size: var(--t-sous); min-height: var(--cible); vertical-align: middle; }
@@ -236,6 +252,8 @@
 .tableau-lignes td:first-child { color: var(--text-2); }
 .section-analyse { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
 .titre-section { font: 600 1.294rem/1.25 var(--police-titre); text-wrap: pretty; }
+/* « Avec qui, comment c'était · Mouvement » (v6.1) : deux lignes égales, aucune ne commence par « · ». */
+.titre-section.equilibre { text-wrap: balance; }
 .constat { display: flex; flex-direction: column; gap: 8px; }
 .constat p, .section-analyse .phrase { font-size: 0.941rem; line-height: 1.45; text-wrap: pretty; }
 .haltere { width: 100%; height: auto; display: block; }
@@ -284,7 +302,7 @@
 .ajout-element { display: flex; gap: var(--esp-2); }
 .ajout-element input { flex: 1; border-radius: var(--r-moyen); }
 .bouton-ajouter { min-height: var(--cible); border-radius: var(--r-moyen); }
-.listes .libelle-section { padding: 8px 0 0 4px; margin-bottom: -6px; }
+.listes .libelle-section { padding: 8px 0 0; margin-bottom: -6px; }
 
 /* Rappel du soir, aide iPhone */
 .rappel, .aide-iphone { gap: 14px; }
@@ -294,7 +312,7 @@
 
 .apercu-page { width: 100%; height: auto; display: block; border: 1px solid var(--hairline); border-radius: var(--r-petit); background: #FFFFFF; }
 @media print {
-  .onglets, .entete-pousse, .entete-onglet, .actions-col, .soignants .pastilles, .bandeau, .toast { display: none !important; }
+  .onglets, .entete-pousse, .entete-onglet, .actions-col, .soignants .champ-fiche, .bandeau, .toast { display: none !important; }
   .apercu-page { border: 0; width: 100%; }
   body, html { background: #FFFFFF; }
 }
@@ -303,6 +321,9 @@
 .aujourdhui { gap: 5px; padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
 .entete-jour { display: flex; flex-direction: column; gap: 6px; }
 .ligne-jour { display: flex; align-items: center; min-height: var(--cible); margin: 0 -12px; }
+/* Jour ouvert depuis l'Historique (v6.1) : « ‹ Retour » juste au-dessus, son chevron aligné sur celui du jour précédent. */
+.entete-jour > .barre-retour { margin: 0 -12px -6px; }
+.entete-jour .retour { padding-left: 11px; }
 .nav-jour { width: var(--cible); height: var(--cible); flex: none; border: 0; background: none; color: var(--text); display: grid; place-items: center; padding: 0; }
 .nav-jour svg { width: 22px; height: 22px; }
 .nav-jour[disabled] { color: var(--hairline); cursor: default; }
@@ -324,6 +345,11 @@
 .aujourdhui .deux-colonnes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .aujourdhui .segmente button { font-size: var(--t-pastille); }
 .aujourdhui .memo-vocal { margin-top: 0; }
+/* v6.1 : « J'ai fini pour ce soir » sur la ligne de « Mémo vocal », à droite, à la hauteur du bouton. */
+.memo-ligne > .fini-bouton { margin-left: auto; min-height: var(--cible); }
+/* « Ce qui a pesé · ce qui a rechargé » (v6.1) : deux colonnes régulières, comme les étapes d'un épisode, un peu
+   moins hautes pour que le repli ouvert tienne sur un écran. */
+.pastilles.pese-recharge .pastille { min-height: var(--cible); padding: 6px 10px; }
 .pastilles.reveils { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.6fr); }
 .replis { margin-top: 6px; border-bottom: 1.5px dashed var(--hairline); }
 .evenements-jour { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
@@ -333,10 +359,13 @@
   min-height: var(--cible-grille); display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
   font-size: var(--t-sous); border-bottom: 1.5px dashed var(--hairline);
 }
-.ligne-evenement .heure { width: 40px; flex: none; color: var(--text-2); font-variant-numeric: tabular-nums; }
+/* Colonne des heures de largeur fixe (v6.1) : « vers 23 h » y tient, « 10:20 » et un symptôme sans heure s'alignent dessus. */
+.ligne-evenement .heure { min-width: 4.4em; flex: none; white-space: nowrap; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
 .ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
 .point-evenement { width: 8px; height: 8px; border-radius: 4px; background: var(--c); flex: none; }
+/* Ma journée (v6.1) : une humeur du moment, point creux, la même pour toutes ; ni lien ni chevron. */
+.point-releve { background: none; border: 2px solid var(--c); }
 .ajout-symptome { align-self: flex-start; font-size: var(--t-corps); }
 .ligne-rdv {
   display: flex; align-items: center; gap: 8px; min-height: var(--cible); margin-top: 8px; padding: 8px 12px; border-radius: var(--r-moyen);
@@ -362,7 +391,7 @@
 /* Réglages */
 .reglages { gap: 10px; }
 .reglages > .entete-onglet { margin-bottom: 0; }
-.reglages .libelle-section { padding: 10px 0 0 4px; }
+.reglages .libelle-section { padding: 10px 0 0; }
 .texte-carte { padding: 12px 16px; font-size: var(--t-sous); line-height: 1.4; }
 .a-propos .texte-carte { font-size: var(--t-corps); }
 .note-carte-interne { font-size: var(--t-note); color: var(--text-2); margin-top: 2px; }
@@ -372,11 +401,12 @@
 .ligne-carte.action.petite { font-size: var(--t-sous); min-height: var(--cible); }
 .ligne-carte.action svg { width: 20px; height: 20px; }
 .ligne-carte.action[disabled] { color: var(--text-2); }
-.aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0 4px; }
+/* Sur le bord, comme les titres de section et les cartes (v6.1). */
+.aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0; }
 .aide-carte .lien { display: flex; }
-.espace-haut { margin-top: 6px; }
 .ligne-interrupteur { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
-.champ-carte { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border-top: 1px solid var(--hairline); }
+/* Le libellé prend la place : l'interrupteur va à droite, comme dans Réglages › Le soir (v6.1). */
+.ligne-interrupteur .ligne-libelle { flex: 1; }
 .libelle-carte { font-size: var(--t-sous); }
 .a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); }
 .a-propos .ligne-info > span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
@@ -398,6 +428,8 @@
 .statut-centre { font-size: var(--t-sous); text-align: center; margin-top: -4px; }
 .lien-centre { align-self: center; font-size: var(--t-sous); }
 .soignants .apercu-page { box-shadow: 0 1px 6px rgba(0, 0, 0, .08); }
+/* Le prénom de la page (v6.1, venu de Réglages) : sous les boutons, réglé une fois. */
+.soignants .champ-prenom { margin-top: var(--esp-3); }
 
 /* Traitement actuel */
 .carte-traitement { display: flex; flex-direction: column; gap: 10px; }
@@ -451,14 +483,15 @@
   .actions-flottantes .moment .libelle-action { display: none; }
 }
 
-/* Réglages › Ma journée, Mon plan, Après coup, Humeur du moment (v4) */
+/* Réglages › Le soir, Rappels, Mon plan, Après coup, Humeur du moment (v4) */
 .ligne-champ-reglage { display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 12px 0 16px; }
 .ligne-champ-reglage .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); }
 .heures-moment .pastille { min-width: 56px; justify-content: center; }
 .ma-journee, .mon-plan { gap: 14px; }
 .ligne-plan { padding: 0 var(--marge); flex: none; display: flex; align-items: center; gap: 8px; }
-.ligne-plan .btn-lien { font-size: var(--t-sous); }
-.ligne-plan .btn-lien svg { width: 16px; height: 16px; }
+/* Enfants directs seulement : la feuille « En parler » s'ouvre dans la ligne et doit garder son aspect (v6.1). */
+.ligne-plan > .btn-lien { font-size: var(--t-sous); }
+.ligne-plan > .btn-lien svg { width: 16px; height: 16px; }
 .separateur-plan { color: var(--text-2); font-size: var(--t-sous); }
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }
 .feuille {
@@ -487,7 +520,8 @@
 .bloc-etape { display: flex; flex-direction: column; gap: 8px; }
 .sous-titre-etape { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
 .moments-du-jour { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.heure-moment { font-variant-numeric: tabular-nums; color: var(--text-2); margin-right: 6px; }
+/* Même colonne fixe que « Ma journée » (v6.1). */
+.heure-moment { display: inline-block; min-width: 4.4em; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text-2); margin-right: 6px; }
 .segmente.energie button { min-height: 52px; }
 /* Analyse v4 : Avant tes explosions, Profil de ta journée */
 .profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
@@ -512,8 +546,9 @@
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 .plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
-.plan-moment .lien-discret { display: inline-flex; align-items: center; }
-.plan-moment .contenu-plan + .lien-discret { margin-top: 6px; }
+/* Mon plan (v6.1) : « Modifier mon plan » à droite du titre, aligné sur sa ligne, en cible de 44 pt. */
+.plan-moment-tete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); }
+.plan-moment-tete .lien-discret { flex: none; display: inline-flex; align-items: center; min-width: var(--cible); }
 /* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
    texte est long, les boutons restent à l'écran. Aucun repère de position : rien n'est compté. */
 .une-chose { height: 100%; display: flex; flex-direction: column; }
@@ -523,18 +558,15 @@
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; }
-/* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), en grand sur
-   l'écran, plus sobre dans la carte de l'Humeur du moment. */
+/* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
+   de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }
 .ressourcer-rubrique { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
 .ressourcer-texte { font: 600 1.35rem/1.35 var(--police-titre); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
-.ressourcer-liste.grand .ressourcer-texte { font-size: clamp(1.75rem, 8vw, 2.5rem); line-height: 1.25; }
 .ressourcer-liste .respiration { padding-top: 0; }
-.ressourcer .lien-discret { align-self: flex-start; display: inline-flex; align-items: center; }
 .reglages-ressourcer .ligne-interrupteur { padding-top: 12px; padding-bottom: 12px; }
 .reglages-ressourcer .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); line-height: 1.35; }
 /* « J'ai fini pour ce soir » (v5) */
-.fini-bouton { align-self: stretch; margin-top: 4px; }
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .fini-soir .phrase-recap { margin-top: 0; }
 .fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }

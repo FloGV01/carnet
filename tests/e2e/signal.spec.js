@@ -21,6 +21,11 @@ test('signal : carte « Pour info » dans Analyse, Masquer, ligne PSY, rien sur 
   const carte = page.getByRole('region', { name: 'Pour info' });
   await expect(carte).toContainText(/Ces 4 derniers jours ressemblent, surtout par/, { timeout: 20000 });
   await expect(carte).toContainText("C'est une ressemblance dans les chiffres, pas une prévision.");
+  // v6.1 : la carte reste en tête, juste sous les trois portes de Comprendre, avant Ma semaine.
+  const [portes, info, semaine] = await Promise.all([page.getByRole('region', { name: 'Comprendre' }), carte, page.getByRole('region', { name: 'Ma semaine' })]
+    .map((l) => l.boundingBox()));
+  expect(portes.y + portes.height).toBeLessThanOrEqual(info.y);
+  expect(info.y + info.height).toBeLessThanOrEqual(semaine.y);
   await carte.getByRole('button', { name: 'Voir le détail' }).click();
   await expect(carte.getByRole('columnheader', { name: 'Avant ces périodes' })).toBeVisible();
   await aller(page, '#/export-psy');

@@ -1,5 +1,6 @@
-// Réglages : sauvegarde (exporter, importer, revenir), listes, rappel, analyse, à propos,
-// et la zone sensible.
+// Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes,
+// rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me ressourcer,
+// aide iPhone), puis analyse, à propos et la zone sensible (v6.1).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
@@ -34,8 +35,8 @@ export function Reglages() {
   const horsLigne = typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller;
   useEffect(() => {
     etatStockage().then(setStockage);
-    Promise.all([repo.audios.metas(), repo.meta.lire('prenomSoignants'), repo.meta.lire('reglages')]).then(([metas, prenom, reglages]) =>
-      setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0), prenom, reglages }));
+    Promise.all([repo.audios.metas(), repo.meta.lire('reglages')]).then(([metas, reglages]) =>
+      setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0), reglages }));
   }, []);
   const appui = useAppuiLong(() => { location.hash = '#/diagnostic'; });
   const chercher = async () => {
@@ -85,10 +86,15 @@ export function Reglages() {
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 
-    <ul class="liste carte carte-groupe espace-haut">
-      <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Ma journée" />
+    <h2 id="titre-ma-saisie" class="libelle-section">Ma saisie</h2>
+    <ul class="liste carte carte-groupe" aria-labelledby="titre-ma-saisie">
+      <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Le soir" />
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
       <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
+    </ul>
+
+    <h2 id="titre-moment-difficile" class="libelle-section">Moment difficile</h2>
+    <ul class="liste carte carte-groupe" aria-labelledby="titre-moment-difficile">
       <${LigneLien} href="#/mon-plan" icone="bulle" titre="Mon plan" />
       <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
       <${LigneLien} href="#/reglages/ressourcer" icone="positifs" titre="Me ressourcer" />
@@ -107,11 +113,6 @@ export function Reglages() {
         <${Interrupteur} etiquette="Tendances" actif=${tendances} surChanger=${basculer('tendances')} />
       </div>
       <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
-      <div class="champ-carte">
-        <label class="libelle-carte" for="prenom-soignants">Prénom pour la vue soignants</label>
-        <input id="prenom-soignants" class="champ-ligne" autocomplete="off" defaultValue=${infos.prenom || ''}
-          onBlur=${(e) => repo.meta.ecrire('prenomSoignants', e.target.value.trim() || null)} />
-      </div>
     </section>
 
     <h2 class="libelle-section">À propos</h2>

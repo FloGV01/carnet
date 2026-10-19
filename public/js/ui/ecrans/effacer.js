@@ -5,6 +5,7 @@ import { repo } from '../../donnees.js';
 import { toutEffacer } from '../../db/sauvegarde.js';
 import { afficherToast } from '../composants/toast.js';
 import { useSauvegarde } from '../sauvegarde.js';
+import { reinitialiserHistorique } from './historique.js';
 
 export function Effacer() {
   const [etape, setEtape] = useState(1);
@@ -14,6 +15,7 @@ export function Effacer() {
   const effacer = async () => {
     await toutEffacer(repo);
     try { Object.keys(localStorage).filter((k) => k.startsWith('carnet:')).forEach((k) => localStorage.removeItem(k)); } catch { /* indisponible */ }
+    reinitialiserHistorique();
     afficherToast('Tout est effacé.', null, 3000);
     location.hash = '#/aujourdhui';
   };

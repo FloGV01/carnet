@@ -63,7 +63,7 @@ test('fiche rouverte : la carte du bas a son cadre, teinté comme les épisodes 
   await expect(carteRemplie).not.toContainText('Retour à froid');
 });
 
-test('nouvel épisode, à chaud : pas de ligne « Après coup » en haut ; au récapitulatif, la carte du bas est encadrée comme sur une fiche rouverte', async ({ page }) => {
+test('nouvel épisode, à chaud : pas de ligne « Après coup » ni « En parler » en haut ; la réaction choisie ramène à Aujourd\'hui, la carte du bas attend la fiche rouverte', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
   const fiche = page.getByRole('dialog', { name: 'Épisode' });
   await fiche.getByRole('button', { name: 'Conflit' }).click();
@@ -73,44 +73,42 @@ test('nouvel épisode, à chaud : pas de ligne « Après coup » en haut ; au r�
   await fiche.getByRole('button', { name: 'Colère' }).click();
   await fiche.getByRole('button', { name: 'Intensité 7' }).click();
   await fiche.getByRole('button', { name: 'Injustice' }).click();
-  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
-  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
   await expect(fiche.locator('.ligne-plan')).toHaveText('Mon plan');
-  const carte = fiche.getByRole('link', { name: /Après coup/ });
-  await expect(carte).toHaveCount(1);
+  await fiche.getByRole('button', { name: 'Retrait / isolement' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(fiche).toHaveCount(0);
+  await page.getByRole('link', { name: /21:00\s+Colère · 7 · Conflit/ }).click();
+  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
+  await expect(fiche.locator('.ligne-plan')).toContainText(/Mon plan\s*·\s*Après coup\s*·\s*En parler/);
+  const carte = fiche.getByRole('link', { name: /Après coup · TCC/ });
   await carte.scrollIntoViewIfNeeded();
-  await expect(carte.locator('.titre-apres-coup')).toHaveText('Après coup · TCC');
   await expect(carte).toContainText('Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.');
-  const cadre = await carte.evaluate((el) => {
-    const s = getComputedStyle(el);
-    return { bord: s.borderTopWidth, couleurBord: s.borderTopColor, fond: s.backgroundColor, point: getComputedStyle(document.querySelector('.point-teinte')).backgroundColor };
-  });
-  expect(cadre.bord).toBe('1px');
-  expect(cadre.fond).not.toBe('rgba(0, 0, 0, 0)');
-  expect(cadre.couleurBord, 'même teinte que le point des épisodes').toBe(cadre.point);
 });
 
 test('Aujourd\'hui : la ligne n\'apparaît que s\'il y a un épisode sur les sept derniers jours logiques, jamais sur un jour passé', async ({ page }) => {
   const ligne = page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ });
   await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
   // Trop anciens : le 8 (huit jours) et 02:00 le 9 (jour logique du 8).
   await creer(page, { date: '2026-10-08', heure: '12:00', ...COLERE });
   await creer(page, { date: '2026-10-09', heure: '02:00', ...COLERE });
   await aller(page, '#/analyse');
   await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
   // 02:00 le 10 : jour logique du 9, le plus ancien des sept jours.
   await creer(page, { date: '2026-10-10', heure: '02:00', ...COLERE });
   await expect(ligne).toBeVisible();
   await expect(ligne).toHaveAttribute('href', '#/apres-coup');
-  await expect(page.locator('.evenements-jour').getByRole('link', { name: /Après coup/ })).toHaveCount(1);
+  // v6.1 : juste sous la ligne « Mémo vocal », avant les replis du soir, hors de Ma journée.
+  await expect(page.locator('.evenements-jour').getByRole('link', { name: /Après coup/ })).toHaveCount(0);
+  expect(await ligne.evaluate((a) => Boolean(document.querySelector('#points-positifs').compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING)
+    && a.nextElementSibling.matches('.replis'))).toBe(true);
   await expect(ligne).toHaveText(/^\s*Après coup \(TCC\) · tes épisodes récents\s*$/);
   // Une page de jour passé ne l'a pas, même avec un épisode ce jour-là.
   await aller(page, '#/jour/2026-10-09');
-  await expect(page.getByRole('heading', { name: 'Épisodes et symptômes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect(ligne).toHaveCount(0);
 });
 

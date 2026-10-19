@@ -77,9 +77,9 @@ test('une valeur hors liste est ignorée, une clé inconnue n\'est pas gardée',
   assert.deepEqual(normaliserRespiration({ duree: '10', son: 1 }), { duree: 5, rythme: '5-5', son: false });
 });
 
-test('les textes d\'avant et de fin suivent la durée', () => {
+test('les textes d\'avant et de fin suivent la durée ; « 5 minutes » ne se coupe pas (espace insécable)', () => {
   for (const minutes of DUREES) {
-    assert.equal(texteAvant(minutes), `Cohérence cardiaque · ${minutes} minutes`);
-    assert.equal(texteFin(minutes), `${minutes} minutes de respiration.`);
+    assert.equal(texteAvant(minutes), `Cohérence cardiaque · ${minutes}\u00a0minutes`);
+    assert.equal(texteFin(minutes), `${minutes}\u00a0minutes de respiration.`);
   }
 });

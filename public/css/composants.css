@@ -12,7 +12,7 @@
 .section { margin-top: 20px; }
 .section > h2 {
   font-size: var(--t-note); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2);
-  font-weight: 600; padding-left: 4px; margin-bottom: 10px;
+  font-weight: 600; margin-bottom: 10px;
 }
 .note-carte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); margin: 8px 4px 0; }
 
@@ -249,11 +249,12 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .ligne-heure { display: flex; gap: 0; align-items: center; flex: none; }
 .ligne-heure input { min-height: var(--cible); width: auto; padding: 0 10px; font-variant-numeric: tabular-nums; }
 .ligne-heure:not(:has(.effacer)) { padding-right: var(--cible); }
-.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
-.effacer svg { width: 18px; height: 18px; }
+/* Le bouton ✕ seulement (v6.1) : l'écran « Tout effacer » porte aussi la classe « effacer ». */
+button.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
+button.effacer svg { width: 18px; height: 18px; }
 
 /* Replis */
-.repli { border-top: 1.5px dashed var(--hairline); }
+.repli { border-top: 1.5px dashed var(--hairline); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
 .repli-tete { width: 100%; display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible-grille); border: 0; background: none; padding: 0; text-align: left; color: var(--text); }
 .repli-fleche { display: inline-flex; color: var(--text-2); transition: transform var(--duree); }
 .repli-fleche svg { width: 16px; height: 16px; stroke-width: 2; }
@@ -267,6 +268,8 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 
 /* Mémo vocal : puces au-dessus, bouton dessous. Pas de point rouge, rien ne clignote. */
 .memo-vocal { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+/* Un élément à côté du bouton (v6.1) : sur sa ligne, à droite ; pendant un enregistrement, il passe dessous. */
+.memo-ligne { align-self: stretch; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .btn-memo {
   display: inline-flex; align-items: center; gap: 8px; min-height: var(--cible); padding: 0 18px 0 14px;
   border: 1px solid var(--border); border-radius: var(--r-plein); background: var(--surface); color: var(--text);

@@ -5,7 +5,7 @@
 // L'humeur du jour (v6) est la moyenne de ces relevés (analyse/humeur-jour.js).
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
-import { useDonnees, useIndicateur, ecrireAvecEssais, lireLocal } from '../hooks.js';
+import { useDonnees, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { cleLocale, heureLocale, heuresVers, versDateHeure, formaterVers } from '../../domain/dates.js';
 import { nouvelId } from '../../domain/ids.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
@@ -26,6 +26,7 @@ import { options } from './aujourdhui.js';
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const DELAI_FERMETURE_MS = 250;
 const CLE_FAISAIS = 'carnet:moment:faisais';
+const CLE_VERS = 'carnet:moment:vers';
 // Ce que l'écran porte : les valeurs du relevé, et son heure (null : maintenant, sinon { date, heure } de « vers »).
 const NEUF = { humeur: null, energie: null, faisais: null, quand: null };
 
@@ -45,18 +46,20 @@ const cleQuand = (quand) => (quand ? `${quand.date} ${quand.heure}` : '');
 const resumeFaisais = (ids, carte) => (ids || []).map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
 
 // « Maintenant ▾ » ouvre les heures déjà passées du jour logique ; avant 6 h il n'y en a pas, la ligne
-// reste fixe. Choisir une heure referme la liste.
+// reste fixe. Choisir une heure laisse la liste ouverte (v6.1) : seul ce bouton l'ouvre et la ferme, et elle
+// rouvre comme on l'a laissée, d'une ouverture de l'écran à l'autre.
 function LigneQuand({ quand, heures, surChoix }) {
-  const [ouvert, setOuvert] = useState(false);
+  const [ouvert, setOuvert] = useState(() => lireLocal(CLE_VERS, false) === true);
+  const basculer = () => { const v = !ouvert; setOuvert(v); ecrireLocal(CLE_VERS, v); };
   if (heures.length === 0 && !quand) return html`<p class="ligne-date ligne-date-fixe">Maintenant</p>`;
   const choisie = quand ? Number(quand.heure.slice(0, 2)) : null;
   const choix = [{ h: null, texte: 'Maintenant' }, ...heures.map((h) => ({ h, texte: `${h} h` }))];
   return html`<div class="ligne-date">
-    <button type="button" class="btn-lien" aria-expanded=${ouvert ? 'true' : 'false'} onClick=${() => setOuvert(!ouvert)}>
+    <button type="button" class="btn-lien" aria-expanded=${ouvert ? 'true' : 'false'} onClick=${basculer}>
       ${quand ? `C'était ${formaterVers(quand.heure)}` : 'Maintenant'}${Icones.chevronBas({ trait: 2 })}</button>
     ${ouvert && html`<div class="pastilles souples teinte-humeur choix-vers" role="group" aria-label="C'était vers…">
       ${choix.map(({ h, texte }) => html`<button type="button" class="pastille" aria-pressed=${h === choisie ? 'true' : 'false'}
-        onClick=${() => { setOuvert(false); surChoix(h); }}><span>${texte}</span></button>`)}
+        onClick=${() => surChoix(h)}><span>${texte}</span></button>`)}
     </div>`}
   </div>`;
 }
@@ -121,7 +124,7 @@ export function Moment() {
   // Une heure de « vers » (ou « Maintenant ») : sans relevé encore, rien n'est écrit, l'heure reste à
   // l'écran et sera posée à la création ; avec un relevé, il change d'heure. La liste a pu s'ouvrir avant 4 h et
   // se toucher après : une heure qui n'est plus proposée est celle du jour d'avant, elle est ignorée (sinon elle
-  // tomberait sur le nouveau jour) et la liste se rafraîchit.
+  // tomberait sur le nouveau jour) et la liste, restée ouverte, se rafraîchit.
   const choisirQuand = (h) => {
     const maintenant = repo.maintenant();
     if (h != null && !heuresVers(maintenant).includes(h)) { rafraichir(); return; }

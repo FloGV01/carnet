@@ -1,4 +1,5 @@
-// Export vers PSY : texte des 7 derniers jours, calculé à l'ouverture, copié dans le geste.
+// Export vers PSY : texte des 7 derniers jours, calculé à l'ouverture, copié dans le geste. S'ouvre depuis
+// « Pour mes soignants », en haut de Soins (v6.1).
 import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { repo } from '../../donnees.js';
@@ -34,7 +35,7 @@ export function ExportPsy() {
 
   // « Faire aussi une sauvegarde » : la feuille de partage s'ouvre directement (fichiers prêts).
   return html`<main class="ecran export-psy">
-    <${Entete} titre="Export PSY" retour=${() => { location.hash = '#/analyse'; }} />
+    <${Entete} titre="Export PSY" retour=${() => { location.hash = '#/soins'; }} />
     <pre class="apercu-export" aria-label="Aperçu du texte">${texte || 'Préparation…'}</pre>
     <button type="button" class="btn btn-plein" disabled=${!texte} onClick=${copierTexte}>${Icones.copier()}Copier les 7 derniers jours pour PSY</button>
     ${message && html`<p class="statut-centre" role="status">${message}</p>`}

@@ -79,10 +79,14 @@ function FeuilleEnParler({ store, element, carte, surFermer, retourFocus }) {
 }
 
 // Le lien « En parler au rendez-vous » et sa feuille. Rien tant que la fiche n'est pas enregistrée (pas d'id).
-export function EnParler({ store, element, carte }) {
+// court : « En parler », sans icône, pour la ligne du haut d'un épisode rouvert (v6.1) ; même feuille.
+export function EnParler({ store, element, carte, court = false }) {
   const [ouvert, setOuvert] = useState(false);
   const bouton = useRef(null);
   if (!element || !element.id) return null;
-  return html`<button type="button" class="btn-lien action en-parler" ref=${bouton} onClick=${() => setOuvert(true)}>${Icones.bulle()}En parler au rendez-vous</button>
+  const lien = court
+    ? html`<button type="button" class="btn-lien" ref=${bouton} onClick=${() => setOuvert(true)}>En parler</button>`
+    : html`<button type="button" class="btn-lien action en-parler" ref=${bouton} onClick=${() => setOuvert(true)}>${Icones.bulle()}En parler au rendez-vous</button>`;
+  return html`${lien}
     ${ouvert && html`<${FeuilleEnParler} store=${store} element=${element} carte=${carte} surFermer=${() => setOuvert(false)} retourFocus=${bouton} />`}`;
 }

@@ -7,6 +7,7 @@ import { formaterJour } from '../../domain/dates.js';
 import { afficherToast } from '../composants/toast.js';
 import { useSauvegarde, analyserChoix, lireImportEnAttente, oublierImport } from '../sauvegarde.js';
 import { dateIso } from './reglages.js';
+import { reinitialiserHistorique } from './historique.js';
 
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const enumerer = (m) => (m.length > 1 ? `${m.slice(0, -1).join(', ')} et ${m[m.length - 1]}` : m[0]);
@@ -40,9 +41,9 @@ export function phrasePerte(p) {
   return `${enumerer(m)} ${accord('présent')} ici et ${accord('absent')} du fichier ${auPluriel ? 'seront' : 'sera'} ${accord('effacé')}.`;
 }
 
-// « Mon plan et les réglages de Ma journée seront remplacés par ceux du fichier. »
+// « Mon plan et les réglages du soir et des rappels seront remplacés par ce que contient le fichier. »
 const NOMS_META = {
-  monPlan: 'Mon plan', journee: 'les réglages de Ma journée', traitementActuel: 'ton traitement actuel',
+  monPlan: 'Mon plan', journee: 'les réglages du soir et des rappels', traitementActuel: 'ton traitement actuel',
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
   respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
   ressourcer: 'les réglages de « Me ressourcer »',
@@ -69,6 +70,8 @@ export function Sauvegarde() {
   };
   const appliquer = async () => {
     await remplacer(repo, etat.analyse);
+    // Un filtre de l'Historique pourrait viser un élément absent du fichier : l'Historique repart de zéro.
+    reinitialiserHistorique();
     oublierImport();
     afficherToast('Import terminé.', null, 3000);
     location.hash = '#/reglages';

@@ -57,7 +57,7 @@ test('replié, le repli résume ce qui est noté ; sans rien de noté, il ne dit
   await expect(repli(page).locator('.repli-resume')).toHaveText('rechargé : calme');
 });
 
-test('masqué dans Réglages › Ma journée, le repli reste affiché un jour où il porte des valeurs', async ({ page }) => {
+test('masqué dans Réglages › Le soir, le repli reste affiché un jour où il porte des valeurs', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-13', { lieu: 'lieu:bureau', pese: ['pese:bruit'] }));
   await aller(page, '#/reglages/journee');
   const interrupteur = page.getByRole('switch', { name: `Afficher ${TITRE}` });
@@ -116,6 +116,9 @@ const releves = (page) => () => repo(page, () => window.__carnet.repo.humeurs.to
 const vueMoment = (page) => page.getByRole('dialog', { name: 'Humeur du moment' });
 const HEURES = ['Maintenant', '6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h'];
 const heure = (vue, h) => vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: h, exact: true });
+// Le bouton qui ouvre et ferme la liste : « Maintenant » ou « C'était vers 14 h » (la liste a aussi son « Maintenant »).
+const boutonQuand = (vue) => vue.locator('.ligne-date > .btn-lien');
+const listeOuverte = (page) => page.evaluate(() => localStorage.getItem('carnet:moment:vers'));
 
 test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, elle est posée à la création', async ({ page }) => {
   await aller(page, '#/moment');
@@ -128,7 +131,8 @@ test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, el
   await expect(vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button')).toHaveText(HEURES);
   await heure(vue, '14 h').click();
   await expect(vue.getByRole('button', { name: 'C\'était vers 14 h' })).toBeVisible();
-  await expect(vue.getByRole('group', { name: 'C\'était vers…' })).toHaveCount(0);
+  // v6.1 : la liste reste ouverte, l'heure choisie allumée.
+  await expect(heure(vue, '14 h')).toHaveAttribute('aria-pressed', 'true');
   await page.waitForTimeout(150);
   expect(await releves(page)()).toEqual([]);
 
@@ -156,19 +160,17 @@ test('C\'était vers… : le relevé déjà créé change d\'heure, revient à �
   await vue.getByRole('button', { name: 'Maintenant' }).click();
   await heure(vue, '16 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '16:00', vers: true, humeur: 7 }]);
-  await vue.getByRole('button', { name: 'C\'était vers 16 h' }).click();
+  // La liste reste ouverte : les heures se choisissent l'une après l'autre.
   await heure(vue, '8 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, heure: '08:00', vers: true }]);
   await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('vers 8 h humeur 7');
 
   // « Maintenant » remet l'heure réelle ; vers redevient null, jamais false.
-  await vue.getByRole('button', { name: 'C\'était vers 8 h' }).click();
   await heure(vue, 'Maintenant').click();
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '21:00', vers: null, humeur: 7 }]);
-  await expect(vue.getByRole('button', { name: 'Maintenant' })).toBeVisible();
+  await expect(boutonQuand(vue)).toHaveText('Maintenant');
 
   // Retirer la seule valeur d'un relevé « vers » le supprime.
-  await vue.getByRole('button', { name: 'Maintenant' }).click();
   await heure(vue, '12 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, heure: '12:00', vers: true }]);
   await vue.getByRole('button', { name: 'Humeur 7' }).click();
@@ -188,7 +190,6 @@ test('C\'était vers… après minuit : « vers 22 h » et « vers 0 h » resten
   await heure(vue, '22 h').click();
   await vue.getByRole('button', { name: 'Humeur 4' }).click();
   await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '22:00', vers: true, humeur: 4 }]);
-  await vue.getByRole('button', { name: 'C\'était vers 22 h' }).click();
   await heure(vue, '0 h').click();
   await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '00:00', vers: true, humeur: 4 }]);
   // Il est au jour logique du 14 : la liste d'« aujourd'hui » le montre.
@@ -207,8 +208,8 @@ test('C\'était vers… ouverte avant 4 h, touchée après : l\'heure d\'hier n\
   await page.clock.setSystemTime(new Date(2026, 9, 15, 6, 30));
   await heure(vue, '22 h').click();
   await expect(vue.getByRole('button', { name: /^C'était vers/ })).toHaveCount(0);
-  // Le 22 h d'hier n'est plus proposé : la liste est celle de 6 h 30.
-  await vue.getByRole('button', { name: 'Maintenant' }).click();
+  // Le 22 h d'hier n'est plus proposé : la liste, restée ouverte, est celle de 6 h 30.
+  await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
   await expect(liste.getByRole('button')).toHaveText(['Maintenant', '6 h']);
   await heure(vue, 'Maintenant').click();
   await vue.getByRole('button', { name: 'Humeur 6' }).click();
@@ -224,6 +225,44 @@ test('C\'était vers… avant 6 h : « Maintenant » seul, sans flèche, qui ne 
   await expect(vue.locator('.ligne-date svg')).toHaveCount(0);
   await vue.getByRole('button', { name: 'Humeur 6' }).click();
   await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '05:30', vers: null, humeur: 6 }]);
+});
+
+test('C\'était vers… (v6.1) : laissée ouverte, la liste rouvre ouverte ; refermée par son bouton, elle rouvre fermée', async ({ page }) => {
+  await aller(page, '#/moment');
+  const vue = vueMoment(page);
+  const liste = vue.getByRole('group', { name: 'C\'était vers…' });
+  await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'false');
+  await boutonQuand(vue).click();
+  expect(await listeOuverte(page)).toBe('true');
+
+  // Choisir une heure ne la ferme plus, et l'écran se ferme seul comme avant, humeur et énergie choisies.
+  await heure(vue, '10 h').click();
+  await expect(boutonQuand(vue)).toHaveText('C\'était vers 10 h');
+  await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
+  await expect(liste.getByRole('button')).toHaveText(HEURES);
+  await vue.getByRole('button', { name: 'Humeur 6' }).click();
+  await vue.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Moyenne' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect.poll(releves(page)).toMatchObject([{ heure: '10:00', vers: true, humeur: 6, energie: 'energie:moyenne' }]);
+
+  // Laissée ouverte, elle rouvre ouverte, l'écran repartant de « Maintenant » ; même après un redémarrage.
+  await aller(page, '#/moment');
+  await expect(boutonQuand(vue)).toHaveText('Maintenant');
+  await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
+  await expect(heure(vue, 'Maintenant')).toHaveAttribute('aria-pressed', 'true');
+  await page.reload();
+  await aller(page, '#/moment');
+  await expect(liste.getByRole('button')).toHaveText(HEURES);
+
+  // Son bouton la ferme toujours ; fermée, elle rouvre fermée.
+  await boutonQuand(vue).click();
+  await expect(liste).toHaveCount(0);
+  expect(await listeOuverte(page)).toBe('false');
+  await vue.getByRole('button', { name: 'Fermer' }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await aller(page, '#/moment');
+  await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'false');
+  await expect(liste).toHaveCount(0);
 });
 
 test('Ce que je faisais : ouvert, l\'écran ne se ferme plus seul ; ✕ le ferme avec le message ; il rouvre comme laissé', async ({ page }) => {

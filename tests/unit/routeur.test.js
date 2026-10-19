@@ -40,14 +40,24 @@ test('onglet actif', () => {
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
-  assert.equal(ongletDe('ressourcer'), 'aujourdhui', 'Me ressourcer s\'ouvre depuis Moment difficile');
-  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'les réglages ne sont pas l\'écran Me ressourcer');
+  assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
-  assert.equal(ongletDe('export-psy'), 'analyse');
   assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v6.1 · « Pour mes soignants » : Export PSY et Vue soignants allument l\'onglet Soins, l\'Analyse garde Comprendre', () => {
+  assert.equal(ongletDe('export-psy'), 'soins');
+  assert.equal(ongletDe('soignants'), 'soins');
+  assert.equal(ongletDe('soins'), 'soins');
+  assert.equal(ongletDe('analyse'), 'analyse');
+  assert.equal(ongletDe('comprendre'), 'analyse');
+  assert.equal(lireRoute('#/export-psy').nom, 'export-psy');
+  assert.equal(lireRoute('#/soignants').nom, 'soignants');
+  assert.equal(versHash('export-psy'), '#/export-psy');
+  assert.equal(versHash('soignants'), '#/soignants');
 });
 
 test('v6 · Comprendre : /comprendre/ID avec ID parmi explosions, energie, rythmes', () => {
@@ -68,19 +78,32 @@ test('v6 · Après coup : la liste (/apres-coup) et un épisode (/apres-coup/ID)
   assert.equal(lireRoute('#/apres-coup/').inconnue, true);
 });
 
-test('v6 · Me ressourcer : l\'écran (/ressourcer) et ses réglages (/reglages/ressourcer) ne se confondent pas', () => {
-  assert.deepEqual(lireRoute('#/ressourcer'), { nom: 'ressourcer', params: {}, chemin: '/ressourcer' });
+test('v6.1 · Me ressourcer : l\'écran (/ressourcer) n\'existe plus et ramène sur Aujourd\'hui ; ses réglages restent', () => {
+  assert.equal(ROUTES.some((r) => r.nom === 'ressourcer'), false);
+  for (const h of ['#/ressourcer', '#/ressourcer/', '#/ressourcer/autre']) {
+    assert.deepEqual(lireRoute(h), { nom: 'aujourdhui', params: {}, chemin: '/aujourdhui', inconnue: true }, h);
+  }
+  assert.equal(versHash('ressourcer'), '#/aujourdhui');
   assert.deepEqual(lireRoute('#/reglages/ressourcer'), { nom: 'reglages-ressourcer', params: {}, chemin: '/reglages/ressourcer' });
-  assert.equal(versHash('ressourcer'), '#/ressourcer');
   assert.equal(versHash('reglages-ressourcer'), '#/reglages/ressourcer');
-  assert.equal(lireRoute('#/ressourcer/').inconnue, true);
-  assert.equal(lireRoute('#/ressourcer/autre').inconnue, true);
 });
 
 test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => {
   assert.deepEqual(lireRoute('#/reglages/aide-iphone'), { nom: 'reglages-aide-iphone', params: {}, chemin: '/reglages/aide-iphone' });
   assert.equal(versHash('reglages-aide-iphone'), '#/reglages/aide-iphone');
   for (const h of ['#/reglages/aide-iphone/', '#/reglages/aide-iphone/autre', '#/aide-iphone']) {
+    assert.equal(lireRoute(h).inconnue, true, h);
+  }
+});
+
+test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour/DATE) garde l\'onglet Historique ; /jour/DATE garde Aujourd\'hui', () => {
+  assert.deepEqual(lireRoute('#/historique/jour/2026-09-21'), { nom: 'historique-jour', params: { date: '2026-09-21' }, chemin: '/historique/jour/2026-09-21' });
+  assert.equal(versHash('historique-jour', { date: '2026-09-21' }), '#/historique/jour/2026-09-21');
+  assert.equal(ongletDe('historique-jour'), 'historique');
+  assert.equal(ongletDe('historique'), 'historique');
+  assert.equal(ongletDe('jour'), 'aujourdhui', 'ouvert autrement, le jour garde l\'onglet Aujourd\'hui');
+  assert.deepEqual(lireRoute('#/historique'), { nom: 'historique', params: {}, chemin: '/historique' });
+  for (const h of ['#/historique/jour', '#/historique/jour/', '#/historique/jour/2026-9-21', '#/historique/2026-09-21']) {
     assert.equal(lireRoute(h).inconnue, true, h);
   }
 });

@@ -104,7 +104,7 @@ test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas »
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 });
 
-test('Réglages › Ma journée : afficher le compteur et l\'humeur du soir, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
+test('Réglages › Le soir : afficher le compteur et l\'humeur du soir, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
   await page.evaluate(() => { location.hash = '#/reglages/journee'; });
   await page.getByRole('switch', { name: 'Afficher Explosions (compteur du soir)' }).click();
   // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici.

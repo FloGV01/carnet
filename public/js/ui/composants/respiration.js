@@ -1,6 +1,6 @@
 // Respiration guidée (v6) : cercle, mots « Inspire » / « Expire », signal sonore facultatif. Partagée
-// entre « Moment difficile » et « Me ressourcer ». La durée, le rythme et le signal se règlent dans
-// Réglages › Moment difficile (méta `respiration`). Rien n'y est calculé ni compté.
+// entre « Moment difficile » et « Respirer », dans la carte « Pour récupérer, je… ». La durée, le rythme
+// et le signal se règlent dans Réglages › Moment difficile (méta `respiration`). Rien n'y est calculé ni compté.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { Icones } from '../icones.js';
@@ -12,7 +12,7 @@ async function garderEcran() {
   try { return navigator.wakeLock ? await navigator.wakeLock.request('screen') : null; } catch { return null; }
 }
 
-// `demarrerTout` : l'exercice part dès que les réglages sont lus, sans toucher (« Me ressourcer »). Le
+// `demarrerTout` : l'exercice part dès que les réglages sont lus, sans toucher (« Respirer »). Le
 // toucher est alors celui de l'appelant : pour que le signal sonore joue, il appelle `preparerSon()` (de
 // signal-sonore.js) dans son gestionnaire. Sans cela, l'exercice part sans son (jamais de contexte audio
 // créé hors d'un toucher).
