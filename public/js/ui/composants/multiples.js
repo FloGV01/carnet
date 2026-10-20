@@ -11,7 +11,7 @@ export function PastillesMultiples({ etiquette, options, valeurs, exclusifs = ne
     ${options.map((o) => {
       const choisi = actuels.includes(o.valeur);
       return html`<button type="button" class="pastille" aria-pressed=${choisi ? 'true' : 'false'}
-        onClick=${() => surChoix(basculerMultiple(actuels, o.valeur, exclusifs))}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 2.2 })}</span><span>${o.libelle}</span></button>`;
+        onClick=${() => surChoix(basculerMultiple(actuels, o.valeur, exclusifs))}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 3 })}</span><span>${o.libelle}</span></button>`;
     })}
   </div>`;
 }

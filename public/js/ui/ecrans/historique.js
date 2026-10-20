@@ -48,7 +48,7 @@ const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="ave
 function Bascules({ etiquette, choix, f, majF }) {
   return html`<div class="pastilles souples" role="group" aria-label=${etiquette}>
     ${choix.map((c) => html`<button type="button" class="pastille" aria-pressed=${f[c.cle] ? 'true' : 'false'}
-      onClick=${() => majF(c.cle)(!f[c.cle])}><span class="texte-pastille"><span>${c.libelle}</span></span></button>`)}
+      onClick=${() => majF(c.cle)(!f[c.cle])}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 3 })}</span><span class="texte-pastille"><span>${c.libelle}</span></span></button>`)}
   </div>`;
 }
 

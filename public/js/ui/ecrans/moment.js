@@ -59,7 +59,7 @@ function LigneQuand({ quand, heures, surChoix }) {
       ${quand ? `C'était ${formaterVers(quand.heure)}` : 'Maintenant'}${Icones.chevronBas({ trait: 2 })}</button>
     ${ouvert && html`<div class="pastilles souples teinte-humeur choix-vers" role="group" aria-label="C'était vers…">
       ${choix.map(({ h, texte }) => html`<button type="button" class="pastille" aria-pressed=${h === choisie ? 'true' : 'false'}
-        onClick=${() => surChoix(h)}><span>${texte}</span></button>`)}
+        onClick=${() => surChoix(h)}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 3 })}</span><span>${texte}</span></button>`)}
     </div>`}
   </div>`;
 }

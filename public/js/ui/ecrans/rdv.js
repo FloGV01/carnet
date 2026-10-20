@@ -56,7 +56,7 @@ export function Rdv({ id: idRoute }) {
         surAjouter=${async (t) => { const it = await repo.listes.creer('professionnel', t); setItems(await repo.listes.items('professionnel')); ecrire({ professionnel: it.id }); }} />
     </div>
     <div class="champ-fiche">
-      <${LibelleChamp} icone="bulle">Questions</${LibelleChamp}>
+      <${LibelleChamp} icone="questions">Questions</${LibelleChamp}>
       ${questions.length > 0 && html`<div class="carte-questions"><${QuestionsACocher} questions=${questions} surChanger=${majQuestions}
         surRetirer=${(i) => majQuestions(questions.filter((_, k) => k !== i))} /></div>`}
       <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />

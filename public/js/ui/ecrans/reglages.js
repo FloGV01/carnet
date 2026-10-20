@@ -95,10 +95,10 @@ export function Reglages() {
 
     <h2 id="titre-moment-difficile" class="libelle-section">Moment difficile</h2>
     <ul class="liste carte carte-groupe" aria-labelledby="titre-moment-difficile">
-      <${LigneLien} href="#/mon-plan" icone="bulle" titre="Mon plan" />
+      <${LigneLien} href="#/mon-plan" icone="monPlan" titre="Mon plan" />
       <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
       <${LigneLien} href="#/reglages/ressourcer" icone="positifs" titre="Me ressourcer" />
-      <${LigneLien} href="#/reglages/aide-iphone" icone="note" titre="Aide iPhone" />
+      <${LigneLien} href="#/reglages/aide-iphone" icone="aideIphone" titre="Aide iPhone" />
     </ul>
 
     <h2 class="libelle-section">Analyse</h2>
