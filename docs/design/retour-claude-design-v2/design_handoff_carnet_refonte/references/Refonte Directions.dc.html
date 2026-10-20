@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&amp;family=Literata:opsz,wght@7..72,500;7..72,600&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e7e4dd;font-family:system-ui,sans-serif}a{color:#1a1a1a}a:hover{color:#2a78d6}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 14px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 15px/1.3 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:14px;scroll-margin-top:16px}.dv-oid{font:600 12px ui-monospace,Menlo,monospace;padding:4px 8px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:28px 0 0;font:14px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6)}</style>
+</helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Nouvelle piste : Lexend, couleurs franches, noir profond le soir, gris froid le jour (remplace la piste 1)</span></div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;max-width:1500px;margin:0 0 12px;font:13px/1.3 system-ui,sans-serif;color:#3a3833">
+<span style="font-weight:700">Une couleur, un sens :</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#cfb69a"></span>Lieu</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#829afc"></span>Sommeil</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#27d0eb"></span>Contact humain</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#6bd672"></span>Sport / mouvement</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#b392f6"></span>Traitement pris</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#efd127"></span>Mes points positifs</span><span style="width:1px;height:16px;background:rgba(0,0,0,.2)"></span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#ff88b9"></span>Humeur du moment</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#dc7ee2"></span>Épisode</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#1ae7c2"></span>Symptôme</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#85b4dc"></span>Moment difficile</span><span style="width:1px;height:16px;background:rgba(0,0,0,.2)"></span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#fca34c"></span>Énergie</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#c79077"></span>Explosions (sourd)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#181b1f"></span>Action (neutre)</span>
+</div>
+<p style="margin:0 0 30px;max-width:1500px;font:15px/1.5 system-ui,sans-serif;color:#3a3833"><b>Nouveau dans les trois :</b> une rubrique remplie se replie en pastille sous le titre, et une touche sur la pastille la rouvre. Les rubriques encore vides restent ouvertes dans l'ordre. On glisse à gauche ou à droite pour changer de jour. Aujourd'hui est montré en cours de saisie : Traitement vient d'être touché, il se repliera au prochain toucher ailleurs.</p>
+<div class="dv-opts">
+<div class="dv-opt" id="2a">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#2a">2a</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">2a · Fiches vives</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Chaque rubrique ouverte est une fiche teintée avec une icône pleine ; les pastilles prennent la couleur franche de leur rubrique. La plus colorée.</span></div>
+<div style="--bg:#000000;--sf:#1e1f21;--sf2:#2d2e30;--ln:#47484a;--ink:#bfc0c3;--ink2:#97989b;--act:#eaebed;--act-on:#000000;--hum:#ff8ebc;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#311420;--hum-t2:#441c2d;--hum-i:#fe9ac2;--ene:#fc9e3f;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#301903;--ene-t2:#422301;--ene-i:#fea753;--pos:#d2b723;--pos-f:#efd127;--pos-o:#141207;--pos-t:#241e00;--pos-t2:#332b01;--pos-i:#d8be34;--spo:#68d36f;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#0c230d;--spo-t2:#133416;--spo-i:#7bd77f;--sym:#0dd5b2;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#00241c;--sym-t2:#00342a;--sym-i:#09dcb8;--con:#1fcde8;--con-f:#27d0eb;--con-o:#071417;--con-t:#002228;--con-t2:#00323a;--con-i:#1fd4f0;--dif:#8ebde6;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#141f29;--dif-t2:#1d2d3b;--dif-i:#9ac3e7;--som:#9fb3fc;--som-f:#829afc;--som-o:#0e111b;--som-t:#161c36;--som-t2:#20284b;--som-i:#a7bafe;--tra:#c1a6fc;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#221b31;--tra-t2:#2f2543;--tra-i:#c7aefe;--epi:#ed8ef3;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#2b162c;--epi-t2:#3b1f3d;--epi-i:#ee9af3;--lieu:#ccb397;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#261c11;--lieu-t2:#362919;--lieu-i:#d0baa1;--exp:#e2a88f;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#281a14;--exp-t2:#39261e;--exp-i:#e4b19a;--som1:#394473;--som2:#6073c7;--som3:#9fb3fe;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#141518;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a9ad">SOMBRE · LE SOIR (NOIR PROFOND)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2a sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#dcdce0;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-2a" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#e7eaee;--sf:#ffffff;--sf2:#eef0f4;--ln:#c2c4c8;--ink:#181b1f;--ink2:#585b61;--act:#181b1f;--act-on:#fdfdfd;--hum:#ca4b85;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#fee7ef;--hum-t2:#ffd1e1;--hum-i:#93285c;--ene:#b96a00;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#ffeada;--ene-t2:#fbd8bb;--ene-i:#804802;--pos:#938013;--pos-f:#efd127;--pos-o:#141207;--pos-t:#f4efd5;--pos-t2:#e9e1b7;--pos-i:#665801;--spo:#279936;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#e1f5e0;--spo-t2:#caeaca;--spo-i:#046b1b;--sym:#02967c;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#d7f7ed;--sym-t2:#baecdd;--sym-i:#056755;--con:#1090a3;--con-f:#27d0eb;--con-o:#071417;--con-t:#d5f5fc;--con-t2:#b6eaf5;--con-i:#0c6371;--dif:#5885ab;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#e5f0fa;--dif-t2:#d1e2f1;--dif-i:#365c7b;--som:#5f74e4;--som-f:#829afc;--som-o:#0e111b;--som-t:#e9eeff;--som-t2:#d5dffe;--som-i:#3d4daa;--tra:#8c6aca;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#f0ebff;--tra-t2:#e3dafb;--tra-i:#624595;--epi:#b156b7;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#fbe7fc;--epi-t2:#f3d4f4;--epi-i:#803385;--lieu:#937c61;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#f6ede2;--lieu-t2:#ecddcd;--lieu-i:#67543e;--exp:#a7725a;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#f9ebe5;--exp-t2:#f0dad1;--exp-i:#784c38;--som1:#c5d0f3;--som2:#7e93e2;--som3:#4455c2;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#cfd3d9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#4f535a">CLAIR · LE JOUR (GRIS FROID)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2a clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#25282d;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-2a" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div class="dv-opt" id="2b">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#2b">2b</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">2b · Cartes noires</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Cartes neutres sur noir, dans l'esprit des réglages de l'iPhone : la couleur vit dans les icônes carrées et sur le choix fait. La plus sobre.</span></div>
+<div style="--bg:#000000;--sf:#1e1f21;--sf2:#2d2e30;--ln:#47484a;--ink:#bfc0c3;--ink2:#97989b;--act:#eaebed;--act-on:#000000;--hum:#ff8ebc;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#311420;--hum-t2:#441c2d;--hum-i:#fe9ac2;--ene:#fc9e3f;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#301903;--ene-t2:#422301;--ene-i:#fea753;--pos:#d2b723;--pos-f:#efd127;--pos-o:#141207;--pos-t:#241e00;--pos-t2:#332b01;--pos-i:#d8be34;--spo:#68d36f;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#0c230d;--spo-t2:#133416;--spo-i:#7bd77f;--sym:#0dd5b2;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#00241c;--sym-t2:#00342a;--sym-i:#09dcb8;--con:#1fcde8;--con-f:#27d0eb;--con-o:#071417;--con-t:#002228;--con-t2:#00323a;--con-i:#1fd4f0;--dif:#8ebde6;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#141f29;--dif-t2:#1d2d3b;--dif-i:#9ac3e7;--som:#9fb3fc;--som-f:#829afc;--som-o:#0e111b;--som-t:#161c36;--som-t2:#20284b;--som-i:#a7bafe;--tra:#c1a6fc;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#221b31;--tra-t2:#2f2543;--tra-i:#c7aefe;--epi:#ed8ef3;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#2b162c;--epi-t2:#3b1f3d;--epi-i:#ee9af3;--lieu:#ccb397;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#261c11;--lieu-t2:#362919;--lieu-i:#d0baa1;--exp:#e2a88f;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#281a14;--exp-t2:#39261e;--exp-i:#e4b19a;--som1:#394473;--som2:#6073c7;--som3:#9fb3fe;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#141518;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a9ad">SOMBRE · LE SOIR (NOIR PROFOND)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2b sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#dcdce0;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-2b" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#e7eaee;--sf:#ffffff;--sf2:#eef0f4;--ln:#c2c4c8;--ink:#181b1f;--ink2:#585b61;--act:#181b1f;--act-on:#fdfdfd;--hum:#ca4b85;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#fee7ef;--hum-t2:#ffd1e1;--hum-i:#93285c;--ene:#b96a00;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#ffeada;--ene-t2:#fbd8bb;--ene-i:#804802;--pos:#938013;--pos-f:#efd127;--pos-o:#141207;--pos-t:#f4efd5;--pos-t2:#e9e1b7;--pos-i:#665801;--spo:#279936;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#e1f5e0;--spo-t2:#caeaca;--spo-i:#046b1b;--sym:#02967c;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#d7f7ed;--sym-t2:#baecdd;--sym-i:#056755;--con:#1090a3;--con-f:#27d0eb;--con-o:#071417;--con-t:#d5f5fc;--con-t2:#b6eaf5;--con-i:#0c6371;--dif:#5885ab;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#e5f0fa;--dif-t2:#d1e2f1;--dif-i:#365c7b;--som:#5f74e4;--som-f:#829afc;--som-o:#0e111b;--som-t:#e9eeff;--som-t2:#d5dffe;--som-i:#3d4daa;--tra:#8c6aca;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#f0ebff;--tra-t2:#e3dafb;--tra-i:#624595;--epi:#b156b7;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#fbe7fc;--epi-t2:#f3d4f4;--epi-i:#803385;--lieu:#937c61;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#f6ede2;--lieu-t2:#ecddcd;--lieu-i:#67543e;--exp:#a7725a;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#f9ebe5;--exp-t2:#f0dad1;--exp-i:#784c38;--som1:#c5d0f3;--som2:#7e93e2;--som3:#4455c2;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#cfd3d9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#4f535a">CLAIR · LE JOUR (GRIS FROID)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2b clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#25282d;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-2b" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div class="dv-opt" id="2c">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#2c">2c</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">2c · Épure vive</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Ni cartes ni filets, grands libellés et grands boutons ; le résumé du jour devient quatre tuiles teintées en haut. La plus aérée.</span></div>
+<div style="--bg:#000000;--sf:#1e1f21;--sf2:#2d2e30;--ln:#47484a;--ink:#bfc0c3;--ink2:#97989b;--act:#eaebed;--act-on:#000000;--hum:#ff8ebc;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#311420;--hum-t2:#441c2d;--hum-i:#fe9ac2;--ene:#fc9e3f;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#301903;--ene-t2:#422301;--ene-i:#fea753;--pos:#d2b723;--pos-f:#efd127;--pos-o:#141207;--pos-t:#241e00;--pos-t2:#332b01;--pos-i:#d8be34;--spo:#68d36f;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#0c230d;--spo-t2:#133416;--spo-i:#7bd77f;--sym:#0dd5b2;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#00241c;--sym-t2:#00342a;--sym-i:#09dcb8;--con:#1fcde8;--con-f:#27d0eb;--con-o:#071417;--con-t:#002228;--con-t2:#00323a;--con-i:#1fd4f0;--dif:#8ebde6;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#141f29;--dif-t2:#1d2d3b;--dif-i:#9ac3e7;--som:#9fb3fc;--som-f:#829afc;--som-o:#0e111b;--som-t:#161c36;--som-t2:#20284b;--som-i:#a7bafe;--tra:#c1a6fc;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#221b31;--tra-t2:#2f2543;--tra-i:#c7aefe;--epi:#ed8ef3;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#2b162c;--epi-t2:#3b1f3d;--epi-i:#ee9af3;--lieu:#ccb397;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#261c11;--lieu-t2:#362919;--lieu-i:#d0baa1;--exp:#e2a88f;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#281a14;--exp-t2:#39261e;--exp-i:#e4b19a;--som1:#394473;--som2:#6073c7;--som3:#9fb3fe;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#141518;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a9ad">SOMBRE · LE SOIR (NOIR PROFOND)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2c sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#dcdce0;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-2c" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#e7eaee;--sf:#ffffff;--sf2:#eef0f4;--ln:#c2c4c8;--ink:#181b1f;--ink2:#585b61;--act:#181b1f;--act-on:#fdfdfd;--hum:#ca4b85;--hum-f:#ff88b9;--hum-o:#190e12;--hum-t:#fee7ef;--hum-t2:#ffd1e1;--hum-i:#93285c;--ene:#b96a00;--ene-f:#fca34c;--ene-o:#181008;--ene-t:#ffeada;--ene-t2:#fbd8bb;--ene-i:#804802;--pos:#938013;--pos-f:#efd127;--pos-o:#141207;--pos-t:#f4efd5;--pos-t2:#e9e1b7;--pos-i:#665801;--spo:#279936;--spo-f:#6bd672;--spo-o:#0c140c;--spo-t:#e1f5e0;--spo-t2:#caeaca;--spo-i:#046b1b;--sym:#02967c;--sym-f:#1ae7c2;--sym-o:#081511;--sym-t:#d7f7ed;--sym-t2:#baecdd;--sym-i:#056755;--con:#1090a3;--con-f:#27d0eb;--con-o:#071417;--con-t:#d5f5fc;--con-t2:#b6eaf5;--con-i:#0c6371;--dif:#5885ab;--dif-f:#85b4dc;--dif-o:#0a131a;--dif-t:#e5f0fa;--dif-t2:#d1e2f1;--dif-i:#365c7b;--som:#5f74e4;--som-f:#829afc;--som-o:#0e111b;--som-t:#e9eeff;--som-t2:#d5dffe;--som-i:#3d4daa;--tra:#8c6aca;--tra-f:#b392f6;--tra-o:#131019;--tra-t:#f0ebff;--tra-t2:#e3dafb;--tra-i:#624595;--epi:#b156b7;--epi-f:#dc7ee2;--epi-o:#160f16;--epi-t:#fbe7fc;--epi-t2:#f3d4f4;--epi-i:#803385;--lieu:#937c61;--lieu-f:#cfb69a;--lieu-o:#171008;--lieu-t:#f6ede2;--lieu-t2:#ecddcd;--lieu-i:#67543e;--exp:#a7725a;--exp-f:#c79077;--exp-o:#190f0a;--exp-t:#f9ebe5;--exp-t2:#f0dad1;--exp-i:#784c38;--som1:#c5d0f3;--som2:#7e93e2;--som3:#4455c2;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#cfd3d9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#4f535a">CLAIR · LE JOUR (GRIS FROID)</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens2 }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="2c clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#25282d;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-2c" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">Pour choisir : « je prends <a class="dv-oid" href="#2b">2b</a> » · « <a class="dv-oid" href="#2b">2b</a> avec les pastilles de <a class="dv-oid" href="#2a">2a</a> » · « <a class="dv-oid" href="#2c">2c</a> mais Humeur moins flashy ».</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Refonte Carnet · temps 1 : trois directions sur les mêmes 5 écrans, en sombre (le soir) puis en clair</span></div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;max-width:1500px;margin:0 0 30px;font:13px/1.3 system-ui,sans-serif;color:#3a3833">
+<span style="font-weight:700">Une couleur, un sens, commun aux trois :</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#a4613c"></span>Lieu</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#596fbb"></span>Sommeil</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#0d848a"></span>Contact humain</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#298954"></span>Sport / mouvement</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#7b64b2"></span>Traitement pris</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#737c14"></span>Mes points positifs</span>
+<span style="width:1px;height:16px;background:rgba(0,0,0,.2)"></span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#a3546c"></span>Humeur du moment</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#9e63a7"></span>Épisode</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#077fac"></span>Symptôme</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:6px;background:#5d7794"></span>Moment difficile</span>
+<span style="width:1px;height:16px;background:rgba(0,0,0,.2)"></span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#956d05"></span>Énergie (pesé, rechargé, basse)</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#9b795c"></span>Explosions (sourd)</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#202a44"></span>Action (neutre)</span>
+<span style="color:#5d5a53">Tous les textes passent AA, en clair et en sombre.</span>
+</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1a">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#1a">1a</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">A · Encre de nuit</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Pensée pour le soir : fond bleu nuit, cartes nettement détachées, rubriques en pastels lumineux ; le choix fait devient une pilule pleine. Titres en Literata, texte en Atkinson Hyperlegible Next.</span></div>
+<div style="--bg:#151b2c;--sf:#262d40;--sf2:#32394b;--ln:#4b5264;--ink:#d5cfc2;--ink2:#a5abb8;--act:#eee4cf;--act-on:#151b2c;--lieu:#eaaf91;--lieu-f:#8d4821;--lieu-o:#fcf3ee;--lieu-t:#3b2b22;--lieu-t2:#473329;--lieu-i:#eeb699;--ene:#dcb875;--ene-f:#795706;--ene-o:#f9f5ec;--ene-t:#362c1a;--ene-t2:#42361f;--ene-i:#e1bf80;--pos:#bbc57d;--pos-f:#5c6404;--pos-o:#f5f6ed;--pos-t:#2d301c;--pos-t2:#373a22;--pos-i:#c2cb87;--spo:#8bd0a3;--spo-f:#00703e;--spo-o:#eff8f2;--spo-t:#1e3225;--spo-t2:#273e2f;--spo-i:#95d6ab;--con:#6bd0d6;--con-f:#0c6b6f;--con-o:#ecf8f8;--con-t:#163233;--con-t2:#1c3e40;--con-i:#78d6db;--sym:#7cc9f1;--sym-f:#08668b;--sym-o:#eef7fc;--sym-t:#1c313c;--sym-t2:#223c49;--sym-i:#87cff5;--dif:#aac0d9;--dif-f:#46607d;--dif-o:#eff6fd;--dif-t:#262f38;--dif-t2:#2f3944;--dif-i:#b2c6de;--som:#a6bbfc;--som-f:#4357a3;--som-o:#f2f5fe;--som-t:#272d3f;--som-t2:#30374d;--som-i:#aec2fc;--tra:#c3b2f4;--tra-f:#654c9b;--tra-o:#f6f4fd;--tra-t:#302c3e;--tra-t2:#3a344b;--tra-i:#c9b9f8;--epi:#cb9ad2;--epi-f:#7d4287;--epi-o:#f9f3fa;--epi-t:#372939;--epi-t2:#423144;--epi-i:#d8a9df;--hum:#f4adc0;--hum-f:#8f3f59;--hum-o:#fdf2f4;--hum-t:#3c292e;--hum-t2:#483036;--hum-i:#f5b2c3;--exp:#bea28a;--exp-f:#775638;--exp-o:#fbf4ed;--exp-t:#352c23;--exp-t2:#41352b;--exp-i:#cfb39c;--som1:#404b6e;--som2:#697dbc;--som3:#aec2fd;--tw:500;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#0f1013;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a69f">SOMBRE · LE SOIR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1a sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#d9d6cf;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-A" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#eee9df;--sf:#fffdfa;--sf2:#f3f0e9;--ln:#c1bdb5;--ink:#1a2133;--ink2:#555b69;--act:#202a44;--act-on:#fdfcf9;--lieu:#a4613c;--lieu-f:#814625;--lieu-o:#fffbf9;--lieu-t:#fce8de;--lieu-t2:#f6d9ca;--lieu-i:#7b401f;--ene:#956d05;--ene-f:#725201;--ene-o:#fdfbf8;--ene-t:#f7ebd7;--ene-t2:#efddbf;--ene-i:#6b4d02;--pos:#737c14;--pos-f:#575e00;--pos-o:#fbfcf8;--pos-t:#ecf0d9;--pos-t2:#dee4c2;--pos-i:#515801;--spo:#298954;--spo-f:#0a693c;--spo-o:#f9fdfa;--spo-t:#def3e4;--spo-t2:#c9e9d3;--spo-i:#0a6338;--con:#0d848a;--con-f:#056569;--con-o:#f8fdfd;--con-t:#d7f3f5;--con-t2:#bee9eb;--con-i:#065e62;--sym:#077fac;--sym-f:#026084;--sym-o:#f9fcff;--sym-t:#daf1fe;--sym-t2:#c3e6f9;--sym-i:#045a7c;--dif:#5d7794;--dif-f:#445a73;--dif-o:#f9fcff;--dif-t:#e4eef9;--dif-t2:#d3e1f2;--dif-i:#3e546d;--som:#596fbb;--som-f:#405395;--som-o:#fafcff;--som-t:#e6ecff;--som-t2:#d4dfff;--som-i:#3b4d8f;--tra:#7b64b2;--tra-f:#5e498e;--tra-o:#fcfbff;--tra-t:#eee9fe;--tra-t2:#e2dafb;--tra-i:#594388;--epi:#9e63a7;--epi-f:#74417c;--epi-o:#fdfbfe;--epi-t:#f7e7f9;--epi-t2:#eed6f2;--epi-i:#6e3b76;--hum:#a3546c;--hum-f:#843e54;--hum-o:#fffafb;--hum-t:#fee6eb;--hum-t2:#f8d5dd;--hum-i:#7e384e;--exp:#9b795c;--exp-f:#6e5137;--exp-o:#fefbf8;--exp-t:#f6eae1;--exp-t2:#eddcce;--exp-i:#694c32;--som1:#c5d0ef;--som2:#7d92d3;--som3:#3a4e9d;--tw:600;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#d6d2c9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#57544d">CLAIR · LE JOUR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1a clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#2c2a26;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-A" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div class="dv-opt" id="1b">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#1b">1b</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">B · Intercalaires</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Chaque rubrique et chaque parcours devient une fiche à sa teinte, avec une grande icône et un titre fort ; le choix fait porte une coche. Lieu montré ici avec icônes. Titres en Source Serif 4.</span></div>
+<div style="--bg:#181512;--sf:#2d2925;--sf2:#38332f;--ln:#4e4a45;--ink:#cdc9c1;--ink2:#aca7a1;--act:#e8e4dc;--act-on:#181512;--lieu:#ecae8e;--lieu-f:#954d24;--lieu-o:#fff7f3;--lieu-t:#3b251a;--lieu-t2:#4b3123;--lieu-i:#f5bca0;--ene:#deb870;--ene-f:#805c07;--ene-o:#fcf8f1;--ene-t:#35280d;--ene-t2:#453516;--ene-i:#e8c586;--pos:#bbc679;--pos-f:#626a05;--pos-o:#f8f9f2;--pos-t:#282b10;--pos-t2:#373b1a;--pos-i:#c8d28e;--spo:#88d1a2;--spo-f:#007742;--spo-o:#f3fbf5;--spo-t:#152f1f;--spo-t2:#20402c;--spo-i:#9bdcb1;--con:#64d1d7;--con-f:#0e7176;--con-o:#f1fbfb;--con-t:#042f32;--con-t2:#0c4042;--con-i:#7edde2;--sym:#78c9f4;--sym-f:#0a6c93;--sym-o:#f2fafe;--sym-t:#0e2c3b;--sym-t2:#183c4e;--sym-i:#8dd5fc;--dif:#a9c0db;--dif-f:#4b6684;--dif-o:#f4f9ff;--dif-t:#202b37;--dif-t2:#2c3948;--dif-i:#b8cde5;--som:#a4bbff;--som-f:#475cad;--som-o:#f6f8ff;--som-t:#212941;--som-t2:#2d3653;--som-i:#b7c9fe;--tra:#c3b1f7;--tra-f:#6b50a4;--tra-o:#f9f7ff;--tra-t:#2d273f;--tra-t2:#3a3250;--tra-i:#cfc0fd;--epi:#cc99d4;--epi-f:#85468f;--epi-o:#fcf6fd;--epi-t:#362439;--epi-t2:#452f48;--epi-i:#deafe5;--hum:#f6acbf;--hum-f:#97435e;--hum-o:#fff6f8;--hum-t:#3c232a;--hum-t2:#4c2d36;--hum-i:#fcb8c9;--exp:#bfa188;--exp-f:#7e5b3b;--exp-o:#fef7f2;--exp-t:#34271c;--exp-t2:#443427;--exp-i:#d5b9a2;--som1:#404b6e;--som2:#697dbc;--som3:#aec2fd;--tw:500;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#0f1013;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a69f">SOMBRE · LE SOIR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1b sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#d9d6cf;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-B" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#f8f7f3;--sf:#ffffff;--sf2:#f0eeea;--ln:#ceccc6;--ink:#241e1a;--ink2:#635c57;--act:#2b2521;--act-on:#fdfcf9;--lieu:#9b532a;--lieu-f:#82411b;--lieu-o:#fffdfc;--lieu-t:#f9dccd;--lieu-t2:#f0c9b6;--lieu-i:#753b19;--ene:#876204;--ene-f:#6f4f00;--ene-o:#fffdfa;--ene-t:#f2e1c2;--ene-t2:#e7d0a6;--ene-i:#644803;--pos:#677001;--pos-f:#545b09;--pos-o:#fdfefb;--pos-t:#e1e7c5;--pos-t2:#d1d8ab;--pos-i:#4c5202;--spo:#107d48;--spo-f:#086639;--spo-o:#fbfefc;--spo-t:#ccecd6;--spo-t2:#b4dfc2;--spo-i:#005d32;--con:#0b787c;--con-f:#036266;--con-o:#fafefe;--con-t:#c1edef;--con-t2:#a4dfe2;--con-i:#07585c;--sym:#06729c;--sym-f:#005d80;--sym-o:#fcfeff;--sym-t:#c6e9fd;--sym-t2:#acdaf4;--sym-i:#045474;--dif:#506b8a;--dif-f:#3f5773;--dif-o:#fcfeff;--dif-t:#d6e5f5;--dif-t2:#c2d5ea;--dif-i:#394f68;--som:#4c62b3;--som-f:#3c4f97;--som-o:#fdfdff;--som-t:#d8e2ff;--som-t2:#c3d2fb;--som-i:#364789;--tra:#7156aa;--tra-f:#5c448f;--tra-o:#fdfdff;--tra-t:#e5ddfe;--tra-t2:#d5cbf6;--tra-i:#533e81;--epi:#94559e;--epi-f:#733b7c;--epi-o:#fffdff;--epi-t:#f2daf5;--epi-t2:#e6c6ea;--epi-i:#683670;--hum:#9a4560;--hum-f:#843851;--hum-o:#fffdfd;--hum-t:#fcd8e1;--hum-t2:#f2c5d0;--hum-i:#773349;--exp:#916d4d;--exp-f:#6d4e31;--exp-o:#fffdfb;--exp-t:#f1dfd1;--exp-t2:#e5cebb;--exp-i:#63462d;--som1:#c5d0ef;--som2:#7d92d3;--som3:#3a4e9d;--tw:600;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#d6d2c9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#57544d">CLAIR · LE JOUR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1b clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#2c2a26;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-B" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div class="dv-opt" id="1c">
+<div style="display:flex;align-items:baseline;gap:12px;max-width:2118px"><a class="dv-oid" href="#1c">1c</a><span style="font:700 22px/1.2 system-ui,sans-serif;color:#1a1a1a;white-space:nowrap">C · Épure</span><span style="font:400 16px/1.4 system-ui,sans-serif;color:#4a4740">Ni cartes ni filets : la hiérarchie passe par la taille et l'espace, et la couleur n'apparaît qu'en bande de rubrique et sur le choix fait (plein et coche). Une seule police, Atkinson Hyperlegible Next.</span></div>
+<div style="--bg:#141618;--sf:#282a2d;--sf2:#333638;--ln:#484b4e;--ink:#cbc9c5;--ink2:#a2a5a8;--act:#e6e4e0;--act-on:#141618;--lieu:#e29f7d;--lieu-f:#8e471d;--lieu-o:#fef9f7;--lieu-t:#35261f;--lieu-t2:#3d2c23;--lieu-i:#ecae8e;--ene:#d4aa5a;--ene-f:#785709;--ene-o:#fcfaf6;--ene-t:#322919;--ene-t2:#392f1b;--ene-i:#deb870;--pos:#afb965;--pos-f:#5c6407;--pos-o:#fafbf6;--pos-t:#292c1b;--pos-t2:#30331e;--pos-i:#bbc679;--spo:#74c692;--spo-f:#04703f;--spo-o:#f7fbf8;--spo-t:#1d2d22;--spo-t2:#223629;--spo-i:#88d1a2;--con:#46c6cd;--con-f:#006b70;--con-o:#f6fbfc;--con-t:#162d2f;--con-t2:#193637;--con-i:#64d1d7;--sym:#61bdec;--sym-f:#0c668a;--sym-o:#f6fbfe;--sym-t:#1b2d37;--sym-t2:#1e333f;--sym-i:#78c9f4;--dif:#9bb4d0;--dif-f:#45607e;--dif-o:#f7fafe;--dif-t:#242b33;--dif-t2:#29313b;--dif-i:#a9c0db;--som:#96aef7;--som-f:#4256a6;--som-o:#f8fafe;--som-t:#242939;--som-t2:#293042;--som-i:#a4bbff;--tra:#b7a3ef;--tra-f:#654b9e;--tra-o:#faf9fe;--tra-t:#2b2737;--tra-t2:#322d40;--tra-i:#c3b1f7;--epi:#c28aca;--epi-f:#7f4188;--epi-o:#fcf9fd;--epi-t:#322634;--epi-t2:#392a3b;--epi-i:#d4a1dc;--hum:#ed9db2;--hum-f:#913d58;--hum-o:#fef8fa;--hum-t:#37262a;--hum-t2:#3e2a2f;--hum-i:#f3a9bc;--exp:#b59479;--exp-f:#785536;--exp-o:#fdf9f6;--exp-t:#312821;--exp-t2:#382e26;--exp-i:#cbac93;--som1:#404b6e;--som2:#697dbc;--som3:#aec2fd;--tw:500;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#0f1013;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#a9a69f">SOMBRE · LE SOIR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1c sombre {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#d9d6cf;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 20px 50px rgba(0,0,0,.5)"><dc-import name="Direction-C" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="--bg:#fdfcf9;--sf:#e9e8e5;--sf2:#dfdedb;--ln:#bab9b6;--ink:#1c1a18;--ink2:#5c5b58;--act:#23211e;--act-on:#fdfcf9;--lieu:#a55b33;--lieu-f:#85441e;--lieu-o:#fffdfc;--lieu-t:#ffece2;--lieu-t2:#f7ddd0;--lieu-i:#783e1c;--ene:#926a06;--ene-f:#725205;--ene-o:#fffdfa;--ene-t:#faefda;--ene-t2:#f0e1c6;--ene-i:#674a07;--pos:#707904;--pos-f:#575e03;--pos-o:#fdfefb;--pos-t:#eff3dc;--pos-t2:#e2e7c9;--pos-i:#4f5506;--spo:#14874e;--spo-f:#006a3a;--spo-o:#fbfefc;--spo-t:#e1f7e7;--spo-t2:#cfebd8;--spo-i:#046035;--con:#0e8186;--con-f:#0a6469;--con-o:#fafefe;--con-t:#daf7f8;--con-t2:#c5eced;--con-i:#005c60;--sym:#097ba8;--sym-f:#066083;--sym-o:#fcfeff;--sym-t:#e0f4ff;--sym-t2:#cae8fa;--sym-i:#0a5777;--dif:#597493;--dif-f:#425a76;--dif-o:#fcfeff;--dif-t:#e8f1fc;--dif-t2:#d8e4f3;--dif-i:#3c526a;--som:#546bbd;--som-f:#3e529a;--som-o:#fdfdff;--som-t:#eaf0ff;--som-t2:#d8e2ff;--som-i:#394a8c;--tra:#795fb4;--tra-f:#5f4792;--tra-o:#fdfdff;--tra-t:#f1edfe;--tra-t2:#e5defb;--tra-i:#564184;--epi:#9e5ea8;--epi-f:#763e7f;--epi-o:#fffdff;--epi-t:#faeafc;--epi-t2:#f0dbf3;--epi-i:#6b3873;--hum:#a44e69;--hum-f:#873b53;--hum-o:#fffdfd;--hum-t:#ffeaef;--hum-t2:#f9dae1;--hum-i:#7a354b;--exp:#9a7555;--exp-f:#705034;--exp-o:#fffdfb;--exp-t:#f9eee4;--exp-t2:#efe0d3;--exp-i:#66492f;--som1:#c5d0ef;--som2:#7d92d3;--som3:#3a4e9d;--tw:600;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px;background:#d6d2c9;border-radius:16px">
+<div style="font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em;color:#57544d">CLAIR · LE JOUR</div>
+<div style="display:flex;gap:28px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="5">
+<div data-screen-label="1c clair {{ s.label }}" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 13px/1.3 system-ui,sans-serif;color:#2c2a26;max-width:390px">{{ s.label }}</div>
+<div style="width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 20px 50px rgba(0,0,0,.18)"><dc-import name="Direction-C" ecran="{{ s.id }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">Pour choisir, une phrase suffit : « je prends <a class="dv-oid" href="#1b">1b</a> » · « <a class="dv-oid" href="#1a">1a</a>, mais avec les fiches teintées de <a class="dv-oid" href="#1b">1b</a> » · « <a class="dv-oid" href="#1c">1c</a>, avec les icônes de rubrique ».</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      screens2: [
+        { id: 'aujourdhui', label: "Aujourd'hui · en cours de saisie, les rubriques remplies passent en pastilles" },
+        { id: 'humeur', label: 'Humeur du moment · un choix fait' },
+        { id: 'intensite', label: 'Épisode · étape Intensité' },
+        { id: 'analyse', label: "Analyse · haut de l'écran" },
+        { id: 'difficile', label: 'Moment difficile' }
+      ],
+      screens: [
+        { id: 'aujourdhui', label: "Aujourd'hui rempli · la saisie du soir tient sans défilement" },
+        { id: 'humeur', label: 'Humeur du moment · un choix fait' },
+        { id: 'intensite', label: 'Épisode · étape Intensité' },
+        { id: 'analyse', label: "Analyse · haut de l'écran" },
+        { id: 'difficile', label: 'Moment difficile' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

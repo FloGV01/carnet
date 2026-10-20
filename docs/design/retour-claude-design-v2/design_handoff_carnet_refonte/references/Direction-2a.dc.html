@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Lexend,system-ui,sans-serif;font-size:16px;line-height:1.35;font-variant-numeric:tabular-nums">
+<sc-if value="{{ isAuj }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;top:47px;left:0;right:0;bottom:147px;overflow:hidden">
+<div style="padding:0 8px 0 16px">
+<div style="display:flex;align-items:center;height:44px">
+<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px"><span style="font-weight:600;font-size:23px;line-height:30px;white-space:nowrap">Dimanche 18 octobre</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M6 9l6 6 6-6"></path></svg></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--act)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink2);opacity:.4"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 12px 0">
+<div style="height:34px;display:flex;align-items:center;gap:6px;padding:0 12px 0 9px;border-radius:10px;background:var(--lieu-f);color:var(--lieu-o);font-size:14px;font-weight:500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 10c0 5.5-7.5 11.5-7.5 11.5S4.5 15.5 4.5 10a7.5 7.5 0 0 1 15 0ZM12 7.2a2.8 2.8 0 1 0 0 5.6a2.8 2.8 0 1 0 0-5.6Z"></path></svg>Congé / repos</div>
+<div style="height:34px;display:flex;align-items:center;gap:6px;padding:0 12px 0 9px;border-radius:10px;background:var(--som-f);color:var(--som-o);font-size:14px;font-weight:500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>nuit moyen</div>
+<div style="height:34px;display:flex;align-items:center;gap:6px;padding:0 12px 0 9px;border-radius:10px;background:var(--con-f);color:var(--con-o);font-size:14px;font-weight:500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>contact oui</div>
+<div style="height:34px;display:flex;align-items:center;gap:6px;padding:0 12px 0 9px;border-radius:10px;background:var(--spo-f);color:var(--spo-o);font-size:14px;font-weight:500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0ZM20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0ZM16 17h4M4 13h4"></path></svg>sport oui</div>
+</div>
+</div>
+<div style="padding:0 12px;display:flex;flex-direction:column;gap:8px">
+<div style="background:var(--tra-t);border-radius:16px;padding:10px">
+<div style="display:flex;align-items:center;gap:10px;height:28px;margin-bottom:8px"><span style="width:28px;height:28px;border-radius:8px;background:var(--tra-f);color:var(--tra-o);display:flex;align-items:center;justify-content:center;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7ZM8.5 8.5l7 7"></path></svg></span><span style="font-weight:600;font-size:16px;color:var(--tra-i)">Traitement pris</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+<div style="height:48px;border-radius:12px;background:var(--tra-f);color:var(--tra-o);font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;font-size:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Oui</div>
+<div style="height:48px;border-radius:12px;background:var(--tra-t2);display:flex;align-items:center;justify-content:center;font-size:16px">Partiel</div>
+<div style="height:48px;border-radius:12px;background:var(--tra-t2);display:flex;align-items:center;justify-content:center;font-size:16px">Non</div>
+</div>
+</div>
+<div style="background:var(--pos-t);border-radius:16px;padding:10px">
+<div style="display:flex;align-items:center;gap:10px;height:28px;margin-bottom:8px"><span style="width:28px;height:28px;border-radius:8px;background:var(--pos-f);color:var(--pos-o);display:flex;align-items:center;justify-content:center;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10M10 20c5.5-2.5.8-6.4 3-10M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8ZM14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2Z"></path></svg></span><span style="font-weight:600;font-size:16px;color:var(--pos-i)">Mes points positifs</span></div>
+<div style="position:relative;background:var(--pos-t2);border-radius:12px;padding:9px 46px 9px 12px;font-size:16px;line-height:22px">Balade en fin d'après-midi, il faisait doux.<div style="position:absolute;right:2px;top:1px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--pos-i)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0v-6a3 3 0 0 0-3-3ZM18.5 10.5v.5a6.5 6.5 0 0 1-13 0v-.5M12 17.5v4"></path></svg></div></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+<div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 14px 0 12px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);font-weight:500;font-size:15px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10.5v3"></path></svg>Mémo vocal</div>
+<div style="height:44px;display:flex;align-items:center;gap:7px;padding:0 14px 0 12px;border-radius:12px;border:1.5px solid var(--act);color:var(--act);font-weight:600;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5 5-5M7 20l5-5 5 5"></path></svg>J'ai fini pour ce soir</div>
+</div>
+<div style="background:var(--sf);border:1px solid var(--ln);border-radius:16px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;padding:0 10px 0 14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--som)"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg><div style="flex:1;min-width:0;line-height:1.25"><div style="font-weight:500">Nuit en détail</div><div style="font-size:14px;color:var(--ink2)">23:20 → 08:40 · 1 réveil</div></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;padding:0 10px 0 14px;border-top:1px solid var(--ln)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ene)"><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1ZM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1ZM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg><div style="flex:1;min-width:0;line-height:1.25"><div style="font-weight:500">Ce qui a pesé · ce qui a rechargé</div><div style="font-size:14px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">pesé : monde, attente · rechargé : dehors / nature</div></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;padding:0 10px 0 14px;border-top:1px solid var(--ln)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--spo)"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0ZM20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0ZM16 17h4M4 13h4"></path></svg><div style="flex:1;min-width:0;line-height:1.25"><div style="font-weight:500">Sport en détail</div><div style="font-size:14px;color:var(--ink2)">Marche 30 à 60 min</div></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;padding:0 10px 0 14px;border-top:1px solid var(--ln)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--con)"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><div style="flex:1;min-width:0;line-height:1.25"><div style="font-weight:500">Contact en détail</div><div style="font-size:14px;color:var(--ink2)">Famille (Ressourçant)</div></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+</div>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:83px;height:64px;padding:8px 12px;display:flex;gap:6px;background:var(--bg)">
+<div style="flex:none;width:114px;height:48px;border-radius:12px;background:var(--dif-t2);display:flex;align-items:center;gap:8px;padding:0 8px 0 11px;font-weight:600;font-size:13px;line-height:1.1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--dif-i)"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18ZM12 7.5a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9Z"></path></svg><span>Moment<br>difficile</span></div>
+<div style="flex:1.2;min-width:0;height:48px;border-radius:12px;background:var(--hum-f);color:var(--hum-o);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:16px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M2 9.5c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3M2 17.5c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3"></path></svg>Humeur</div>
+<div style="flex:1;min-width:0;height:48px;border-radius:12px;background:var(--act);color:var(--act-on);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;font-size:16px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 5v14M5 12h14"></path></svg>Épisode</div>
+</div>
+</sc-if>
+<sc-if value="{{ isHum }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+<div style="position:absolute;top:0;left:0;right:0;height:162px;background:var(--hum-t);border-radius:0 0 26px 26px"></div>
+<div style="position:relative;padding-top:47px">
+<div style="display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 14px 0 10px">
+<div style="display:flex;align-items:center;gap:6px;height:44px;padding:0 6px;color:var(--act);font-weight:600;font-size:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>Fermer</div>
+<div style="display:flex;align-items:center;gap:6px;height:40px;padding:0 10px 0 14px;border-radius:12px;background:var(--hum-t2);font-size:15px;font-weight:500">Maintenant<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+</div>
+<div style="padding:8px 16px 0;display:flex;align-items:center;gap:12px"><span style="width:36px;height:36px;border-radius:10px;background:var(--hum-f);color:var(--hum-o);display:flex;align-items:center;justify-content:center;flex:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3M2 17.5c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3"></path></svg></span><span style="font-weight:600;font-size:25px;line-height:32px">Humeur du moment</span></div>
+<div style="margin:26px 12px 0;background:var(--sf);border:1px solid var(--ln);border-radius:16px;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px 0 14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink2)"><path d="M9 2.5h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1ZM16 4.5h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h2"></path></svg><span style="flex:1;font-weight:500">Ce que je faisais</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="margin:20px 16px 8px;font-size:12.5px;font-weight:600;letter-spacing:.07em;color:var(--ink2)">AUJOURD'HUI</div>
+<div style="margin:0 12px;background:var(--sf);border:1px solid var(--ln);border-radius:16px;overflow:hidden">
+<div style="display:flex;align-items:center;height:48px;padding:0 4px 0 14px;gap:8px"><span style="width:70px;flex:none;color:var(--ink2);font-size:15px">10:20</span><span style="flex:1;font-size:15px">humeur 6 · énergie moyenne</span><div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></div></div>
+<div style="display:flex;align-items:center;height:48px;padding:0 4px 0 14px;gap:8px;border-top:1px solid var(--ln)"><span style="width:70px;flex:none;color:var(--ink2);font-size:15px">vers 12 h</span><span style="flex:1;font-size:15px">humeur 5 · énergie basse</span><div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></div></div>
+<div style="display:flex;align-items:center;height:48px;padding:0 4px 0 14px;gap:8px;border-top:1px solid var(--ln)"><span style="width:70px;flex:none;color:var(--ink2);font-size:15px">17:45</span><span style="flex:1;font-size:15px">humeur 5 · énergie moyenne</span><div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></div></div>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 12px 42px;background:var(--sf);border-radius:24px 24px 0 0;box-shadow:0 -1px 0 var(--ln)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 10px"><span style="font-weight:600;font-size:17px;color:var(--hum-i)">Humeur</span><span style="font-size:13.5px;color:var(--ink2)">1 = au plus bas, 10 = au plus haut</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px">
+<sc-for list="{{ ten }}" as="n" hint-placeholder-count="10"><sc-if value="{{ n.un }}" hint-placeholder-val="{{ true }}"><div style="height:56px;border-radius:12px;background:var(--hum-t2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500">{{ n.v }}</div></sc-if><sc-if value="{{ n.sel }}" hint-placeholder-val="{{ false }}"><div style="height:56px;border-radius:12px;background:var(--hum-f);color:var(--hum-o);display:flex;align-items:center;justify-content:center;gap:4px;font-size:20px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>{{ n.v }}</div></sc-if></sc-for>
+</div>
+<div style="padding:16px 4px 10px;font-weight:600;font-size:17px;color:var(--hum-i)">Énergie</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+<div style="height:52px;border-radius:12px;background:var(--hum-t2);display:flex;align-items:center;justify-content:center">Basse</div>
+<div style="height:52px;border-radius:12px;background:var(--hum-t2);display:flex;align-items:center;justify-content:center">Moyenne</div>
+<div style="height:52px;border-radius:12px;background:var(--hum-t2);display:flex;align-items:center;justify-content:center">Haute</div>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isInt }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+<div style="position:absolute;top:0;left:0;right:0;height:146px;background:var(--epi-t);border-radius:0 0 26px 26px"></div>
+<div style="position:relative;padding-top:47px">
+<div style="display:flex;align-items:center;height:48px;padding:0 18px 0 10px;gap:6px">
+<div style="display:flex;align-items:center;gap:6px;height:44px;padding:0 6px;color:var(--act);font-weight:600;font-size:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>Fermer</div>
+<div style="flex:1;font-weight:600;font-size:16px;padding-left:6px;color:var(--epi-i)">Épisode</div>
+<div style="display:flex;gap:7px;align-items:center"><span style="width:10px;height:10px;border-radius:5px;background:var(--epi-f)"></span><span style="width:10px;height:10px;border-radius:5px;background:var(--epi-f)"></span><span style="width:10px;height:10px;border-radius:5px;background:var(--epi-f);box-shadow:0 0 0 3px var(--epi-t2)"></span><span style="width:10px;height:10px;border-radius:5px;border:1.5px solid var(--epi-i)"></span><span style="width:10px;height:10px;border-radius:5px;border:1.5px solid var(--epi-i)"></span></div>
+</div>
+<div style="padding:0 14px 0 16px;display:flex;align-items:center">
+<div style="display:flex;align-items:center;gap:4px;height:44px;color:var(--ink2);font-size:15px">Aujourd'hui · 21:00<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+<div style="margin-left:auto;display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border-radius:12px;background:var(--epi-t2);font-weight:600;font-size:15px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3ZM9 3.5v14M15 6.5v14"></path></svg>Mon plan</div>
+</div>
+</div>
+<div style="position:relative;margin:24px 12px 0;padding:14px 16px;background:var(--sf);border:1px solid var(--ln);border-radius:16px;font-size:16.5px;line-height:1.5;color:var(--ink2);text-wrap:pretty">Ça a démarré avec <span style="color:var(--epi-i);font-weight:600">Imprévu / changement</span>, ça ressemblait à <span style="color:var(--epi-i);font-weight:600">frustration</span>.</div>
+<div style="position:absolute;left:0;right:0;bottom:92px;padding:0 12px">
+<div style="padding:0 4px 14px"><div style="font-weight:600;font-size:29px;line-height:36px">Intensité</div><div style="font-size:14.5px;color:var(--ink2);margin-top:2px">1 = à peine, 10 = maximum</div></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px"><sc-for list="{{ tenI }}" as="n" hint-placeholder-count="10"><div style="height:64px;border-radius:14px;background:var(--epi-t2);display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:500">{{ n.v }}</div></sc-for></div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:34px;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-top:1px solid var(--ln)">
+<div style="display:flex;align-items:center;gap:4px;height:44px;padding:0 8px;color:var(--act);font-weight:600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>Retour</div>
+<div style="display:flex;align-items:center;gap:4px;height:44px;padding:0 8px;color:var(--act);font-weight:600">Passer<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isAna }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:47px;left:0;right:0;bottom:83px;overflow:hidden;padding:4px 12px 0">
+<div style="padding:0 4px;font-weight:600;font-size:30px;line-height:38px">Analyse</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px">
+<div style="background:var(--exp-t);border-radius:14px;height:76px;padding:11px 10px 10px 12px;display:flex;flex-direction:column;justify-content:space-between"><div style="display:flex;justify-content:space-between;align-items:center"><span style="width:22px;height:9px;border-radius:3px;background:var(--exp)"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--exp-i)"><path d="M9 18l6-6-6-6"></path></svg></div><span style="font-weight:600;font-size:15px;color:var(--exp-i)">Explosions</span></div>
+<div style="background:var(--ene-t);border-radius:14px;height:76px;padding:11px 10px 10px 12px;display:flex;flex-direction:column;justify-content:space-between"><div style="display:flex;justify-content:space-between;align-items:center"><span style="width:11px;height:11px;border-radius:6px;background:var(--ene)"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ene-i)"><path d="M9 18l6-6-6-6"></path></svg></div><span style="font-weight:600;font-size:15px;color:var(--ene-i)">Énergie</span></div>
+<div style="background:var(--som-t);border-radius:14px;height:76px;padding:11px 10px 10px 12px;display:flex;flex-direction:column;justify-content:space-between"><div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;gap:2px"><span style="width:7px;height:11px;border-radius:2px;background:var(--som1)"></span><span style="width:7px;height:11px;border-radius:2px;background:var(--som2)"></span><span style="width:7px;height:11px;border-radius:2px;background:var(--som3)"></span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--som-i)"><path d="M9 18l6-6-6-6"></path></svg></div><span style="font-weight:600;font-size:15px;color:var(--som-i)">Rythmes</span></div>
+</div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+<div style="height:44px;border-radius:12px;background:var(--act);color:var(--act-on);font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;font-size:15px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>7 j</div>
+<div style="height:44px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:15px">30 j</div>
+<div style="height:44px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:15px">3 mois</div>
+<div style="height:44px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:15px">Tout</div>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin:18px 4px 10px"><span style="font-weight:600;font-size:18px">Ma semaine</span><span style="font-size:13.5px;color:var(--ink2)">12 – 18 oct.</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+<div style="background:var(--hum-t);border-radius:14px;padding:10px 12px"><div style="font-size:13.5px;font-weight:500;color:var(--hum-i)">humeur moyenne</div><div style="display:flex;align-items:baseline;gap:8px;color:var(--hum-i)"><span style="font-weight:600;font-size:34px;line-height:42px">5,8</span><span style="font-size:13px">de 4 à 8</span></div></div>
+<div style="background:var(--som-t);border-radius:14px;padding:10px 12px"><div style="font-size:13.5px;font-weight:500;color:var(--som-i)">nuits Mal</div><div style="font-weight:600;font-size:34px;line-height:42px;color:var(--som-i)">3</div></div>
+<div style="background:var(--exp-t);border-radius:14px;padding:10px 12px"><div style="font-size:13.5px;font-weight:500;color:var(--exp-i)">explosions</div><div style="font-weight:600;font-size:34px;line-height:42px;color:var(--exp-i)">0</div></div>
+<div style="background:var(--epi-t);border-radius:14px;padding:10px 12px"><div style="font-size:13.5px;font-weight:500;color:var(--epi-i)">épisodes</div><div style="font-weight:600;font-size:34px;line-height:42px;color:var(--epi-i)">3</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;height:48px;margin-top:2px;padding:0 4px"><span style="width:26px;height:26px;border-radius:8px;background:var(--pos-f);color:var(--pos-o);display:flex;align-items:center;justify-content:center;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10M10 20c5.5-2.5.8-6.4 3-10M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8ZM14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2Z"></path></svg></span><span style="flex:1;font-weight:500">Tes points positifs</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="margin-top:4px;background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:12px 14px">
+<div style="font-weight:600;font-size:17px;margin-bottom:6px">Mes jours</div>
+<div style="display:grid;grid-template-columns:82px repeat(7,36px);align-items:center;height:20px;font-size:12px;color:var(--ink2)"><span></span><span style="text-align:center">L</span><span style="text-align:center">M</span><span style="text-align:center">M</span><span style="text-align:center">J</span><span style="text-align:center">V</span><span style="text-align:center">S</span><span style="text-align:center">D</span></div>
+<div style="display:flex;align-items:center"><div style="width:82px;flex:none;font-size:13px;font-weight:600;color:var(--hum-i);line-height:1.2">Humeur<br><span style="font-size:11.5px;font-weight:400;color:var(--ink2)">1 à 10</span></div>
+<svg width="252" height="64" viewBox="0 0 252 64" style="display:block;flex:none"><path d="M0 6H252M0 58H252" stroke="currentColor" stroke-width="1" style="color:var(--ln)"></path><g stroke="currentColor" stroke-width="3" stroke-linecap="round" style="color:var(--hum)" opacity=".45"><path d="M18 40.7V34.9M54 40.7V29.1M90 29.1V17.6M126 29.1V23.3M162 34.9V23.3M198 34.9V23.3M234 34.9V29.1"></path></g><g fill="currentColor" style="color:var(--hum)"><circle cx="18" cy="37.2" r="5"></circle><circle cx="54" cy="36.6" r="5"></circle><circle cx="90" cy="23.3" r="5"></circle><circle cx="126" cy="25.1" r="5"></circle><circle cx="162" cy="27.4" r="5"></circle><circle cx="198" cy="29.1" r="5"></circle><circle cx="234" cy="33.2" r="5"></circle></g></svg></div>
+<div style="display:grid;grid-template-columns:82px repeat(7,36px);align-items:center;height:28px"><span style="font-size:13px;font-weight:600;color:var(--som-i)">Nuits</span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som2)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som1)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som3)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som1)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som2)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som1)"></span><span style="justify-self:center;width:24px;height:14px;border-radius:4px;background:var(--som2)"></span></div>
+<div style="display:grid;grid-template-columns:82px repeat(7,36px);align-items:center;height:28px"><span style="font-size:13px;font-weight:600;color:var(--epi-i)">Épisodes</span><span></span><span style="justify-self:center;width:10px;height:10px;border-radius:5px;background:var(--epi)"></span><span></span><span style="justify-self:center;width:10px;height:10px;border-radius:5px;background:var(--epi)"></span><span></span><span></span><span style="justify-self:center;width:10px;height:10px;border-radius:5px;background:var(--epi)"></span></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isDif }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+<div style="position:absolute;top:0;left:0;right:0;height:104px;background:var(--dif-t);border-radius:0 0 26px 26px"></div>
+<div style="position:relative;padding-top:47px">
+<div style="display:flex;align-items:center;height:48px;padding:0 18px 0 10px;gap:6px">
+<div style="display:flex;align-items:center;gap:6px;height:44px;padding:0 6px;color:var(--act);font-weight:600;font-size:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>Fermer</div>
+<div style="font-weight:600;font-size:16px;padding-left:6px;color:var(--dif-i)">Moment difficile</div>
+</div>
+<div style="margin:18px 12px 0;background:var(--sf);border:1px solid var(--ln);border-radius:22px;padding:20px 20px 16px;display:flex;flex-direction:column;align-items:center">
+<div style="width:140px;height:140px;border-radius:70px;background:var(--dif-t2);box-shadow:inset 0 0 0 2px var(--dif);display:flex;align-items:center;justify-content:center"><div style="width:76px;height:76px;border-radius:38px;background:var(--dif-t)"></div></div>
+<div style="margin-top:14px;font-weight:600;font-size:20px;line-height:26px;text-align:center">Cohérence cardiaque</div>
+<div style="margin-top:10px;display:flex;gap:6px">
+<div style="height:44px;padding:0 12px 0 16px;border-radius:12px;background:var(--dif-t2);display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500">5 minutes<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+<div style="height:44px;padding:0 12px 0 16px;border-radius:12px;background:var(--dif-t2);display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500">5 s · 5 s<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+</div>
+<div style="margin-top:14px;height:52px;padding:0 28px 0 24px;border-radius:14px;background:var(--dif-f);color:var(--dif-o);display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18ZM12 7.5a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9Z"></path></svg>Commencer</div>
+</div>
+<div style="margin:6px 12px 0;background:var(--sf);border:1px solid var(--ln);border-radius:16px;height:54px;display:flex;align-items:center;padding:0 12px 0 18px"><span style="flex:1;font-size:16.5px;font-weight:600">Une chose à la fois</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink2)"><path d="M9 18l6-6-6-6"></path></svg></div>
+<div style="margin:6px 12px 0;background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:8px 12px 14px 16px">
+<div style="display:flex;align-items:center;gap:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--dif-i)"><path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3ZM9 3.5v14M15 6.5v14"></path></svg><span style="flex:1;font-weight:600;font-size:19px">Mon plan</span><span style="color:var(--act);font-weight:600;font-size:15.5px;height:44px;display:flex;align-items:center;padding:0 4px">Modifier</span></div>
+<div style="font-size:12px;font-weight:600;letter-spacing:.07em;color:var(--dif-i)">MES PREMIERS SIGNES</div>
+<div style="font-size:17px;line-height:1.5;margin-top:3px;text-wrap:pretty">Mâchoire serrée, je parle plus vite, les bruits deviennent insupportables.</div>
+<div style="font-size:12px;font-weight:600;letter-spacing:.07em;color:var(--dif-i);margin-top:12px">QUAND ÇA MONTE, JE…</div>
+<div style="font-size:17px;line-height:1.5;margin-top:3px;text-wrap:pretty">Je m'éloigne cinq minutes. Je bois un verre d'eau. Je respire lentement.</div>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:90px;padding:0 14px 34px;background:var(--bg);border-top:1px solid var(--ln);display:flex;align-items:center">
+<div style="display:flex;align-items:center;gap:8px;height:48px;padding:0 4px;color:var(--act);font-weight:600;font-size:16.5px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Noter un épisode</div>
+</div>
+</div>
+</sc-if>
+<div style="position:absolute;top:0;left:0;right:0;height:47px;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:4px 28px 0 40px;font-weight:600;font-size:15.5px"><span>21:04</span><svg width="70" height="12" viewBox="0 0 70 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0.5" width="3" height="11.5" rx="1"></rect><path d="M31 3.6a10 10 0 0 1 13 0l-1.5 1.6a7.8 7.8 0 0 0-10 0zM33.5 6.3a6.2 6.2 0 0 1 8 0l-1.5 1.6a4 4 0 0 0-5 0zM36 9a2.3 2.3 0 0 1 3 0l-1.5 1.6z"></path><rect x="49.5" y="0.5" width="18" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".5"></rect><rect x="51.5" y="2.5" width="12" height="7" rx="1.6"></rect><rect x="68.5" y="4" width="1.5" height="4" rx=".7" opacity=".5"></rect></svg></div>
+<sc-if value="{{ tabsOn }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:var(--sf);border-top:1px solid var(--ln);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:5px 2px 0">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink)"><div style="width:56px;height:30px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.d }}"></path></svg></div><span style="font-size:11px;font-weight:700">{{ t.l }}</span></div></sc-if>
+<sc-if value="{{ t.off }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink2)"><div style="width:56px;height:30px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.d }}"></path></svg></div><span style="font-size:11px;font-weight:400">{{ t.l }}</span></div></sc-if>
+</sc-for>
+</div>
+</sc-if>
+<div style="position:absolute;left:128px;bottom:8px;width:134px;height:5px;border-radius:3px;background:var(--ink);z-index:6"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;ecran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;aujourdhui&quot;,&quot;humeur&quot;,&quot;intensite&quot;,&quot;analyse&quot;,&quot;difficile&quot;],&quot;default&quot;:&quot;aujourdhui&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const e = this.props.ecran ?? 'aujourdhui';
+    const tabs = [
+      { l: "Aujourd'hui", k: 'aujourdhui', d: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20' },
+      { l: 'Analyse', k: 'analyse', d: 'M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3' },
+      { l: 'Historique', k: 'h', d: 'M12 2.5a9.5 9.5 0 1 0 0 19a9.5 9.5 0 1 0 0-19ZM12 6.5V12l3.5 2' },
+      { l: 'Soins', k: 's', d: 'M5.5 4.5h13A2.5 2.5 0 0 1 21 7v12a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 19V7a2.5 2.5 0 0 1 2.5-2.5ZM16 2.5v4M8 2.5v4M3 10h18' },
+      { l: 'Réglages', k: 'r', d: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5' }
+    ].map(t => ({ ...t, on: t.k === e, off: t.k !== e }));
+    const ten = Array.from({ length: 10 }, (_, i) => ({ v: i + 1, sel: i === 5, un: i !== 5 }));
+    const tenI = Array.from({ length: 10 }, (_, i) => ({ v: i + 1 }));
+    return { isAuj: e === 'aujourdhui', isHum: e === 'humeur', isInt: e === 'intensite', isAna: e === 'analyse', isDif: e === 'difficile', tabsOn: e === 'aujourdhui' || e === 'analyse', tabs, ten, tenI };
+  }
+}
+</script>
+</body>
+</html>
