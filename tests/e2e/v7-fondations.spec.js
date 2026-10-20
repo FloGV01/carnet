@@ -245,7 +245,7 @@ test('un toucher ne déplace pas les voisins : Sommeil, Traitement pris, « C\'�
 
   // « C'était vers… » : choisir 14 h retire la coche de « Maintenant » ; ni la 1re rangée ni la 2e ne glissent.
   await aller(page, '#/moment');
-  const vue = page.getByRole('dialog', { name: 'Humeur du moment' });
+  const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
   await vue.locator('.ligne-date > .btn-lien').click();
   const vers = vue.getByRole('group', { name: 'C\'était vers…' });
   await expect(vers.getByRole('button', { name: 'Maintenant', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -285,7 +285,7 @@ test('boutons à coche faits à la main, en clair et en sombre : « C\'était ve
     await page.emulateMedia({ colorScheme: schema });
     // « C'était vers… », en couleur Humeur ; « Maintenant » est choisi tant qu'aucune heure ne l'est.
     await aller(page, '#/moment');
-    const vue = page.getByRole('dialog', { name: 'Humeur du moment' });
+    const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
     const bouton = vue.locator('.ligne-date > .btn-lien');
     if (await bouton.getAttribute('aria-expanded') !== 'true') await bouton.click();
     const vers = vue.getByRole('group', { name: 'C\'était vers…' });

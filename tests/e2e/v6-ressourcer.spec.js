@@ -3,8 +3,8 @@ import { viderBase, aller } from '../aides/saisie.js';
 import { espionnerAudio, audio } from '../aides/audio.js';
 
 // v6 · « Me ressourcer » (spec §5) : la règle, éteinte au départ. Quand l'utilisateur note lui-même, maintenant,
-// une énergie basse, « Pour récupérer, je… » s'affiche tel qu'écrit sous les choix de l'Humeur du moment et l'écran
-// ne se ferme pas seul. L'écran « Me ressourcer » est parti en v6.1 (P14) : la carte et la règle restent. Rien
+// une énergie basse, « Pour récupérer, je… » s'affiche tel qu'écrit dans l'Émotion du moment (v7 : juste au-dessus
+// du panneau des réponses) et l'écran ne se ferme pas seul. L'écran « Me ressourcer » est parti en v6.1 (P14) : la carte et la règle restent. Rien
 // n'est calculé, compté ni gardé.
 // Mots inventés pour le test (jamais de donnée réelle).
 test.beforeEach(async ({ page }) => {
@@ -20,22 +20,24 @@ const lireRegle = (page) => page.evaluate(() => window.__carnet.repo.meta.lire('
 const ecrireRespiration = (page, valeur) => page.evaluate((v) => window.__carnet.repo.meta.ecrire('respiration', v), valeur);
 const releves = (page) => () => page.evaluate(() => window.__carnet.repo.humeurs.tous());
 
-const vueMoment = (page) => page.getByRole('dialog', { name: 'Humeur du moment' });
+const vueMoment = (page) => page.getByRole('dialog', { name: 'Émotion du moment' });
 const carte = (vue) => vue.getByRole('region', { name: 'Pour récupérer, je…' });
-const humeur = (vue, n) => vue.getByRole('button', { name: `Humeur ${n}`, exact: true });
+// Une famille de la roue (v7) : la toucher la choisit et montre ses mots, sans fermer l'écran ; un mot le peut.
+const famille = (vue, nom) => vue.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: nom, exact: true });
+const mot = (vue, nom, fam) => vue.getByRole('button', { name: `${nom}, famille ${fam}`, exact: true });
 const energie = (vue, nom) => vue.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: nom });
 const respirer = (zone) => zone.getByRole('button', { name: 'Respirer', exact: true });
-const noteeUneFois = (page) => page.getByText('Humeur du moment notée');
+const noteeUneFois = (page) => page.getByText('Émotion du moment notée');
 const ouvrirMoment = async (page) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
-  await expect(humeur(vue, 1)).toBeVisible();
+  await expect(famille(vue, 'Colère')).toBeVisible();
   return vue;
 };
-// Note une humeur et une énergie « basse », maintenant.
+// Note une émotion (une famille) et une énergie « basse », maintenant.
 const noterBasse = async (page) => {
   const vue = await ouvrirMoment(page);
-  await humeur(vue, 4).click();
+  await famille(vue, 'Tristesse').click();
   await energie(vue, 'Basse').click();
   return vue;
 };
@@ -46,34 +48,38 @@ const seFermeSeul = async (page) => {
   await expect(noteeUneFois(page)).toBeVisible();
 };
 
-// ---------- La règle, sur l'écran Humeur du moment ----------
+// ---------- La règle, sur l'écran Émotion du moment ----------
 
-test('règle allumée : une énergie basse notée maintenant affiche la liste sous les choix, l\'écran reste ouvert, ✕ le ferme', async ({ page }) => {
+test('règle allumée : une énergie basse notée maintenant affiche la liste au-dessus des réponses, l\'écran reste ouvert, ✕ le ferme', async ({ page }) => {
   await ecrirePlan(page);
   await ecrireRegle(page);
   const vue = await ouvrirMoment(page);
   // Aucune invitation tant que rien n'est noté.
   await expect(carte(vue)).toHaveCount(0);
-  await humeur(vue, 3).click();
+  await famille(vue, 'Peur').click();
   await expect(carte(vue)).toHaveCount(0);
+  const groupeEnergie = vue.getByRole('group', { name: 'Énergie' });
+  const avant = await groupeEnergie.boundingBox();
   await energie(vue, 'Basse').click();
 
-  // La liste est affichée telle qu'écrite, sous les choix, sans défiler.
+  // La liste est affichée telle qu'écrite, entière, sans avoir à défiler (le corps de l'écran s'y cale), juste
+  // au-dessus du panneau des réponses (v7) ; rien ne bouge sous le pouce.
   await expect(carte(vue)).toBeVisible();
   await expect(carte(vue)).toContainText('je m\'allonge');
   await expect(carte(vue)).toContainText('je ferme les yeux');
   await expect(respirer(carte(vue))).toBeVisible();
-  await expect(carte(vue)).toBeInViewport();
-  const choix = await vue.getByRole('group', { name: 'Énergie' }).boundingBox();
+  await expect(carte(vue)).toBeInViewport({ ratio: 1 });
+  const panneau = await vue.getByRole('region', { name: 'Réponses' }).boundingBox();
   const boite = await carte(vue).boundingBox();
-  expect(boite.y).toBeGreaterThanOrEqual(choix.y + choix.height);
+  expect(boite.y + boite.height).toBeLessThanOrEqual(panneau.y);
+  expect(await groupeEnergie.boundingBox()).toEqual(avant);
 
-  // Humeur et énergie sont choisies, bien au-delà des 250 ms de la fermeture : l'écran reste là.
+  // Émotion et énergie sont choisies, bien au-delà des 250 ms de la fermeture : l'écran reste là.
   await page.waitForTimeout(700);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue).toBeVisible();
   await expect(noteeUneFois(page)).toHaveCount(0);
-  await expect.poll(releves(page)).toMatchObject([{ humeur: 3, energie: 'energie:basse', vers: null }]);
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:peur', energie: 'energie:basse', vers: null }]);
 
   // ✕ ferme l'écran et dit que le relevé est noté.
   await vue.getByRole('button', { name: 'Fermer' }).click();
@@ -91,8 +97,8 @@ test('règle allumée : l\'énergie seule suffit, la carte suit l\'énergie choi
   const vue = await ouvrirMoment(page);
   await energie(vue, 'Basse').click();
   await expect(carte(vue)).toBeVisible();
-  await expect.poll(releves(page)).toMatchObject([{ humeur: null, energie: 'energie:basse', vers: null }]);
-  // Une autre énergie retire la carte ; l'écran ne se ferme pas (l'humeur manque), sans rien dire.
+  await expect.poll(releves(page)).toMatchObject([{ emotion: null, humeur: null, energie: 'energie:basse', vers: null }]);
+  // Une autre énergie retire la carte ; l'écran ne se ferme pas (l'émotion manque), sans rien dire.
   await energie(vue, 'Moyenne').click();
   await expect(carte(vue)).toHaveCount(0);
   await expect(vue).not.toContainText('Pour récupérer');
@@ -103,11 +109,15 @@ test('règle allumée : l\'énergie seule suffit, la carte suit l\'énergie choi
   await expect(carte(vue)).toBeVisible();
   await energie(vue, 'Basse').click();
   await expect(carte(vue)).toHaveCount(0);
-  // Une autre énergie avec l'humeur : l'écran se ferme seul, comme avant.
+  // Une autre énergie avec l'émotion : l'écran se ferme seul, comme avant. Une famille touchée montre ses mots et
+  // l'écran les attend ; le mot touché, il se ferme.
   await energie(vue, 'Basse').click();
   await expect(carte(vue)).toBeVisible();
   await energie(vue, 'Haute').click();
-  await humeur(vue, 6).click();
+  await famille(vue, 'Joie').click();
+  await page.waitForTimeout(500);
+  await expect(page).toHaveURL(/#\/moment$/);
+  await mot(vue, 'Amusé', 'Joie').click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(noteeUneFois(page)).toBeVisible();
 });
@@ -117,7 +127,7 @@ test('règle éteinte, par défaut : une énergie basse ne change rien, l\'écra
   const vue = await noterBasse(page);
   await expect(carte(vue)).toHaveCount(0);
   await seFermeSeul(page);
-  await expect.poll(releves(page)).toMatchObject([{ humeur: 4, energie: 'energie:basse' }]);
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse', energie: 'energie:basse' }]);
   // Rien n'est écrit tant que rien n'est réglé.
   expect(await lireRegle(page)).toBeNull();
 });
@@ -136,11 +146,11 @@ test('règle allumée, un relevé « vers » : jamais de carte, même avec une �
   const vue = await ouvrirMoment(page);
   await vue.getByRole('button', { name: 'Maintenant' }).click();
   await vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: '14 h', exact: true }).click();
-  await humeur(vue, 5).click();
+  await famille(vue, 'Surprise').click();
   await energie(vue, 'Basse').click();
   await expect(carte(vue)).toHaveCount(0);
   await seFermeSeul(page);
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '14:00', vers: true, humeur: 5, energie: 'energie:basse' }]);
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '14:00', vers: true, emotion: 'roue:surprise', energie: 'energie:basse' }]);
 });
 
 test('règle allumée : passer de « maintenant » à « vers » retire la carte, et inversement', async ({ page }) => {
@@ -187,10 +197,10 @@ test('règle allumée : lecture du réglage ou du plan impossible, l\'écran se 
   await seFermeSeul(page);
 });
 
-test('✕ touché dans les 250 ms de la fermeture automatique : « Humeur du moment notée » une seule fois', async ({ page }) => {
+test('✕ touché dans les 250 ms de la fermeture automatique : « Émotion du moment notée » une seule fois', async ({ page }) => {
   const vue = await ouvrirMoment(page);
-  await humeur(vue, 6).click();
-  await expect.poll(releves(page)).toMatchObject([{ humeur: 6 }]);
+  await famille(vue, 'Sérénité').click();
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:serenite' }]);
   await page.evaluate(() => {
     // L'écriture du second choix est retenue : la fermeture automatique (250 ms) sera programmée mais n'aura pas
     // encore sonné quand ✕ est touché, et l'écran attend la fin de l'écriture.
@@ -198,9 +208,9 @@ test('✕ touché dans les 250 ms de la fermeture automatique : « Humeur du mom
     const modifierVraiment = humeurs.modifier;
     const retenue = new Promise((ok) => { window.__ouvrirEcriture = ok; });
     humeurs.modifier = async (...args) => { await retenue; return modifierVraiment(...args); };
-    // Chaque message « Humeur du moment notée » a son propre identifiant : on les compte.
+    // Chaque message « Émotion du moment notée » a son propre identifiant : on les compte.
     window.__messages = new Set();
-    window.__carnet.etatApp.abonner((e) => { if (e.toast && e.toast.texte === 'Humeur du moment notée') window.__messages.add(e.toast.id); });
+    window.__carnet.etatApp.abonner((e) => { if (e.toast && e.toast.texte === 'Émotion du moment notée') window.__messages.add(e.toast.id); });
   });
   // L'horloge s'arrête : aucun délai ne sonne avant qu'on le décide.
   await page.clock.pauseAt(new Date(2026, 9, 15, 20, 31));
@@ -213,7 +223,7 @@ test('✕ touché dans les 250 ms de la fermeture automatique : « Humeur du mom
   await expect(noteeUneFois(page)).toBeVisible();
   await page.clock.runFor(400);
   expect(await page.evaluate(() => window.__messages.size)).toBe(1);
-  await expect.poll(releves(page)).toMatchObject([{ humeur: 6, energie: 'energie:moyenne' }]);
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:serenite', energie: 'energie:moyenne' }]);
 });
 
 // ---------- « Respirer » : la respiration sur place, démarrée aussitôt, son préparé dans le toucher ----------
