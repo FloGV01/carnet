@@ -16,6 +16,8 @@ async function baseSaine() {
   await repo.traitements.creer({ date: '2026-09-30', changement: 'inventé' });
   const rdv = await repo.rdv.creer({ date: '2026-10-02', professionnel: 'professionnel:psychiatre' });
   await repo.humeurs.creer({ date: '2026-09-30', heure: '12:00', humeur: 5 });
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '15:00', emotion: 'roue:colere:irrite', energie: 'energie:moyenne' });
+  await repo.seances.creer({ date: '2026-09-30', heure: '17:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
   await repo.audios.creer(memo('journal', '2026-09-30'));
   await repo.audios.creer(memo('episodes', ep.id));
   await repo.audios.creer(memo('symptomes', sy.id));
@@ -33,6 +35,8 @@ test('base saine : un nombre par table, aucun mémo sans fiche, aucune fiche ill
   assert.equal(res.parTable.journal, 2);
   assert.equal(res.parTable.episodes, 1);
   assert.equal(res.parTable.audios, 4);
+  assert.equal(res.parTable.humeurs, 2);
+  assert.equal(res.parTable.seances, 1, 'v7 : les séances sont comptées');
   assert.ok(res.parTable.listes > 0, 'les listes par défaut sont comptées');
 });
 
@@ -108,12 +112,15 @@ test('les différentes façons d\'être illisible, dans chaque table de saisie',
     symptomes: [{ id: 'sy_1', date: '2026-09-30', intensite: 'forte' }],
     traitements: [{ id: 'tr_1', date: '2026-09-30', effetsSecondaires: 'fatigue' }],
     rdv: [{ id: 'rdv_1', heure: '25:99' }],
-    humeurs: [{ id: 'hu_1', date: '2026-09-30', heure: '12:00', humeur: 3.5 }],
+    humeurs: [{ id: 'hu_1', date: '2026-09-30', heure: '12:00', humeur: 3.5 }, { id: 'hu_2', date: '2026-09-30', heure: '13:00', emotion: 'roue:colere:inconnu' }],
+    seances: [{ id: 'se_1', date: '2026-09-30', heure: '12:00', origine: 'ailleurs' }, { id: 'se_2', date: '2026-09-30', heure: '12:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' }],
     listes: [{ id: 'lieu:x', liste: 'lieu', libelle: 'Libellé qui n\'est pas une fiche' }],
     meta: [{ cle: 'inconnue', valeur: 1 }],
   });
-  // journal 2, épisodes 3, symptômes 1, traitements 1, rendez-vous 1 (heure), humeurs 1. Listes et méta ne sont pas des fiches.
-  assert.equal(res.fichesIllisibles, 9);
+  // journal 2, épisodes 3, symptômes 1, traitements 1, rendez-vous 1 (heure), humeurs 2 (note, émotion inconnue),
+  // séances 1 (origine). Listes et méta ne sont pas des fiches.
+  assert.equal(res.fichesIllisibles, 11);
+  assert.equal(res.parTable.seances, 2);
   assert.equal(res.parTable.listes, 1);
   assert.equal(res.parTable.meta, 1);
 });

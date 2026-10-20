@@ -19,6 +19,7 @@ function phraseContenu(r) {
   if (r.rdv) morceaux.push(pluriel(r.rdv, 'rendez-vous', 'rendez-vous'));
   if (r.humeurs) morceaux.push(pluriel(r.humeurs, "relevé d'humeur du moment", "relevés d'humeur du moment"));
   if (r.notes) morceaux.push(pluriel(r.notes, 'note', 'notes'));
+  if (r.seances) morceaux.push(pluriel(r.seances, 'séance de Bien-être', 'séances de Bien-être'));
   if (r.memos) morceaux.push(pluriel(r.memos, 'mémo vocal', 'mémos vocaux'));
   const periode = r.du ? ` (du ${formaterJour(r.du, { annee: true })} au ${formaterJour(r.au, { annee: true })})` : '';
   return `Ce fichier contient ${morceaux.join(', ')}${periode}.`;
@@ -29,7 +30,7 @@ const NOMS_PERTE = [
   ['journal', 'journée', 'journées', true], ['episodes', 'épisode', 'épisodes'], ['symptomes', 'symptôme', 'symptômes'],
   ['traitements', 'fiche de traitement', 'fiches de traitement', true], ['rdv', 'rendez-vous', 'rendez-vous'],
   ['humeurs', "relevé d'humeur du moment", "relevés d'humeur du moment"], ['notes', 'note', 'notes', true],
-  ['audios', 'mémo vocal', 'mémos vocaux'],
+  ['seances', 'séance de Bien-être', 'séances de Bien-être', true], ['audios', 'mémo vocal', 'mémos vocaux'],
 ];
 export function phrasePerte(p) {
   const nommes = NOMS_PERTE.filter(([cle]) => p[cle]);

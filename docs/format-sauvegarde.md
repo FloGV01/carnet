@@ -11,11 +11,11 @@
 ## sauvegarde.json
 
 ```json
-{ "format": "carnet-sauvegarde", "formatVersion": 4, "schemaVersion": 4,
-  "exportedAt": "2026-10-20T19:02:11.412Z", "app": { "version": "6.0.0" },
+{ "format": "carnet-sauvegarde", "formatVersion": 5, "schemaVersion": 5,
+  "exportedAt": "2026-10-20T19:02:11.412Z", "app": { "version": "7.0.0" },
   "partie": { "numero": 1, "total": 2 },
-  "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "notes": 1, "listes": 197, "meta": 2, "audios": 1 },
-  "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "notes": [], "listes": [], "meta": [],
+  "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "notes": 1, "seances": 2, "listes": 197, "meta": 2, "audios": 1 },
+  "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "notes": [], "seances": [], "listes": [], "meta": [],
             "audios": [ { "id": "au_…", "parentStore": "journal", "parentId": "2026-09-30", "dureeMs": 24000,
                           "mime": "audio/mp4", "taille": 192000, "fichier": "audios/au_….m4a" } ] } }
 ```
@@ -23,6 +23,13 @@
 - **Champ `partie`** : présent seulement dans un export en plusieurs fichiers.
 - **Enregistrements** : ils suivent le schéma du plan (§5.3). Les références de liste sont des identifiants (`liste:slug`), jamais des libellés.
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
+- **formatVersion 5 (v7)** :
+  - champ `emotion` dans les humeurs du moment : un identifiant de la roue des émotions (`domain/roue.js`), `roue:<famille>` pour une famille seule ou `roue:<famille>:<mot>`, ou `null`. Un id inconnu rend le relevé illisible. `humeur` (note de 1 à 10) reste pour les anciens relevés et vaut `null` dans les nouveaux ;
+  - tableau `seances` (séances de Bien-être) : `{ id, date, heure, exercice, dureeS, origine, createdAt, updatedAt }`, avec la date calendaire réelle et l'heure, comme les humeurs du moment. `exercice` vaut `coherence` ou l'identifiant d'un exercice, `dureeS` est un entier de 0 à 86400, `origine` vaut `bien-etre`, `moment-difficile` ou `ressourcer`.
+
+  Une sauvegarde en formatVersion 4 passe au format 5 à l'import :
+  - `seances: []` et `counts.seances: 0` ;
+  - `emotion: null` ajouté à chaque humeur du moment, dont la note de 1 à 10 reste telle quelle.
 - **formatVersion 4 (v6)** :
   - tableau `notes` (notes en vrac) : `{ id, date, heure, texte, createdAt, updatedAt }`, avec la date calendaire réelle et l'heure, comme les humeurs du moment ;
   - champs `pese` et `recharge` dans le journal, `vers` et `faisais` dans les humeurs, `lien` (`{ store, id }`, facultatif) dans les questions d'un rendez-vous ;
@@ -46,12 +53,12 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
    - les ZIP sont intègres (CRC).
 2. **Normalisation** : chaque enregistrement passe par `normaliser` en mode import. Les éléments illisibles sont listés puis ignorés.
 3. **Identifiant de liste inconnu** : il recrée un élément archivé « Élément sans libellé (id) », pour qu'aucun enregistrement ne soit perdu.
-4. **Aperçu** : contenu du fichier, ce qui serait effacé (notes comprises), mémos absents des fichiers choisis, et les deux dates si le fichier est plus ancien que la dernière saisie.
+4. **Aperçu** : contenu du fichier, ce qui serait effacé (notes et séances comprises), mémos absents des fichiers choisis, et les deux dates si le fichier est plus ancien que la dernière saisie.
 5. **Application** :
    - copie de secours `avant-import`, 3 au maximum, sans les audios ;
    - puis une seule transaction qui vide et réécrit tout.
 6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
 7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant.
-   - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes : elles restent alors telles quelles.
+   - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes, une copie prise avant la v7 n'a pas de séances : elles restent alors telles quelles.
    - Les listes par défaut absentes de la copie (v4, v6) sont ajoutées.
    - Dans une copie prise avant la v6, `'humeur'` rejoint les champs masqués de `journee`, comme à l'import d'un fichier au format 3. Une copie de la v6 garde le choix qu'elle contient.

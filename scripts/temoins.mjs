@@ -1,4 +1,4 @@
-// Sauvegardes témoins aux formats 1, 2 et 3 (tests/fixtures/temoins/), écrites par le code même des
+// Sauvegardes témoins aux formats 1 à 4 (tests/fixtures/temoins/), écrites par le code même des
 // versions publiées. Chaque tag est extrait avec git worktree dans un dossier temporaire hors du
 // dépôt, retiré à la fin même en cas d'erreur. Sa base (fake-indexeddb) est remplie de données
 // inventées par son creerRepository, puis exportée par son construireSauvegarde.
@@ -18,6 +18,7 @@ const VERSIONS = [
   { tag: 'v3.0.0', format: 1, json: 'format-1.json', exporteLe: '2026-10-01T19:30:00.000Z' },
   { tag: 'v4.0.0', format: 2, json: 'format-2.json', exporteLe: '2026-10-05T19:30:00.000Z' },
   { tag: 'v5.0.0', format: 3, json: 'format-3.json', exporteLe: '2026-10-06T19:30:00.000Z', zip: 'format-3-memo.zip', zipLe: '2026-10-06T19:45:00.000Z' },
+  { tag: 'v6.1.0', format: 4, json: 'format-4.json', exporteLe: '2026-10-19T19:30:00.000Z' },
 ];
 const dec = new TextDecoder();
 
@@ -64,7 +65,7 @@ export function controlerTemoin(octets) {
   const exiger = (ok, quoi) => { if (!ok) manques.push(quoi); };
 
   // Chaque store, et chaque champ non nul au moins une fois.
-  const stores = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', ...(f >= 2 ? ['humeurs'] : []), ...(zip ? ['audios'] : [])];
+  const stores = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', ...(f >= 2 ? ['humeurs'] : []), ...(f >= 4 ? ['notes'] : []), ...(zip ? ['audios'] : [])];
   for (const st of stores) {
     exiger((d[st] || []).length > 0, `${st} : aucun enregistrement`);
     for (const chemin of jamaisRemplis(d[st] || [], !['listes', 'meta'].includes(st))) manques.push(`${st}.${chemin} : jamais rempli`);
@@ -81,9 +82,19 @@ export function controlerTemoin(octets) {
   exiger((d.episodes || []).some((e) => e.heure === '02:30'), 'un épisode à 02:30');
   if (f >= 2) exiger((d.humeurs || []).some((h) => h.heure === '01:30'), 'une humeur à 01:30');
   exiger((d.rdv || []).some((r) => r.date === null), 'un rendez-vous sans date');
+  // Formats 2 et 3 : le champ Humeur du soir n'est pas encore masqué (la mise à niveau 3 → 4 le masque).
+  // Format 4 : la v6 l'a déjà masqué.
   if (f >= 2) {
     const journee = (d.meta || []).find((m) => m.cle === 'journee');
-    exiger(journee && Array.isArray(journee.valeur.masques) && !journee.valeur.masques.includes('humeur'), 'meta.journee sans « humeur » dans ses masques');
+    const masques = journee && Array.isArray(journee.valeur.masques) ? journee.valeur.masques : null;
+    if (f <= 3) exiger(masques && !masques.includes('humeur'), 'meta.journee sans « humeur » dans ses masques');
+    else exiger(masques && masques.includes('humeur'), 'meta.journee avec « humeur » dans ses masques');
+  }
+  if (f >= 4) {
+    exiger((d.notes || []).some((n) => n.heure === '01:30'), 'une note à 01:30');
+    exiger((d.humeurs || []).some((h) => h.vers === true && Array.isArray(h.faisais) && h.faisais.length > 0), 'une humeur « vers » avec ce que je faisais');
+    exiger((d.rdv || []).some((r) => (r.questions || []).some((q) => q.lien && (d.episodes || []).some((e) => e.id === q.lien.id))), 'une question liée à un épisode');
+    exiger(['respiration', 'uneChoseALaFois', 'ressourcer'].every((cle) => (d.meta || []).some((m) => m.cle === cle)), 'les réglages de la v6 (respiration, une chose à la fois, me ressourcer)');
   }
   if (zip) {
     const noms = new Set(entrees.map((e) => e.nom));
@@ -113,6 +124,8 @@ function aleaFixe(graine) {
 async function remplir(repo, horloge, format) {
   const a = (iso) => { horloge.t = new Date(iso); };
   const v4 = format >= 2;
+  // Ce que la v6 ajoute (format 4) : notes, « vers », ce que je faisais, pesé et rechargé, question liée.
+  const v6 = format >= 4;
 
   // Listes : un lieu renommé (l'ancien libellé reste en alias), un lieu créé par l'utilisateur,
   // un symptôme créé puis disparu de la base (son id devient inconnu).
@@ -143,6 +156,13 @@ async function remplir(repo, horloge, format) {
     declencheur: 'declencheur:imprevu_changement', dessous: 'dessous:fatigue_debordement', reaction: 'reaction:retrait_isolement',
     ceQuiAAide: 'Sortir marcher dix minutes',
   });
+  if (v6) {
+    a('2026-09-26T17:30:00.000Z');
+    await repo.rdv.creer({
+      date: '2026-10-02', heure: '09:00', professionnel: 'professionnel:psychiatre',
+      questions: [{ texte: 'Parler de la réunion déplacée', lien: { store: 'episodes', id: episode.id } }],
+    });
+  }
   a('2026-09-26T19:40:00.000Z');
   await repo.journal.patch('2026-09-26', {
     lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:moyen', humeur: 5, contactHumain: true, sportMouvement: false, explosions: 1,
@@ -187,9 +207,21 @@ async function remplir(repo, horloge, format) {
   a('2026-09-28T00:35:00.000Z');
   await repo.episodes.creer({ date: '2026-09-28', heure: '02:30', situation: 'Réveil en pleine nuit', emotion: 'emotion:anxiete', intensite: 5 });
 
+  if (v6) {
+    a('2026-09-28T16:00:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-28', heure: '15:00', vers: true, humeur: 5, energie: 'energie:basse', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
+  }
+
   // Un lieu archivé encore utilisé.
   a('2026-09-28T19:45:00.000Z');
-  await repo.journal.patch('2026-09-28', { lieu: 'lieu:clinique', humeur: 4, sommeilRessenti: 'sommeil:mal', traitementPris: 'traitementPris:partiel' });
+  await repo.journal.patch('2026-09-28', {
+    lieu: 'lieu:clinique', humeur: 4, sommeilRessenti: 'sommeil:mal', traitementPris: 'traitementPris:partiel',
+    ...(v6 ? { pese: ['pese:bruit', 'pese:trajets'], recharge: ['recharge:musique'] } : {}),
+  });
+  if (v6) {
+    a('2026-09-28T23:40:00.000Z');
+    await repo.notes.creer({ date: '2026-09-29', heure: '01:30', texte: 'Idée pour le week-end : ranger les papiers' });
+  }
   a('2026-09-29T10:00:00.000Z');
   await repo.symptomes.creer({ date: '2026-09-29', symptome: disparu.id, intensite: 3, duree: 'duree:moins_une_heure' });
   await repo.tx(['listes'], 'readwrite', (t) => { t.objectStore('listes').delete(disparu.id); });
@@ -205,7 +237,7 @@ async function remplir(repo, horloge, format) {
     await repo.meta.ecrire('explosionsDepuis', '2026-09-24');
     await repo.meta.ecrire('journee', {
       ordre: ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'],
-      masques: ['explosions', 'traitement'], heuresMoment: [12, 18],
+      masques: v6 ? ['explosions', 'traitement', 'humeur'] : ['explosions', 'traitement'], heuresMoment: [12, 18],
     });
     await repo.meta.ecrire('monPlan', {
       premiersSignes: 'Mâchoire serrée', quandCaMonte: 'Je sors marcher', siSurcharge: 'Je mets le casque',
@@ -215,6 +247,11 @@ async function remplir(repo, horloge, format) {
     await repo.meta.ecrire('traitementActuel', {
       depuis: '2026-09-25', lignes: [{ id: 'l1', nom: 'Traitement A', doses: { matin: '1', midi: null, apresMidi: null, soir: '1', coucher: null } }],
     });
+  }
+  if (v6) {
+    await repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: true });
+    await repo.meta.ecrire('uneChoseALaFois', { rubriques: ['quandCaMonte', 'pourRecuperer'], siAlors: true });
+    await repo.meta.ecrire('ressourcer', { energieBasse: true });
   }
   return { episode };
 }
