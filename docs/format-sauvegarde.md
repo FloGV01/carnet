@@ -25,7 +25,7 @@
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
 - **formatVersion 5 (v7)** :
   - champ `emotion` dans les humeurs du moment : un identifiant de la roue des émotions (`domain/roue.js`), `roue:<famille>` pour une famille seule ou `roue:<famille>:<mot>`, ou `null`. Un id inconnu rend le relevé illisible. `humeur` (note de 1 à 10) reste pour les anciens relevés et vaut `null` dans les nouveaux ;
-  - tableau `seances` (séances de Bien-être) : `{ id, date, heure, exercice, dureeS, origine, createdAt, updatedAt }`, avec la date calendaire réelle et l'heure, comme les humeurs du moment. `exercice` vaut `coherence` ou l'identifiant d'un exercice, `dureeS` est un entier de 0 à 86400, `origine` vaut `bien-etre`, `moment-difficile` ou `ressourcer`.
+  - tableau `seances` (séances de Bien-être) : `{ id, date, heure, exercice, dureeS, origine, createdAt, updatedAt }`, avec la date calendaire réelle et l'heure, comme les humeurs du moment. `exercice` vaut `coherence` ou l'identifiant d'un exercice ; il est obligatoire, comme `id`, `date` et `heure` : une séance sans exercice (absent ou vide) est illisible. `dureeS` est un entier de 0 à 86400, `origine` vaut `bien-etre`, `moment-difficile` ou `ressourcer`.
 
   Une sauvegarde en formatVersion 4 passe au format 5 à l'import :
   - `seances: []` et `counts.seances: 0` ;

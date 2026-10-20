@@ -430,16 +430,21 @@ test('v7 : le format 6 est refusé, un format 5 tronqué aussi, une séance illi
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 6, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 5, counts: { seances: 2 }, data: { seances: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
   const a = analyserFichiers(json({
-    format: 'carnet-sauvegarde', formatVersion: 5, exportedAt: '2026-10-20T19:00:00.000Z', counts: { seances: 2, humeurs: 1 },
+    format: 'carnet-sauvegarde', formatVersion: 5, exportedAt: '2026-10-20T19:00:00.000Z', counts: { seances: 3, humeurs: 1 },
     data: {
-      seances: [{ id: 'se_1', date: '2026-10-20', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' }, { id: 'se_2', date: '2026-10-20', heure: '10:00', origine: 'ailleurs' }],
+      seances: [
+        { id: 'se_1', date: '2026-10-20', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' },
+        { id: 'se_2', date: '2026-10-20', heure: '10:00', exercice: 'coherence', origine: 'ailleurs' },
+        { id: 'se_3', date: '2026-10-20', heure: '10:30', dureeS: 300, origine: 'bien-etre' },
+      ],
       humeurs: [{ id: 'hu_1', date: '2026-10-20', heure: '11:00', emotion: 'roue:colere:inconnu' }],
     },
   }));
   assert.equal(a.valides.seances.length, 1);
   assert.equal(a.valides.humeurs.length, 0);
-  assert.equal(a.erreurs.length, 2);
-  assert.match(a.erreurs.join(' ; '), /seances n° 2/);
+  assert.equal(a.erreurs.length, 3);
+  assert.match(a.erreurs.join(' ; '), /seances n° 2 : origine/);
+  assert.match(a.erreurs.join(' ; '), /seances n° 3 : exercice : absente/, 'une séance sans exercice est illisible');
   assert.match(a.erreurs.join(' ; '), /humeurs n° 1 : emotion/);
 });
 

@@ -276,7 +276,7 @@ test('Ce que je faisais : ouvert, l\'écran ne se ferme plus seul ; ✕ le ferme
   expect(await page.evaluate(() => localStorage.getItem('carnet:moment:faisais'))).toBe('true');
   await expect(activites.getByRole('button')).toHaveText(['Travail', 'Trajet', 'Courses / démarches', 'Chez moi', 'Avec du monde', 'Repos']);
 
-  // Des activités seules ne gardent pas de relevé ; elles partent avec la première valeur.
+  // Des activités seules ne créent pas de relevé ; elles partent avec la première valeur.
   await activites.getByRole('button', { name: 'Travail' }).click();
   await page.waitForTimeout(150);
   expect(await releves(page)()).toEqual([]);
@@ -307,7 +307,7 @@ test('Ce que je faisais : ouvert, l\'écran ne se ferme plus seul ; ✕ le ferme
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 });
 
-test('Ce que je faisais : replié, le repli résume ce qui est noté ; retirer la valeur d\'un relevé qui n\'a plus que des activités le supprime', async ({ page }) => {
+test('Ce que je faisais : replié, le repli résume ce qui est noté ; un relevé qui n\'a plus que des activités reste, sans elles il part', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
   const repliFaisais = vue.getByRole('button', { name: /^Ce que je faisais/ });
@@ -318,7 +318,14 @@ test('Ce que je faisais : replié, le repli résume ce qui est noté ; retirer l
   await expect.poll(releves(page)).toMatchObject([{ humeur: 6, faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
   await repliFaisais.click();
   await expect(repliFaisais.locator('.repli-resume')).toHaveText('courses / démarches, repos');
-  // Le seul chiffre retiré : il ne reste que des activités, le relevé est supprimé.
+  // Le seul chiffre retiré : il ne reste que des activités, et elles gardent le relevé (v7, spec §4.3).
   await vue.getByRole('button', { name: 'Humeur 6' }).click();
+  await expect.poll(releves(page)).toMatchObject([{ humeur: null, energie: null, faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
+  await page.waitForTimeout(150);
+  expect(await releves(page)()).toHaveLength(1);
+  // Les activités retirées à leur tour, il ne reste rien : le relevé est supprimé.
+  await repliFaisais.click();
+  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Courses / démarches' }).click();
+  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Repos' }).click();
   await expect.poll(async () => (await releves(page)()).length).toBe(0);
 });

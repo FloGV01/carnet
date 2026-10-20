@@ -64,7 +64,8 @@ export const SCHEMAS = {
   // Humeur du moment (v4) : date calendaire réelle et heure, rattachées au jour par jourEvenement.
   // vers (v6) : relevé noté après coup, pour une heure passée. faisais : ce que je faisais.
   // emotion (v7) : une famille ou un mot de la roue, à la place de la note ; humeur reste pour les
-  // anciens relevés et vaut null dans les nouveaux.
+  // anciens relevés et vaut null dans les nouveaux. Vide quand emotion, humeur, energie et faisais le
+  // sont tous (spec v7 §4.3) : « vers » seul ne garde pas un relevé, des activités le gardent.
   humeurs: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
     saisis: { emotion: T.roue, humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
@@ -83,10 +84,11 @@ export const SCHEMAS = {
   },
   // Séance de Bien-être (v7) : une respiration ou un exercice mené au bout, ou arrêté après 60 s au moins.
   // Date calendaire réelle et heure, rattachées au jour par jourEvenement, comme l'humeur du moment.
-  // exercice : `coherence` ou l'identifiant d'un exercice. origine : l'écran d'où elle a été lancée.
+  // exercice : `coherence` ou l'identifiant d'un exercice, posé par l'app, donc obligatoire (spec v7 §6.3) :
+  // une séance sans exercice est refusée. origine : l'écran d'où elle a été lancée.
   seances: {
-    cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
-    saisis: { exercice: T.texte, dureeS: T.int(0, 86400), origine: T.choix(ORIGINES_SEANCE) },
+    cles: { id: { type: 'id' }, date: T.date, heure: T.heure, exercice: T.texte },
+    saisis: { dureeS: T.int(0, 86400), origine: T.choix(ORIGINES_SEANCE) },
   },
 };
 export const STORES_SAISIE = Object.keys(SCHEMAS);
@@ -246,7 +248,8 @@ export function valider(store, brut, options) {
 }
 
 // Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
-const CONTEXTE = { episodes: ['heure'], humeurs: ['vers', 'faisais'] };
+// v7 : « Ce que je faisais » n'en est plus un (spec §4.3), seul « vers » le reste pour les relevés.
+const CONTEXTE = { episodes: ['heure'], humeurs: ['vers'] };
 
 export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];

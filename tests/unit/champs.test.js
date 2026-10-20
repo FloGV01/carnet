@@ -138,12 +138,12 @@ test('v6 : ce que je faisais, références activiteMoment', () => {
   assert.ok(normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', faisais: ['pese:bruit'] }).erreurs.length > 0);
 });
 
-test('v6 : vers et faisais sont du contexte, seuls ils ne gardent pas un relevé', () => {
+test('v6 : vers est du contexte, seul il ne garde pas un relevé ; v7 : des activités le gardent (spec §4.3)', () => {
   const rel = (extra) => normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', ...extra }).valeur;
   assert.equal(rel({ vers: true }).vers, true, 'le champ existe');
   assert.equal(estVide('humeurs', rel({ vers: true })), true, 'un relevé « vers » seul est vide');
-  assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), true, 'des activités seules ne gardent pas le relevé');
-  assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:repos'] })), true);
+  assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), false, 'v7 : des activités seules gardent le relevé');
+  assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:repos'] })), false);
   assert.equal(estVide('humeurs', rel({ vers: true, humeur: 4 })), false);
   assert.equal(estVide('humeurs', rel({ vers: true, energie: 'energie:basse' })), false);
   assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'], humeur: 7 })), false);
@@ -226,13 +226,16 @@ test('v7 : un relevé avec seulement une émotion est valide et n\'est pas vide 
   assert.equal(estVide('humeurs', rel({ emotion: 'roue:colere' })), false, 'une famille seule');
   assert.equal(estVide('humeurs', rel({ emotion: 'roue:colere:irrite' })), false);
   assert.equal(estVide('humeurs', rel({ emotion: 'roue:colere', vers: true })), false);
+  assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), false, 'des activités seules gardent le relevé');
+  assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:travail'] })), false);
+  assert.equal(estVide('humeurs', rel({ vers: true })), true, '« vers » seul reste du contexte');
   assert.equal(estVide('humeurs', rel({})), true);
   assert.equal(estVide('humeurs', rel({ emotion: null, humeur: null, energie: null, faisais: null, vers: true })), true);
   assert.equal(estVide('humeurs', rel({ humeur: 6 })), false, 'un ancien relevé chiffré reste un relevé');
   assert.equal(estVide('humeurs', { id: 'h1', date: '2026-10-20', heure: '14:00', humeur: null, energie: null }), true, 'champ absent d\'un ancien relevé');
 });
 
-test('v7 : une séance a pour clés id, date et heure ; exercice, durée en secondes et origine', () => {
+test('v7 : une séance a pour clés id, date, heure et exercice ; durée en secondes et origine', () => {
   const brut = { id: 'se_1', date: '2026-10-20', heure: '09:05', exercice: ' coherence ', dureeS: 300, origine: 'bien-etre' };
   const { valeur, erreurs, avertissements } = normaliser('seances', brut);
   assert.deepEqual(erreurs, []);
@@ -245,13 +248,17 @@ test('v7 : une séance a pour clés id, date et heure ; exercice, durée en seco
   assert.equal(valider('seances', { ...brut, dureeS: 0 }).dureeS, 0);
   assert.equal(valider('seances', { ...brut, dureeS: 86400 }).dureeS, 86400);
   for (const dureeS of [-1, 86401, 12.5, '300']) assert.ok(normaliser('seances', { ...brut, dureeS }).erreurs.length > 0, String(dureeS));
-  assert.ok(normaliser('seances', { ...brut, exercice: 7 }).erreurs.length > 0);
-  assert.equal(normaliser('seances', { ...brut, exercice: '   ' }).valeur.exercice, null);
-  for (const cle of ['id', 'date', 'heure']) {
+  assert.ok(normaliser('seances', { ...brut, exercice: 7 }).erreurs.some((e) => /^exercice : /.test(e)));
+  // L'exercice est posé par l'app : obligatoire, comme les clés (spec §6.3).
+  for (const exercice of ['   ', '', null, undefined]) {
+    assert.deepEqual(normaliser('seances', { ...brut, exercice }).erreurs, ['exercice : absente'], JSON.stringify(exercice));
+    assert.throws(() => valider('seances', { ...brut, exercice }), ErreurValidation);
+  }
+  for (const cle of ['id', 'date', 'heure', 'exercice']) {
     const sans = { ...brut };
     delete sans[cle];
     assert.ok(normaliser('seances', sans).erreurs.length > 0, `${cle} manquant`);
   }
   assert.equal(normaliser('seances', { ...brut, compteur: 3 }).avertissements.length, 1, 'champ inconnu ignoré');
-  assert.equal(estVide('seances', valider('seances', { id: 'se_1', date: '2026-10-20', heure: '09:05' })), true);
+  assert.equal(estVide('seances', valider('seances', { id: 'se_1', date: '2026-10-20', heure: '09:05', exercice: 'coherence' })), true);
 });

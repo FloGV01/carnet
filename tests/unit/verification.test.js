@@ -113,14 +113,19 @@ test('les différentes façons d\'être illisible, dans chaque table de saisie',
     traitements: [{ id: 'tr_1', date: '2026-09-30', effetsSecondaires: 'fatigue' }],
     rdv: [{ id: 'rdv_1', heure: '25:99' }],
     humeurs: [{ id: 'hu_1', date: '2026-09-30', heure: '12:00', humeur: 3.5 }, { id: 'hu_2', date: '2026-09-30', heure: '13:00', emotion: 'roue:colere:inconnu' }],
-    seances: [{ id: 'se_1', date: '2026-09-30', heure: '12:00', origine: 'ailleurs' }, { id: 'se_2', date: '2026-09-30', heure: '12:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' }],
+    seances: [
+      { id: 'se_1', date: '2026-09-30', heure: '12:00', exercice: 'coherence', origine: 'ailleurs' },
+      { id: 'se_2', date: '2026-09-30', heure: '12:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' },
+      { id: 'se_3', date: '2026-09-30', heure: '13:00', dureeS: 300, origine: 'bien-etre' },
+      { id: 'se_4', date: '2026-09-30', heure: '14:00', exercice: '  ', dureeS: 300, origine: 'bien-etre' },
+    ],
     listes: [{ id: 'lieu:x', liste: 'lieu', libelle: 'Libellé qui n\'est pas une fiche' }],
     meta: [{ cle: 'inconnue', valeur: 1 }],
   });
   // journal 2, épisodes 3, symptômes 1, traitements 1, rendez-vous 1 (heure), humeurs 2 (note, émotion inconnue),
-  // séances 1 (origine). Listes et méta ne sont pas des fiches.
-  assert.equal(res.fichesIllisibles, 11);
-  assert.equal(res.parTable.seances, 2);
+  // séances 3 (origine, exercice absent, exercice vide). Listes et méta ne sont pas des fiches.
+  assert.equal(res.fichesIllisibles, 13);
+  assert.equal(res.parTable.seances, 4);
   assert.equal(res.parTable.listes, 1);
   assert.equal(res.parTable.meta, 1);
 });
