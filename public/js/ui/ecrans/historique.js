@@ -5,6 +5,7 @@ import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { Pastilles } from '../composants/pastilles.js';
+import { coche, libelleChoix } from '../composants/coche.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
@@ -48,7 +49,7 @@ const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="ave
 function Bascules({ etiquette, choix, f, majF }) {
   return html`<div class="pastilles souples" role="group" aria-label=${etiquette}>
     ${choix.map((c) => html`<button type="button" class="pastille" aria-pressed=${f[c.cle] ? 'true' : 'false'}
-      onClick=${() => majF(c.cle)(!f[c.cle])}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 3 })}</span><span class="texte-pastille"><span>${c.libelle}</span></span></button>`)}
+      onClick=${() => majF(c.cle)(!f[c.cle])}>${coche()}<span class="texte-pastille">${libelleChoix(c.libelle)}</span></button>`)}
   </div>`;
 }
 

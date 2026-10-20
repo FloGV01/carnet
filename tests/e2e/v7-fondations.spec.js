@@ -58,33 +58,34 @@ function verifierNonChoisi(s, fond, quoi) {
   expect(contraste(s.fond, s.texte), `${quoi} : AA`).toBeGreaterThanOrEqual(4.5);
 }
 
-// Un choix fait, construit dans la page pour chaque teinte (et sans teinte), avec sa coche et une précision.
-const choixParTeinte = (page) => page.evaluate((classes) => classes.map((classe) => {
-  const g = document.createElement('div');
-  g.className = classe ? `pastilles ${classe}` : 'pastilles';
-  const b = document.createElement('button');
-  b.className = 'pastille';
-  b.setAttribute('aria-pressed', 'true');
-  const coche = document.createElement('span');
-  coche.className = 'coche';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('stroke-width', '3');
-  coche.append(svg);
-  const texte = document.createElement('span');
-  texte.className = 'texte-pastille';
-  const petit = document.createElement('small');
-  petit.textContent = 'précision';
-  texte.append('Choix', petit);
-  b.append(coche, texte);
-  g.append(b);
-  document.querySelector('.ecran').append(g);
-  const [s, sp] = [getComputedStyle(b), getComputedStyle(petit)];
-  const r = { classe, fond: s.backgroundColor, texte: s.color, graisse: s.fontWeight, petit: sp.color,
-    coche: getComputedStyle(coche).display !== 'none' && svg.getBoundingClientRect().width >= 15 && svg.getBoundingClientRect().width <= 16, trait: '3' };
-  g.remove();
-  return r;
-}), [...Object.keys(TEINTES), null]);
+// Un choix fait, construit dans la page pour chaque teinte (et sans teinte), avec une précision ; sa coche est celle
+// de l'app (coche.js), prise sur un vrai bouton de l'écran : son trait est lu, pas supposé.
+const choixParTeinte = async (page) => {
+  await expect(page.locator('[role="group"] button > .coche').first()).toBeAttached();
+  return page.evaluate((classes) => classes.map((classe) => {
+    const g = document.createElement('div');
+    g.className = classe ? `pastilles ${classe}` : 'pastilles';
+    const b = document.createElement('button');
+    b.className = 'pastille';
+    b.setAttribute('aria-pressed', 'true');
+    const coche = document.querySelector('[role="group"] button > .coche').cloneNode(true);
+    const svg = coche.querySelector('svg');
+    const texte = document.createElement('span');
+    texte.className = 'texte-pastille';
+    const petit = document.createElement('small');
+    petit.textContent = 'précision';
+    texte.append('Choix', petit);
+    b.append(coche, texte);
+    g.append(b);
+    document.querySelector('.ecran').append(g);
+    const [s, sp] = [getComputedStyle(b), getComputedStyle(petit)];
+    const r = { classe, fond: s.backgroundColor, texte: s.color, graisse: s.fontWeight, petit: sp.color,
+      coche: getComputedStyle(coche).display !== 'none' && svg.getBoundingClientRect().width >= 15 && svg.getBoundingClientRect().width <= 16,
+      trait: svg.getAttribute('stroke-width') };
+    g.remove();
+    return r;
+  }), [...Object.keys(TEINTES), null]);
+};
 
 test('sélection commune 2b, en clair et en sombre : -fill, -on, 600 (700 pour un chiffre), coche, AA ; non choisi : sans coche, en 400', async ({ page }) => {
   const id = await creerEpisode(page, COLERE);
@@ -209,5 +210,163 @@ test('barre d\'onglets 2b, en clair et en sombre : neutre, icônes de 22, pilule
         expect(contraste(o.couleur, rgb(t.bg)), o.nom).toBeGreaterThanOrEqual(4.5);
       }
     }
+  }
+});
+
+// ---------- Relecture de la tâche 1 : la coche ne change pas la largeur d'un choix ----------
+
+// Boîtes des boutons d'un groupe, par rapport au groupe : [libellé, gauche, droite, haut]. (Le résumé des filtres de
+// l'Historique, qui apparaît au-dessus d'eux, peut déplacer le groupe entier : ce sont les voisins qui comptent.)
+const boites = (groupeLoc) => groupeLoc.evaluate(async (g) => {
+  await Promise.all(g.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
+  const o = g.getBoundingClientRect();
+  return [...g.querySelectorAll('button')].map((b) => { const r = b.getBoundingClientRect(); return [b.textContent.trim(), r.left - o.left, r.right - o.left, r.top - o.top]; });
+});
+// Avant et après un toucher, chaque bouton du groupe reste où il était, au pixel près.
+function memesPlaces(avant, apres, quoi) {
+  expect(apres.map((b) => b[0]), quoi).toEqual(avant.map((b) => b[0]));
+  avant.forEach(([nom, ...p], i) => p.forEach((x, k) => expect(Math.abs(apres[i][k + 1] - x), `${quoi} : ${nom}`).toBeLessThanOrEqual(1)));
+}
+
+test('un toucher ne déplace pas les voisins : Sommeil, Traitement pris, « C\'était vers… », Rappels, filtres de l\'Historique', async ({ page }) => {
+  // Aujourd'hui : les segments à largeur naturelle, à droite de leur libellé. Choisir, puis effacer.
+  for (const [nom, choix] of [['Sommeil', 'Moyen'], ['Sommeil', 'Mal'], ['Traitement pris', 'Oui'], ['Traitement pris', 'Partiel']]) {
+    const g = groupe(page, nom);
+    const avant = await boites(g);
+    await toucher(page, nom, choix);
+    await expect(g.getByRole('button', { name: `${nom} : ${choix}` })).toHaveAttribute('aria-pressed', 'true');
+    memesPlaces(avant, await boites(g), `${nom} › ${choix}`);
+    await toucher(page, nom, choix);
+    await expect(g.getByRole('button', { name: `${nom} : ${choix}` })).toHaveAttribute('aria-pressed', 'false');
+    memesPlaces(avant, await boites(g), `${nom} › ${choix} effacé`);
+  }
+  // « Traitement pris » tient sur une ligne, à côté de ses segments (390 de large).
+  expect(await page.locator('.ligne-champ', { has: groupe(page, 'Traitement pris') }).locator('.rubrique').evaluate((r) => r.getClientRects().length && r.getBoundingClientRect().height)).toBeLessThanOrEqual(24);
+
+  // « C'était vers… » : choisir 14 h retire la coche de « Maintenant » ; ni la 1re rangée ni la 2e ne glissent.
+  await aller(page, '#/moment');
+  const vue = page.getByRole('dialog', { name: 'Humeur du moment' });
+  await vue.locator('.ligne-date > .btn-lien').click();
+  const vers = vue.getByRole('group', { name: 'C\'était vers…' });
+  await expect(vers.getByRole('button', { name: 'Maintenant', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const avantVers = await boites(vers);
+  expect(new Set(avantVers.map((b) => Math.round(b[3]))).size, 'deux rangées au moins').toBeGreaterThan(1);
+  for (const h of ['14 h', '6 h', 'Maintenant']) {
+    await vers.getByRole('button', { name: h, exact: true }).click();
+    await expect(vers.getByRole('button', { name: h, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    memesPlaces(avantVers, await boites(vers), `vers ${h}`);
+  }
+  await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+
+  // Rappels : plusieurs heures choisies l'une après l'autre.
+  await aller(page, '#/reglages/rappel');
+  const heures = groupe(page, 'Heures des rappels');
+  const avantHeures = await boites(heures);
+  for (const h of ['8 h', '9 h', '8 h']) {
+    await heures.getByRole('button', { name: h, exact: true }).click();
+    memesPlaces(avantHeures, await boites(heures), `Rappels ${h}`);
+  }
+
+  // Filtres de l'Historique : une période (pastilles) et une bascule (« Avec »).
+  await aller(page, '#/historique');
+  await page.getByRole('button', { name: 'Filtrer' }).click();
+  for (const [nom, choix] of [['Période', '7 j'], ['Avec', 'Avec explosions'], ['Avec', 'Avec notes']]) {
+    const g = groupe(page, nom);
+    const avant = await boites(g);
+    await g.getByRole('button', { name: choix, exact: true }).click();
+    await expect(g.getByRole('button', { name: choix, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    memesPlaces(avant, await boites(g), `${nom} › ${choix}`);
+  }
+});
+
+test('boutons à coche faits à la main, en clair et en sombre : « C\'était vers… », Rappels et filtres de l\'Historique (coche, 600, AA)', async ({ page }) => {
+  for (const schema of ['light', 'dark']) {
+    const t = schema === 'dark' ? sombre : clair;
+    await page.emulateMedia({ colorScheme: schema });
+    // « C'était vers… », en couleur Humeur ; « Maintenant » est choisi tant qu'aucune heure ne l'est.
+    await aller(page, '#/moment');
+    const vue = page.getByRole('dialog', { name: 'Humeur du moment' });
+    const bouton = vue.locator('.ligne-date > .btn-lien');
+    if (await bouton.getAttribute('aria-expanded') !== 'true') await bouton.click();
+    const vers = vue.getByRole('group', { name: 'C\'était vers…' });
+    verifierChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), attendu(t, 'humeur'), `${schema} vers Maintenant`);
+    await vers.getByRole('button', { name: '12 h', exact: true }).click();
+    verifierChoisi(await styleDe(vers.getByRole('button', { name: '12 h', exact: true })), attendu(t, 'humeur'), `${schema} vers 12 h`);
+    verifierNonChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), rgb(t.surface), `${schema} vers Maintenant non choisi`);
+    await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+
+    // Rappels : sans teinte, couleur action.
+    await aller(page, '#/reglages/rappel');
+    const heures = groupe(page, 'Heures des rappels');
+    const dix = heures.getByRole('button', { name: '10 h', exact: true });
+    await dix.click();
+    await expect(dix).toHaveAttribute('aria-pressed', 'true');
+    verifierChoisi(await styleDe(dix), attendu(t, null), `${schema} Rappels 10 h`);
+    verifierNonChoisi(await styleDe(heures.getByRole('button', { name: '11 h', exact: true })), rgb(t.surface), `${schema} Rappels 11 h`);
+    await dix.click();
+    await expect(dix).toHaveAttribute('aria-pressed', 'false');
+
+    // Filtres de l'Historique (dans leur carte : non choisi en --surface-2) : sans teinte, couleur action.
+    await aller(page, '#/historique');
+    const filtrer = page.getByRole('button', { name: 'Filtrer' });
+    if (await filtrer.getAttribute('aria-expanded') !== 'true') await filtrer.click();
+    const avec = groupe(page, 'Avec').getByRole('button', { name: 'Avec notes', exact: true });
+    await avec.click();
+    await expect(avec).toHaveAttribute('aria-pressed', 'true');
+    verifierChoisi(await styleDe(avec), attendu(t, null), `${schema} Avec notes`);
+    verifierNonChoisi(await styleDe(groupe(page, 'Avec').getByRole('button', { name: 'Avec explosions', exact: true })), rgb(t['surface-2']), `${schema} Avec explosions`);
+    await avec.click();
+    await expect(avec).toHaveAttribute('aria-pressed', 'false');
+  }
+});
+
+// Chaque bouton de choix visible : sa coche et son libellé restent dans sa boîte (marges comprises), dans l'écran.
+const debordements = (page) => page.evaluate(() => {
+  const fautes = [];
+  for (const b of document.querySelectorAll('[role="group"] button[aria-pressed]')) {
+    const r = b.getBoundingClientRect();
+    if (!r.width) continue;
+    const s = getComputedStyle(b);
+    const [g, d] = [r.left + parseFloat(s.paddingLeft) - 0.5, r.right - parseFloat(s.paddingRight) + 0.5];
+    const nom = `${b.closest('[role="group"]').getAttribute('aria-label')} › ${b.textContent.trim()}${b.getAttribute('aria-pressed') === 'true' ? ' (choisi)' : ''}`;
+    for (const e of b.querySelectorAll('.coche svg, .libelle-choix')) {
+      const q = e.getBoundingClientRect();
+      if (q.width && (q.left < g || q.right > d)) fautes.push(nom);
+    }
+    if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`${nom} : hors de l'écran`);
+  }
+  return [...new Set(fautes)];
+});
+
+test('en grand texte (19, 21, 23), aucun choix ne déborde de sa boîte : Soins, Historique, Comprendre ; ses voisins ne bougent pas', async ({ page }) => {
+  // [écran, groupe, ses choix] : chaque choix est fait tour à tour.
+  const CAS = [
+    ['#/soins', 'Soins', ['Rendez-vous', 'Notes', 'Traitement']],
+    ['#/historique', 'Afficher', ['Jours', 'Épisodes', 'Symptômes']],
+    ['#/comprendre/explosions', 'Comprendre', ['Explosions', 'Énergie', 'Rythmes']],
+    ['#/comprendre/explosions', 'Avant ou après', ['Avant', 'Après']],
+    ['#/comprendre/rythmes', 'Période', ['3 mois', 'Tout']],
+    ['#/comprendre/rythmes', 'Mesure', ['Humeur', 'Nuits Mal', 'Explosions', 'Énergie basse']],
+  ];
+  for (const [hash, nom, choix] of CAS) {
+    await aller(page, hash);
+    const g = groupe(page, nom);
+    await expect(g).toBeVisible();
+    for (const taille of [17, 19, 21, 23]) {
+      await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+      let avant = null;
+      for (const c of choix) {
+        const b = g.getByRole('button', { name: `${nom} : ${c}` });
+        await b.click();
+        await expect(b).toHaveAttribute('aria-pressed', 'true');
+        // Comprendre change d'écran à chaque onglet : on attend le nouveau.
+        await expect(g).toBeVisible();
+        expect(await debordements(page), `${hash}, texte de ${taille} px, ${c} choisi`).toEqual([]);
+        const ici = await boites(g);
+        if (avant) memesPlaces(avant, ici, `${hash}, texte de ${taille} px, ${c} choisi`);
+        avant = ici;
+      }
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   }
 });

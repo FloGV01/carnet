@@ -86,7 +86,7 @@ export function EnParler({ store, element, carte, court = false }) {
   if (!element || !element.id) return null;
   const lien = court
     ? html`<button type="button" class="btn-lien" ref=${bouton} onClick=${() => setOuvert(true)}>En parler</button>`
-    : html`<button type="button" class="btn-lien action en-parler" ref=${bouton} onClick=${() => setOuvert(true)}>${Icones.bulle()}En parler au rendez-vous</button>`;
+    : html`<button type="button" class="btn-lien action en-parler" ref=${bouton} onClick=${() => setOuvert(true)}>${Icones.enParlerAuRdv()}En parler au rendez-vous</button>`;
   return html`${lien}
     ${ouvert && html`<${FeuilleEnParler} store=${store} element=${element} carte=${carte} surFermer=${() => setOuvert(false)} retourFocus=${bouton} />`}`;
 }

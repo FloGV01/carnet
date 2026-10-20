@@ -35,6 +35,20 @@ test('base 2b : les valeurs exactes du lot, en clair et en sombre', () => {
   }
 });
 
+test('couleurs du lot telles quelles : chaque --c-* et --chart-* du tokens.css du lot, en clair et en sombre', () => {
+  // Le lot : son premier :root (clair) et son :root[data-theme="dark"] (sombre), sans commentaires.
+  const lot = sansCommentaires(lire(join(RACINE, 'docs', 'design', 'retour-claude-design-v2', 'design_handoff_carnet_refonte', 'tokens.css')));
+  const bloc = (re) => Object.fromEntries([...lot.match(re)[1].matchAll(/--((?:c|chart)-[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim().toLowerCase()]));
+  const lotClair = bloc(/^:root\s*\{([\s\S]*?)\n\}/m);
+  const lotSombre = bloc(/^:root\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/m);
+  // Les 12 couleurs du système, avec leurs six rôles, et la rampe sommeil : rien de plus, rien de moins.
+  const attendus = [...COULEURS_LOT.flatMap((c) => ROLES.map((r) => `c-${c}${r}`)), 'chart-sommeil-1', 'chart-sommeil-2', 'chart-sommeil-3'];
+  for (const [nom, valeurs] of [['clair', lotClair], ['sombre', lotSombre]]) assert.deepEqual(Object.keys(valeurs).sort(), [...attendus].sort(), `lot ${nom}`);
+  for (const [theme, lotT, t] of [['clair', lotClair, clair], ['sombre', lotSombre, sombre]]) {
+    for (const [n, v] of Object.entries(lotT)) assert.equal((t[n] || '').toLowerCase(), v, `${theme} : --${n}`);
+  }
+});
+
 test('chaque couleur (lot et roue) a ses six rôles ; -fill et -on ne changent pas en sombre, les quatre autres oui', () => {
   for (const c of TOUTES) {
     for (const r of ROLES) {

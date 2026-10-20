@@ -1,6 +1,6 @@
 import { html } from '../lib.js';
 import { Entete } from '../composants/entete.js';
-import { Icones } from '../icones.js';
+import { coche, libelleChoix } from '../composants/coche.js';
 import { HEURE_MIN, HEURE_MAX } from '../../domain/journee.js';
 import { useJournee } from './ma-journee.js';
 
@@ -29,7 +29,7 @@ export function Rappel() {
         const choisi = heures.includes(h);
         return html`<button type="button" class="pastille" aria-pressed=${choisi ? 'true' : 'false'} aria-label=${`${h} h`}
           onClick=${() => changer((x) => ({ ...x, heuresMoment: choisi ? x.heuresMoment.filter((y) => y !== h) : [...x.heuresMoment, h] }))}>
-          <span class="coche" aria-hidden="true">${Icones.coche({ trait: 3 })}</span><span class="texte-pastille"><span>${h} h</span></span></button>`;
+          ${coche()}<span class="texte-pastille">${libelleChoix(`${h} h`)}</span></button>`;
       })}
     </div>`}
     <p class="note-import">${heures.length === 0 ? 'Refais les mêmes étapes pour chaque heure choisie.' : `Refais les mêmes étapes pour chaque heure : ${heures.map(pad).join(', ')}.`} Texte de la notification : « Humeur du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Humeur », en bas.</p>

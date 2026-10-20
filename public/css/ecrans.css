@@ -341,7 +341,10 @@
 .aujourdhui .ligne-champ { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
 .aujourdhui .ligne-champ > .rubrique { flex: 1 1 0; min-width: 96px; }
 .aujourdhui .ligne-champ > .segmente { flex: none; margin-left: auto; }
-.aujourdhui .ligne-champ .segmente button { flex: none; min-width: 0; padding: 4px 10px; }
+/* Segments à leur largeur naturelle, à droite du libellé : chaque bouton garde la place de sa coche (composants.css),
+   en compact (coche de 15, écart de 4, marges de 8) pour que « Traitement pris » tienne sur une ligne à 390. */
+.aujourdhui .ligne-champ .segmente button { flex: none; min-width: 0; padding: 4px 8px; gap: 4px; --demi-coche: 9.5px; }
+.aujourdhui .ligne-champ .segmente .coche svg { width: 15px; height: 15px; }
 .aujourdhui .deux-colonnes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .aujourdhui .segmente button { font-size: var(--t-corps); }
 .aujourdhui .memo-vocal { margin-top: 0; }

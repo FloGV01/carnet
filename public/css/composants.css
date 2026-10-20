@@ -197,6 +197,22 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .coche { display: none; flex: none; }
 .coche svg { width: 16px; height: 16px; }
 [aria-pressed="true"] > .coche { display: inline-flex; }
+/* La coche ne change pas la largeur d'un choix centré (pastilles souples, segmentés) : non choisi, son libellé
+   garde la place de la coche dans ses marges, moitié de chaque côté (--demi-coche = (coche + écart) / 2). Sinon le
+   choix fait s'élargit et pousse ses voisins (un second toucher là où était un voisin tomberait sur lui et
+   l'effacerait), ou déborde en grand texte. Des marges du libellé, et non du bouton : des segments en flex: 1
+   restent de même largeur. */
+.pastille, .segmente button { --demi-coche: 11px; }
+.pastilles.souples .pastille:not([aria-pressed="true"]) > .coche + *,
+.segmente button:not([aria-pressed="true"]) > .coche + * { margin-inline: var(--demi-coche); }
+/* La graisse non plus : le libellé (coche.js) garde la largeur de sa version en 600 (700 pour un chiffre), par une
+   copie sans hauteur, invisible et muette pour les lecteurs d'écran. */
+.libelle-choix { display: inline-grid; }
+.libelle-choix::after {
+  content: attr(data-libelle); content: attr(data-libelle) / "";
+  height: 0; overflow: clip; visibility: hidden; font-weight: 600;
+}
+.chiffres .libelle-choix::after { font-weight: 700; }
 .pastilles { display: grid; gap: var(--ecart); grid-template-columns: repeat(3, 1fr); }
 .pastilles.colonnes-2 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .pastilles.colonnes-5 { grid-template-columns: repeat(5, 1fr); }
@@ -233,8 +249,10 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
   font-size: var(--t-corps); transition: background var(--duree), color var(--duree);
 }
 .segmente button[aria-pressed="true"] { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); font-weight: 600; }
-.segmente.large { width: 100%; }
-.segmente.large button { min-height: var(--cible); padding: 0 6px; gap: 4px; font-size: var(--t-sous); }
+/* « large » : jamais plus étroit que son libellé et sa coche (min-content, et non 56 px, qui laissait le choix fait
+   déborder dès un cran de grand texte) ; en très grand texte, les boutons passent à la ligne. */
+.segmente.large { width: 100%; flex-wrap: wrap; }
+.segmente.large button { --demi-coche: 9.5px; min-width: min-content; min-height: var(--cible); padding: 0 6px; gap: 4px; font-size: var(--t-sous); }
 .segmente.large .coche svg { width: 15px; height: 15px; }
 
 /* Dicter */

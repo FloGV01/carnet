@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '7267ce25c447';
+const VERSION = '009f86dfcfe9';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -77,6 +77,7 @@ const FICHIERS = [
   "./js/store.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
+  "./js/ui/composants/coche.js",
   "./js/ui/composants/confirmation.js",
   "./js/ui/composants/dicter.js",
   "./js/ui/composants/en-parler.js",

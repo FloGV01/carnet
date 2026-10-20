@@ -41,6 +41,44 @@ test('le module : au trait de 2 par défaut, sans métadonnées ni style ; « bi
   for (const d of Object.values(TRACES)) assert.match(d, /^M[\d.\s,MmLlHhVvCcSsQqTtAaZz-]+$/);
 });
 
+// Noms d'icônes employés dans l'interface : Icones.x, icone="x" (ou icone: 'x'), et les onglets (Icones[o.id]).
+const UI = lister(join(RACINE, 'public', 'js', 'ui'), (p) => p.endsWith('.js') && !p.endsWith('/icones.js'));
+const employees = new Set(UI.flatMap((f) => {
+  const code = sansCommentaires(lire(f));
+  return [...code.matchAll(/Icones\.(\w+)/g), ...code.matchAll(/\bicone[=:]\s*["'](\w+)["']/g), ...code.matchAll(/\bid: '(\w+)'/g)].map((m) => m[1]);
+}));
+
+test('chaque usage qui a son icône dans le lot l\'emploie : « En parler au rendez-vous » n\'emprunte plus celle d\'« En consultation »', () => {
+  // [fichier de public/js/ui, libellé, clé de l'icône du lot] ; chaque ligne qui porte le libellé et une icône emploie celle-là.
+  const USAGES = [
+    ['composants/en-parler.js', 'En parler au rendez-vous', 'enParlerAuRdv'],
+    ['composants/questions.js', 'En consultation', 'bulle'],
+    ['ecrans/rdv.js', 'En consultation', 'bulle'],
+    ['ecrans/rdv.js', 'Questions', 'questions'],
+    ['ecrans/reglages.js', 'Mon plan', 'monPlan'],
+    ['ecrans/reglages.js', 'Moment difficile', 'respiration'],
+    ['ecrans/reglages.js', 'Aide iPhone', 'aideIphone'],
+  ];
+  for (const [fichier, libelle, icone] of USAGES) {
+    const lignes = lire(join(RACINE, 'public', 'js', 'ui', fichier)).split('\n')
+      .filter((l) => new RegExp(`[>}"]${libelle}[<"]`).test(l) && /Icones\.\w+|\bicone=/.test(l));
+    assert.ok(lignes.length > 0, `${fichier} : ${libelle}`);
+    for (const l of lignes) assert.match(l, new RegExp(`Icones\\.${icone}\\(|icone="${icone}"`), `${fichier} : ${libelle} → ${icone}`);
+  }
+});
+
+test('chaque icône du module sert dans l\'app, sauf celles qui attendent leur écran (plan v7) et les lieux (B1)', () => {
+  const EN_ATTENTE = {
+    lieuBureau: 'B1', lieuTeletravail: 'B1', lieuCongeRepos: 'B1', lieuArret: 'B1', lieuClinique: 'B1', lieuAutre: 'B1',
+    ceQueJeFaisais: 'tâche 3, Émotion du moment',
+    emotion: 'tâche 4, bande du bas', replierSoiree: 'tâche 4, J\'ai fini pour ce soir', peseRecharge: 'tâche 4, replis',
+    energie: 'tâche 5, portes de l\'Analyse', rythmes: 'tâche 5, portes de l\'Analyse',
+    bienEtre: 'tâche 7, onglet Bien-être',
+  };
+  for (const n of Object.keys(EN_ATTENTE)) assert.ok(TRACES[n], `${n} : pas dans le module`);
+  assert.deepEqual(Object.keys(TRACES).filter((n) => !employees.has(n) && !EN_ATTENTE[n]), []);
+});
+
 test('toute icône nommée dans l\'app existe dans le module', () => {
   const connues = new Set([...Object.keys(TRACES), 'stop']);
   const fautes = [];
