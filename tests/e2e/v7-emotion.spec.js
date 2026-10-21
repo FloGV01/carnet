@@ -10,6 +10,10 @@ import { FAMILLES } from '../../public/js/domain/roue.js';
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 const releves = (page) => () => page.evaluate(() => window.__carnet.repo.humeurs.tous());
+const effacerReleves = (page) => page.evaluate(async () => {
+  const r = window.__carnet.repo;
+  for (const h of await r.humeurs.tous()) await r.humeurs.supprimer(h.id);
+});
 const vueMoment = (page) => page.getByRole('dialog', { name: 'Émotion du moment' });
 const familles = (vue) => vue.getByRole('group', { name: 'Émotion' });
 const famille = (vue, nom) => familles(vue).getByRole('button', { name: nom, exact: true });
@@ -98,20 +102,135 @@ test('relevé noté par étapes (point de vigilance 3) : famille, mot, retouche 
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:surprise', energie: 'energie:basse' }]);
 });
 
-test('un mot choisi dans la vue des familles : sa famille est cochée, le mot dessous ; une autre famille le remplace', async ({ page }) => {
+test('un mot choisi dans la vue des familles : sa famille est cochée, le mot à droite du titre ; une autre famille le remplace', async ({ page }) => {
   const vue = await ouvrir(page);
   await famille(vue, 'Sérénité').click();
   await mot(vue, 'En sécurité', 'Sérénité').click();
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:serenite:en-securite' }]);
   await retourFamilles(vue).click();
-  const serenite = familles(vue).getByRole('button', { name: /^Sérénité/ });
+  // La bulle ne garde que le nom de sa famille ; elle s'annonce « Sérénité, En sécurité ».
+  const serenite = familles(vue).getByRole('button', { name: 'Sérénité, En sécurité', exact: true });
   await expect(serenite).toHaveAttribute('aria-pressed', 'true');
-  await expect(serenite.locator('small')).toHaveText('En sécurité');
-  // Une autre famille : la famille seule, à la place du mot.
+  await expect(serenite).toHaveText('Sérénité');
+  await expect(vue.locator('.mot-choisi')).toHaveText('En sécurité');
+  await expect(vue.getByText('une famille, puis un mot')).toHaveCount(0);
+  // Une autre famille : la famille seule, à la place du mot ; l'aide revient.
   await famille(vue, 'Tristesse').click();
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse' }]);
   await retourFamilles(vue).click();
   await expect(familles(vue).getByRole('button', { pressed: true })).toHaveText(['Tristesse']);
+  await expect(vue.locator('.mot-choisi')).toHaveCount(0);
+  await expect(vue.getByText('une famille, puis un mot')).toBeVisible();
+});
+
+// Le mot choisi, à droite du titre « Émotion » : sur une ligne, entier, dans le panneau, sans toucher le titre. Les
+// 79 mots passent tour à tour dans l'élément de l'écran (son texte seul change, ses styles sont ceux de l'app).
+const placesDuMot = (vue, libelles) => vue.locator('.mot-choisi').evaluate((el, ls) => {
+  const texte = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE);
+  const avant = texte.data;
+  const titre = el.closest('.tete-reponse').querySelector('.titre-reponse');
+  const p = el.closest('.panneau-reponses');
+  const [rp, sp] = [p.getBoundingClientRect(), getComputedStyle(p)];
+  const droite = rp.right - parseFloat(sp.paddingRight);
+  const fautes = [];
+  for (const l of ls) {
+    texte.data = l;
+    const rg = document.createRange();
+    rg.selectNodeContents(texte);
+    const r = rg.getBoundingClientRect();
+    const t = titre.getBoundingClientRect();
+    if (rg.getClientRects().length !== 1) fautes.push(`${l} : sur plusieurs lignes`);
+    if (r.left < t.right + 4) fautes.push(`${l} : touche le titre`);
+    if (r.right > droite + 0.5 || el.scrollWidth > el.clientWidth + 0.5) fautes.push(`${l} : coupé ou hors du panneau`);
+  }
+  texte.data = avant;
+  return fautes;
+}, libelles);
+
+test('le mot choisi s\'affiche en entier à droite du titre « Émotion », les 79 mots, à 17, 21 et 23 px ; à la couleur de sa famille, AA en clair et en sombre', async ({ page }) => {
+  // Le texte d'une famille (-text) sur le panneau (--surface), pour les 7 familles.
+  for (const [schema, t] of [['clair', clair], ['sombre', sombre]]) {
+    for (const f of FAMILLES) expect(contraste(t[`c-emo-${f.cle}-text`], t.surface), `${schema} ${f.libelle}`).toBeGreaterThanOrEqual(4.5);
+  }
+  const tous = FAMILLES.flatMap((f) => f.mots.map((m) => m.libelle));
+  expect(tous).toHaveLength(79);
+  for (const schema of ['light', 'dark']) {
+    const t = schema === 'dark' ? sombre : clair;
+    await page.emulateMedia({ colorScheme: schema });
+    const vue = await ouvrir(page);
+    // Les deux mots les plus longs, choisis pour de bon : Peur › Non respecté, puis Surprise › Désillusionné en 23 px.
+    await famille(vue, 'Peur').click();
+    await mot(vue, 'Non respecté', 'Peur').click();
+    await retourFamilles(vue).click();
+    const choisi = vue.locator('.mot-choisi');
+    await expect(choisi).toHaveText('Non respecté');
+    const [couleur, fond] = await choisi.evaluate((e) => [getComputedStyle(e).color, getComputedStyle(e.closest('.panneau-reponses')).backgroundColor]);
+    expect(couleur).toBe(rgb(t['c-emo-peur-text']));
+    expect(contraste(couleur, fond)).toBeGreaterThanOrEqual(4.5);
+    for (const taille of [17, 21, 23]) {
+      await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+      expect(await placesDuMot(vue, tous), `${schema}, texte de ${taille} px`).toEqual([]);
+    }
+    await familles(vue).getByRole('button', { name: 'Peur, Non respecté', exact: true }).click();
+    await expect(choisi).toHaveCount(0);
+    await famille(vue, 'Surprise').click();
+    await mot(vue, 'Désillusionné', 'Surprise').click();
+    await retourFamilles(vue).click();
+    await expect(choisi).toHaveText('Désillusionné');
+    expect(await placesDuMot(vue, ['Désillusionné']), `${schema}, Désillusionné en 23 px`).toEqual([]);
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+    await effacerReleves(page);
+  }
+});
+
+// Deux touchers à 120 ms au même point, le centre d'une bulle : sur l'iPhone, width=device-width supprime le délai du
+// double toucher, ce sont deux clics. La vue change entre les deux : le second tombe sur une bulle qui vient de paraître.
+const doubleToucher = async (page, bouton) => {
+  const b = await bouton.boundingBox();
+  const [x, y] = [b.x + b.width / 2, b.y + b.height / 2];
+  await page.touchscreen.tap(x, y);
+  await page.waitForTimeout(120);
+  await page.touchscreen.tap(x, y);
+  return [x, y];
+};
+const finAnimations = (vue) => vue.locator('.panneau-reponses').evaluate((p) => Promise.all(p.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))));
+
+test('double toucher rapide sur une famille : le mot apparu dessous n\'est pas choisi (sans puis avec l\'énergie, avec ou sans « Réduire les animations »)', async ({ page }) => {
+  test.setTimeout(60000);
+  for (const mouvement of ['no-preference', 'reduce']) {
+    await page.emulateMedia({ reducedMotion: mouvement });
+    for (const avecEnergie of [false, true]) {
+      const quoi = (f) => `${f.libelle}, ${avecEnergie ? 'énergie choisie' : 'sans énergie'}, ${mouvement}`;
+      const vue = await ouvrir(page);
+      if (avecEnergie) await energie(vue, 'Haute').click();
+      for (const f of FAMILLES) {
+        await finAnimations(vue);
+        const point = await doubleToucher(page, famille(vue, f.libelle));
+        await expect(mots(vue, f.libelle).getByRole('button')).toHaveCount(f.mots.length);
+        // Au-delà de la fermeture automatique (250 ms) : l'écran est resté, la famille seule est notée, aucun mot coché.
+        await page.waitForTimeout(400);
+        expect(await releves(page)(), quoi(f)).toMatchObject([{ emotion: f.id, energie: avecEnergie ? 'energie:haute' : null }]);
+        await expect(mots(vue, f.libelle).getByRole('button', { pressed: true }), quoi(f)).toHaveCount(0);
+        await expect(page, quoi(f)).toHaveURL(/#\/moment$/);
+        if (f === FAMILLES[0] && !avecEnergie) {
+          // La garde passée, un toucher au même point choisit le mot qui s'y trouve.
+          await page.touchscreen.tap(...point);
+          await expect(mots(vue, f.libelle).getByRole('button', { pressed: true })).toHaveCount(1);
+          await expect.poll(async () => (await releves(page)())[0].emotion).toMatch(new RegExp(`^${f.id}:`));
+        }
+        // Retour aux familles ; retoucher la famille choisie (« Colère, Hostile » si un mot l'est) efface l'émotion.
+        await retourFamilles(vue).click();
+        const choisie = familles(vue).getByRole('button', { name: new RegExp(`^${f.libelle}`) });
+        await choisie.click();
+        await expect(choisie).toHaveAttribute('aria-pressed', 'false');
+        await expect.poll(async () => (await releves(page)()).map((h) => h.emotion)).toEqual(avecEnergie ? [null] : []);
+      }
+      await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+      await effacerReleves(page);
+    }
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
 // Style d'une bulle : fond, texte, graisse, coche (15–16 px, trait 3), taille.
