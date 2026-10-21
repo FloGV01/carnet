@@ -139,8 +139,13 @@
   display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 16px;
   background: var(--text); color: var(--bg); border-radius: var(--r-bouton); font-size: var(--t-sous);
 }
-/* Dans un parcours, en haut, sous « Fermer » : les réponses sont en bas, près du pouce (2b). */
+/* Dans un parcours, en haut, juste sous l'en-tête : les réponses sont en bas, près du pouce (2b). En grand texte,
+   l'en-tête grandit (le repère d'étape passe sous le nom) : le toast se cale sur son bas réel, par ancrage CSS (iOS 26),
+   et à défaut sous ses 48 px. */
 .toast.en-haut { top: calc(52px + env(safe-area-inset-top)); bottom: auto; }
+@supports (top: anchor(bottom)) {
+  .toast.en-haut { top: calc(anchor(--tete-parcours bottom, calc(48px + env(safe-area-inset-top))) + 4px); }
+}
 .toast-texte { flex: 1; }
 .toast button { border: 0; background: none; color: var(--bg); font-weight: 600; font-size: inherit; min-height: var(--cible); padding: 0 12px; text-decoration: underline; }
 
@@ -365,13 +370,19 @@ button.effacer svg { width: 18px; height: 18px; }
 }
 /* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600) derrière un petit carré à sa couleur,
    et, à droite, le repère d'étapes en points de 9 px, jamais une barre : faites, pleines à la couleur du parcours ;
-   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --surface-2. */
-.parcours-tete { display: flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 48px; }
+   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --surface-2.
+   En grand texte, rien ne se coupe : le nom ne passe pas à la ligne tant qu'il tient seul sur une ligne, et quand les
+   trois ne tiennent plus côte à côte, le repère passe dessous, dans une rangée de 28 (flex-wrap). L'ancre
+   --tete-parcours cale le toast sous l'en-tête, quelle que soit sa hauteur. */
+.parcours-tete {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 8px; min-height: 48px;
+  container: tete / inline-size; anchor-name: --tete-parcours;
+}
 .parcours-tete .fermer { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; min-height: var(--cible); border: 0; background: none; color: var(--action); font-size: var(--t-corps); font-weight: 600; }
 .parcours-tete .fermer svg { width: 20px; height: 20px; }
 .parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
 .point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
-.reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 10px 0 8px; }
+.reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
 .reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); }
 .reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
@@ -379,6 +390,14 @@ button.effacer svg { width: 18px; height: 18px; }
 .reperes:has(i:nth-child(8)) { gap: 6px; }
 .reperes:has(i:nth-child(10)) { gap: 5px; }
 .reperes:has(i:nth-child(10)) i { width: 8px; height: 8px; }
+/* Texte grand pour la largeur (moins de 21,5 rem : dès 19 px à 390, dès 17 px à 375) : l'en-tête se resserre, pour que
+   l'Après coup à 8 étapes tienne sur une ligne de 48 jusqu'à 23 px (et à 11 étapes jusqu'à 21 px), mesuré dans WebKit. */
+@container tete (max-width: 21.5rem) {
+  .parcours-tete .fermer { gap: 4px; }
+  .parcours-tete .nom { margin-left: 2px; gap: 7px; }
+  .reperes { padding: 0 6px 0 4px; }
+  .reperes:has(i:nth-child(10)) { gap: 4px; }
+}
 .parcours-corps { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 .parcours-pied {
   display: flex; justify-content: space-between; align-items: center; gap: var(--esp-3);

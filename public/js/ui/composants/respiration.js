@@ -41,6 +41,9 @@ export function Respiration({ demarrerTout = false, origine = null, apres = null
   const seance = useSeance('coherence', origine);
   // Vrai quand la dernière respiration a créé une séance (menée au bout, ou arrêtée après 60 s).
   const [notee, setNotee] = useState(false);
+  // La durée de la respiration lancée, prise à « Commencer » : le texte de fin dit ce qui vient d'être fait, même si
+  // une puce change le réglage ensuite.
+  const [dureeFaite, setDureeFaite] = useState(null);
   // Une lecture qui échoue donne les réglages par défaut : « Commencer » ne reste jamais inactif.
   useEffect(() => { repo.meta.lire('respiration').catch(() => null).then((v) => setReglages(normaliserRespiration(v))); }, []);
   // Les écritures des puces se suivent, chacune relue et réécrite dans sa transaction : deux choix rapprochés ne
@@ -119,6 +122,7 @@ export function Respiration({ demarrerTout = false, origine = null, apres = null
     derniere.current = null;
     seance.commencer();
     setNotee(false);
+    setDureeFaite(reglages.duree);
     if (!reglages.son) suspendreSon(); // un contexte préparé par l'appelant pour rien se rendort
     else if (dansToucher) preparerSon();
     setPhase('inspire');
@@ -136,7 +140,7 @@ export function Respiration({ demarrerTout = false, origine = null, apres = null
     ? html`${NOM_RESPIRATION} <span class="duree-respiration">${texteDuree(minutes)}</span>`
     : texteAvant(minutes));
   const texte = phase === 'inspire' ? 'Inspire' : phase === 'expire' ? 'Expire'
-    : !reglages ? '' : phase === 'fini' ? texteFin(duree) : avant(duree);
+    : !reglages ? '' : phase === 'fini' ? texteFin(dureeFaite) : avant(duree);
   const classeCercle = ['cercle-respiration', enCours && 'en-cours', enCours && `phase-${phase}`, reglages && reglages.rythme === '4-6' && 'rythme-4-6']
     .filter(Boolean).join(' ');
   return html`<section class="respiration" aria-label="Cohérence cardiaque">

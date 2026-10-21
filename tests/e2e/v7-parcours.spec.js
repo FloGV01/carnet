@@ -171,6 +171,59 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à la c
   }
 });
 
+// L'en-tête d'un parcours à étapes : sa hauteur, le nom (lignes), le repère (à côté du nom ou passé dessous), ce qui
+// sort de l'écran, et le toast (sous l'en-tête, sans le couvrir).
+const tete = (vue) => vue.locator('.parcours-tete').evaluate((h) => {
+  const r = (e) => e.getBoundingClientRect();
+  const nom = h.querySelector('.nom');
+  const texte = document.createRange();
+  texte.selectNodeContents([...nom.childNodes].find((n) => n.nodeType === Node.TEXT_NODE));
+  const reperes = h.querySelector('.reperes');
+  const toast = document.querySelector('.toast');
+  return {
+    hauteur: Math.round(r(h).height),
+    lignesNom: new Set([...texte.getClientRects()].map((x) => Math.round(x.top))).size,
+    repere: r(reperes).top >= r(nom).bottom - 1 ? 'dessous' : r(reperes).left >= r(nom).right ? 'à côté' : 'chevauche le nom',
+    dehors: [...h.querySelectorAll('*')].filter((e) => r(e).left < -0.5 || r(e).right > innerWidth + 0.5).length,
+    toastSous: toast && r(toast).top >= r(h).bottom,
+  };
+});
+
+test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne de 48 à 21 et 23 px ; plus grand, le repère passe sous le nom, jamais coupé ; le toast se pose sous l\'en-tête', async ({ page }) => {
+  const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
+  const id11 = await creerEpisode(page, { date: '2026-10-14', heure: '19:30', emotion: 'emotion:colere', intensite: 6,
+    apresCoup: { types: ['typeExplosion:colere', 'typeExplosion:surcharge'] } });
+  const ac = page.getByRole('dialog', { name: 'Après coup' });
+  const verifier = async (cas, toast) => {
+    for (const [px, attendu] of cas) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, px);
+      const t = await tete(ac);
+      const quoi = `${await ac.locator('.reperes').getAttribute('aria-label')} · ${px ?? 17} px`;
+      expect({ ...t, hauteur: attendu.hauteur ? t.hauteur : undefined }, quoi).toEqual({ ...attendu, lignesNom: 1, dehors: 0, toastSous: toast });
+      if (!attendu.hauteur) expect(t.hauteur, `${quoi} : le repère dans une rangée à lui`).toBeGreaterThan(48);
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  };
+  // 11 étapes (Colère et Surcharge cochées) : sur une ligne jusqu'à 21 px, puis le repère dessous.
+  await aller(page, `#/apres-coup/${id11}`);
+  await expect(ac.getByRole('img', { name: 'Récapitulatif' })).toBeVisible();
+  await expect(ac.locator('.reperes i')).toHaveCount(11);
+  await verifier([[null, { hauteur: 48, repere: 'à côté' }], [21, { hauteur: 48, repere: 'à côté' }], [23, { repere: 'dessous' }]], null);
+  await ac.getByRole('button', { name: 'Fermer', exact: true }).click();
+
+  // 8 étapes, juste après un épisode noté : son toast est encore là, posé en haut. L'horloge s'arrête pour qu'il reste.
+  await page.getByRole('link', { name: 'Épisode', exact: true }).click();
+  const fiche = page.getByRole('dialog', { name: 'Épisode' });
+  await fiche.getByRole('button', { name: 'Conflit', exact: true }).click();
+  await fiche.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await aller(page, `#/apres-coup/${id}`);
+  await expect(ac.getByRole('img', { name: 'Étape 1 sur 8' })).toBeVisible();
+  await expect(page.locator('.toast.en-haut')).toHaveText(/Épisode enregistré/);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50));
+  await verifier([[null, { hauteur: 48, repere: 'à côté' }], [21, { hauteur: 48, repere: 'à côté' }], [23, { hauteur: 48, repere: 'à côté' }],
+    [28, { repere: 'dessous' }], [33, { repere: 'dessous' }]], true);
+});
+
 // Style d'un choix fait (après son petit rebond) : fond, texte, graisse, coche.
 const styleChoix = (loc) => loc.evaluate(async (e) => {
   await Promise.all(e.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
@@ -388,6 +441,37 @@ test('Moment difficile : les puces règlent la durée et le rythme d\'un toucher
   await expect(v.getByRole('button', { name: 'Recommencer' })).toBeVisible();
   // La séance est notée, avec son origine (tâche 7).
   await expect.poll(async () => (await page.evaluate(() => window.__carnet.repo.seances.tous())).map((x) => [x.origine, x.dureeS])).toEqual([['moment-difficile', 120]]);
+});
+
+test('Moment difficile : une puce réglée une fois la respiration finie ne change pas ce qui vient d\'être fait (« 2 minutes de respiration. » reste, la séance aussi) ; « Recommencer » suit le nouveau réglage', async ({ page }) => {
+  await ecrireMeta(page, 'respiration', { duree: 2, rythme: '5-5', son: false });
+  const vue = await ouvrirDifficile(page);
+  const phase = vue.locator('.phase-respiration');
+  const seances = () => page.evaluate(async () => (await window.__carnet.repo.seances.tous()).map((x) => x.dureeS).sort((a, b) => a - b));
+  await vue.getByRole('button', { name: 'Commencer' }).click();
+  await expect(phase).toHaveText('Inspire');
+  await page.clock.runFor(122 * 1000);
+  await expect(phase).toHaveText('2 minutes de respiration.');
+  await expect.poll(seances).toEqual([120]);
+  // 10 minutes sur la puce : le réglage change, le texte de fin dit toujours la séance faite.
+  await puce(vue, 'Durée').selectOption('10');
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '5-5', son: false });
+  await expect(puce(vue, 'Durée')).toHaveValue('10');
+  await expect(phase).toHaveText('2 minutes de respiration.');
+  await expect(vue.getByText('10 minutes de respiration.')).toHaveCount(0);
+  expect(await seances()).toEqual([120]);
+  // Le rythme aussi, sans rien changer au texte.
+  await puce(vue, 'Rythme').selectOption('4-6');
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '4-6', son: false });
+  await expect(phase).toHaveText('2 minutes de respiration.');
+  // « Recommencer » : 10 minutes, cette fois. Passé 2 minutes, la respiration continue ; arrêtée, c'est une autre séance.
+  await vue.getByRole('button', { name: 'Recommencer' }).click();
+  await expect(phase).toHaveText('Inspire');
+  await page.clock.runFor(122 * 1000);
+  await expect(phase).toHaveText(/^(Inspire|Expire)$/);
+  await vue.getByRole('button', { name: 'Arrêter' }).click();
+  await expect(phase).toHaveText('Cohérence cardiaque');
+  await expect.poll(seances).toEqual([120, 122]);
 });
 
 test('Moment difficile, « Réduire les animations » : le cercle reste figé (le disque change seulement de teinte) ; Une chose à la fois et sans plan, au même style', async ({ page }) => {
