@@ -1,9 +1,9 @@
 // Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes,
 // rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me ressourcer,
-// aide iPhone), puis analyse, à propos et la zone sensible (v6.1).
+// aide iPhone), puis à propos et la zone sensible (v6.1). v7 : la section « Analyse » (signal de ressemblance,
+// tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
-import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { VERSION, VERSION_APP } from '../../version.js';
 import { etatStockage, formaterOctets } from '../../plateforme/persistance.js';
@@ -35,8 +35,7 @@ export function Reglages() {
   const horsLigne = typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller;
   useEffect(() => {
     etatStockage().then(setStockage);
-    Promise.all([repo.audios.metas(), repo.meta.lire('reglages')]).then(([metas, reglages]) =>
-      setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0), reglages }));
+    repo.audios.metas().then((metas) => setInfos({ memos: metas.reduce((n, m) => n + (m.taille || 0), 0) }));
   }, []);
   const appui = useAppuiLong(() => { location.hash = '#/diagnostic'; });
   const chercher = async () => {
@@ -55,14 +54,6 @@ export function Reglages() {
     afficherToast("État d'avant l'import rétabli.", null, 3000);
     await sauvegarde.recharger();
   };
-  const signal = infos.reglages ? infos.reglages.signal !== false : true;
-  const tendances = infos.reglages ? infos.reglages.tendances !== false : true;
-  const basculer = (cle) => (v) => {
-    const reglages = { ...(infos.reglages || {}), [cle]: v };
-    setInfos((i) => ({ ...i, reglages }));
-    repo.meta.ecrire('reglages', reglages);
-  };
-  const basculerSignal = basculer('signal');
   const s = sauvegarde.infos;
   const fichiers = sauvegarde.fichiers;
 
@@ -100,20 +91,6 @@ export function Reglages() {
       <${LigneLien} href="#/reglages/ressourcer" icone="positifs" titre="Me ressourcer" />
       <${LigneLien} href="#/reglages/aide-iphone" icone="aideIphone" titre="Aide iPhone" />
     </ul>
-
-    <h2 class="libelle-section">Analyse</h2>
-    <section class="carte carte-groupe" aria-label="Analyse">
-      <div class="ligne-interrupteur">
-        <span id="libelle-signal" class="ligne-libelle">Signal de ressemblance</span>
-        <${Interrupteur} etiquette="Signal de ressemblance" actif=${signal} surChanger=${basculerSignal} />
-      </div>
-      <p class="note-carte-interne marge-interne">Une ligne « Pour info » dans Analyse quand les derniers jours ressemblent, dans les chiffres, à ceux qui ont précédé des périodes plus basses.</p>
-      <div class="ligne-interrupteur">
-        <span class="ligne-libelle">Tendances</span>
-        <${Interrupteur} etiquette="Tendances" actif=${tendances} surChanger=${basculer('tendances')} />
-      </div>
-      <p class="note-carte-interne marge-interne">Une phrase dans Analyse quand l'humeur des 4 dernières semaines s'écarte nettement de celle des 8 d'avant.</p>
-    </section>
 
     <h2 class="libelle-section">À propos</h2>
     <section class="carte carte-groupe a-propos" aria-label="À propos">

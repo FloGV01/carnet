@@ -39,22 +39,28 @@ test('periodeComprendre : « 3 mois » couvre [aujourd\'hui − 89, aujourd\'hui
 
 // ---------- Facteurs ----------
 
-test('facteursParJour : nuit Mal, journée au bureau, humeur à 4 ou moins (humeur du jour), oui / non / inconnu', () => {
+test('facteursParJour : nuit Mal, journée au bureau, oui / non / inconnu ; v7, les familles du jour, plus la note', () => {
   const journal = [
     soir('2026-09-01', { sommeilRessenti: MAL, lieu: 'lieu:bureau', humeur: 4 }),
     soir('2026-09-02', { sommeilRessenti: 'sommeil:moyen', lieu: 'lieu:teletravail', humeur: 5 }),
     soir('2026-09-03', { sommeilRessenti: BIEN, lieu: 'lieu:conge_repos', humeur: 9 }),
     soir('2026-09-04'),
   ];
-  // Le 03 : les relevés (moyenne 2) font l'humeur du jour, le soir (9) n'est pas lu. Le 05 : relevés seuls, 4,5.
-  const humeurs = [releve('2026-09-03', '10:00', { humeur: 2 }), releve('2026-09-05', '10:00', { humeur: 4 }), releve('2026-09-05', '18:00', { humeur: 5 })];
+  // Le 03 : deux émotions, dans l'ordre des heures. Le 05 : une émotion seule (un jour de relevés seuls). Le 06 : une
+  // ancienne note seule, qui ne crée plus de jour.
+  const humeurs = [
+    releve('2026-09-03', '18:00', { emotion: 'roue:serenite:calme' }), releve('2026-09-03', '10:00', { emotion: 'roue:colere' }),
+    releve('2026-09-05', '10:00', { emotion: 'roue:joie:amuse' }), releve('2026-09-06', '10:00', { humeur: 4 }),
+  ];
   const jours = facteursParJour({ journal, humeurs, episodes: [] });
-  const lire = (date) => { const j = jours.get(date); return [j.nuitMal, j.bureau, j.humeurBasse, j.humeur, j.lieu]; };
-  assert.deepEqual(lire('2026-09-01'), [true, true, true, 4, 'lieu:bureau']);
-  assert.deepEqual(lire('2026-09-02'), [false, false, false, 5, 'lieu:teletravail']);
-  assert.deepEqual(lire('2026-09-03'), [false, false, true, 2, 'lieu:conge_repos']);
-  assert.deepEqual(lire('2026-09-04'), [null, null, null, null, null]);
-  assert.deepEqual(lire('2026-09-05'), [null, null, false, 4.5, null]);
+  const lire = (date) => { const j = jours.get(date); return [j.nuitMal, j.bureau, j.lieu, j.familles]; };
+  assert.deepEqual(lire('2026-09-01'), [true, true, 'lieu:bureau', []]);
+  assert.deepEqual(lire('2026-09-02'), [false, false, 'lieu:teletravail', []]);
+  assert.deepEqual(lire('2026-09-03'), [false, false, 'lieu:conge_repos', ['colere', 'serenite']]);
+  assert.deepEqual(lire('2026-09-04'), [null, null, null, []]);
+  assert.deepEqual(lire('2026-09-05'), [null, null, null, ['joie']]);
+  assert.equal(jours.has('2026-09-06'), false);
+  for (const j of jours.values()) for (const cle of ['humeur', 'humeurBasse']) assert.equal(cle in j, false, cle);
 });
 
 test('facteursParJour : explosion selon la règle de l\'Analyse ; un jour de relevés seuls reste inconnu, jamais « non »', () => {
@@ -66,7 +72,7 @@ test('facteursParJour : explosion selon la règle de l\'Analyse ; un jour de rel
     soir('2026-09-03', { explosions: 2 }), // compteur : oui
   ];
   const episodes = [explosion('2026-09-02'), explosion('2026-09-06'), { id: 'x', date: '2026-09-07', heure: '10:00', reaction: 'reaction:rien_fait' }];
-  const humeurs = [releve('2026-09-04', '10:00', { humeur: 6 }), releve('2026-09-05', '11:00', { energie: 'energie:haute' })];
+  const humeurs = [releve('2026-09-04', '10:00', { emotion: 'roue:peur' }), releve('2026-09-05', '11:00', { energie: 'energie:haute' })];
   const jours = facteursParJour({ journal, humeurs, episodes, zeroDepuis: '2026-09-01' });
   const explosionDe = (date) => jours.get(date).explosion;
   assert.equal(explosionDe('2026-08-30'), null);
@@ -74,7 +80,7 @@ test('facteursParJour : explosion selon la règle de l\'Analyse ; un jour de rel
   assert.equal(explosionDe('2026-09-01'), false);
   assert.equal(explosionDe('2026-09-02'), true);
   assert.equal(explosionDe('2026-09-03'), true);
-  assert.equal(explosionDe('2026-09-04'), null, 'relevé d\'humeur seul : pas de saisie du soir');
+  assert.equal(explosionDe('2026-09-04'), null, 'relevé d\'émotion seul : pas de saisie du soir');
   assert.equal(explosionDe('2026-09-05'), null, 'relevé d\'énergie seul : pas de saisie du soir');
   assert.equal(explosionDe('2026-09-06'), true, 'épisode seul, sans saisie du soir');
   assert.equal(jours.has('2026-09-07'), false, 'un autre épisode ne crée pas de jour');
@@ -85,7 +91,7 @@ test('facteursParJour : énergie basse dès un relevé « basse » (« vers » c
     releve('2026-09-01', '09:00', { energie: 'energie:haute' }), releve('2026-09-01', '17:00', { energie: 'energie:basse', humeur: 6 }),
     releve('2026-09-02', '09:00', { energie: 'energie:moyenne' }), releve('2026-09-02', '14:00', { energie: 'energie:haute', vers: true }),
     releve('2026-09-03', '14:00', { energie: 'energie:basse', vers: true }),
-    releve('2026-09-04', '10:00', { humeur: 5 }), // humeur seule : pas un relevé d'énergie
+    releve('2026-09-04', '10:00', { emotion: 'roue:surprise' }), // émotion seule : pas un relevé d'énergie
   ];
   const jours = facteursParJour({ journal: [soir('2026-09-05')], humeurs, episodes: [] });
   assert.equal(jours.get('2026-09-01').energieBasse, true);
@@ -293,7 +299,7 @@ test('autres jours, retour au bureau : hors des fenêtres de tous les retours ; 
   const jours = facteursParJour({ journal, humeurs: [], episodes: [] });
   const g = retoursBureau(jours, tout('2026-09-16', '2026-09-01'));
   assert.equal(g.statut, 'ok');
-  assert.deepEqual(g.blocs.map((b) => b.cle), ['humeurBasse', 'nuitMal', 'energieBasse', 'explosion', 'contactCouteux']);
+  assert.deepEqual(g.blocs.map((b) => b.cle), ['nuitMal', 'energieBasse', 'explosion', 'contactCouteux'], 'v7 : plus d\'« humeur à 4 ou moins »');
   const nuit = bloc(g, 'nuitMal');
   assert.deepEqual(nuit.barres.map((x) => x.decalage), [-1, 0, 1, 2]);
   // Retours : 02, 08 et 12 (le 03 suit un jour au bureau, le 06 une veille sans lieu).
@@ -360,7 +366,7 @@ test('graphique aligné : avant les explosions, les éléments pesés ; après, 
   const periode = tout('2026-09-15', '2026-09-02');
   assert.deepEqual(explosionsAvant(jours, periode).blocs.map((b) => b.cle), ['nuitMal', 'energieBasse', 'contactCouteux', 'bureau', 'pese:bruit']);
   const apres = explosionsApres(jours, periode);
-  assert.deepEqual(apres.blocs.map((b) => b.cle), ['humeurBasse', 'energieBasse', 'nuitMal', 'recharge:calme', 'recharge:seul']);
+  assert.deepEqual(apres.blocs.map((b) => b.cle), ['energieBasse', 'nuitMal', 'recharge:calme', 'recharge:seul'], 'v7 : plus d\'« humeur à 4 ou moins »');
   assert.deepEqual(barres(bloc(apres, 'recharge:seul')), ['3/3', '0/0', '0/0']);
   assert.deepEqual(apres.blocs[0].barres.map((x) => x.decalage), [1, 2, 3]);
 });
@@ -416,26 +422,29 @@ test('seuils : un élément pesé n\'apparaît qu\'à partir de 3 jours notés s
 // Le 07/09/2026 est un lundi : 07, 14, 21 et 28 sont des lundis, 08, 15, 22 et 29 des mardis, 09, 16, 23 et 30 des mercredis.
 const colonnesDe = (journal, humeurs = []) => facteursParJour({ journal, humeurs, episodes: [] });
 
-test('mesures de Comprendre : humeur, nuits Mal, explosions, énergie basse', () => {
-  assert.deepEqual(MESURES, ['humeur', 'nuitMal', 'explosion', 'energieBasse']);
+test('mesures de Comprendre : émotions (v7, à la place de l\'humeur), nuits Mal, explosions, énergie basse', () => {
+  assert.deepEqual(MESURES, ['emotions', 'nuitMal', 'explosion', 'energieBasse']);
 });
 
-test('colonnes, semaine : sept colonnes du lundi au dimanche ; humeur du jour en moyenne, du plus bas au plus haut ; fragile sous 3 valeurs', () => {
+test('colonnes, semaine : sept colonnes du lundi au dimanche ; la mesure « emotions » compte les relevés par famille (v7)', () => {
   assert.equal(jourSemaine('2026-09-07'), 0);
-  const journal = [
-    soir('2026-09-07', { humeur: 4 }), soir('2026-09-14', { humeur: 6 }), soir('2026-09-21', { humeur: 8 }),
-    soir('2026-09-08', { humeur: 5 }), soir('2026-09-15', { humeur: 7 }),
-    // Le 09 : les relevés (4 et 5) font l'humeur du jour, le 9 du soir n'est pas lu.
-    soir('2026-09-09', { humeur: 9 }), soir('2026-09-16', { humeur: 2 }), soir('2026-09-23', { humeur: 5 }),
+  // Lundis 07 et 14 : colère, colère ; sérénité. Mardi 08 : joie (et une ancienne note, qui ne compte pas). Le 10/09 à 01:00
+  // est le mercredi 09.
+  const humeurs = [
+    releve('2026-09-07', '10:00', { emotion: 'roue:colere:irrite' }), releve('2026-09-07', '18:00', { emotion: 'roue:colere' }),
+    releve('2026-09-14', '10:00', { emotion: 'roue:serenite:calme' }), releve('2026-09-08', '10:00', { emotion: 'roue:joie', humeur: null }),
+    releve('2026-09-08', '12:00', { humeur: 6 }), releve('2026-09-10', '01:00', { emotion: 'roue:peur' }),
   ];
-  const humeurs = [releve('2026-09-09', '10:00', { humeur: 4 }), releve('2026-09-09', '18:00', { humeur: 5 })];
-  const g = parColonnes(colonnesDe(journal, humeurs), tout('2026-09-23', '2026-09-07'), { cle: 'semaine', mesure: 'humeur' });
+  const g = parColonnes(colonnesDe([], humeurs), tout('2026-09-23', '2026-09-07'), { cle: 'semaine', mesure: 'emotions' });
   assert.equal(g.statut, 'ok');
   assert.deepEqual(g.colonnes.map((c) => c.cle), [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, moyenne: 6, min: 4, max: 8, fragile: false });
-  assert.deepEqual(g.colonnes[1], { cle: 1, n: 2, moyenne: 6, min: 5, max: 7, fragile: true });
-  assert.deepEqual(g.colonnes[2], { cle: 2, n: 3, moyenne: (4.5 + 2 + 5) / 3, min: 2, max: 5, fragile: false });
-  assert.deepEqual(g.colonnes[3], { cle: 3, n: 0, moyenne: null, min: null, max: null, fragile: true }, 'un jeudi sans humeur : colonne vide');
+  assert.deepEqual([g.colonnes[0].n, g.colonnes[0].jours, g.colonnes[0].familles.colere, g.colonnes[0].familles.serenite], [3, 2, 2, 1]);
+  assert.deepEqual([g.colonnes[1].n, g.colonnes[1].familles.joie], [1, 1]);
+  assert.deepEqual([g.colonnes[2].n, g.colonnes[2].familles.peur], [1, 1], 'le relevé de 01:00 compte pour la veille');
+  assert.deepEqual([g.colonnes[3].n, g.colonnes[3].jours], [0, 0], 'un jeudi sans émotion : colonne vide');
+  // Sous 5 relevés : aucune colonne.
+  assert.deepEqual(parColonnes(colonnesDe([], humeurs.slice(0, 4)), tout('2026-09-23', '2026-09-07'), { cle: 'semaine', mesure: 'emotions' }),
+    { statut: 'insuffisant', colonnes: [] });
 });
 
 test('colonnes, semaine : une barre par colonne, libellée par le seul compte ; aucun dénominateur', () => {
@@ -526,14 +535,20 @@ test('colonnes, lieu : une colonne par lieu présent, dans l\'ordre de la liste 
     ['lieu:ailleurs', 'lieu:bureau', 'lieu:teletravail']);
 });
 
-test('colonnes, lieu : l\'humeur du jour par lieu', () => {
+test('colonnes, lieu : les émotions par lieu, des jours où le lieu est noté (v7)', () => {
   const journal = [
-    ...['2026-09-01', '2026-09-02', '2026-09-03'].map((d, i) => soir(d, { lieu: 'lieu:bureau', humeur: [3, 5, 7][i] })),
-    ...['2026-09-04', '2026-09-05', '2026-09-06'].map((d, i) => soir(d, { lieu: 'lieu:teletravail', humeur: [6, 8, 9][i] })),
+    ...['2026-09-01', '2026-09-02', '2026-09-03'].map((d) => soir(d, { lieu: 'lieu:bureau' })),
+    ...['2026-09-04', '2026-09-05'].map((d) => soir(d, { lieu: 'lieu:teletravail' })),
+    soir('2026-09-06'),
   ];
-  const g = parColonnes(colonnesDe(journal), tout('2026-09-30', '2026-09-01'), { cle: 'lieu', mesure: 'humeur' });
-  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.moyenne, c.min, c.max]),
-    [['lieu:bureau', 5, 3, 7], ['lieu:teletravail', 23 / 3, 6, 9]]);
+  const humeurs = [
+    ...['2026-09-01', '2026-09-02', '2026-09-03'].map((d) => releve(d, '10:00', { emotion: 'roue:colere:hostile' })),
+    ...['2026-09-04', '2026-09-05'].map((d) => releve(d, '10:00', { emotion: 'roue:serenite' })),
+    releve('2026-09-06', '10:00', { emotion: 'roue:joie' }), // sans lieu noté : écarté
+  ];
+  const g = parColonnes(colonnesDe(journal, humeurs), tout('2026-09-30', '2026-09-01'), { cle: 'lieu', mesure: 'emotions' });
+  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.n, c.familles.colere, c.familles.serenite, c.familles.joie]),
+    [['lieu:bureau', 3, 3, 0, 0], ['lieu:teletravail', 2, 0, 2, 0]]);
 });
 
 test('colonnes, mois : une colonne par mois calendaire de la période, vide ou non ; le jour logique fait foi', () => {
@@ -554,14 +569,14 @@ test('colonnes, mois : une colonne par mois calendaire de la période, vide ou n
   assert.deepEqual(g.colonnes.map((c) => c.fragile), [false, true, false, true]);
 });
 
-test('colonnes, mois : l\'humeur du jour d\'un mois à cheval sur la bascule de 4 h', () => {
-  // Humeurs de septembre : relevé du 01/10 à 02:00 (6), jour logique du 30/09. Mois suivant : trois jours.
+test('colonnes, mois : les émotions d\'un mois à cheval sur la bascule de 4 h (v7)', () => {
+  // Le relevé du 01/10 à 02:00 est du 30/09.
   const humeurs = [
-    releve('2026-09-28', '10:00', { humeur: 4 }), releve('2026-09-29', '10:00', { humeur: 5 }), releve('2026-10-01', '02:00', { humeur: 6 }),
-    releve('2026-10-02', '10:00', { humeur: 7 }), releve('2026-10-03', '10:00', { humeur: 8 }), releve('2026-10-04', '10:00', { humeur: 9 }),
+    releve('2026-09-28', '10:00', { emotion: 'roue:peur' }), releve('2026-09-29', '10:00', { emotion: 'roue:peur' }), releve('2026-10-01', '02:00', { emotion: 'roue:tristesse:vide' }),
+    releve('2026-10-02', '10:00', { emotion: 'roue:joie' }), releve('2026-10-03', '10:00', { emotion: 'roue:joie' }), releve('2026-10-04', '04:00', { emotion: 'roue:surprise' }),
   ];
-  const g = parColonnes(colonnesDe([], humeurs), tout('2026-10-15', '2026-09-28'), { cle: 'mois', mesure: 'humeur' });
-  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.n, c.moyenne, c.min, c.max]), [['2026-09', 3, 5, 4, 6], ['2026-10', 3, 8, 7, 9]]);
+  const g = parColonnes(colonnesDe([], humeurs), tout('2026-10-15', '2026-09-28'), { cle: 'mois', mesure: 'emotions' });
+  assert.deepEqual(g.colonnes.map((c) => [c.cle, c.n, c.familles.peur, c.familles.tristesse, c.familles.joie]), [['2026-09', 3, 2, 1, 0], ['2026-10', 3, 0, 0, 2]]);
 });
 
 test('colonnes, seuils : 2 colonnes à au moins 3 valeurs (jour de la semaine, lieu), 2 mois à au moins 3 valeurs', () => {

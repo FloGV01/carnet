@@ -44,6 +44,9 @@
 .hist-date { font-size: var(--t-sous); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .hist-resume { font-size: var(--t-sous); line-height: 1.3; }
 .hist-note { font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
+/* v7 : les émotions du jour, deux mots au plus, avec les points de leurs familles. */
+.hist-emotions { display: flex; align-items: center; gap: 6px; font-size: var(--t-sous); line-height: 1.3; min-width: 0; }
+.mots-jour { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .puces { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 0 1px; }
 .puce {
   font-size: var(--t-legende); line-height: 19px; padding: 0 7px; border-radius: var(--r-icone);
@@ -179,38 +182,47 @@
 .bloc-consultation { display: flex; flex-direction: column; gap: 6px; }
 .bloc-consultation .titre-carte { font-size: 1.412rem; }
 
-/* Analyse */
-.analyse { gap: 16px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
-.analyse > .entete-onglet { margin-bottom: 0; }
-/* v6.1 : Comprendre en trois portes ; le sélecteur de période ne colle que sur les sections qu'il règle
-   (son bloc, .selon-periode) ; « Sur tout ton historique » vient après. */
-.portes-comprendre { display: flex; flex-direction: column; gap: 6px; }
-.portes-comprendre .libelle-section { padding: 0; }
-/* Les portes passent à la ligne quand la place manque (grand texte d'iOS, écran étroit) : « Explosions » ne se
-   coupe pas. 6,25 em : les trois tiennent sur une ligne au texte par défaut, à 375 comme à 390 de large. */
+/* Analyse (v7 en 2b) : les portes en haut (Historique, puis les trois de Comprendre), Ma semaine en tuiles, le sélecteur
+   de période qui ne colle que sur les sections qu'il règle (son bloc, .selon-periode). */
+.analyse { gap: 12px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+.analyse > .entete-onglet { margin-bottom: 2px; }
+.portes-analyse { display: flex; flex-direction: column; gap: 8px; }
+.carre-porte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
+.carre-porte svg { width: 17px; height: 17px; }
+.porte-historique {
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: var(--r-carte);
+  background: var(--surface); color: var(--text); text-decoration: none; font-size: var(--t-corps); font-weight: 600;
+}
+.porte-historique > svg { margin-left: auto; width: 16px; height: 16px; color: var(--text-2); }
+/* Les portes de Comprendre : trois cartes de 76, le carré de leur couleur et un chevron en haut, le nom en bas. Elles
+   passent à la ligne quand la place manque (grand texte d'iOS, écran étroit) : « Explosions » ne se coupe pas. 6,25 em :
+   les trois tiennent sur une ligne au texte par défaut, à 375 comme à 390 de large. */
 .portes { display: flex; flex-wrap: wrap; gap: 8px; }
-.porte { flex: 1 1 6.25em; min-height: var(--cible); padding: 0 6px; color: var(--action); font-weight: 600; }
-.selon-periode, .tout-historique { display: flex; flex-direction: column; gap: 16px; }
-.tout-historique { padding-top: 12px; }
-.tout-historique > .libelle-section { padding: 0; margin-bottom: -8px; }
+.porte {
+  flex: 1 1 6.25em; min-height: 76px; padding: 10px 10px 10px 12px; border-radius: var(--r-carte); background: var(--surface);
+  color: var(--text); text-decoration: none; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+}
+.porte-haut { display: flex; align-items: flex-start; justify-content: space-between; }
+.porte-haut > svg { width: 16px; height: 16px; color: var(--text-2); }
+.porte-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.2; }
+.selon-periode { display: flex; flex-direction: column; gap: 12px; }
 .centre { text-align: center; margin: 12px 0; }
 .texte-secondaire { font-size: var(--t-sous); color: var(--text-2); line-height: 1.4; }
 .pourquoi { font-size: var(--t-sous); min-height: var(--cible); vertical-align: middle; }
 .encadre-regle { font-size: var(--t-sous); line-height: 1.4; padding: 12px 14px; border-radius: var(--r-moyen); background: var(--surface-2); }
-.pour-info { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r-carte); background: var(--surface); }
-.pour-info-tete { display: flex; align-items: center; justify-content: space-between; }
-.pour-info .libelle-section { padding: 0; }
-.pour-info .masquer { font-size: var(--t-sous); padding: 0 8px; margin: -12px -8px -12px 0; }
-.pour-info p { font-size: 0.941rem; line-height: 1.45; text-wrap: pretty; }
-.voir-detail { align-self: flex-start; font-size: var(--t-sous); margin: -6px 0; }
-.detail-signal { border-collapse: collapse; width: 100%; font-size: var(--t-note); font-variant-numeric: tabular-nums; }
-.detail-signal th, .detail-signal td { text-align: left; padding: 3px 4px; font-weight: 400; vertical-align: baseline; }
-.detail-signal thead th, .detail-signal tbody th { color: var(--text-2); }
-.detail-signal .fort { font-weight: 600; }
-.ma-semaine { display: flex; flex-direction: column; gap: 12px; }
+.ma-semaine { display: flex; flex-direction: column; gap: 10px; }
 .ma-semaine .carte-entete { margin: 0; }
-.ma-semaine .valeur-chiffre { font-size: 1.529rem; }
-.phrase-semaine { font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; border-top: 1.5px dashed var(--line); padding-top: 10px; }
+.ma-semaine .repli.repli-carte { padding: 0; background: none; }
+/* Ma semaine : « Tes émotions » sur toute la largeur, puis nuits Mal, explosions et épisodes côte à côte. */
+.tuiles-semaine { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.4em, 1fr)); gap: 8px; }
+.tuiles-semaine .tuile { border: 0; background: var(--surface-2); min-height: 0; padding: 12px 12px 14px; gap: 8px; }
+.tuiles-semaine .tuile-valeur { font-size: var(--t-tuile); color: var(--text); }
+.tuile-emotions { grid-column: 1 / -1; }
+.barres-familles { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.barres-familles li { display: grid; grid-template-columns: minmax(0, 5.6em) minmax(0, 1fr) 2.2em; align-items: center; gap: 10px; font-size: var(--t-sous); }
+.nom-famille { color: var(--text); overflow-wrap: anywhere; }
+.barre-famille { width: 100%; height: 10px; display: block; }
+.compte-famille { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .tuile { background: var(--surface); --fond-choix: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
 .tuile-titre { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
@@ -222,29 +234,29 @@
 .graphe { margin: 0; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .graphe figcaption { display: flex; flex-direction: column; gap: 2px; }
 .graphe-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.graphe-titre { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--t-corps); }
+.graphe-titre { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--t-bloc); }
 .graphe-droite { font-size: var(--t-note); color: var(--text-2); }
 .graphe-resume { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); }
 .graphe svg { width: 100%; height: auto; display: block; overflow: visible; }
 .bascule-graphe { align-self: flex-start; font-size: var(--t-sous); }
 .g-axe { font-size: 10px; fill: var(--text-2); }
 .g-graduation { dominant-baseline: middle; }
+/* Mes jours, Ta journée (2b) : l'étiquette de chaque rangée, et les noms des colonnes en tête. */
+.g-etiquette { font-size: 12.5px; fill: var(--text); dominant-baseline: middle; }
+.g-tete { font-size: 12px; font-weight: 600; }
 .g-filet { stroke: var(--line); stroke-width: 1; }
-.g-ligne { stroke: var(--c); stroke-width: 2; stroke-linecap: round; }
 .g-point { fill: var(--c); stroke: var(--c); stroke-width: 2; }
 .g-anneau { fill: var(--surface); stroke: var(--c); stroke-width: 2; }
+.g-plein { fill: var(--c); }
 .g-barre { fill: var(--c); }
+/* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques. */
+.g-emo { fill: var(--c); }
 .g-zone { fill: transparent; cursor: pointer; }
-.g-bulle rect { fill: var(--text); }
-.g-bulle text { fill: var(--bg); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .g-sommeil-1 { fill: var(--chart-sommeil-1); background: var(--chart-sommeil-1); }
 .g-sommeil-2 { fill: var(--chart-sommeil-2); background: var(--chart-sommeil-2); }
 .g-sommeil-3 { fill: var(--chart-sommeil-3); background: var(--chart-sommeil-3); }
 .legende-graphe { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); }
 .legende-graphe svg { width: 12px; height: 12px; flex: none; }
-.legende-sommeil { gap: 14px; }
-.legende-sommeil > span { display: inline-flex; align-items: center; gap: 5px; }
-.pastille-legende { display: inline-block; width: 10px; height: 10px; }
 .tableau-lignes { border-collapse: collapse; width: 100%; font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
 .tableau-lignes thead th { font-size: var(--t-note); color: var(--text-2); font-weight: 600; text-align: left; padding: 4px 0; }
 .tableau-lignes thead th:last-child, .tableau-lignes td:last-child { text-align: right; }
@@ -254,34 +266,11 @@
 .titre-section { font: 600 1.294rem/1.25 var(--police); text-wrap: pretty; }
 /* « Avec qui, comment c'était · Mouvement » (v6.1) : deux lignes égales, aucune ne commence par « · ». */
 .titre-section.equilibre { text-wrap: balance; }
-.constat { display: flex; flex-direction: column; gap: 8px; }
-.constat p, .section-analyse .phrase { font-size: 0.941rem; line-height: 1.45; text-wrap: pretty; }
-.haltere { width: 100%; height: auto; display: block; }
-.h-rail { stroke: var(--line); stroke-width: 2; stroke-linecap: round; }
-.h-ligne { stroke: var(--action); stroke-width: 2; }
-.h-plein { fill: var(--action); }
-.h-creux { fill: var(--surface); stroke: var(--action); stroke-width: 2; }
-.h-texte { font-size: 11px; fill: var(--text-2); font-variant-numeric: tabular-nums; }
+.section-analyse .phrase { font-size: 0.941rem; line-height: 1.45; text-wrap: pretty; }
 .pied-section { font-size: var(--t-note); color: var(--text-2); line-height: 1.4; }
-.points-sommeil { display: flex; flex-direction: column; gap: 8px; }
-.rangee-sommeil { display: flex; align-items: center; gap: 10px; }
-.nom-sommeil { width: 56px; flex: none; font-size: var(--t-sous); color: var(--text-2); }
-.piste-sommeil { flex: 1; min-width: 0; height: auto; }
-.rail-sommeil { stroke: var(--line); stroke-width: 3; stroke-linecap: round; }
-.point-sommeil { fill: var(--c-humeur); }
-.valeur-sommeil { width: 34px; flex: none; text-align: right; font-size: var(--t-sous); font-weight: 600; font-variant-numeric: tabular-nums; }
-.echelle-sommeil { display: flex; justify-content: space-between; font-size: 0.647rem; color: var(--text-2); padding: 0 44px 0 66px; }
 .classements .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
 .nom-classement { font-size: var(--t-note); color: var(--text-2); }
-.defile-x { overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--surface); border-radius: var(--r-bouton); }
-.tableau-evolution { border-collapse: collapse; font-size: var(--t-note); font-variant-numeric: tabular-nums; min-width: 760px; width: 100%; }
-.tableau-evolution th { text-align: left; color: var(--text-2); font-weight: 600; padding: 10px 8px; white-space: nowrap; }
-.tableau-evolution td { padding: 9px 8px; border-top: 1px solid var(--line); white-space: nowrap; }
-.tableau-evolution th:first-child, .tableau-evolution td:first-child { position: sticky; left: 0; background: var(--surface); padding-left: 12px; }
-.humeur-evolution { display: inline-flex; align-items: center; gap: 5px; }
-.humeur-evolution svg { width: 10px; height: 10px; }
-.anneau-fragile { fill: none; stroke: var(--action); stroke-width: 2; }
-.analyse .replis, .analyse .repli { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.analyse .selon-periode > .repli { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .chiffres-base { margin-top: 4px; }
 .apercu-export { max-height: 330px; overflow: auto; -webkit-overflow-scrolling: touch; white-space: pre-wrap; word-break: break-word; margin: 0;
   font: 0.706rem/1.55 var(--police-mono); color: var(--text); background: var(--surface); border: 1px solid var(--line);
@@ -658,12 +647,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }
 /* Analyse v5 : Ma semaine, sélecteur collant, Mes jours, Ta journée, barres en jours */
 .lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; }
-.ma-semaine .repli { margin: 0; }
 .selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
-.g-moyenne { stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: .55; }
-/* v6 : du plus bas au plus haut des relevés d'un jour, sous le point de l'humeur du jour */
+/* v6 : du plus bas au plus haut des anciennes notes d'un jour, sous le point de la note du jour */
 .g-trait { stroke: var(--c); stroke-width: 2; stroke-linecap: round; opacity: .7; }
-.g-autre { fill: var(--surface); stroke: var(--c); stroke-width: 1.6; }
 .g-choix { fill: var(--surface-2); }
 .g-energie-1 { fill: var(--c); opacity: .3; }
 .g-energie-2 { fill: var(--c); opacity: .6; }
@@ -676,6 +662,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .legende-frise { flex-wrap: wrap; gap: 4px 12px; }
 .legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
 .legende-frise svg { width: 14px; height: 12px; }
+/* v7 : une rampe (nuits, énergie) en légende, une case par niveau, sur une seule ligne qui peut passer à la ligne. */
+.legende-frise > .rampe { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.pas-rampe { display: inline-flex; align-items: center; gap: 4px; }
+.pas-rampe svg { width: 12px; height: 12px; }
 /* v6 · repères de traitement : un trait fin à la date, son numéro en haut, la légende sous le graphique */
 .g-changement { stroke: var(--text-2); stroke-width: 1; }
 .g-changement-num { font-size: 11px; font-weight: 600; fill: var(--text-2); } /* TAILLE_REPERE, geometrie.js */
@@ -705,5 +695,5 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* v6 · Comprendre : l'écran */
 .comprendre { gap: 16px; }
 .comprendre > .entete-pousse { margin-bottom: 0; }
-/* Le choix de mesure : quatre libellés trop longs pour une ligne, en deux rangées de deux. */
-.segmente.mesure { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* v7 · les familles d'une ligne en toutes lettres, alignées à gauche. */
+.tableau-familles th:nth-child(2), .tableau-familles td:nth-child(2) { text-align: left; }

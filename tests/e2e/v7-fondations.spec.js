@@ -350,7 +350,7 @@ test('en grand texte (19, 21, 23), aucun choix ne déborde de sa boîte : Soins,
     ['#/comprendre/explosions', 'Comprendre', ['Explosions', 'Énergie', 'Rythmes']],
     ['#/comprendre/explosions', 'Avant ou après', ['Avant', 'Après']],
     ['#/comprendre/rythmes', 'Période', ['3 mois', 'Tout']],
-    ['#/comprendre/rythmes', 'Mesure', ['Humeur', 'Nuits Mal', 'Explosions', 'Énergie basse']],
+    ['#/comprendre/rythmes', 'Mesure', ['Émotions', 'Nuits Mal', 'Explosions', 'Énergie basse']],
   ];
   for (const [hash, nom, choix] of CAS) {
     await aller(page, hash);

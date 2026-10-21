@@ -115,6 +115,13 @@ export function formaterHeure(heure) {
   const [h, m] = heure.split(':').map(Number);
   return `${h} h${m ? ` ${pad(m)}` : ''}`;
 }
+// « 12 – 18 oct. » ; à cheval sur deux mois, « 28 sept. – 4 oct. » ; sur deux années, avec elles.
+export function formaterPlage(du, au) {
+  const [a1, m1, j1] = du.split('-').map(Number);
+  const [a2, m2, j2] = au.split('-').map(Number);
+  if (a1 !== a2) return `${j1} ${MOIS_COURTS[m1 - 1]} ${a1} – ${j2} ${MOIS_COURTS[m2 - 1]} ${a2}`;
+  return m1 === m2 ? `${j1} – ${j2} ${MOIS_COURTS[m2 - 1]}` : `${j1} ${MOIS_COURTS[m1 - 1]} – ${j2} ${MOIS_COURTS[m2 - 1]}`;
+}
 export function formaterSemaine(lundi) {
   const [, m, j] = lundi.split('-').map(Number);
   return `Semaine du ${j}${j === 1 ? 'er' : ''} ${MOIS[m - 1]}`;

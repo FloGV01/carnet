@@ -1,6 +1,8 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
-// n'existent pas ici : ni ligne vide, ni décompte. L'humeur d'un jour (ligne et filtre) est
-// l'humeur du jour (v6) : un jour qui n'a que des humeurs du moment a sa ligne.
+// n'existent pas ici : ni ligne vide, ni décompte. v7 : la ligne d'un jour donne ses émotions du moment
+// (deux au plus, puis « … », avec les points de leurs familles) ; un jour qui n'a que des relevés a sa ligne.
+// Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
+// filtre « Humeur » n'est proposé que si une note existe.
 import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -12,6 +14,8 @@ import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
+import { resumeEmotions } from '../../domain/releves.js';
+import { estEmotion } from '../../domain/roue.js';
 import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
 import { phraseResume } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
@@ -80,7 +84,17 @@ export function Historique() {
     const [journal, episodes, symptomes, items, avecMemo, humeurs] = await Promise.all([
       repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(), repo.humeurs.tous(),
     ]);
-    return { journal: avecHumeurDuJour(journal, humeurs), episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
+    // Les relevés de chaque jour logique ; un jour qui n'a que des relevés à émotion reçoit une entrée minimale.
+    const releves = new Map();
+    for (const h of humeurs) {
+      const j = jourEvenement(h.date, h.heure);
+      if (!releves.has(j)) releves.set(j, []);
+      releves.get(j).push(h);
+    }
+    const jours = avecHumeurDuJour(journal, humeurs);
+    const presents = new Set(jours.map((j) => j.date));
+    for (const [date, liste] of releves) if (!presents.has(date) && liste.some((h) => estEmotion(h.emotion))) jours.push({ date });
+    return { journal: jours, releves, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
   // Avant que l'écran ne s'affiche : la liste revient là où on l'avait laissée.
   useLayoutEffect(() => {
@@ -117,6 +131,7 @@ export function Historique() {
         <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
         <ul class="liste carte carte-groupe">${g.elements.map((j) => {
           const puces = phraseResume('jour', j, carte, { nExplosions: nExplosions(j.date) }).filter((s) => s.valeur);
+          const emo = resumeEmotions(donnees.releves.get(j.date));
           const note = [];
           for (const e of (episodesDuJour.get(j.date) || []).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''))) {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
@@ -126,6 +141,8 @@ export function Historique() {
           return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
+              ${emo.mots.length > 0 && html`<span class="hist-emotions"><span class="familles-jour" aria-hidden="true">${emo.familles.map((x) => html`<i class=${`emo-${x.cle}`}></i>`)}</span>
+                <span class="mots-jour">${emo.mots.join(', ')}${emo.plus ? '…' : ''}</span></span>`}
               ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<span class=${`puce teinte-${p.rubrique}`}>${p.texte}</span>`)}</span>`}
               ${q ? html`<${Extrait} ex=${trouves.get(j.date)} />` : note.length > 0 && html`<span class="hist-note">${note.join(' · ')}</span>`}
             </span>
@@ -191,7 +208,7 @@ export function Historique() {
       <${GroupeFiltre} titre="Période"><${Pastilles} etiquette="Période" options=${PERIODES} valeur=${f.periode ?? null} surChoix=${majF('periode')} classe="souples" /></${GroupeFiltre}>
       ${segment === 'jours' && html`
         <${GroupeFiltre} titre="Lieu"><${Pastilles} etiquette="Lieu" options=${optionsListe('lieu')} valeur=${f.lieu ?? null} surChoix=${majF('lieu')} classe="souples" /></${GroupeFiltre}>
-        <${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>
+        ${(f.humeur || donnees.journal.some((j) => j.humeur != null)) && html`<${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>`}
         <${GroupeFiltre} titre="Avec"><${Bascules} etiquette="Avec" f=${f} majF=${majF}
           choix=${[{ cle: 'avecExplosions', libelle: 'Avec explosions' }, { cle: 'avecNotes', libelle: 'Avec notes' }]} /></${GroupeFiltre}>`}
       ${segment === 'episodes' && html`

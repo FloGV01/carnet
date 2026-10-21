@@ -47,7 +47,7 @@ test('un jour passé noté le soir garde son champ Humeur ; Réglages › Le soi
   await expect.poll(async () => (await entreeDuJour(page))?.humeur).toBe(7);
 });
 
-test('l\'humeur du jour partout : résumé, Historique, Ma semaine, trait du plus bas au plus haut dans Mes jours', async ({ page }) => {
+test('l\'humeur du jour partout : résumé, Historique, trait du plus bas au plus haut dans Mes jours (v7 : rangée « Humeur (notes) », plus de moyenne dans Ma semaine)', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     // Le 13 : un soir à 9 (jamais mêlé) et cinq relevés, dont un « vers » et un à 01:00 le 14.
@@ -71,11 +71,12 @@ test('l\'humeur du jour partout : résumé, Historique, Ma semaine, trait du plu
   await expect(page.getByText('Rien ne correspond.')).toBeVisible();
 
   await page.getByRole('link', { name: 'Analyse' }).click();
-  await expect(page.getByRole('region', { name: 'Ma semaine' })).toContainText('Humeur : de 3 à 8, 5,6 en moyenne');
+  await expect(page.getByRole('region', { name: 'Ma semaine' })).toHaveCount(0);
   const mesJours = page.locator('figure', { has: page.getByText('Mes jours', { exact: true }) });
-  const graphe = mesJours.getByRole('img', { name: /^Mes jours\. Humeur entre / });
+  const graphe = mesJours.getByRole('img', { name: /^Mes jours, une colonne par jour : émotions, humeur \(notes de 1 à 10\), nuits/ });
   await expect(graphe.locator('line.g-trait')).toHaveCount(1);
-  await expect(mesJours.getByText('du plus bas au plus haut')).toBeVisible();
+  await expect(graphe.locator('text.g-etiquette')).toContainText(['Émotions', 'Humeur', '(notes)']);
+  await expect(mesJours.getByText('note du plus bas au plus haut')).toBeVisible();
   await mesJours.getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(mesJours.getByRole('cell', { name: /^humeur 5,6 \(de 3 à 8\)/ })).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/humeur du soir/i);

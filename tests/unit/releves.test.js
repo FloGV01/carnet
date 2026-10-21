@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { texteReleve, famillesDuJour } from '../../public/js/domain/releves.js';
+import { texteReleve, famillesDuJour, resumeEmotions } from '../../public/js/domain/releves.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 
 // v7 · Un relevé du moment en mots, pour Ma journée et Émotion du moment ; les familles du jour, pour le résumé sous le
@@ -41,4 +41,18 @@ test('famillesDuJour : chaque famille une fois, dans l\'ordre de la journée, sa
   ]);
   assert.deepEqual(famillesDuJour([{ date: '2026-10-15', heure: '10:20', humeur: 6 }]), []);
   assert.deepEqual(famillesDuJour(null), []);
+});
+
+test('resumeEmotions (Historique) : deux mots au plus, dans l\'ordre de la journée, chacun une fois, puis « … » ; les familles du jour', () => {
+  const r = (heure, emotion, plus = {}) => ({ date: '2026-10-12', heure, emotion, ...plus });
+  const jour = [r('18:00', 'roue:serenite:calme'), r('09:00', 'roue:colere:irrite'), r('12:00', 'roue:colere:irrite'), r('20:00', 'roue:joie'),
+    { date: '2026-10-12', heure: '10:00', humeur: 6 }];
+  assert.deepEqual(resumeEmotions(jour), {
+    mots: ['irrité', 'calme'], plus: true,
+    familles: [{ cle: 'colere', libelle: 'Colère' }, { cle: 'serenite', libelle: 'Sérénité' }, { cle: 'joie', libelle: 'Joie' }],
+  });
+  assert.deepEqual(resumeEmotions([r('09:00', 'roue:peur'), r('10:00', 'roue:peur:sans-valeur')]).mots, ['peur', 'sans valeur'], 'une famille seule, en minuscules');
+  assert.equal(resumeEmotions([r('09:00', 'roue:peur'), r('10:00', 'roue:joie')]).plus, false);
+  assert.deepEqual(resumeEmotions([{ date: '2026-10-12', heure: '10:00', humeur: 4 }]), { mots: [], plus: false, familles: [] }, 'un ancien jour : aucun mot');
+  assert.deepEqual(resumeEmotions(undefined), { mots: [], plus: false, familles: [] });
 });

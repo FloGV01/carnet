@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exportPsy, reperesPsy } from '../../public/js/export/psy.js';
+import { exportPsy } from '../../public/js/export/psy.js';
 import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 
@@ -28,10 +28,6 @@ const episodes = [
     reaction: 'reaction:retrait_isolement', situation: null, ceQuiAAide: null },
 ];
 const symptomes = [{ id: 's1', date: '2026-09-25', symptome: 'symptome:ruminations', intensite: 6, duree: 'duree:quelques_heures', contexte: "après les échanges de l'après-midi", note: null }];
-const reperes = [
-  'Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).',
-  "Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.",
-];
 
 const ATTENDU = `SUIVI APP · 7 jours du lun 21/09 au dim 27/09/2026
 
@@ -63,18 +59,15 @@ COMPTEURS
 cette semaine : humeur moyenne 6,2 (de 4 à 8) · explosions 2 · jours au bureau 2 · contact humain 4 jours · sport 3 jours · nuits Mal 2
 semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1
 
-REPÈRES DE L'APP (tout l'historique)
-- Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).
-- Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.
-
 PSY : fais-moi le récap de la semaine, format habituel.`;
 
-test('instantané exact de l\'exemple du plan', () => {
-  assert.equal(exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes }), ATTENDU);
+test('instantané exact de l\'exemple du plan ; v7, sans « REPÈRES DE L\'APP »', () => {
+  assert.equal(exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte }), ATTENDU);
+  assert.ok(!/REPÈRES|journées à 7 ou plus|Sommeil et humeur|Tendances|Signal/.test(ATTENDU));
 });
 
 test('exclusions : ni traitement, ni rendez-vous, ni jour manquant mentionné', () => {
-  const t = exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes: [] });
+  const t = exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte });
   assert.ok(!/traitement|rendez-vous|RDV|jeu 24\/09|jours? (notés|remplis)|\/7\b/i.test(t), t);
 });
 
@@ -83,13 +76,6 @@ test('textes coupés à 280 caractères, rubriques vides omises', () => {
   const t = exportPsy({ journal: [J('2026-09-27', { pointsPositifs: long })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
   assert.ok(t.includes(`  + ${'a'.repeat(279)}…`));
   assert.ok(!t.includes('ÉPISODES') && !t.includes('SYMPTÔMES'));
-});
-
-test('repères : insuffisant et phrases en voix « je »', () => {
-  const analyse = { bonnesJournees: { statut: 'insuffisant', constats: [] }, sommeil: { meme: { statut: 'insuffisant' }, lendemain: { statut: 'insuffisant' } } };
-  assert.deepEqual(reperesPsy(analyse, carte), ['Bonnes journées : pas encore assez de données.', 'Sommeil et humeur : pas encore assez de données pour le dire.']);
-  const avecTendance = { ...analyse, tendances: { statut: 'ok', constat: { sens: 'bas', moyR: 4.6, moyB: 6.1 } } };
-  assert.equal(reperesPsy(avecTendance, carte)[2], "Tendances (4 dernières semaines contre les 8 d'avant) : mon humeur est plus basse : 4,6 en moyenne, contre 6,1.");
 });
 
 // ---------- v6 : humeur du jour ----------

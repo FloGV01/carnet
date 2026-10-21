@@ -74,9 +74,6 @@ export function mettreEnPage(m) {
   });
   y = Math.max(yMax, yDebut + 2 * 16);
 
-  titreSection('Repères');
-  for (const r of m.reperes) texte(`· ${r}`, { taille: 8 });
-
   // Traitement : l'actuel en deux colonnes, puis les changements datés des 90 derniers jours.
   const actuel = m.traitementActuel || [];
   if (actuel.length || m.traitement.length) {

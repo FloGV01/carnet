@@ -57,8 +57,7 @@ test('humeur du jour : index.js enrichit le journal avant tout appel', () => {
   const corps = code.slice(code.indexOf('export function analyze'));
   const enrichi = corps.indexOf('avecHumeurDuJour(');
   assert.ok(enrichi > 0, 'analyze() ne construit pas l\'humeur du jour');
-  const appels = ['journalAvecExplosions', 'premiereDate', 'indicateurs', 'classements', 'profilJournee', 'tesMoments', 'frise',
-    'bonnesJournees', 'sommeilHumeur', 'tendances', 'ressemblance'];
+  const appels = ['journalAvecExplosions', 'premiereDate', 'indicateurs', 'classements', 'profilJournee', 'tesMoments', 'frise'];
   for (const f of appels) {
     const i = corps.indexOf(`${f}(`);
     assert.ok(i > enrichi, `${f} appelé avant l'humeur du jour`);
@@ -73,20 +72,21 @@ test('humeur du jour : aucun module d\'analyse ne lit l\'humeur brute', () => {
     // L'humeur du jour est décimale : plus aucun test « entier de 1 à 10 » (estHumeur).
     assert.ok(!/Number\.isInteger\([^)]*humeur/.test(code), `${nom} n'accepte que des humeurs entières`);
     // Seuls les points d'entrée calculent l'humeur du jour : index.js (l'Analyse) et comprendre.js (l'écran
-    // Comprendre, qui lit aussi l'énergie des relevés, spec §2.2). Ailleurs, seul moments.js (« Ta journée
-    // heure par heure ») lit les relevés. Exception, pour la rangée « énergie basse » de Mes jours (spec §3) :
-    // energie-jour.js lit les relevés pour leur seule énergie (jamais leur humeur), et frise.js ne fait que les lui passer.
+    // Comprendre, qui lit aussi l'énergie et les émotions des relevés, spec §2.2). Ailleurs, seul moments.js (« Ta journée
+    // heure par heure ») lit les relevés. Exceptions, pour Mes jours (spec §3, v7 §5) : energie-jour.js lit les relevés pour
+    // leur seule énergie et emotions.js pour leur seule émotion (jamais leur humeur), et frise.js ne fait que les leur passer.
     if (nom === 'index.js' || nom === 'comprendre.js') continue;
     assert.ok(!/\b(avecHumeurDuJour|humeursDuJour)\b/.test(code), `${nom} recalcule l'humeur du jour`);
-    if (nom === 'energie-jour.js') {
+    if (nom === 'energie-jour.js' || nom === 'emotions.js') {
       assert.ok(!/\.humeur\b/.test(code), `${nom} lit l'humeur des relevés`);
       continue;
     }
     if (nom === 'frise.js') {
-      // Les relevés n'ont que deux emplois : le paramètre, et energieBasseParJour(humeurs). Le reste de `humeurs`
-      // dans ce fichier, ce sont les humeurs du jour d'une semaine ou d'un mois (g.humeurs, humeurs: []).
+      // Les relevés n'ont que trois emplois : le paramètre, energieBasseParJour(humeurs) et emotionsParJour(humeurs, …). Le
+      // reste de `humeurs` dans ce fichier, ce sont les humeurs du jour d'une semaine ou d'un mois (g.humeurs, humeurs: []).
       const emplois = code.match(/(?<![.\w])humeurs\b(?!\s*:)/g) || [];
-      assert.ok(emplois.length === 2 && code.includes('energieBasseParJour(humeurs)'), `${nom} lit autre chose que l'énergie des relevés`);
+      assert.ok(emplois.length === 3 && code.includes('energieBasseParJour(humeurs)') && code.includes('emotionsParJour(humeurs, du, au)'),
+        `${nom} lit autre chose que l'énergie et les émotions des relevés`);
       continue;
     }
     if (nom === 'moments.js') continue;

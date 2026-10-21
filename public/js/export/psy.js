@@ -4,7 +4,7 @@
 import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
-import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
+import { nombre } from '../analyse/textes.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
 import { resumeContacts } from '../domain/contacts.js';
@@ -121,24 +121,7 @@ function compteurs(f, complet, lib) {
   return m.join(' · ');
 }
 
-// Repères issus de l'analyse (tout l'historique), en voix « je ».
-export function reperesPsy(analyse, carte) {
-  if (!analyse) return [];
-  const lignes = [];
-  const bj = analyse.bonnesJournees;
-  if (bj.constats.length) for (const c of bj.constats) lignes.push(phraseConstat(c, carte, 'je'));
-  else if (bj.statut === 'insuffisant') lignes.push('Bonnes journées : pas encore assez de données.');
-  const s = analyse.sommeil;
-  if (s.meme.statut === 'ok' || s.lendemain.statut === 'ok') {
-    const ph = phrasesSommeil(s, carte).join(' ');
-    lignes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`);
-  } else lignes.push(`Sommeil et humeur : ${PAS_ASSEZ.charAt(0).toLowerCase()}${PAS_ASSEZ.slice(1)}`);
-  // Tendances (v5) : sur leurs propres fenêtres, pas sur tout l'historique, d'où le préfixe.
-  if (analyse.tendances && analyse.tendances.constat) lignes.push(`Tendances (4 dernières semaines contre les 8 d'avant) : ${phraseTendance(analyse.tendances.constat, 'je', { court: true })}`);
-  return lignes;
-}
-
-export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujourdhui, carte, reperes = [], signal = null, zeroDepuis = null }) {
+export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujourdhui, carte, zeroDepuis = null }) {
   const lib = (id) => carte.get(id) || id;
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;
@@ -178,9 +161,7 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   const avant = compteurs(indicateurs(data, addDays(du, -7), addDays(du, -1)), false, lib);
   const lignesCompteurs = [cette && `cette semaine : ${cette}`, avant && `semaine d'avant : ${avant}`].filter(Boolean);
   if (lignesCompteurs.length) blocs.push(['COMPTEURS', ...lignesCompteurs].join('\n'));
-  const rep = [...reperes];
-  if (signal) rep.push(`Signal : ${signal}`);
-  if (rep.length) blocs.push(['REPÈRES DE L\'APP (tout l\'historique)', ...rep.map((r) => `- ${r}`)].join('\n'));
+  // v7 : plus de « REPÈRES DE L'APP » : les phrases calculées sur la note de 1 à 10 sont retirées de l'Analyse.
   blocs.push('PSY : fais-moi le récap de la semaine, format habituel.');
   return blocs.join('\n\n');
 }

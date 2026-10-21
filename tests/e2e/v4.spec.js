@@ -121,12 +121,12 @@ test('Réglages › Le soir : afficher le compteur et l\'humeur du soir, changer
   expect(groupes.slice(0, 2)).toEqual(['Humeur', 'Lieu']);
 });
 
-test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure, avec tes notes seulement', async ({ page }) => {
+test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure (v7 : les familles d\'émotions), avec tes notes seulement', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     for (const [d, f] of [['2026-10-01', ['fragilite:fatigue']], ['2026-10-02', ['fragilite:fatigue', 'fragilite:faim']], ['2026-10-03', null]]) {
       await r.episodes.creer({ date: d, heure: '19:00', reaction: 'reaction:explosion', declencheur: 'declencheur:conflit', apresCoup: f ? { fragilites: f, jour: d } : null });
-      for (const [heure, humeur] of [['10:00', 5], ['16:00', 7]]) await r.humeurs.creer({ date: d, heure, humeur, energie: 'energie:basse' });
+      for (const [heure, emotion] of [['10:00', 'roue:colere:irrite'], ['16:00', 'roue:serenite']]) await r.humeurs.creer({ date: d, heure, emotion, energie: 'energie:basse' });
     }
   });
   await page.getByRole('link', { name: 'Analyse' }).click();
@@ -137,7 +137,8 @@ test('Analyse (v5) : tes moments étape par étape et ta journée heure par heur
   await expect(avant).toContainText('Ce sont tes notes, rassemblées : pas des causes.');
   const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
   await journee.getByRole('button', { name: 'Voir en tableau' }).click();
-  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('humeur du moment 5,0 (peu de jours) · énergie : basse 3 jours');
+  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('émotions : colère 3 · énergie : basse 3 jours');
+  await expect(journee.getByRole('row', { name: /16 h – 18 h/ })).toContainText('émotions : sérénité 3 · énergie : basse 3 jours');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
 

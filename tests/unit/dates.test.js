@@ -114,3 +114,9 @@ test('vers : « vers 14 h »', () => {
   assert.equal(D.formaterVers('00:00'), 'vers 0 h');
   assert.equal(D.formaterVers('02:00'), 'vers 2 h');
 });
+
+test('formaterPlage (v7, Ma semaine) : « 12 – 18 oct. », à cheval sur deux mois ou deux années', () => {
+  assert.equal(D.formaterPlage('2026-10-12', '2026-10-18'), '12 – 18 oct.');
+  assert.equal(D.formaterPlage('2026-09-28', '2026-10-04'), '28 sept. – 4 oct.');
+  assert.equal(D.formaterPlage('2026-12-28', '2027-01-03'), '28 déc. 2026 – 3 janv. 2027');
+});

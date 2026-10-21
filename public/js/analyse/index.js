@@ -1,42 +1,55 @@
 // Point d'entrée unique du moteur d'analyse. Pur : la date du jour et les libellés
 // arrivent par ctx. L'écran Analyse, l'export PSY et la vue soignants lisent ce même objet.
+// v7 : les analyses fondées sur la note de 1 à 10 sont retirées (bonnes journées, sommeil et humeur, tendances,
+// signal de ressemblance) ; les émotions du moment (emotions.js) sont comptées par période.
 import { indicateurs, bornesFenetre, premiereDate } from './fenetres.js';
-import { classements } from './classements.js';
-import { bonnesJournees } from './bonnes-journees.js';
-import { sommeilHumeur } from './sommeil.js';
-import { ressemblance } from './ressemblance.js';
+import { classements, classer } from './classements.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { addDays } from '../domain/dates.js';
 import { profilJournee } from './moments.js';
 import { tesMoments } from './avant-explosions.js';
 import { frise } from './frise.js';
-import { tendances } from './tendances.js';
 import { avecHumeurDuJour } from './humeur-jour.js';
 import { reperesTraitement } from './reperes.js';
+import { relevesAEmotion, parFamille, famillesParHeure } from './emotions.js';
 
 export const FENETRES = ['7', '30', '90', 'tout'];
 
+// Les émotions du moment d'une période : le nombre de relevés de chaque famille, par heure de la journée (hors « vers »),
+// et le classement des mots notés (une famille seule n'est pas un mot).
+function emotionsDe(releves) {
+  return {
+    n: releves.length,
+    parFamille: parFamille(releves),
+    parHeure: famillesParHeure(releves),
+    mots: classer(releves.filter((r) => r.mot).map((r) => r.mot), new Set()),
+  };
+}
+
 export function analyze(data, ctx) {
-  const { aujourdhui, items, constatsAffiches = [], reglages = {}, zeroDepuis = null } = ctx;
+  const { aujourdhui, items, zeroDepuis = null } = ctx;
   // Humeur du jour (v6, humeur-jour.js), avant tout le reste : dans chaque journal, `humeur` est la
-  // moyenne des relevés du jour, sinon l'humeur du soir. Un jour qui n'a que des relevés y entre.
+  // moyenne des anciennes notes de 1 à 10 du jour (relevés), sinon l'humeur du soir. Elle ne sert plus qu'à
+  // montrer ces notes (rangée « Humeur (notes) » de Mes jours) et aux exports.
   const journal = avecHumeurDuJour(data.journal, data.humeurs || []).filter((j) => j.date <= aujourdhui);
   const episodes = data.episodes || [];
   // Explosions (v4, domain/explosions.js) : la règle ne change que la valeur des explosions.
-  // Les jours qui n'ont qu'un épisode d'explosion n'entrent que dans les comptes d'explosions
-  // (fenêtres, semaines) ; calendrier, bonnes journées, sommeil et signal gardent le journal.
+  // Les jours qui n'ont qu'un épisode d'explosion n'entrent que dans les comptes d'explosions.
   // Un jour de relevés seuls n'a pas de saisie du soir : il ne vaut jamais 0 explosion.
   const regle = { zeroDepuis, jourNote: saisieDuSoir(data.journal) };
   const brut = { ...data, journal };
   const d = { ...data, journal: journalAvecExplosions(journal, episodes, regle).filter((j) => j.date <= aujourdhui) };
-  const pourSignal = { ...data, journal: journalAvecExplosions(journal, episodes, { ...regle, ajouterJours: false }) };
-  const premier = premiereDate(brut, aujourdhui);
+  const releves = relevesAEmotion(data.humeurs || []).filter((r) => r.date <= aujourdhui);
+  // « Tout » part du premier jour noté, toutes sources, émotions du moment comprises (v7 : un relevé à émotion n'a pas
+  // d'humeur du jour, il n'est pas dans le journal).
+  const premier = premiereDate({ ...brut, journal: [...journal, ...releves.map((r) => ({ date: r.date }))] }, aujourdhui);
   const fenetres = {};
   const classes = {};
   const moments = {};
   const lesMoments = {};
   const frises = {};
   const reperes = {};
+  const emotions = {};
   for (const f of FENETRES) {
     const [du, au] = bornesFenetre(f, aujourdhui, premier);
     fenetres[f] = indicateurs(d, du, au);
@@ -46,24 +59,15 @@ export function analyze(data, ctx) {
     frises[f] = frise(d, du, au);
     // Repères de traitement (v6) : les changements notés, sur les colonnes de cette frise.
     reperes[f] = reperesTraitement(data.traitements, frises[f].colonnes);
+    emotions[f] = emotionsDe(releves.filter((r) => r.date >= du && r.date <= au));
   }
-  const deja = new Set(constatsAffiches);
-  const bj = bonnesJournees(journal, aujourdhui, deja);
-  const sommeil = sommeilHumeur(journal, aujourdhui, deja);
-  const tend = reglages.tendances === false ? { statut: 'desactive', constat: null } : tendances(journal, aujourdhui, deja);
-  const affiches = [
-    ...(tend.constat ? [tend.constat.cle] : []),
-    ...bj.constats.map((c) => `bj:${c.cle}`),
-    ...(sommeil.meme.constat ? ['sommeil:meme'] : []),
-    ...(sommeil.lendemain.constat ? ['sommeil:lendemain'] : []),
-  ];
-  // Ma semaine : les 2 points positifs les plus récents des 7 derniers jours (dans un repli fermé).
+  // Ma semaine : les 7 derniers jours, quelle que soit la période choisie. Les émotions par famille, et les 2 points
+  // positifs les plus récents (dans un repli fermé).
   const debut7 = addDays(aujourdhui, -6);
   const positifs = journal.filter((j) => j.date >= debut7 && j.pointsPositifs).sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 2).map((j) => ({ date: j.date, texte: j.pointsPositifs.length > 120 ? `${j.pointsPositifs.slice(0, 119)}…` : j.pointsPositifs }));
   return {
-    aujourdhui, premier, fenetres, semaine: { positifs }, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, tendances: tend,
-    bonnesJournees: bj, sommeil, constatsAffiches: affiches,
-    signal: ressemblance(pourSignal, { aujourdhui, items, actif: reglages.signal !== false }),
+    aujourdhui, premier, fenetres, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, emotions,
+    semaine: { du: debut7, au: aujourdhui, positifs, emotions: parFamille(releves.filter((r) => r.date >= debut7)) },
   };
 }

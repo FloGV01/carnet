@@ -1,16 +1,16 @@
 // Toutes les phrases de l'analyse, en trois voix : « tu » (app), « je » (export PSY),
 // « neutre » (vue soignants). Factuelles, jamais causales, jamais évaluatives.
-import { extremesFiables } from './sommeil.js';
+// v7 : les phrases calculées sur la note de 1 à 10 (bonnes journées, sommeil et humeur, tendances) sont retirées.
 import { SEUILS } from './seuils.js';
 
 export const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
+const E = SEUILS.emotions;
+// Le nombre de relevés d'une vue d'émotions, tiré du seuil (jamais recopié).
+const AU_MOINS_EMOTIONS = `au moins ${E.minReleves} émotions du moment`;
 export const REGLES = {
-  bonnesJournees: 'La règle : au moins 5 journées à 7 ou plus et 5 journées à 4 ou moins, et assez de « oui » et de « non » pour chaque facteur.',
-  sommeil: 'La règle : au moins 14 jours où la nuit et l\'humeur sont notées, avec au moins 4 jours pour deux qualités de nuit différentes.',
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
-  moments: 'La règle : un créneau de 2 h apparaît avec des humeurs du moment notées au moins 3 jours différents.',
-  tendances: "La règle : comparer l'humeur des 4 dernières semaines à celle des 8 d'avant, une fois environ 3 mois réunis.",
+  emotionsJournee: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, à leur heure (sans « C'était vers… »).`,
 };
 // v6 · Comprendre (spec §2.1) : sous son seuil, chaque graphique donne sa règle fixe, sans aucun décompte. Les
 // nombres viennent de SEUILS.comprendre, jamais recopiés ; aucun libellé de liste modifiable n'y paraît.
@@ -28,21 +28,13 @@ export const REGLES_COMPRENDRE = {
   nuits: `La règle : au moins ${C.minColonnes} soirs de la semaine qui ont chacun au moins ${C.minValeurs} nuits avec l'heure du coucher et du lever (« Nuit en détail »).`,
   activites: `La règle : une activité de « Ce que je faisais » apparaît à partir de ${C.minActivite} relevés avec une énergie.`,
   peseRecharge: 'La règle : au moins un élément de « Ce qui a pesé » ou de « Ce qui a rechargé », noté sur la période.',
+  // v7 · émotions du moment
+  emotions: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période.`,
+  emotionsLieu: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, des jours où le lieu est noté.`,
+  apresNuit: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, des jours où la nuit est notée.`,
+  autourExplosions: `La règle : ${AU_MOINS_EMOTIONS} notées dans les ${E.heuresAutour} heures avant ou après une explosion dont l'heure est notée, sur la période.`,
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
-export const PIED_TENDANCES = 'Une observation sur tes chiffres, pas une explication.';
-export const POURQUOI_TENDANCE = "Un changement d'emploi du temps (congé, arrêt, reprise) peut suffire à faire bouger ces chiffres. Les moyennes ne portent que sur les jours où une humeur est notée.";
-export const SANS_ECART = "Pas d'écart net entre ces 4 semaines et les 8 d'avant.";
-
-// Tendances (v5) : même tournure dans les deux sens, sans adjectif ni jugement.
-export function phraseTendance(c, voix = 'tu', { court = false } = {}) {
-  const qui = { tu: 'ton humeur est', je: 'mon humeur est', neutre: "l'humeur est" }[voix];
-  const sens = c.sens === 'haut' ? 'plus haute' : 'plus basse';
-  if (court) return `${qui} ${sens} : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
-  return `Ces 4 dernières semaines, ${qui} ${sens} que sur les 8 semaines d'avant : ${nombre(c.moyR)} en moyenne, contre ${nombre(c.moyB)}.`;
-}
-
-const POSSESSIF = { tu: 'tes', je: 'mes', neutre: 'les' };
 
 // Moyenne affichée avec sa décimale, même ronde (« 6,0 ») : tuiles, Ma semaine, consultation.
 export function uneDecimale(x) {
@@ -53,11 +45,6 @@ export function nombre(x, decimales = 1) {
   if (x == null || Number.isNaN(x)) return '·';
   return x.toFixed(decimales).replace('.', ',').replace(/,0$/, '');
 }
-// Humeur du jour (v6) : « de 3 à 8 » porte sur les valeurs notées (relevés, ou soir d'un jour sans
-// relevé : minReleve, maxReleve), la moyenne sur les humeurs du jour.
-const etendueHumeur = (h) => (h.minReleve === h.maxReleve ? nombre(h.minReleve) : `de ${nombre(h.minReleve)} à ${nombre(h.maxReleve)}`);
-// Ma semaine : « Humeur : de 3 à 8, 5,6 en moyenne ».
-export const ligneHumeurSemaine = (h) => `Humeur : ${etendueHumeur(h)}, ${uneDecimale(h.moyenne)} en moyenne${h.fragile ? ' (peu de valeurs)' : ''}`;
 // Une valeur 5 vaut « 5 ou plus » : la moyenne n'est alors qu'une borne basse.
 export const moyenneReveils = (r) => (r && r.n ? `${r.plafonne ? 'au moins ' : ''}${nombre(r.moyenne)}` : '·');
 
@@ -67,78 +54,13 @@ export function duree(min) {
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
 }
 
-// [libellé par défaut, tournure] : la tournure ne sert que tant que l'élément n'est pas renommé.
-const FACTEURS_LIEU = {
-  'lieu:bureau': ['Bureau', 'une journée au bureau'], 'lieu:teletravail': ['Télétravail', 'une journée en télétravail'],
-  'lieu:conge_repos': ['Congé / repos', 'une journée de congé ou de repos'], 'lieu:arret': ['Arrêt', "une journée d'arrêt"],
-  'lieu:clinique': ['Clinique', 'une journée à la clinique'], 'lieu:autre': ['Autre', 'un autre lieu'],
+const NOMS_SOURCE = {
+  declencheur: 'épisodes', dessous: 'épisodes', emotion: 'épisodes', reaction: 'épisodes', symptome: 'symptômes', effetSecondaire: 'mentions',
+  emotionMoment: 'relevés',
 };
 
-export function texteFacteur(f, carte) {
-  const lib = (id) => (carte && carte.get(id)) || id;
-  if (f.variable === 'lieu') {
-    const [defaut, tournure] = FACTEURS_LIEU[f.valeur] || [];
-    const actuel = carte && carte.get(f.valeur);
-    return tournure && (actuel == null || actuel === defaut) ? tournure : `le lieu « ${lib(f.valeur)} »`;
-  }
-  if (f.variable === 'sommeil') return `une nuit notée « ${lib(f.valeur)} »`;
-  if (f.variable === 'contact') return 'un contact humain';
-  if (f.variable === 'sport') return 'du sport ou du mouvement';
-  if (f.variable === 'reveil') return 'au moins un réveil nocturne';
-  return f.cle;
-}
-
-export function phraseConstat(f, carte, voix = 'tu') {
-  const sens = f.d >= 0 ? 'Plus présent' : 'Moins présent';
-  return `${sens} dans ${POSSESSIF[voix]} journées à 7 ou plus : ${texteFacteur(f, carte)} (${f.a} sur ${f.n1}, contre ${f.b} sur ${f.n2} journées à 4 ou moins).`;
-}
-
-export function piedObservations(voix = 'tu') {
-  return voix === 'neutre' ? 'Ce sont des observations sur les données, pas des causes.' : `Ce sont des observations sur ${voix === 'je' ? 'mes' : 'tes'} données, pas des causes.`;
-}
-
-// Phrase sommeil de « Ma semaine » : seulement quand le moteur a un constat (jour même, sinon
-// lendemain) ; sinon rien, ni « pas d'écart net » ni « pas encore assez ».
-export function phraseSommeilSemaine(res, carte) {
-  const lib = (id) => (carte && carte.get(id)) || id;
-  const sens = (e) => (e.haut[1].moyenne > e.bas[1].moyenne ? 'plus basse' : 'plus haute');
-  const m = res.meme; const l = res.lendemain;
-  const meme = m.statut === 'ok' && m.constat && extremesFiables(m.moyennes);
-  if (meme) return `Une nuit notée ${lib(meme.bas[0])} va avec une humeur ${sens(meme)} le jour même (${nombre(meme.bas[1].moyenne)} contre ${nombre(meme.haut[1].moyenne)} après une nuit ${lib(meme.haut[0])}).`;
-  const lend = l.statut === 'ok' && l.constat && extremesFiables(l.moyennes);
-  if (lend) return `Le lendemain, une nuit notée ${lib(lend.bas[0])} va avec une humeur ${sens(lend)} (${nombre(lend.bas[1].moyenne)} contre ${nombre(lend.haut[1].moyenne)}).`;
-  return null;
-}
-
-// Phrases sommeil et humeur (aucune ne dit « provoque »).
-export function phrasesSommeil(res, carte) {
-  const lib = (id) => (carte && carte.get(id)) || id;
-  const phrases = [];
-  const m = res.meme; const l = res.lendemain;
-  if (m.statut !== 'ok' && l.statut !== 'ok') return [PAS_ASSEZ];
-  const sens = (e) => (e.haut[1].moyenne > e.bas[1].moyenne ? 'plus basse' : 'plus haute');
-  const memeAffiche = m.statut === 'ok' && m.constat && extremesFiables(m.moyennes);
-  if (m.statut === 'ok') {
-    if (memeAffiche) {
-      const e = memeAffiche;
-      phrases.push(`Une nuit notée ${lib(e.bas[0])} va avec une humeur ${sens(e)} le jour même (${nombre(e.bas[1].moyenne)} contre ${nombre(e.haut[1].moyenne)} après une nuit ${lib(e.haut[0])}).`);
-    } else phrases.push('Le jour même, pas d\'écart net.');
-  }
-  const lendAffiche = l.statut === 'ok' && l.constat && extremesFiables(l.moyennes);
-  if (l.statut === 'ok') {
-    if (lendAffiche) {
-      const e = lendAffiche;
-      phrases.push(`Le lendemain, une nuit notée ${lib(e.bas[0])} va${memeAffiche ? ' encore' : ''} avec une humeur ${sens(e)} (${nombre(e.bas[1].moyenne)} contre ${nombre(e.haut[1].moyenne)}).`);
-    } else phrases.push('Le lendemain, pas d\'écart net.');
-  }
-  if (res.suite && (memeAffiche || lendAffiche)) phrases.push(`Les nuits notées ${lib('sommeil:mal')} arrivent souvent à la suite, donc le jour même et le lendemain se recouvrent en partie.`);
-  return phrases;
-}
-
-const NOMS_SOURCE = { declencheur: 'épisodes', dessous: 'épisodes', emotion: 'épisodes', reaction: 'épisodes', symptome: 'symptômes', effetSecondaire: 'mentions' };
-
-export function phraseClassement(liste, c, carte) {
-  const lib = (id) => (carte && carte.get(id)) || id;
+// `lib` (facultatif) : un libellé pour les identifiants qui ne sont pas dans `carte` (les mots de la roue, v7).
+export function phraseClassement(liste, c, carte, lib = (id) => (carte && carte.get(id)) || id) {
   if (c.statut === 'aucun') return liste === 'effetSecondaire' ? 'Aucun effet noté sur la période' : 'Rien de noté sur la période';
   const hors = c.hors.map((h) => `hors « ${lib(h.id)} » : ${h.n}`).join(', ');
   if (liste === 'effetSecondaire' && c.classables === 0) return `Aucun effet noté sur la période${hors ? ` (${hors})` : ''}`;

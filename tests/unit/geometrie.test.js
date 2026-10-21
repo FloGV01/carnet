@@ -52,14 +52,60 @@ test('frise par semaine : nuits empilées, anneau si fragile, explosions à l\'�
   assert.equal(g.moyenne.length, 1);
 });
 
-test('ta journée : 12 créneaux de 4 h à 4 h, points sans segments, énergie empilée', () => {
+test('ta journée (v7) : 12 créneaux de 4 h à 4 h, les familles d\'émotions empilées par créneau, l\'énergie empilée', async () => {
+  const { famillesParHeure } = await import('../../public/js/analyse/emotions.js');
   assert.deepEqual(CRENEAUX.slice(0, 2), [4, 6]);
   assert.equal(CRENEAUX[CRENEAUX.length - 1], 2);
-  const g = geometrieJournee([{ debut: 10, fin: 12, moyenne: 6, fragile: false, energie: { 'energie:basse': 2, 'energie:moyenne': 1, 'energie:haute': 0 } }, { debut: 0, fin: 2, moyenne: null, energie: { 'energie:basse': 1 } }]);
-  assert.equal(g.points.length, 1, 'créneau sans humeur : pas de point');
+  const creneaux = [{ debut: 10, fin: 12, energie: { 'energie:basse': 2, 'energie:moyenne': 1, 'energie:haute': 0 } }, { debut: 0, fin: 2, energie: { 'energie:basse': 1 } }];
+  // 10 h et 11 h : même créneau ; 01 h : le créneau de minuit, après la soirée.
+  const parHeure = famillesParHeure([
+    { heure: '10:00', famille: 'colere' }, { heure: '11:30', famille: 'serenite' }, { heure: '11:40', famille: 'colere' }, { heure: '01:00', famille: 'joie' },
+  ]);
+  const g = geometrieJournee({ parHeure, creneaux });
+  assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'energie']);
+  assert.deepEqual(g.barres.map((b) => [b.debut, b.famille]), [[10, 'colere'], [10, 'serenite'], [0, 'joie']], 'dans l\'ordre de la roue, du bas vers le haut');
+  assert.ok(g.barres[1].y < g.barres[0].y, 'la sérénité au-dessus de la colère');
   assert.equal(g.energies.length, 3);
   assert.ok(g.zones[1].x > g.zones[0].x, 'minuit après la soirée');
-  assert.ok(!('segments' in g));
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Sans émotion (sous le seuil, parHeure nul) : la seule rangée Énergie ; sans rien : aucune rangée.
+  assert.deepEqual(geometrieJournee({ parHeure: null, creneaux }).rangees.map((r) => r.cle), ['energie']);
+  assert.deepEqual(geometrieJournee({ parHeure: null, creneaux: [] }).rangees, []);
+});
+
+test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa famille, « Humeur (notes) » seulement avec des notes', async () => {
+  const { geometrieMesJours } = await import('../../public/js/ui/graphes/geometrie.js');
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const humeurs = [
+    { date: '2026-10-12', heure: '09:00', emotion: 'roue:colere:irrite' }, { date: '2026-10-12', heure: '18:00', emotion: 'roue:serenite' },
+    { date: '2026-10-12', heure: '20:00', emotion: 'roue:joie:amuse' }, { date: '2026-10-14', heure: '10:00', emotion: 'roue:peur' },
+  ];
+  const f = frise({ journal: [{ date: '2026-10-13', sommeilRessenti: 'sommeil:mal' }], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g = geometrieMesJours(f);
+  assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'nuits', 'explosions', 'autres'], 'sans note ni énergie : ni « Humeur (notes) » ni « Énergie basse »');
+  assert.deepEqual(g.libelles.map((l) => l.lignes.map((x) => x.texte).join(' ')), ['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
+  assert.deepEqual(g.etiquettes.map((e) => e.texte), ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+  assert.deepEqual(g.points.map((p) => [p.cle, p.famille]), [['2026-10-12', 'colere'], ['2026-10-12', 'serenite'], ['2026-10-12', 'joie'], ['2026-10-14', 'peur']]);
+  assert.ok(g.points[2].y < g.points[0].y, 'le troisième relevé du jour monte d\'un rang');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Avec une ancienne note : la rangée « Humeur (notes) », sous les émotions.
+  const avecNote = frise({ journal: [{ date: '2026-10-13', humeur: 6, humeurN: 1 }], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g2 = geometrieMesJours(avecNote);
+  assert.deepEqual(g2.rangees.map((r) => r.cle), ['emotions', 'humeur', 'nuits', 'explosions', 'autres']);
+  assert.deepEqual(g2.libelles[1].lignes.map((x) => x.texte), ['Humeur', '(notes)']);
+  assert.equal(g2.notes.points.length, 1);
+  assert.deepEqual(horsCadre(g2, g2.dim.largeur, g2.dim.hauteur), []);
+  // Par semaine : une barre par colonne, empilée par famille dans l'ordre de la roue.
+  const parSemaine = frise({ journal: [], episodes: [], humeurs }, '2026-07-20', '2026-10-18');
+  const g3 = geometrieMesJours(parSemaine);
+  assert.equal(parSemaine.pas, 'semaine');
+  assert.deepEqual(g3.barres.map((b) => b.famille), ['colere', 'joie', 'peur', 'serenite']);
+  assert.deepEqual(horsCadre(g3, g3.dim.largeur, g3.dim.hauteur), []);
+  // Beaucoup de relevés un même jour, sur 31 colonnes étroites : les points restent dans leur rangée.
+  const plein = Array.from({ length: 14 }, (_, i) => ({ date: '2026-10-01', heure: `${String(6 + i).padStart(2, '0')}:00`, emotion: 'roue:joie' }));
+  const g4 = geometrieMesJours(frise({ journal: [], episodes: [], humeurs: plein }, '2026-09-18', '2026-10-18'));
+  const emo = g4.rangees[0];
+  assert.ok(g4.points.every((p) => p.y - p.r >= emo.y - 0.1 && p.y + p.r <= emo.y + emo.h + 0.1));
 });
 
 // v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement. Les dimensions du PDF
@@ -198,30 +244,12 @@ test('v6 · Comprendre, graphique aligné : un bloc par facteur, dans son cadre,
   assert.deepEqual(geometrieAligne([]), []);
 });
 
-const colH = (cle, n, moyenne, min, max) => ({ cle, n, moyenne: n ? moyenne : null, min: n ? min : null, max: n ? max : null, fragile: n < 3 });
 const colB = (cle, oui, n) => ({ cle, n, oui: n ? oui : 0, part: n ? oui / n : null, fragile: n < 3, libelle: n ? `${oui} jour${oui > 1 ? 's' : ''}` : null });
-
-test('v6 · Comprendre, colonnes d\'humeur : point à la moyenne sur l\'axe 1 à 10, trait du plus bas au plus haut, anneau sous 3 valeurs, rien sans valeur', async () => {
-  const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  const colonnes = [colH(0, 5, 10, 10, 10), colH(1, 2, 5.5, 3, 8), colH(2, 0), colH(3, 4, 1, 1, 1), colH(4, 3, 6, 4, 8), colH(5, 0), colH(6, 0)];
-  const g = geometrieColonnes({ pas: 'semaine', mesure: 'humeur', colonnes });
-  const y = (v) => r1(d.haut + ((10 - v) / 9) * (d.bas - d.haut));
-  assert.deepEqual(g.points.map((p) => p.cle), [0, 1, 3, 4], 'une colonne sans valeur ne dessine rien');
-  assert.deepEqual([g.points[0].y, g.points[2].y], [d.haut, d.bas]);
-  assert.deepEqual(g.points.map((p) => p.plein), [true, false, true, true], 'anneau creux sous 3 valeurs');
-  assert.deepEqual(g.traits, [{ x: g.points[1].x, y1: y(8), y2: y(3), cle: 1 }, { x: g.points[3].x, y1: y(8), y2: y(4), cle: 4 }]);
-  assert.deepEqual(g.filets.map((f) => [f.v, f.y]), [[4, y(4)], [7, y(7)]]);
-  assert.deepEqual(g.graduations.map((t) => t.v), [1, 4, 7, 10]);
-  assert.deepEqual([g.barres, g.comptes], [[], []]);
-  assert.deepEqual(g.etiquettes.map((e) => e.cle), [0, 1, 2, 3, 4, 5, 6], 'les sept jours sur l\'axe');
-  assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
-});
 
 test('v6 · Comprendre, colonnes des autres mesures : barre haute de oui / n, compte au-dessus, creuse sous 3 valeurs, rien sans valeur', async () => {
   const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const colonnes = [colB(0, 3, 10), colB(1, 0, 4), colB(2, 0, 0), colB(3, 2, 2), colB(4, 10, 10), colB(5, 1, 5), colB(6, 0, 0)];
-  const g = geometrieColonnes({ pas: 'semaine', mesure: 'nuitMal', colonnes });
-  assert.deepEqual(g.points, []);
+  const g = geometrieColonnes({ pas: 'semaine', colonnes });
   assert.deepEqual(g.barres.map((b) => b.cle), [0, 3, 4, 5], 'zéro : pas de barre ; sans valeur : rien');
   assert.deepEqual(g.comptes.map((c) => c.cle), [0, 1, 3, 4, 5], '« 0 mardi » est un vrai compte ; une colonne sans valeur n\'a pas d\'étiquette');
   const par = new Map(g.barres.map((b) => [b.cle, b]));
@@ -257,12 +285,12 @@ test('v6 · Comprendre, colonnes par mois : au plus 7 étiquettes depuis le mois
 test('v6 · Comprendre, colonnes par lieu : étiquettes sur deux rangs quand les lieux sont serrés, toujours dans le cadre', async () => {
   const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const lieux = ['bureau', 'teletravail', 'conge_repos', 'arret', 'clinique', 'autre'].map((s) => `lieu:${s}`);
-  const g = geometrieColonnes({ pas: 'lieu', mesure: 'humeur', colonnes: lieux.map((cle, i) => colH(cle, i + 1, 5, 4, 6)) });
+  const g = geometrieColonnes({ pas: 'lieu', colonnes: lieux.map((cle, i) => colB(cle, 1, i + 1)) });
   assert.equal(g.etiquettes.length, 6);
   assert.equal(new Set(g.etiquettes.map((e) => e.y)).size, 2, 'deux rangs');
   assert.ok(g.hauteur > d.hauteur);
   assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
-  const g4 = geometrieColonnes({ pas: 'lieu', mesure: 'humeur', colonnes: lieux.slice(0, 4).map((cle) => colH(cle, 3, 5, 4, 6)) });
+  const g4 = geometrieColonnes({ pas: 'lieu', colonnes: lieux.slice(0, 4).map((cle) => colB(cle, 1, 3)) });
   assert.equal(new Set(g4.etiquettes.map((e) => e.y)).size, 1, 'un seul rang quand « Congé / repos » a la place');
   assert.equal(g4.hauteur, d.hauteur);
 });
@@ -349,10 +377,11 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(libelleAutres({ oui: 0, n: 0, peu: true }), null);
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
-  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge']);
+  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge',
+    'apresNuit', 'autourExplosions']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
-    for (const mesure of ['humeur', 'nuitMal', 'explosion', 'energieBasse']) {
+    for (const mesure of ['emotions', 'nuitMal', 'explosion', 'energieBasse']) {
       const p3 = phraseAria(graphe, '3mois', lib, mesure);
       const pt = phraseAria(graphe, 'tout', lib, mesure);
       for (const p of [p3, pt]) {
@@ -365,7 +394,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
     }
   }
   // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas.
-  assert.equal(phrases.size, 2 * (7 + 3 * 4));
+  assert.equal(phrases.size, 2 * (9 + 3 * 4));
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -373,7 +402,7 @@ test('v6 · Comprendre, phrase d\'accessibilité : la période est la clé du s�
   const { phraseAria, GRAPHES } = await import('../../public/js/ui/graphes/comprendre.js');
   const lib = (id) => id;
   for (const periode of [undefined, null, '90', 'Tout', 'toString', { du: '2026-01-01', au: '2026-10-15' }, ['2026-01-01', '2026-10-15']]) {
-    assert.throws(() => phraseAria('semaine', periode, lib, 'humeur'), /Période inconnue/, String(periode));
+    assert.throws(() => phraseAria('semaine', periode, lib, 'emotions'), /Période inconnue/, String(periode));
   }
   // Les zones de toucher n'ont pas de rôle : la phrase ne promet pas ce qu'un lecteur d'écran ne peut pas faire.
   for (const graphe of GRAPHES) assert.doesNotMatch(phraseAria(graphe, 'tout', lib), /[Tt]ouche/, graphe);
@@ -385,8 +414,9 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   const { SEUILS } = await import('../../public/js/analyse/seuils.js');
   const { RACINE, lire, sansCommentaires } = await import('../aides/fichiers.js');
   const S = SEUILS.comprendre;
-  // Chaque graphique (toutes les cartes PasAssez de l'écran en prennent un) a sa règle, et rien d'autre.
-  assert.deepEqual(Object.keys(R).sort(), [...GRAPHES].sort());
+  // Chaque graphique (toutes les cartes PasAssez de l'écran en prennent un) a sa règle, et rien d'autre ; les colonnes à la
+  // mesure « Émotions » (v7) ont la règle des émotions, celle du lieu à part.
+  assert.deepEqual(Object.keys(R).sort(), [...GRAPHES, 'emotions', 'emotionsLieu'].sort());
   for (const [graphe, regle] of Object.entries(R)) {
     assert.equal(typeof regle, 'string', graphe);
     assert.match(regle, /^La règle : .+\.$/, graphe);
@@ -396,6 +426,8 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
   for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
+  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  assert.match(R.autourExplosions, new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`));
   // Aucun chiffre écrit à la main dans le bloc des règles : ils viennent tous de SEUILS.comprendre.
   const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
   const bloc = code.slice(code.indexOf('SEUILS.comprendre'), code.indexOf('export const PIED_EXPLOSIONS'));

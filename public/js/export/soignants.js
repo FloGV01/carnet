@@ -2,7 +2,7 @@
 // positifs, « ce qui a aidé », détail jour par jour, signal, mémos. Pur.
 import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
-import { nombre, duree, moyenneReveils, phraseConstat, phrasesSommeil, PAS_ASSEZ } from '../analyse/textes.js';
+import { nombre, duree, moyenneReveils } from '../analyse/textes.js';
 import { trierRdv, rdvReference } from '../domain/soins.js';
 import { LISTES_CLASSEES } from '../analyse/classements.js';
 import { normaliserTraitement, resumeLigne } from '../domain/traitement-actuel.js';
@@ -58,11 +58,7 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     return { titre: NOMS[liste], elements: c.statut === 'aucun' ? [] : c.tries.slice(0, 3).map(([id, n]) => `${lib(id)} (${n})`) };
   });
 
-  const reperes = [];
-  for (const c of analyse.bonnesJournees.constats) reperes.push(phraseConstat(c, carte, 'neutre'));
-  const s = analyse.sommeil;
-  if (s.meme.statut === 'ok' || s.lendemain.statut === 'ok') { const ph = phrasesSommeil(s, carte).join(' '); reperes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`); }
-  if (!reperes.length) reperes.push(PAS_ASSEZ);
+  // v7 : plus de section « Repères » : les phrases calculées sur la note de 1 à 10 sont retirées de l'Analyse.
 
   // Évolution (v5) : la frise « Mes jours », par semaine sur 12 semaines, ou par mois sur 12 mois
   // quand l'historique dépasse 26 semaines. Jamais le détail jour par jour, aucune phrase.
@@ -99,10 +95,10 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
     // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran.
-    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, ...c }) => c), reperes: reperesFrise.traits },
+    // Sans les clés des émotions (v7, à l'écran pour l'instant ; la frise ne reçoit pas les relevés ici).
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, emotions, familles, nEmotions, ...c }) => c), reperes: reperesFrise.traits },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
-    reperes,
     traitement: lignesTraitement,
     traitementActuel: actuel,
     rdv: {

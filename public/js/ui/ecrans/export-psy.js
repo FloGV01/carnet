@@ -3,8 +3,8 @@
 import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { repo } from '../../donnees.js';
-import { calculerAnalyse } from './analyse.js';
-import { exportPsy, reperesPsy } from '../../export/psy.js';
+import { exportPsy } from '../../export/psy.js';
+import { carteLibelles } from '../../domain/libelles.js';
 import { copier } from '../../plateforme/presse-papier.js';
 import { useSauvegarde } from '../sauvegarde.js';
 import { Icones } from '../icones.js';
@@ -15,11 +15,10 @@ export function ExportPsy() {
   const sauvegarde = useSauvegarde();
   useEffect(() => {
     (async () => {
-      const [{ resultat, carte, zeroDepuis }, journal, episodes, symptomes, humeurs] = await Promise.all([
-        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous(),
+      const [items, zeroDepuis, journal, episodes, symptomes, humeurs] = await Promise.all([
+        repo.listes.items(), repo.meta.lire('explosionsDepuis'), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous(),
       ]);
-      const signal = resultat.signal && resultat.signal.ressemble ? resultat.signal.phraseExport : null;
-      setTexte(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: repo.aujourdhui(), carte, reperes: reperesPsy(resultat, carte), signal, zeroDepuis }));
+      setTexte(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: repo.aujourdhui(), carte: carteLibelles(items), zeroDepuis }));
     })();
   }, []);
 

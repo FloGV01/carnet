@@ -3,7 +3,8 @@ import { viderBase, aller } from '../aides/saisie.js';
 import { LISTES, NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 
 // v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Rappels) et « Moment
-// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis Analyse, À propos, Zone sensible.
+// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 : la section
+// Analyse disparaît avec le signal de ressemblance et les tendances).
 // « Le soir » (ex-« Ma journée ») ne règle plus que les champs du soir ; les heures de l'humeur du moment passent
 // dans Rappels, dans la même méta. L'index des Listes est rangé par écran. Écran de 390 × 844, celui du projet.
 const nav = (page, nom) => page.getByRole('navigation').getByRole('link', { name: nom, exact: true });
@@ -18,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », puis Analyse, À propos, Zone sensible', async ({ page }) => {
+test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », puis À propos, Zone sensible ; v7, plus de section Analyse', async ({ page }) => {
   await nav(page, 'Réglages').click();
   await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
   // Intertitres et liens, dans l'ordre du document.
@@ -27,8 +28,10 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
     'Sauvegarde',
     'Ma saisie', 'Le soir', 'Listes', 'Rappels',
     'Moment difficile', 'Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone',
-    'Analyse', 'À propos', 'Zone sensible', 'Tout effacer',
+    'À propos', 'Zone sensible', 'Tout effacer',
   ]);
+  await expect(page.locator('main.reglages')).not.toContainText(/Signal de ressemblance|Tendances/);
+  await expect(page.getByRole('switch')).toHaveCount(0);
   // Chaque groupe de liens porte le nom de son intertitre et mène où il faut.
   const liens = async (nom) => page.getByRole('list', { name: nom, exact: true }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href')));
   expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/rappel']);

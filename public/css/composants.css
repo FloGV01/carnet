@@ -258,6 +258,11 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .segmente.large { width: 100%; flex-wrap: wrap; }
 .segmente.large button { --demi-coche: 9.5px; min-width: min-content; min-height: var(--cible); padding: 0 6px; gap: 4px; font-size: var(--t-sous); }
 .segmente.large .coche svg { width: 15px; height: 15px; }
+/* « petit » (v7, Comprendre : période, mesure, avant ou après) : de petites pastilles à la largeur de leur libellé, qui
+   passent à la ligne, en couleur action une fois choisies ; cibles de 44. */
+.segmente.petit { flex-wrap: wrap; }
+.segmente.petit button { --demi-coche: 9.5px; flex: 0 0 auto; min-width: 0; min-height: var(--cible); padding: 0 12px; gap: 4px; border-radius: var(--r-petit); font-size: var(--t-petit); }
+.segmente.petit .coche svg { width: 15px; height: 15px; }
 
 /* Dicter */
 .champ-avec-dicter { position: relative; }

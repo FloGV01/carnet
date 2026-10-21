@@ -6,14 +6,15 @@ import { addDays } from '../../public/js/domain/dates.js';
 
 // v6.1 · Soins et Analyse (P12, P13) : « Pour mes soignants : Export PSY · Vue soignants » en haut de Soins, quel
 // que soit le segment, et le prénom de la page sur l'écran Vue soignants ; dans l'Analyse, Comprendre en trois
-// portes, le sélecteur de période collé sur ses seules sections, puis « Sur tout ton historique ».
+// portes (v7 : sous la porte « Historique › »), le sélecteur de période collé sur ses seules sections.
 // Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (écran de 390 × 844, celui du projet).
 const AUJ = '2026-10-15';
 const PRENOM = 'Essai';
 const nav = (page, nom) => page.getByRole('navigation').getByRole('link', { name: nom, exact: true });
 const segment = (page, nom) => page.getByRole('group', { name: 'Soins', exact: true }).getByRole('button', { name: `Soins : ${nom}` });
 const ligneSoignants = (page) => page.locator('.pour-soignants');
-const porte = (page, nom) => page.getByRole('region', { name: 'Comprendre' }).getByRole('link', { name: nom, exact: true });
+const portes = (page) => page.getByRole('group', { name: 'Comprendre', exact: true });
+const porte = (page, nom) => portes(page).getByRole('link', { name: nom, exact: true });
 const lireMeta = (page, cle) => page.evaluate((c) => window.__carnet.repo.meta.lire(c), cle);
 const image = (page) => page.locator('canvas.apercu-page').evaluate((c) => c.toDataURL('image/png'));
 
@@ -163,10 +164,9 @@ test('Vue soignants depuis Soins : onglet Soins, le prénom réglé sur l\'écra
   await page.getByLabel('Prénom sur la page').blur();
   await expect.poll(() => lireMeta(page, 'prenomSoignants')).toBeNull();
 
-  // Réglages › Analyse n'a plus de champ de prénom ; ses deux interrupteurs restent.
+  // Réglages n'a plus de champ de prénom (ni, v7, de section Analyse).
   await aller(page, '#/reglages');
-  const analyse = page.getByRole('region', { name: 'Analyse' });
-  await expect(analyse.getByRole('switch')).toHaveCount(2);
+  await expect(page.getByRole('region', { name: 'Analyse' })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /Prénom/ })).toHaveCount(0);
 });
 
@@ -251,14 +251,17 @@ async function charger120(page) {
   }, journal);
 }
 
-test('Analyse : trois portes vers Comprendre, plus d\'Export PSY ni de Vue soignants ; la semaine, la période, puis « Sur tout ton historique »', async ({ page }) => {
+test('Analyse : « Historique › » et trois portes vers Comprendre, plus d\'Export PSY ni de Vue soignants ; la semaine, puis la période (v7)', async ({ page }) => {
   test.setTimeout(60000);
   await charger120(page);
   await nav(page, 'Analyse').click();
-  await expect(page.getByRole('heading', { name: 'Sommeil et humeur' })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('heading', { name: 'Les plus fréquents' })).toBeVisible({ timeout: 15000 });
 
-  // Les portes, en tête, de 44 pt.
-  await expect(page.getByRole('region', { name: 'Comprendre' }).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);
+  // Les portes, en tête, de 44 pt au moins : l'Historique, puis Comprendre.
+  const historique = page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true });
+  await expect(historique).toHaveAttribute('href', '#/historique');
+  await cible(historique);
+  await expect(portes(page).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);
   for (const [nom, onglet] of [['Explosions', 'explosions'], ['Énergie', 'energie'], ['Rythmes', 'rythmes']]) {
     await expect(porte(page, nom)).toHaveAttribute('href', `#/comprendre/${onglet}`);
     await cible(porte(page, nom));
@@ -266,28 +269,18 @@ test('Analyse : trois portes vers Comprendre, plus d\'Export PSY ni de Vue soign
   await expect(page.getByRole('link', { name: 'Export PSY' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Vue soignants' })).toHaveCount(0);
 
-  // L'ordre : rien d'autre ne bouge, les deux constats sur tout l'historique passent à la fin, sous un intertitre.
+  // L'ordre : Ma semaine, la période, puis les sections qu'elle règle. Les analyses retirées (v7) n'y sont plus.
   const titres = await page.locator('main').locator('h2, h3, .repli-titre, .selecteur-periode').evaluateAll((els) => els.map((e) => (e.classList.contains('selecteur-periode') ? '[période]' : e.textContent.trim())));
-  const reperes = ['Comprendre', 'Ma semaine', 'Tendances', '[période]', 'Avec qui, comment c\'était · Mouvement', 'Tes moments, étape par étape', 'Les plus fréquents',
-    'Tous les chiffres', 'Sur tout ton historique', 'Ce que tes journées à 7 ou plus ont en commun', 'Sommeil et humeur'];
+  const reperes = ['Ma semaine', '[période]', 'Avec qui, comment c\'était · Mouvement', 'Tes moments, étape par étape', 'Les plus fréquents', 'Tous les chiffres'];
   expect(titres.filter((t) => reperes.includes(t))).toEqual(reperes);
-  await expect(page.getByRole('heading', { name: 'Sur tout ton historique', level: 2 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Ce que tes journées à 7 ou plus ont en commun', level: 3 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sommeil et humeur', level: 3 })).toBeVisible();
-  await expect(page.locator('.note-carte-interne', { hasText: 'historique' })).toHaveCount(0);
+  for (const retire of ['Tendances', 'Sur tout ton historique', 'Ce que tes journées à 7 ou plus ont en commun', 'Sommeil et humeur']) {
+    await expect(page.getByRole('heading', { name: retire })).toHaveCount(0);
+  }
 
-  // Le sélecteur colle sur les sections qu'il règle…
+  // Le sélecteur colle sur les sections qu'il règle.
   const selecteur = page.locator('.selecteur-periode');
   await page.getByRole('heading', { name: 'Les plus fréquents' }).evaluate((e) => e.scrollIntoView({ block: 'center' }));
   await expect.poll(async () => Math.round((await selecteur.boundingBox()).y)).toBe(0);
-  // … et part avec elles : « Sur tout ton historique » en haut de l'écran, il n'est plus au-dessus.
-  await page.setViewportSize({ width: 390, height: 480 });
-  const intertitre = page.getByRole('heading', { name: 'Sur tout ton historique' });
-  await intertitre.evaluate((e) => e.scrollIntoView({ block: 'start' }));
-  await expect.poll(async () => Math.round((await intertitre.boundingBox()).y)).toBeLessThanOrEqual(1);
-  const [s, i] = await Promise.all([selecteur.boundingBox(), intertitre.boundingBox()]);
-  expect(s.y + s.height).toBeLessThanOrEqual(i.y);
-  await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
 });
@@ -319,7 +312,7 @@ const mesurerPortes = (page) => page.locator('.portes .porte').evaluateAll((els)
 
 test('Analyse : en grand texte, les portes passent à la ligne et le texte de chacune reste dans sa boîte', async ({ page }) => {
   await nav(page, 'Analyse').click();
-  await expect(page.getByRole('region', { name: 'Comprendre' }).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);
+  await expect(portes(page).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);
   // Tailles du texte d'iOS (html suit -apple-system-body) : par défaut, xLarge, xxLarge, xxxLarge, puis la première
   // des grandes tailles d'accessibilité. Posées par le CSSOM, que la CSP laisse passer.
   for (const largeur of [390, 375, 320]) {

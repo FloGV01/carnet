@@ -10,20 +10,19 @@ import { carteLibelles } from '../../public/js/domain/libelles.js';
 const items = [...seedItems(SEED_V1, 'x'), ...seedItems(SEED_V2_AJOUTS, 'x')];
 const carte = carteLibelles(items);
 
-test('profil de journée : créneaux de 2 h, au moins 3 relevés, rattachement au jour logique', () => {
-  const h = (date, heure, humeur, energie = null) => ({ id: `${date}${heure}`, date, heure, humeur, energie });
-  const humeurs = [h('2026-10-01', '10:05', 6, 'energie:basse'), h('2026-10-02', '11:40', 4, 'energie:basse'), h('2026-10-03', '10:30', 5),
-    h('2026-10-03', '11:30', 9), h('2026-10-01', '14:00', 7), h('2026-10-02', '15:00', 7), h('2026-10-04', '01:30', 3),
-    h('2026-10-02', '01:00', 2), h('2026-10-03', '00:10', 2), h('2026-10-04', '00:20', 4), h('2026-10-01', '22:30', 6), h('2026-10-02', '23:00', 6), h('2026-10-03', '22:00', 6)];
+test('profil de journée : créneaux de 2 h, au moins 3 jours, rattachement au jour logique ; v7, l\'énergie seulement', () => {
+  const h = (date, heure, energie = 'energie:moyenne', humeur = null) => ({ id: `${date}${heure}`, date, heure, humeur, energie });
+  const humeurs = [h('2026-10-01', '10:05', 'energie:basse'), h('2026-10-02', '11:40', 'energie:basse'), h('2026-10-03', '10:30'),
+    h('2026-10-03', '11:30'), h('2026-10-01', '14:00'), h('2026-10-02', '15:00'), h('2026-10-04', '01:30'),
+    h('2026-10-02', '01:00'), h('2026-10-03', '00:10'), h('2026-10-04', '00:20'), h('2026-10-01', '22:30'), h('2026-10-02', '23:00'), h('2026-10-03', '22:00')];
   const p = profilJournee(humeurs, '2026-10-01', '2026-10-03');
   assert.equal(p.n, 13, 'les relevés d\'avant 4 h comptent pour la veille');
-  assert.deepEqual(p.creneaux.map((c) => [c.debut, c.n, c.jours, c.moyenne]), [[10, 4, 3, 5.666666666666667], [22, 3, 3, 6], [0, 4, 3, 2.5]],
-    'moyenne des moyennes par jour ; créneaux de 4 h à 4 h ; 14 h avec 2 jours seulement : absent');
+  assert.deepEqual(p.creneaux.map((c) => [c.debut, c.n, c.jours]), [[10, 4, 3], [22, 3, 3], [0, 4, 3]],
+    'créneaux de 4 h à 4 h ; 14 h avec 2 jours seulement : absent');
   assert.equal(p.creneaux[0].energie['energie:basse'], 2);
-  // Relevés avec seulement l'énergie : comptés pour le créneau et pour l'énergie, pas pour l'humeur.
-  const energieSeule = ['2026-10-01', '2026-10-02', '2026-10-03'].map((d) => h(d, '16:30', null, 'energie:haute'));
-  const q = profilJournee(energieSeule, '2026-10-01', '2026-10-03');
-  assert.deepEqual(q.creneaux.map((c) => [c.debut, c.jours, c.moyenne, c.energie['energie:haute']]), [[16, 3, null, 3]]);
+  // Une ancienne note sans énergie n'entre pas dans le profil.
+  const notes = ['2026-10-01', '2026-10-02', '2026-10-03'].map((d) => h(d, '16:30', null, 6));
+  assert.equal(profilJournee(notes, '2026-10-01', '2026-10-03').statut, 'insuffisant');
   assert.equal(profilJournee([], '2026-10-01', '2026-10-03').statut, 'insuffisant');
 });
 
@@ -52,7 +51,7 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
   const data = { journal, episodes, symptomes: [], traitements: [], humeurs: [] };
   const r = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.deepEqual([r.fenetres['7'].explosions.n, r.fenetres['7'].explosions.total, r.fenetres['7'].explosions.jours], [2, 1, 1]);
-  assert.ok(r.moments['7'] && r.tesMoments['7'] && r.frise['7'] && r.tendances);
+  assert.ok(r.moments['7'] && r.tesMoments['7'] && r.frise['7'] && r.emotions['7']);
   // Avant la mise à jour v4, un compteur vide reste inconnu : seul le jour de l'épisode compte.
   const avant = analyze(data, { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-30' });
   assert.deepEqual([avant.fenetres['7'].explosions.n, avant.fenetres['7'].explosions.total], [1, 1]);
@@ -61,7 +60,7 @@ test('analyse : les épisodes « Explosion » font foi quand le compteur du soir
     { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   assert.equal(seul.fenetres['30'].explosions.total, 2);
   // v6 : un jour qui n'a que des humeurs du moment a une humeur du jour, mais pas de saisie du soir :
-  // son compte d'explosions reste inconnu (jamais 0), dans les fenêtres, la frise et le signal.
+  // son compte d'explosions reste inconnu (jamais 0), dans les fenêtres et la frise.
   const releves = analyze({ ...data, humeurs: [{ id: 'h1', date: '2026-09-28', heure: '10:00', humeur: 4, energie: null }] },
     { aujourdhui: '2026-09-30', items, zeroDepuis: '2026-09-01' });
   const f7 = releves.fenetres['7'];

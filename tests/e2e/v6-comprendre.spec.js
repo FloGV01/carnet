@@ -2,6 +2,7 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { generer } from '../fixtures/generateur.js';
 import { addDays } from '../../public/js/domain/dates.js';
+import { FAMILLES } from '../../public/js/domain/roue.js';
 
 // v6 · Comprendre (spec §2) : un écran ouvert depuis l'Analyse, trois onglets, graphiques seulement. Depuis la
 // v6.1, l'Analyse l'ouvre par trois portes, une par onglet. Données inventées (aucune donnée réelle).
@@ -14,7 +15,7 @@ const bouton = (page, nom, libelle) => groupe(page, nom).getByRole('button', { n
 const carte = (page, titre) => page.locator('figure.graphe', { has: page.getByText(titre, { exact: true }) });
 const lireLocal = (page, cle) => page.evaluate((c) => JSON.parse(localStorage.getItem(c)), cle);
 // Une des trois portes de Comprendre, en haut de l'Analyse (v6.1).
-const porte = (page, nom) => page.getByRole('region', { name: 'Comprendre' }).getByRole('link', { name: nom, exact: true });
+const porte = (page, nom) => page.getByRole('group', { name: 'Comprendre', exact: true }).getByRole('link', { name: nom, exact: true });
 // Sous son seuil, une carte dit « Pas encore assez » ; « Pourquoi ? » déplie sa règle, sans décompte.
 async function pasAssez(page, titre) {
   const c = carte(page, titre);
@@ -30,9 +31,10 @@ async function demarrer(page) {
   await viderBase(page);
 }
 
-// 180 jours qui finissent aujourd'hui : le générateur (lieu, nuit, contact, explosions, humeurs du moment),
-// puis, sans hasard, ce qu'il ne note pas : l'énergie et « Ce que je faisais » des relevés, pesé et rechargé,
-// le coucher et le lever.
+// 180 jours qui finissent aujourd'hui : le générateur (lieu, nuit, contact, explosions, relevés du moment),
+// puis, sans hasard, ce qu'il ne note pas : l'énergie, l'émotion (v7, à la place de la note) et « Ce que je faisais »
+// des relevés, pesé et rechargé, le coucher et le lever.
+const EMOTIONS = FAMILLES.flatMap((f) => [f.id, ...f.mots.slice(0, 2).map((m) => m.id)]);
 const ENERGIES = ['energie:basse', 'energie:moyenne', 'energie:haute', 'energie:moyenne'];
 const ACTIVITES = ['activiteMoment:travail', 'activiteMoment:trajet', 'activiteMoment:maison', 'activiteMoment:repos'];
 const COUCHERS = ['22:40', '23:15', '23:50', '00:30', '01:10'];
@@ -46,7 +48,9 @@ function jours180() {
       recharge: i % 4 === 0 ? ['recharge:calme'] : i % 5 === 0 ? ['recharge:dehors'] : null,
       heureCoucher: COUCHERS[i % COUCHERS.length], heureLever: LEVERS[i % LEVERS.length],
     })),
-    humeurs: humeurs.map(({ id, ...h }, k) => ({ ...h, energie: ENERGIES[k % ENERGIES.length], faisais: [ACTIVITES[k % ACTIVITES.length]] })),
+    humeurs: humeurs.map(({ id, ...h }, k) => ({
+      ...h, humeur: null, emotion: EMOTIONS[(k * 5) % EMOTIONS.length], energie: ENERGIES[k % ENERGIES.length], faisais: [ACTIVITES[k % ACTIVITES.length]],
+    })),
   };
 }
 async function charger180(page) {
@@ -69,6 +73,7 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
   await expect(bouton(page, 'Période', 'Tout')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Avant ou après', 'Avant')).toHaveAttribute('aria-pressed', 'true');
   await pasAssez(page, 'Avant mes explosions');
+  await pasAssez(page, 'Autour de tes explosions');
   await bouton(page, 'Avant ou après', 'Après').click();
   await pasAssez(page, 'Après mes explosions');
 
@@ -80,9 +85,9 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
 
   await bouton(page, 'Comprendre', 'Rythmes').click();
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
-  await expect(groupe(page, 'Mesure').getByRole('button')).toHaveText(['Humeur', 'Nuits Mal', 'Explosions', 'Énergie basse']);
-  await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
-  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Tes nuits selon le jour', 'Selon le mois']) {
+  await expect(groupe(page, 'Mesure').getByRole('button')).toHaveText(['Émotions', 'Nuits Mal', 'Explosions', 'Énergie basse']);
+  await expect(bouton(page, 'Mesure', 'Émotions')).toHaveAttribute('aria-pressed', 'true');
+  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Tes nuits selon le jour', 'Après une nuit', 'Selon le mois']) {
     await pasAssez(page, titre);
   }
 
@@ -95,7 +100,7 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
 });
 
-test('un choix gardé qui n\'est plus valable revient au défaut : Tout, Humeur', async ({ page }) => {
+test('un choix gardé qui n\'est plus valable revient au défaut : Tout, Émotions (v7 : « Humeur » gardée de la v6 aussi)', async ({ page }) => {
   await demarrer(page);
   await page.evaluate(() => {
     localStorage.setItem('carnet:comprendre:periode', JSON.stringify('90'));
@@ -105,14 +110,15 @@ test('un choix gardé qui n\'est plus valable revient au défaut : Tout, Humeur'
   await porte(page, 'Explosions').click();
   await expect(bouton(page, 'Comprendre', 'Explosions')).toHaveAttribute('aria-pressed', 'true');
   await expect(bouton(page, 'Période', 'Tout')).toHaveAttribute('aria-pressed', 'true');
-  await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', JSON.stringify('humeurs')));
+  await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', JSON.stringify('humeur')));
   await bouton(page, 'Comprendre', 'Rythmes').click();
-  await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
-  // Une mesure illisible ou inconnue : Humeur, même relue à une nouvelle ouverture de l'écran.
+  await expect(bouton(page, 'Mesure', 'Émotions')).toHaveAttribute('aria-pressed', 'true');
+  await expect(groupe(page, 'Mesure')).not.toContainText('Humeur');
+  // Une mesure illisible ou inconnue : Émotions, même relue à une nouvelle ouverture de l'écran.
   await aller(page, '#/analyse');
   await page.evaluate(() => localStorage.setItem('carnet:comprendre:mesure', '{illisible'));
   await porte(page, 'Rythmes').click();
-  await expect(bouton(page, 'Mesure', 'Humeur')).toHaveAttribute('aria-pressed', 'true');
+  await expect(bouton(page, 'Mesure', 'Émotions')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => localStorage.getItem('carnet:comprendre:periode'))).toBe('"90"');
 });
 
@@ -135,7 +141,9 @@ test('« Pas encore assez de données » avec 2 explosions ; « Pourquoi ? » do
 
   await repo(page, () => window.__carnet.repo.episodes.creer({ date: '2026-10-14', heure: '18:00', emotion: 'emotion:colere', reaction: 'reaction:explosion' }));
   await expect(page.getByRole('group', { name: /^Après mes explosions, sur tout ce que tu as noté : / })).toBeVisible();
-  await expect(page.locator('main')).not.toContainText(PAS_ASSEZ);
+  await expect(carte(page, 'Après mes explosions')).not.toContainText(PAS_ASSEZ);
+  // v7 : sans émotion du moment notée autour des explosions, « Autour de tes explosions » reste sous son seuil.
+  await expect(carte(page, 'Autour de tes explosions')).toContainText(PAS_ASSEZ);
 });
 
 test('180 jours inventés : les graphiques des trois onglets, les choix gardés, sans débordement', async ({ page }) => {
@@ -159,11 +167,16 @@ test('180 jours inventés : les graphiques des trois onglets, les choix gardés,
   await expect(carte(page, 'Selon ce que tu faisais').locator('text.g-nom')).toHaveText(['Travail', 'Trajet', 'Chez moi', 'Repos']);
 
   await bouton(page, 'Comprendre', 'Rythmes').click();
-  await expect(page.getByRole('img', { name: /^Selon le jour de la semaine, sur tout ce que tu as noté : l'humeur du jour/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Selon le jour de la semaine, sur tout ce que tu as noté : une barre des émotions du moment/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /^Selon le lieu, sur tout ce que tu as noté : / })).toBeVisible();
   await expect(page.getByRole('group', { name: /^Autour d'un retour au bureau, sur tout ce que tu as noté : / })).toBeVisible();
   await expect(page.getByRole('img', { name: /^Tes nuits selon le jour, sur tout ce que tu as noté : / })).toBeVisible();
-  await expect(page.getByRole('img', { name: /^Selon le mois, sur tout ce que tu as noté : l'humeur du jour/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Après une nuit, sur tout ce que tu as noté : / })).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Selon le mois, sur tout ce que tu as noté : une barre des émotions du moment/ })).toBeVisible();
+  // Les colonnes d'émotions : un jour de la semaine par ligne, les familles en légende, aucun pourcentage.
+  await expect(carte(page, 'Selon le jour de la semaine').locator('text.g-nom')).toHaveText(['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']);
+  await expect(carte(page, 'Selon le jour de la semaine').locator('.legende-graphe')).toContainText('Colère');
+  await expect(carte(page, 'Après une nuit').locator('text.g-nom')).toHaveText(['Mal', 'Moyen', 'Bien']);
 
   // Le choix de mesure sert aux graphiques 1, 2 et 5 ; mesure et période sont gardées.
   await bouton(page, 'Mesure', 'Explosions').click();
@@ -236,7 +249,8 @@ test('180 jours inventés : « Voir en tableau », le toucher d\'une barre et se
     await expect(page.locator('figure.graphe').first()).toBeVisible();
     phrases.push(...await page.locator('figure.graphe [role="group"], figure.graphe svg[role="img"]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))));
   }
-  expect(phrases).toHaveLength(1 + 3 + 5);
+  // Explosions : Avant (Autour de tes explosions n'a pas d'heure d'explosion ici) ; Énergie : 3 ; Rythmes : 5, et Après une nuit.
+  expect(phrases).toHaveLength(1 + 3 + 6);
   for (const p of phrases) {
     expect(p).toMatch(/« Voir en tableau »\.$/);
     expect(p).not.toMatch(/\d|%/);

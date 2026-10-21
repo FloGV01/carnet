@@ -28,8 +28,11 @@ const lignesInterrupteur = (page) => page.locator('.ligne-interrupteur').evaluat
   };
 }));
 
-test('interrupteurs alignés à droite : Réglages › Analyse, › Moment difficile et › Me ressourcer', async ({ page }) => {
-  for (const [route, nombre] of [['#/reglages', 2], ['#/reglages/moment-difficile', 7], ['#/reglages/ressourcer', 1]]) {
+test('interrupteurs alignés à droite : Réglages › Moment difficile et › Me ressourcer (v7 : plus de section Analyse)', async ({ page }) => {
+  await aller(page, '#/reglages');
+  await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
+  await expect(page.locator('.ligne-interrupteur')).toHaveCount(0);
+  for (const [route, nombre] of [['#/reglages/moment-difficile', 7], ['#/reglages/ressourcer', 1]]) {
     await aller(page, route);
     await expect(page.locator('.ligne-interrupteur')).toHaveCount(nombre);
     const lignes = await lignesInterrupteur(page);
