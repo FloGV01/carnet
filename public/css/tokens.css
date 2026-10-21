@@ -168,8 +168,9 @@
 .teinte-humeur { --c: var(--c-humeur); --c-fill: var(--c-humeur-fill); --c-on: var(--c-humeur-on); --c-tint: var(--c-humeur-tint); --c-tint-2: var(--c-humeur-tint-2); --c-text: var(--c-humeur-text); }
 .teinte-ep { --c: var(--c-episode); --c-fill: var(--c-episode-fill); --c-on: var(--c-episode-on); --c-tint: var(--c-episode-tint); --c-tint-2: var(--c-episode-tint-2); --c-text: var(--c-episode-text); }
 .teinte-sy { --c: var(--c-symptome); --c-fill: var(--c-symptome-fill); --c-on: var(--c-symptome-on); --c-tint: var(--c-symptome-tint); --c-tint-2: var(--c-symptome-tint-2); --c-text: var(--c-symptome-text); }
-/* Moment difficile (et « Une chose à la fois », teinte « jour » depuis la v6). */
-.teinte-difficile, .teinte-jour { --c: var(--c-difficile); --c-fill: var(--c-difficile-fill); --c-on: var(--c-difficile-on); --c-tint: var(--c-difficile-tint); --c-tint-2: var(--c-difficile-tint-2); --c-text: var(--c-difficile-text); }
+/* Moment difficile (et « Une chose à la fois », teinte « jour » depuis la v6). Bien-être (v7) prend la couleur de la
+   cohérence cardiaque, sa première pratique. */
+.teinte-difficile, .teinte-jour, .teinte-bien-etre { --c: var(--c-difficile); --c-fill: var(--c-difficile-fill); --c-on: var(--c-difficile-on); --c-tint: var(--c-difficile-tint); --c-tint-2: var(--c-difficile-tint-2); --c-text: var(--c-difficile-text); }
 .teinte-energie { --c: var(--c-energie); --c-fill: var(--c-energie-fill); --c-on: var(--c-energie-on); --c-tint: var(--c-energie-tint); --c-tint-2: var(--c-energie-tint-2); --c-text: var(--c-energie-text); }
 .teinte-expl { --c: var(--c-explosions); --c-fill: var(--c-explosions-fill); --c-on: var(--c-explosions-on); --c-tint: var(--c-explosions-tint); --c-tint-2: var(--c-explosions-tint-2); --c-text: var(--c-explosions-text); }
 /* Familles de la roue des émotions, dans l'ordre de la roue. */

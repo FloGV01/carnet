@@ -1,6 +1,6 @@
 // Émotions du moment (v7, spec §5 et §6.4) : les relevés qui portent une émotion de la roue (domain/roue.js), comptés
 // par famille. Par jour, par heure, par colonne (jour de la semaine, mois, lieu), après une nuit, et autour d'instants
-// (les explosions ; les séances de Bien-être, plus tard). Des comptes de relevés, dans l'ordre fixe des familles :
+// (les explosions ; les séances lancées depuis Bien-être). Des comptes de relevés, dans l'ordre fixe des familles :
 // jamais une famille additionnée à une autre en score, ni un pourcentage, ni une famille « meilleure » qu'une autre.
 // Les anciennes notes de 1 à 10 n'entrent pas ici (humeur-jour.js). Un relevé se rattache à son jour logique par
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
@@ -134,4 +134,12 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
     if (temps.some((t) => m >= t && m <= t + apresH * 60)) { apres[f] += 1; n += 1; }
   }
   return { statut: selonSeuilEmotions(n), avant, apres, instants: temps.length, n };
+}
+
+// Autour du Bien-être (spec §6.4) : autourDe sur les séances lancées depuis l'onglet Bien-être (origine `bien-etre`) dont le
+// jour logique est dans la période ; les respirations de Moment difficile et de « Pour récupérer » n'y entrent pas.
+export function autourDuBienEtre(seances, humeurs, periode) {
+  const instants = (seances || []).filter((x) => x && x.origine === 'bien-etre' && estDateValide(x.date) && estHeureValide(x.heure)
+    && (() => { const j = jourEvenement(x.date, x.heure); return j >= periode.du && j <= periode.au; })());
+  return autourDe(instants, humeurs);
 }

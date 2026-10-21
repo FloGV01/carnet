@@ -46,11 +46,11 @@ function caseEmotion(ctx, famille, x, y, l, h, mm) {
   ctx.restore();
 }
 
-// La frise des émotions et des jours : la géométrie de « Mes jours » (geometrie.js), sans énergie, sur une largeur qui
+// La frise des émotions et des jours : la géométrie de « Mes jours » (geometrie.js), sans énergie ni Bien-être, sur une largeur qui
 // suit le rapport du cadre (sinon textes et barres seraient écrasés) ; la bande des repères de traitement ajoute de la
 // hauteur, d'où un nouveau calcul. L'échelle ne dépasse jamais le cadre.
 export function geometriePage(op) {
-  const frise = { ...op.frise, avecEnergie: false };
+  const frise = { ...op.frise, avecEnergie: false, avecBienEtre: false };
   const calculer = (largeur) => geometrieMesJours(frise, { reperes: op.frise.reperes || [] }, { ...DIM_MES_JOURS_PDF, largeur });
   let geo = calculer(DIM_MES_JOURS_PDF.largeur);
   for (let k = 0; k < 3; k++) {

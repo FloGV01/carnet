@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '0961bce6bd22';
+const VERSION = '4a955c7ed9f7';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -41,6 +41,7 @@ const FICHIERS = [
   "./js/domain/champs.js",
   "./js/domain/contacts.js",
   "./js/domain/dates.js",
+  "./js/domain/exercices.js",
   "./js/domain/explosions.js",
   "./js/domain/historique.js",
   "./js/domain/ids.js",
@@ -54,6 +55,7 @@ const FICHIERS = [
   "./js/domain/respiration.js",
   "./js/domain/ressourcer.js",
   "./js/domain/roue.js",
+  "./js/domain/seances.js",
   "./js/domain/soins.js",
   "./js/domain/traitement-actuel.js",
   "./js/domain/verification.js",
@@ -111,11 +113,13 @@ const FICHIERS = [
   "./js/ui/ecrans/apres-coup.js",
   "./js/ui/ecrans/attente.js",
   "./js/ui/ecrans/aujourdhui.js",
+  "./js/ui/ecrans/bien-etre.js",
   "./js/ui/ecrans/comprendre.js",
   "./js/ui/ecrans/consultation.js",
   "./js/ui/ecrans/diagnostic.js",
   "./js/ui/ecrans/effacer.js",
   "./js/ui/ecrans/episode.js",
+  "./js/ui/ecrans/exercice.js",
   "./js/ui/ecrans/export-psy.js",
   "./js/ui/ecrans/guide.js",
   "./js/ui/ecrans/historique.js",
@@ -145,6 +149,7 @@ const FICHIERS = [
   "./js/ui/icones.js",
   "./js/ui/lib.js",
   "./js/ui/sauvegarde.js",
+  "./js/ui/seance.js",
   "./js/version.js",
   "./manifest.webmanifest",
   "./vendor/LICENCES.txt",

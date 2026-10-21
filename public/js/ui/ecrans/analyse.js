@@ -28,21 +28,21 @@ const NOMS_CLASSEMENT = { emotionMoment: 'Émotion du moment', declencheur: 'Dé
 let cache = null;
 
 export async function calculerAnalyse() {
-  const [journal, episodes, symptomes, traitements, humeurs, items, ecriture, zeroDepuis] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.humeurs.tous(), repo.listes.items(),
-    repo.meta.lire('derniereEcriture'), repo.meta.lire('explosionsDepuis'),
+  const [journal, episodes, symptomes, traitements, humeurs, seances, items, ecriture, zeroDepuis] = await Promise.all([
+    repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.humeurs.tous(), repo.seances.tous(),
+    repo.listes.items(), repo.meta.lire('derniereEcriture'), repo.meta.lire('explosionsDepuis'),
   ]);
   const aujourdhui = repo.aujourdhui();
   const cle = `${ecriture}|${aujourdhui}|${zeroDepuis}`;
   if (cache && cache.cle === cle) return cache.valeur;
   await new Promise((ok) => setTimeout(ok, 0));
-  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs }, { aujourdhui, items, zeroDepuis });
+  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs, seances }, { aujourdhui, items, zeroDepuis });
   const valeur = { resultat, items, carte: carteLibelles(items), zeroDepuis };
   cache = { cle, valeur };
   return valeur;
 }
 
-// En haut (2b) : « Historique › » (l'onglet Historique rejoindra l'Analyse), puis les trois portes de Comprendre, chacune
+// En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
 // avec le carré de sa couleur (deux touchers pour chaque onglet, v6.1). Elles passent à la ligne en grand texte.
 const COULEURS_PORTES = { explosions: ['explosions', 'expl'], energie: ['energie', 'energie'], rythmes: ['rythmes', 'sommeil'] };
 const Portes = () => html`<nav class="portes-analyse" aria-label="Historique et Comprendre">

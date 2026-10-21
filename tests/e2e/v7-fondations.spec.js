@@ -179,7 +179,7 @@ test('barre d\'onglets 2b, en clair et en sombre : neutre, icônes de 22, pilule
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
     await page.emulateMedia({ colorScheme: schema });
-    for (const [hash, actif] of [['#/aujourdhui', 'Aujourd\'hui'], ['#/analyse', 'Analyse'], ['#/soins', 'Soins']]) {
+    for (const [hash, actif] of [['#/aujourdhui', 'Aujourd\'hui'], ['#/analyse', 'Analyse'], ['#/bien-etre', 'Bien-être'], ['#/soins', 'Soins']]) {
       await aller(page, hash);
       const nav = page.getByRole('navigation', { name: 'Navigation principale' });
       await expect(nav.getByRole('link', { name: actif, exact: true })).toHaveAttribute('aria-current', 'page');
@@ -202,7 +202,7 @@ test('barre d\'onglets 2b, en clair et en sombre : neutre, icônes de 22, pilule
       expect(r.fond).toBe(rgb(t.bg));
       expect(r.filet).toBe(`1px ${rgb(t.line)}`);
       expect(r.hauteur).toBe(50);
-      expect(r.onglets.map((o) => o.nom)).toEqual(['Aujourd\'hui', 'Analyse', 'Historique', 'Soins', 'Réglages']);
+      expect(r.onglets.map((o) => o.nom)).toEqual(['Aujourd\'hui', 'Analyse', 'Bien-être', 'Soins', 'Réglages']);
       for (const o of r.onglets) {
         expect(o.classe, `${o.nom} : aucune teinte`).toBe('onglet');
         expect(o.icone).toBe('22×22');

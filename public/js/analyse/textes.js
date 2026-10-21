@@ -35,6 +35,7 @@ export const REGLES_COMPRENDRE = {
   emotionsLieu: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, des jours où le lieu est noté.`,
   apresNuit: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, des jours où la nuit est notée.`,
   autourExplosions: `La règle : ${AU_MOINS_EMOTIONS} notées dans les ${E.heuresAutour} heures avant ou après une explosion dont l'heure est notée, sur la période.`,
+  autourBienEtre: `La règle : ${AU_MOINS_EMOTIONS} notées dans les ${E.heuresAutour} heures avant ou après une séance lancée depuis Bien-être, sur la période.`,
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 

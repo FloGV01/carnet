@@ -2,7 +2,8 @@
 // n'existent pas ici : ni ligne vide, ni décompte. v7 : la ligne d'un jour donne ses émotions du moment
 // (deux au plus, puis « … », avec les points de leurs familles) ; un jour qui n'a que des relevés a sa ligne.
 // Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
-// filtre « Humeur » n'est proposé que si une note existe.
+// filtre « Humeur » n'est proposé que si une note existe. L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa
+// porte en haut de l'Analyse, et « Retour » y ramène.
 import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -104,7 +105,8 @@ export function Historique() {
     memoriser({ position: window.scrollY });
   }, [donnees]);
 
-  if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" /></main>`;
+  const versAnalyse = () => { location.hash = '#/analyse'; };
+  if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" retour=${versAnalyse} /></main>`;
   const { carte, items, avecMemo, aujourdhui } = donnees;
   const periode = f.periode === '7' ? addDays(aujourdhui, -6) : f.periode === '30' ? addDays(aujourdhui, -29) : null;
   const q = requete.trim();
@@ -193,7 +195,7 @@ export function Historique() {
   };
 
   return html`<main class="ecran historique">
-    <${Entete} titre="Historique" />
+    <${Entete} titre="Historique" retour=${versAnalyse} />
     <${Segmente} etiquette="Afficher" options=${SEGMENTS} valeur=${segment} classe="large" sansVide=${true}
       surChoix=${(v) => { if (v && v !== segment) { setSegment(v); setF({}); ecrireLocal(CLE_SEGMENT, v); } }} />
     <div class="barre-recherche">

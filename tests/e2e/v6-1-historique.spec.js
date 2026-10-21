@@ -4,7 +4,8 @@ import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub
 
 // v6.1 · Historique (P15, A5) : segment, filtres, recherche et position gardés pour la session, après un aller-retour
 // par un jour, un épisode ou un symptôme ; seul le segment survit à un redémarrage. Un jour ouvert depuis l'Historique
-// garde l'onglet Historique et affiche « ‹ Retour » ; ‹ et › changent de jour. Ouvert autrement, rien ne change.
+// garde l'onglet de l'Historique (v7 : Analyse, l'Historique a quitté la barre) et affiche « ‹ Retour » ; ‹ et › changent de
+// jour. Ouvert autrement, rien ne change.
 // Mots inventés pour le test (jamais de donnée réelle). Écran de 390 × 844, celui du projet.
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 20, 30) });
@@ -32,8 +33,10 @@ test.beforeEach(async ({ page }) => {
 
 const segment = (page, nom) => page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: new RegExp(nom) });
 const onglet = (page, nom) => page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: nom, exact: true });
+// v7 : par la porte « Historique », en haut de l'Analyse.
 const ouvrirHistorique = async (page) => {
-  await onglet(page, 'Historique').click();
+  await onglet(page, 'Analyse').click();
+  await page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();
 };
 const positionY = (page) => page.evaluate(() => window.scrollY);
@@ -105,7 +108,7 @@ test('la recherche et le segment Symptômes gardés après un symptôme ; après
   expect(await positionY(page)).toBe(0);
 });
 
-test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et › changent de jour, « Retour » ramène à la même position', async ({ page }) => {
+test('un jour ouvert depuis l\'Historique : onglet de l\'Historique (Analyse) allumé, ‹ et › changent de jour, « Retour » ramène à la même position', async ({ page }) => {
   await ouvrirHistorique(page);
   await page.getByRole('button', { name: 'Filtrer' }).click();
   await page.getByRole('group', { name: 'Lieu' }).getByRole('button', { name: 'Bureau', exact: true }).click();
@@ -116,7 +119,7 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   await lien.click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-10$/);
   await expect(page.getByRole('heading', { name: 'Jeudi 10 septembre', level: 1 })).toBeVisible();
-  await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
+  await expect(onglet(page, 'Analyse')).toHaveAttribute('aria-current', 'page');
   await expect(onglet(page, 'Aujourd\'hui')).not.toHaveAttribute('aria-current', 'page');
   const retour = page.getByRole('button', { name: 'Retour', exact: true });
   await expect(retour).toBeVisible();
@@ -134,7 +137,7 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   await page.getByRole('button', { name: 'Jour suivant' }).click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-11$/);
   await expect(page.getByRole('heading', { name: 'Vendredi 11 septembre', level: 1 })).toBeVisible();
-  await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
+  await expect(onglet(page, 'Analyse')).toHaveAttribute('aria-current', 'page');
   await expect(retour).toBeVisible();
 
   await retour.click();
@@ -221,7 +224,7 @@ test('un épisode ouvert d\'un jour de l\'Historique ramène à ce jour, puis Re
   const fiche = page.getByRole('dialog', { name: 'Épisode' });
   await fiche.getByRole('button', { name: 'Terminer' }).click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-14$/);
-  await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
+  await expect(onglet(page, 'Analyse')).toHaveAttribute('aria-current', 'page');
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
   await expect(page).toHaveURL(/#\/historique$/);
   await expect.poll(async () => Math.abs((await positionY(page)) - y)).toBeLessThanOrEqual(1);
@@ -234,7 +237,7 @@ test('aujourd\'hui ouvert depuis l\'Historique : même page, avec Retour', async
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-10-15$/);
   await expect(page.getByRole('heading', { name: 'Jeudi 15 octobre', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Jour suivant' })).toBeDisabled();
-  await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
+  await expect(onglet(page, 'Analyse')).toHaveAttribute('aria-current', 'page');
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
   await expect(page).toHaveURL(/#\/historique$/);
 });

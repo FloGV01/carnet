@@ -18,6 +18,7 @@ test('renommer se voit partout : Aujourd\'hui, Historique, export PSY', async ({
   await expect(page.getByRole('button', { name: 'Renommer Au bureau' })).toBeVisible();
   await page.getByRole('link', { name: "Aujourd'hui" }).click();
   await expect(groupe(page, 'Lieu').getByRole('button', { name: 'Au bureau' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('link', { name: 'Analyse' }).click();
   await page.getByRole('link', { name: 'Historique' }).click();
   await expect(page.getByText(/Au bureau/)).toBeVisible();
   await aller(page, '#/export-psy');

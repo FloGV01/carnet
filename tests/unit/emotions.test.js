@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CLES_FAMILLES, comptesVides, nombreDeReleves, relevesAEmotion, parFamille, emotionsParJour, famillesParJour, famillesParHeure,
-  famillesParColonnes, apresNuit, autourDe,
+  famillesParColonnes, apresNuit, autourDe, autourDuBienEtre,
 } from '../../public/js/analyse/emotions.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import { analyze } from '../../public/js/analyse/index.js';
@@ -175,6 +175,63 @@ test('frise : les émotions d\'un jour dans l\'ordre des heures, par semaine les
   assert.deepEqual([semaine.familles, semaine.nEmotions, semaine.aDonnee], [compte({ colere: 1, peur: 1, serenite: 1 }), 3, true]);
   assert.equal(s.colonnes.find((c) => c.cle === '2026-08-03').familles, null);
   assert.equal(s.avecHumeur, true, 'une ancienne note sur la période');
+});
+
+test('autourDuBienEtre : seules les séances lancées depuis Bien-être, dont le jour logique est dans la période', () => {
+  const seances = [
+    { date: '2026-10-12', heure: '10:00', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 },
+    { date: '2026-10-12', heure: '16:00', exercice: 'coherence', origine: 'moment-difficile', dureeS: 300 }, // crise : ne compte pas
+    { date: '2026-10-12', heure: '20:00', exercice: 'coherence', origine: 'ressourcer', dureeS: 120 }, // « Pour récupérer » : non plus
+    { date: '2026-10-20', heure: '02:00', exercice: 'scan-corporel', origine: 'bien-etre', dureeS: 600 }, // jour logique du 19 : hors période
+    { date: '2026-10-13', heure: null, exercice: 'epaules', origine: 'bien-etre', dureeS: 300 }, // sans heure : pas placée
+  ];
+  const humeurs = [
+    releve('2026-10-12', '08:00', 'roue:peur:craintif'), releve('2026-10-12', '11:00', 'roue:serenite:calme'),
+    releve('2026-10-12', '17:00', 'roue:colere'), releve('2026-10-12', '21:00', 'roue:tristesse'), releve('2026-10-20', '01:00', 'roue:joie'),
+  ];
+  const r = autourDuBienEtre(seances, humeurs, { du: '2026-10-01', au: '2026-10-18' });
+  assert.deepEqual([r.avant, r.apres, r.instants, r.n], [compte({ peur: 1 }), compte({ serenite: 1 }), 1, 2]);
+  assert.equal(r.statut, 'insuffisant');
+  // La période qui contient le 19 : la séance de 2 h du 20 y entre.
+  assert.equal(autourDuBienEtre(seances, humeurs, { du: '2026-10-19', au: '2026-10-21' }).avant.joie, 1);
+  assert.deepEqual(autourDuBienEtre([], humeurs, { du: '2026-10-01', au: '2026-10-31' }), autourDe([], humeurs));
+  assert.equal(autourDuBienEtre(undefined, humeurs, { du: '2026-10-01', au: '2026-10-31' }).instants, 0);
+});
+
+test('frise, rangée Bien-être : un repère par jour qui a une séance (toutes origines, bascule à 4 h), par semaine sans nombre ; pas de rangée sans séance', () => {
+  const seances = [
+    { date: '2026-10-12', heure: '09:00', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 },
+    { date: '2026-10-12', heure: '18:00', exercice: 'epaules', origine: 'bien-etre', dureeS: 300 },
+    { date: '2026-10-14', heure: '01:30', exercice: 'coherence', origine: 'moment-difficile', dureeS: 120 }, // du 13
+  ];
+  const f = frise({ journal: [], episodes: [], humeurs: [], seances }, '2026-10-12', '2026-10-18');
+  assert.deepEqual(f.colonnes.filter((c) => c.bienEtre).map((c) => c.cle), ['2026-10-12', '2026-10-13']);
+  assert.deepEqual(f.colonnes.filter((c) => c.aDonnee).map((c) => c.cle), ['2026-10-12', '2026-10-13'], 'un jour de séance seule se touche');
+  assert.equal(f.colonnes[0].bienEtre, true, 'deux séances : un repère, pas un nombre');
+  assert.equal(f.avecBienEtre, true);
+  const s = frise({ journal: [], episodes: [], humeurs: [], seances }, '2026-07-20', '2026-10-18');
+  assert.equal(s.pas, 'semaine');
+  assert.deepEqual(s.colonnes.filter((c) => c.bienEtre).map((c) => c.cle), ['2026-10-12']);
+  assert.equal(s.colonnes.find((c) => c.cle === '2026-10-12').bienEtre, true);
+  // Sans séance (la Vue soignants n'en passe pas) : pas de rangée.
+  assert.equal(frise({ journal: [], episodes: [], humeurs: [] }, '2026-10-12', '2026-10-18').avecBienEtre, false);
+  assert.equal(frise({ journal: [], episodes: [], humeurs: [], seances }, '2026-09-01', '2026-09-30').avecBienEtre, false);
+});
+
+test('analyze : Mes jours reçoit les séances (rangée Bien-être sur les périodes qui en ont), sans rien en compter ailleurs', () => {
+  const items = seedItems(SEED_V1, 'x');
+  const seances = [{ id: 'se_1', date: '2026-10-01', heure: '10:00', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 }];
+  const a = analyze({ journal: [], humeurs: [], episodes: [], symptomes: [], traitements: [], seances }, { aujourdhui: '2026-10-18', items });
+  assert.deepEqual([a.frise['7'].avecBienEtre, a.frise['30'].avecBienEtre], [false, true]);
+  assert.equal(a.frise['30'].colonnes.find((c) => c.cle === '2026-10-01').bienEtre, true);
+  assert.equal(analyze({ journal: [], humeurs: [], episodes: [], symptomes: [], traitements: [] }, { aujourdhui: '2026-10-18', items }).frise['30'].avecBienEtre, false);
+  assert.ok(!JSON.stringify(a.fenetres).includes('seance'), 'aucun indicateur de séances');
+  // « Tout » part de la première séance quand elle est la plus ancienne donnée (jour logique : 01:30 le 2 → le 1er).
+  const b = analyze({ journal: [], humeurs: [releve('2026-10-12', '10:00', 'roue:joie')], episodes: [], symptomes: [], traitements: [],
+    seances: [{ id: 'se_2', date: '2026-08-02', heure: '01:30', exercice: 'coherence', origine: 'ressourcer', dureeS: 120 }] }, { aujourdhui: '2026-10-18', items });
+  assert.equal(b.premier, '2026-08-01');
+  assert.equal(b.frise.tout.pas, 'semaine');
+  assert.deepEqual(b.frise.tout.colonnes.filter((c) => c.bienEtre).map((c) => c.cle), ['2026-07-27']);
 });
 
 test('analyze : les émotions de chaque période (familles, heures, mots) et de Ma semaine ; une famille seule n\'est pas un mot', () => {

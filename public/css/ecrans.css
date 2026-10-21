@@ -633,6 +633,45 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; }
+/* Bien-être (v7) : la cohérence cardiaque dans une carte, les exercices en liste groupée 2b (titre 16/600, durée et
+   description en 14 --text-2, chevron), la ligne fixe en bas. Aucun compteur, aucun repère de séance faite. */
+.bien-etre { gap: 12px; }
+.bien-etre > .entete-onglet { margin-bottom: 2px; }
+.carte-respiration { padding: 18px 16px 16px; }
+.carte-respiration .respiration { padding-top: 0; }
+/* Dans Bien-être, la respiration prend la couleur du parcours, comme dans le rendu 2b de Moment difficile : le cercle en
+   -tint-2 cerclé de la couleur, « Commencer » en -fill / -on. Sans mouvement, la phase d'inspiration reste plus soutenue. */
+.carte-respiration .cercle-respiration span { background: var(--c-tint-2); border-color: var(--c); }
+.carte-respiration .respiration .btn-plein { background: var(--c-fill); color: var(--c-on); }
+@media (prefers-reduced-motion: reduce) {
+  .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c); }
+}
+.bien-etre > .libelle-section { padding: 8px 0 0; margin-bottom: -4px; }
+.ligne-exercice { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 9px 12px 9px 16px; color: var(--text); text-decoration: none; }
+.ligne-exercice-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exercice-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.25; }
+.exercice-description { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-wrap: pretty; }
+.ligne-exercice > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); }
+.ligne-fixe { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-align: center; padding: 2px 0 8px; }
+.noter-emotion { display: inline-flex; align-items: center; justify-content: center; }
+/* Un exercice (v7) : la consigne en grand, le minuteur discret dessous, les boutons en bas, près du pouce ; l'interrupteur
+   de la lecture à voix haute à droite de « Fermer ». */
+.exercice { padding: 0 var(--marge) 16px; }
+.exercice-avant, .exercice-fin { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.exercice-intro { font: 600 1.235rem/1.4 var(--police); color: var(--text); text-wrap: pretty; }
+.exercice-etape { display: flex; flex-direction: column; gap: 16px; padding-top: 6px; }
+.exercice-texte { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }
+.minuteur-etape { font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.actions-exercice { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 4px 6px; }
+.actions-exercice .btn { min-height: 56px; font-size: 1.059rem; }
+.actions-exercice .large, .terminer-exercice { grid-column: 1 / -1; }
+/* « Commencer » et « Reprendre » à la couleur du parcours, comme « Commencer » de la respiration en 2b (-fill, -on). */
+.actions-exercice .btn-teinte { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
+.terminer-exercice { justify-content: center; }
+.voix-exercice { display: flex; align-items: center; gap: 8px; }
+/* L'interrupteur fait 31 de haut : sa zone de toucher est portée à 45 (cible de 44 pt). */
+.voix-exercice .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
+.voix-libelle { font-size: var(--t-sous); color: var(--text-2); text-align: right; line-height: 1.2; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
    de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }

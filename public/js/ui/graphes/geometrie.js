@@ -41,21 +41,22 @@ function placerNumeros(reperes, centre, largeur) {
 // dans l'ordre : Émotions (un point par relevé, à la couleur de sa famille, dans l'ordre des heures, du bas vers le haut ;
 // par semaine ou par mois, une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de
 // relevés), Humeur (notes) seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait
-// du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté). Les
+// du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté), Bien-être
+// (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une). Les
 // repères de traitement : leurs numéros sous les noms de colonnes, leurs traits à travers les rangées. Une colonne vide ne
 // dessine rien. La Vue soignants (PDF) dessine la même frise par semaine ou par mois, aux dimensions DIM_MES_JOURS_PDF (sa
-// largeur suit le cadre de la page), sans la rangée d'énergie (avecEnergie faux). Pure.
+// largeur suit le cadre de la page), sans la rangée d'énergie (avecEnergie faux) ni celle du Bien-être. Pure.
 // barreMax : la largeur la plus grande d'une barre (12 à l'écran ; plus large sur la page, pour que le motif de chaque
 // famille se lise imprimé en noir et blanc).
 export const DIM_MES_JOURS = {
   largeur: 326, gauche: 80, droite: 4, teteH: 22, ecart: 8,
-  emotionsH: 44, humeurH: 40, nuitH: 14, explH: 16, autresH: 12, energieH: 12, barreMax: 12,
+  emotionsH: 44, humeurH: 40, nuitH: 14, explH: 16, autresH: 12, energieH: 12, bienEtreH: 8, barreMax: 12,
 };
 export const DIM_MES_JOURS_PDF = { ...DIM_MES_JOURS, gauche: 84, emotionsH: 56, humeurH: 28, barreMax: 40 };
 const LETTRES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const LIBELLES_RANGEES = {
   emotions: ['Émotions'], humeur: ['Humeur', '(notes)'], nuits: ['Nuits'], explosions: ['Explosions'],
-  autres: ['Épisodes'], energie: ['Énergie', 'basse'],
+  autres: ['Épisodes'], energie: ['Énergie', 'basse'], bienEtre: ['Bien-être'],
 };
 // Une étiquette de deux lignes prend 26 unités : sa rangée aussi, la bande dessinée au milieu.
 const LIGNE_ETIQUETTE = 13;
@@ -74,7 +75,7 @@ function pilePoints(familles, x, bas, h, l) {
   });
 }
 
-export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnergie = false }, { reperes = [], familleDe = familleDeRoue, ordreFamilles = ORDRE_FAMILLES } = {}, d = DIM_MES_JOURS) {
+export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnergie = false, avecBienEtre = false }, { reperes = [], familleDe = familleDeRoue, ordreFamilles = ORDRE_FAMILLES } = {}, d = DIM_MES_JOURS) {
   const n = Math.max(1, colonnes.length);
   const l = (d.largeur - d.gauche - d.droite) / n;
   const centre = (i) => d.gauche + l * (i + 0.5);
@@ -107,6 +108,7 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const exp = ajouter('explosions', d.explH);
   const aut = ajouter('autres', d.autresH);
   const ene = avecEnergie ? ajouter('energie', d.energieH) : null;
+  const bie = avecBienEtre ? ajouter('bienEtre', d.bienEtreH ?? 8) : null;
   const hauteur = r1(y - d.ecart + 2);
 
   const points = [];
@@ -117,6 +119,7 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const encoches = [];
   const autres = [];
   const energieBasse = [];
+  const bienEtre = [];
   const zones = [];
   const yNote = (v) => r1(hum.y + ((10 - v) / 9) * hum.h);
   if (hum) notes.graduations.push({ v: 10, y: yNote(10) }, { v: 1, y: yNote(1) });
@@ -169,6 +172,8 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
       const h = pas === 'jour' ? ene.h : r1(Math.max(3, (jours / maxEnergie) * ene.h));
       energieBasse.push({ x: xb, y: r1(ene.y + ene.h - h), l: larg, h, n: jours });
     }
+    // Un repère de la même taille pour chaque colonne qui a une séance : ni hauteur ni nombre.
+    if (bie && c.bienEtre) bienEtre.push({ x: xb, y: bie.y, l: larg, h: bie.h, cle: c.cle });
     if (c.aDonnee) zones.push({ x: r1(d.gauche + l * i), l: r1(l), cle: c.cle, i });
   });
   // Le trait d'un repère part sous son numéro et traverse toutes les rangées.
@@ -182,7 +187,7 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   }));
   return {
     dim: { largeur: d.largeur, hauteur }, largeurColonne: r1(l), rangees, libelles, filet, etiquettes,
-    points, barres, notes, nuits, encoches, autres, energieBasse, zones, reperes: traitsReperes,
+    points, barres, notes, nuits, encoches, autres, energieBasse, bienEtre, zones, reperes: traitsReperes,
   };
 }
 

@@ -2,7 +2,8 @@
 // Graphiques seulement, aucune phrase calculée. Les calculs sont ceux, purs, d'analyse/comprendre.js et (v7)
 // d'analyse/emotions.js ; sous un seuil, chaque graphique dit « Pas encore assez de données pour le dire. ». La période
 // et la mesure sont gardées d'une ouverture à l'autre ; l'onglet vient de la porte touchée dans l'Analyse (v6.1).
-// v7 : la mesure « Humeur » devient « Émotions » (les familles), avec « Après une nuit » et « Autour de tes explosions ».
+// v7 : la mesure « Humeur » devient « Émotions » (les familles), avec « Après une nuit » et « Autour de tes explosions » ;
+// « Autour du Bien-être » (spec §6.4) ferme l'onglet Énergie.
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -14,7 +15,7 @@ import {
   PERIODES, MESURES, periodeComprendre, facteursParJour, explosionsAvant, explosionsApres, energieAvant, retoursBureau,
   parColonnes, nuitsParSoir, energieParActivite, peseRecharge,
 } from '../../analyse/comprendre.js';
-import { apresNuit, autourDe } from '../../analyse/emotions.js';
+import { apresNuit, autourDe, autourDuBienEtre } from '../../analyse/emotions.js';
 import { SEUILS } from '../../analyse/seuils.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { jourEvenement } from '../../domain/dates.js';
@@ -36,14 +37,14 @@ const COTES = [{ valeur: 'avant', libelle: 'Avant' }, { valeur: 'apres', libelle
 const lireChoix = (cle, valeurs, defaut) => { const v = lireLocal(cle); return valeurs.includes(v) ? v : defaut; };
 
 async function charger() {
-  const [journal, episodes, humeurs, items, zeroDepuis] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.humeurs.tous(), repo.listes.items(), repo.meta.lire('explosionsDepuis'),
+  const [journal, episodes, humeurs, seances, items, zeroDepuis] = await Promise.all([
+    repo.journal.tous(), repo.episodes.tous(), repo.humeurs.tous(), repo.seances.tous(), repo.listes.items(), repo.meta.lire('explosionsDepuis'),
   ]);
   const aujourdhui = repo.aujourdhui();
   const jours = facteursParJour({ journal, humeurs, episodes, zeroDepuis });
   // « Tout » part du premier jour qui porte une donnée lue ici : un soir, un relevé, une explosion.
   const premier = premiereDate({ journal: [...jours.values()] }, aujourdhui);
-  return { journal, humeurs, episodes, items, jours, premier, aujourdhui, carte: carteLibelles(items) };
+  return { journal, humeurs, episodes, seances, items, jours, premier, aujourdhui, carte: carteLibelles(items) };
 }
 
 // periode : { du, au }, pour les calculs ; choixPeriode : la clé du sélecteur (« 3mois » ou « tout »), pour la
@@ -65,6 +66,16 @@ function AutourExplosions({ d, periode, choixPeriode }) {
     lignes=${[{ cle: 'avant', nom: `${H} heures avant`, compte: r.avant }, { cle: 'apres', nom: `${H} heures après`, compte: r.apres }]} />`;
 }
 
+// Autour du Bien-être (v7, spec §6.4) : les émotions du moment notées dans les 3 heures avant et après une séance lancée
+// depuis l'onglet Bien-être (les respirations de Moment difficile et de « Pour récupérer » ne comptent pas), sur la période.
+// Une description, sans phrase calculée ni verdict.
+function AutourBienEtre({ d, periode, choixPeriode }) {
+  const r = autourDuBienEtre(d.seances, d.humeurs, periode);
+  if (r.statut !== 'ok') return html`<${PasAssez} graphe="autourBienEtre" />`;
+  return html`<${GrapheFamilles} graphe="autourBienEtre" entete="Quand" periode=${choixPeriode} carte=${d.carte}
+    lignes=${[{ cle: 'avant', nom: `${H} heures avant`, compte: r.avant }, { cle: 'apres', nom: `${H} heures après`, compte: r.apres }]} />`;
+}
+
 function Explosions({ d, periode, choixPeriode, cote, choisirCote }) {
   const graphe = cote === 'apres' ? 'explosionsApres' : 'explosionsAvant';
   const calcul = cote === 'apres' ? explosionsApres : explosionsAvant;
@@ -78,7 +89,8 @@ function Energie({ d, periode, choixPeriode }) {
   const activites = energieParActivite(d.humeurs, periode, d.items);
   return html`${pr.statut === 'ok' ? html`<${GraphePeseRecharge} resultat=${pr} periode=${choixPeriode} carte=${d.carte} />` : html`<${PasAssez} graphe="peseRecharge" />`}
     <${Aligne} graphe="energieAvant" resultat=${energieAvant(d.jours, periode, d.items)} d=${d} choixPeriode=${choixPeriode} />
-    ${activites.statut === 'ok' ? html`<${GrapheActivites} resultat=${activites} periode=${choixPeriode} carte=${d.carte} />` : html`<${PasAssez} graphe="activites" />`}`;
+    ${activites.statut === 'ok' ? html`<${GrapheActivites} resultat=${activites} periode=${choixPeriode} carte=${d.carte} />` : html`<${PasAssez} graphe="activites" />`}
+    <${AutourBienEtre} d=${d} periode=${periode} choixPeriode=${choixPeriode} />`;
 }
 
 // Après une nuit (v7) : les émotions du jour selon la nuit notée ce jour-là.

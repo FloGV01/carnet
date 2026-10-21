@@ -157,6 +157,39 @@ test('v6 · Mes jours sans avecEnergie (la page A4) : ni rangée, ni marque, et 
 });
 
 
+test('v7 · Mes jours, rangée Bien-être : le même repère pour chaque colonne qui a une séance, sans nombre ; pas de rangée sans avecBienEtre', () => {
+  const colonnes = [
+    jour('2026-10-01', { bienEtre: true, aDonnee: true }), jour('2026-10-02', { bienEtre: false }), jour('2026-10-03'),
+    jour('2026-10-04', { bienEtre: true, energieBasse: true, aDonnee: true }),
+  ];
+  const g = geometrieMesJours({ pas: 'jour', colonnes, avecEnergie: true, avecBienEtre: true });
+  const bie = lignes(g, 'bienEtre');
+  assert.deepEqual(bie.libelle, ['Bien-être']);
+  assert.equal(g.rangees.at(-1).cle, 'bienEtre', 'la dernière rangée, sous l\'énergie basse');
+  assert.deepEqual(g.bienEtre.map((m) => m.cle), ['2026-10-01', '2026-10-04']);
+  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && !('n' in m)), 'la même marque, sans nombre');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Par semaine : un repère, qu'il y ait une séance ou dix dans la semaine.
+  const semaines = geometrieMesJours({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', bienEtre: true, aDonnee: true }, { cle: '2026-10-05', bienEtre: false }], avecBienEtre: true });
+  assert.equal(semaines.bienEtre.length, 1);
+  // Sans avecBienEtre (période sans séance, page A4) : ni rangée ni repère, et rien d'autre ne bouge.
+  const sans = geometrieMesJours({ pas: 'jour', colonnes, avecEnergie: true });
+  assert.deepEqual(sans.bienEtre, []);
+  assert.ok(!sans.rangees.some((r) => r.cle === 'bienEtre'));
+  assert.deepEqual(sans.energieBasse, g.energieBasse);
+  assert.ok(sans.dim.hauteur < g.dim.hauteur);
+});
+
+test('v7 · Mes jours, détail d\'une colonne : « Bien-être » pour un jour ou une semaine avec une séance, jamais leur nombre', async () => {
+  const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
+  const lib = (id) => id;
+  assert.deepEqual(detailColonne('jour', { bienEtre: true, entree: {} }, lib), ['Bien-être']);
+  assert.deepEqual(detailColonne('jour', { bienEtre: false, entree: {} }, lib), []);
+  assert.deepEqual(detailColonne('semaine', { humeur: null, bienEtre: true }, lib), ['Bien-être']);
+  assert.deepEqual(detailColonne('mois', { humeur: null, bienEtre: false }, lib), []);
+});
+
+
 test('v6 · Mes jours, détail d\'une colonne : l\'humeur, avec une décimale, et son écart', async () => {
   const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
   const lib = (id) => id;
@@ -379,7 +412,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
   assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge',
-    'apresNuit', 'autourExplosions']);
+    'apresNuit', 'autourExplosions', 'autourBienEtre']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
     for (const mesure of ['emotions', 'nuitMal', 'explosion', 'energieBasse']) {
@@ -395,7 +428,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
     }
   }
   // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas.
-  assert.equal(phrases.size, 2 * (9 + 3 * 4));
+  assert.equal(phrases.size, 2 * (10 + 3 * 4));
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -427,8 +460,10 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
   for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
-  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
-  assert.match(R.autourExplosions, new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`));
+  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  for (const g of ['autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`), g);
+  // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit.
+  assert.match(R.autourBienEtre, /séance lancée depuis Bien-être/);
   // Aucun chiffre écrit à la main dans le bloc des règles : ils viennent tous de SEUILS.comprendre.
   const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
   const bloc = code.slice(code.indexOf('SEUILS.comprendre'), code.indexOf('export const PIED_EXPLOSIONS'));

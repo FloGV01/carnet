@@ -5,7 +5,7 @@
 import { indicateurs, bornesFenetre, premiereDate } from './fenetres.js';
 import { classements, classer } from './classements.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
-import { addDays } from '../domain/dates.js';
+import { addDays, estDateValide, jourEvenement } from '../domain/dates.js';
 import { profilJournee } from './moments.js';
 import { tesMoments } from './avant-explosions.js';
 import { frise } from './frise.js';
@@ -42,7 +42,9 @@ export function analyze(data, ctx) {
   const releves = relevesAEmotion(data.humeurs || []).filter((r) => r.date <= aujourdhui);
   // « Tout » part du premier jour noté, toutes sources, émotions du moment comprises (v7 : un relevé à émotion n'a pas
   // d'humeur du jour, il n'est pas dans le journal).
-  const premier = premiereDate({ ...brut, journal: [...journal, ...releves.map((r) => ({ date: r.date }))] }, aujourdhui);
+  // Les séances de Bien-être aussi (v7), à leur jour logique : leur rangée de Mes jours remonte jusqu'à la première.
+  const joursSeances = (data.seances || []).filter((x) => x && estDateValide(x.date)).map((x) => ({ date: jourEvenement(x.date, x.heure) }));
+  const premier = premiereDate({ ...brut, journal: [...journal, ...releves.map((r) => ({ date: r.date })), ...joursSeances] }, aujourdhui);
   const fenetres = {};
   const classes = {};
   const moments = {};
@@ -56,6 +58,7 @@ export function analyze(data, ctx) {
     classes[f] = classements(brut, du, au, items);
     moments[f] = profilJournee(data.humeurs || [], du, au);
     lesMoments[f] = tesMoments(episodes, du, au, items);
+    // Mes jours, avec la rangée Bien-être (v7) : les séances de `data.seances`, passées par `d`.
     frises[f] = frise(d, du, au);
     // Repères de traitement (v6) : les changements notés, sur les colonnes de cette frise.
     reperes[f] = reperesTraitement(data.traitements, frises[f].colonnes);

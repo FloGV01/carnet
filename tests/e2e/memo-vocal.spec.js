@@ -77,6 +77,7 @@ test('la puce « avec mémo vocal » se lit sur Aujourd\'hui, l\'Historique et S
   await page.reload();
   await expect(puce(page.locator('.evenements-jour'))).toHaveCount(1);
 
+  await page.getByRole('link', { name: 'Analyse' }).click();
   await page.getByRole('link', { name: 'Historique' }).click();
   await expect(puce(page.locator('.ligne-hist'))).toHaveCount(1); // le jour
   await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Épisodes/ }).click();

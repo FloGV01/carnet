@@ -61,7 +61,8 @@ export { texteFamilles };
 // « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures.
 export const texteEmotions = (ids) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id) || id)).join(', ');
 
-// Détail d'une colonne touchée : seulement ce qui est noté. Les anciennes notes de 1 à 10 restent dites (« humeur 6 »).
+// Détail d'une colonne touchée : seulement ce qui est noté. Les anciennes notes de 1 à 10 restent dites (« humeur 6 »). Les
+// séances de Bien-être sont dites sans leur nombre (v7).
 export function detailColonne(pas, c, lib) {
   const m = [];
   if (pas === 'jour' && (c.emotions || []).length) m.push(`émotions : ${texteEmotions(c.emotions)}`);
@@ -77,6 +78,7 @@ export function detailColonne(pas, c, lib) {
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
     if (c.energieBasse === true) m.push('énergie basse');
+    if (c.bienEtre) m.push('Bien-être');
     if (e.lieu) m.push(lib(e.lieu));
     const contacts = resumeContacts(e.contacts, lib);
     if (contacts) m.push(contacts);
@@ -87,6 +89,7 @@ export function detailColonne(pas, c, lib) {
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
     if (c.energieBasse > 0) m.push(`${pluriel(c.energieBasse, 'jour', 'jours')} d'énergie basse`);
+    if (c.bienEtre) m.push('Bien-être');
   }
   return m;
 }
@@ -146,6 +149,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-plein" cx=${a.x} cy=${a.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}</g>
     <g class="teinte-energie">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
+    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<rect class="g-barre g-bien-etre" x=${b.x} y=${b.y} width=${b.l} height=${b.h} rx=${Math.min(b.l, b.h) / 2} />`)}</g>
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;
 }

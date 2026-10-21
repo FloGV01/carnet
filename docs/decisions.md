@@ -207,3 +207,151 @@ L'entrée v7 complète vient avec la version 7.0.0 (tâche 9 du plan v7). Ce qui
 
 - **Pire cas du soir à 8 rubriques** (Humeur du soir et Explosions réaffichées, Contact et Sport séparés). La v4 l'exigeait sans défilement à 390 et 375 × 797. En cartes 2b, même resserrées, les 8 rubriques dépassent d'environ 270 px : aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Deux voies : accepter que ce cas défile (c'est l'état actuel, le test le vérifie), ou une mise en page sans cartes au-delà de 6 rubriques. Les 6 rubriques par défaut tiennent, elles.
 - **Aujourd'hui, écarts au lot 2b** pour garder P2 (Après coup sans défiler) et P3 (« J'ai fini » sans défiler) à 390 × 844, et le soir sans défilement à 390 × 797 après minuit ou avec le bandeau « Nouvelle version prête » : les choix des cartes font 44 de haut au lieu de 48, les cartes ont 8 de marge haute et basse, 4 entre la tête et les choix, et 6 entre deux blocs (4 avec le bandeau). À revoir sur l'iPhone.
+
+### Bien-être (tâche 7)
+
+Choix faits pendant la construction, à vérifier par l'utilisateur :
+
+- **Onglets** : Aujourd'hui · Analyse · Bien-être · Soins · Réglages. L'Historique garde sa route et s'ouvre par sa porte en haut de l'Analyse ; il allume l'onglet Analyse et a un « Retour » vers elle.
+- **Couleur** : Bien-être prend celle de la cohérence cardiaque (le bleu de Moment difficile). Aucune couleur nouvelle.
+- **Un exercice commence par « Commencer »** : Safari ne parle qu'après un toucher, et l'écran d'avant permet d'allumer la voix avant de fermer les yeux. Puis une consigne par écran, « Précédent », « Suivant », « Terminer », et le temps qui reste à l'étape. Aucun repère « 3 sur 8 ».
+- **Lecture à voix haute** : éteinte au départ, gardée sur l'iPhone (pas dans la sauvegarde) ; sans voix française, l'interrupteur n'apparaît pas. Allumée pendant une étape, elle lit l'étape et son temps repart.
+- **Arrière-plan, écran verrouillé, page cachée** : l'exercice se met en pause (voix coupée, verrou d'écran rendu) et attend « Reprendre ». S'il a duré 60 s ou plus, la séance est notée dès la pause (l'app peut ne pas revenir) ; reprise et finie, c'est la même séance, dont la durée est mise à jour.
+- **Une séance** commence à l'heure de « Commencer », et sa durée est celle de l'exercice actif, pauses exclues. « Terminer » avant la dernière étape, ou « Fermer », compte comme un arrêt (gardé à partir de 60 s).
+- **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée.
+- **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
+- **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
+
+#### Exercices à relire
+
+Rédigés pour Carnet selon la spec §6.2 : phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. La durée de chaque étape sert quand la voix est allumée : l'étape passe seule à la suivante. Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas.
+
+#### Respiration abdominale (3 min, `respiration-abdominale`)
+
+Respirer avec le ventre, une main posée dessus.
+
+1. Installe-toi assis ou allongé. Ferme les yeux si tu veux. *(15 s)*
+2. Pose une main sur ton ventre, l'autre sur ta poitrine. *(15 s)*
+3. Inspire par le nez. Laisse le ventre se gonfler sous ta main. *(20 s)*
+4. Expire lentement par la bouche. Le ventre redescend. *(20 s)*
+5. Garde ce rythme, sans forcer. La main sur la poitrine bouge peu. *(40 s)*
+6. Inspire, le ventre se gonfle. Expire, il redescend. *(40 s)*
+7. Laisse la respiration revenir à son rythme habituel. *(20 s)*
+8. Quand tu veux, ouvre les yeux et bouge doucement. *(10 s)*
+
+#### Respiration carrée (3 min, `respiration-carree`)
+
+Inspirer, retenir, expirer, retenir : quatre temps chacun.
+
+1. Installe-toi, le dos droit sans être raide. Les épaules restent basses. *(15 s)*
+2. Vide doucement l'air de tes poumons. *(10 s)*
+3. Inspire par le nez en comptant jusqu'à quatre. *(5 s)*
+4. Retiens l'air en comptant jusqu'à quatre. *(5 s)*
+5. Expire par la bouche en comptant jusqu'à quatre. *(5 s)*
+6. Garde les poumons vides en comptant jusqu'à quatre. *(5 s)*
+7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(60 s)*
+8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(60 s)*
+9. Laisse ta respiration redevenir libre. *(15 s)*
+
+#### Relaxation dynamique des épaules (5 min, `epaules`)
+
+Hausser puis relâcher les épaules, avec la respiration.
+
+1. Mets-toi debout ou assis, les pieds à plat, les bras le long du corps. *(20 s)*
+2. Inspire et monte les deux épaules vers les oreilles. *(10 s)*
+3. Garde-les en haut quelques secondes, en retenant l'air. *(10 s)*
+4. Expire par la bouche et laisse-les retomber d'un coup. *(10 s)*
+5. Observe les sensations dans tes épaules et tes bras. *(20 s)*
+6. Recommence : inspire, monte les épaules, retiens. *(15 s)*
+7. Expire et relâche. Laisse retomber. *(15 s)*
+8. Observe de nouveau ce que tu sens. *(20 s)*
+9. Une dernière fois : inspire, monte les épaules, retiens. *(15 s)*
+10. Expire et relâche tout. *(15 s)*
+11. Fais rouler les épaules vers l'arrière, lentement. *(30 s)*
+12. Puis vers l'avant, lentement. *(30 s)*
+13. Laisse les bras pendre. Remarque ce qui a changé, ou ce qui est pareil. *(40 s)*
+14. Respire normalement quelques instants. *(30 s)*
+15. Quand tu veux, reprends ce que tu faisais. *(20 s)*
+
+#### Tension et détente (8 min, `tension-detente`)
+
+Serrer un groupe de muscles, puis le relâcher, des pieds au visage.
+
+1. Installe-toi assis ou allongé. Ferme les yeux si tu veux. *(20 s)*
+2. Respire lentement quelques instants. *(20 s)*
+3. Serre les orteils et contracte les pieds, sans forcer. Garde la tension. *(15 s)*
+4. Relâche d'un coup. Observe la différence. *(30 s)*
+5. Contracte les mollets en tirant les pointes de pied vers toi. *(15 s)*
+6. Relâche. Observe les sensations dans les jambes. *(30 s)*
+7. Serre les cuisses et les fesses. *(15 s)*
+8. Relâche. Laisse les jambes posées. *(30 s)*
+9. Rentre le ventre et contracte-le. *(15 s)*
+10. Relâche. Laisse la respiration revenir dans le ventre. *(30 s)*
+11. Serre les poings et contracte les bras. *(15 s)*
+12. Relâche. Ouvre les mains. *(30 s)*
+13. Monte les épaules vers les oreilles et serre. *(15 s)*
+14. Relâche. Laisse les épaules redescendre. *(30 s)*
+15. Serre la mâchoire, plisse les yeux et le front. *(15 s)*
+16. Relâche le visage. Desserre les dents. *(30 s)*
+17. Parcours ton corps des pieds à la tête. Remarque ce que tu sens. *(60 s)*
+18. Respire tranquillement. *(35 s)*
+19. Bouge les doigts, les pieds, puis ouvre les yeux quand tu veux. *(30 s)*
+
+#### Scan corporel (10 min, `scan-corporel`)
+
+Passer d'une partie du corps à l'autre, sans rien changer.
+
+1. Installe-toi allongé ou assis. Ferme les yeux si tu veux. *(30 s)*
+2. Remarque les points d'appui de ton corps : le sol, le siège ou le lit. *(40 s)*
+3. Va vers tes pieds : les orteils, la plante, les talons. Remarque ce qui est là, ou rien de particulier. *(50 s)*
+4. Monte vers les chevilles, les mollets, les genoux. *(45 s)*
+5. Les cuisses, puis le bassin. *(45 s)*
+6. Le ventre, qui bouge avec la respiration. *(45 s)*
+7. Si ton esprit part ailleurs, reviens au corps, sans te juger. *(40 s)*
+8. La poitrine, et le dos contre son appui. *(45 s)*
+9. Les mains, les bras, jusqu'aux épaules. *(50 s)*
+10. Le cou et la nuque. *(40 s)*
+11. Le visage : la mâchoire, les joues, les yeux, le front. *(50 s)*
+12. Le haut de la tête. *(30 s)*
+13. Le corps entier, d'un seul coup, tel qu'il est maintenant. *(60 s)*
+14. Bouge doucement les doigts et les pieds. Ouvre les yeux quand tu veux. *(30 s)*
+
+#### Lieu ressource (8 min, `lieu-ressource`)
+
+Imaginer un lieu, réel ou inventé, et le parcourir par les sens.
+
+1. Installe-toi confortablement. Ferme les yeux si tu veux. *(20 s)*
+2. Respire lentement, quelques fois. *(30 s)*
+3. Choisis un lieu, réel ou imaginé, où tu aimes être. S'il n'en vient aucun, invente-le. *(40 s)*
+4. Regarde autour de toi : les formes, les couleurs, la lumière. *(60 s)*
+5. Écoute les sons de ce lieu, proches ou lointains. *(60 s)*
+6. Remarque les odeurs, la température de l'air. *(50 s)*
+7. Sens ce que tu touches : le sol sous tes pieds, une matière, un objet. *(60 s)*
+8. Reste là un moment, sans rien faire de particulier. *(60 s)*
+9. Ce lieu reste là : tu peux y revenir en pensée. *(30 s)*
+10. Reviens doucement dans la pièce. Remarque les appuis de ton corps. *(40 s)*
+11. Bouge les doigts, puis ouvre les yeux quand tu veux. *(30 s)*
+
+#### Ancrage 5-4-3-2-1 (3 min, `ancrage-54321`)
+
+Nommer ce que tu perçois autour de toi, un sens après l'autre.
+
+1. Garde les yeux ouverts. Regarde autour de toi. *(10 s)*
+2. Nomme cinq choses que tu vois. *(35 s)*
+3. Nomme quatre choses que tu peux toucher. Touche-les si tu veux. *(35 s)*
+4. Nomme trois sons que tu entends. *(30 s)*
+5. Nomme deux odeurs. S'il n'y en a pas, deux odeurs que tu aimes. *(25 s)*
+6. Nomme un goût, dans ta bouche en ce moment. *(20 s)*
+7. Respire une fois, lentement. *(15 s)*
+8. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Pause d'une minute (1 min, `pause-une-minute`)
+
+Un arrêt bref, là où tu es.
+
+1. Arrête ce que tu fais. Pose ce que tu as dans les mains. *(10 s)*
+2. Sens tes pieds sur le sol. *(10 s)*
+3. Inspire lentement par le nez. *(10 s)*
+4. Expire plus longuement, par la bouche. *(10 s)*
+5. Encore une fois : inspire, puis expire. *(15 s)*
+6. Reprends quand tu veux. *(5 s)*

@@ -2,7 +2,7 @@
 // rythme et signal sonore réglés dans Réglages › Moment difficile), « Une chose à la fois » (le plan
 // une ligne par écran, réglé au même endroit), puis Mon plan tel que l'utilisateur l'a écrit, avec
 // « Modifier mon plan » à droite de son titre (v6.1). Rien n'y est calculé ni choisi par l'app : ni
-// conseil, ni sélection de notes, ni compte à rebours.
+// conseil, ni sélection de notes, ni compte à rebours. La respiration crée une séance d'origine `moment-difficile` (v7).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Respiration } from '../composants/respiration.js';
@@ -40,7 +40,7 @@ export function MomentDifficile() {
   return html`<${CadreParcours} titre="Moment difficile" teinte="jour" surFermer=${fermer} sansPoint=${true}
     pied=${html`<a class="btn-lien" href="#/episode/nouveau">${Icones.plus({ trait: 2 })}Noter un épisode</a>`}>
     <div class="etape moment-difficile">
-      <${Respiration} />
+      <${Respiration} origine="moment-difficile" />
       ${cartes.length > 0 && html`<button type="button" class="btn une-chose-acces" ref=${acces} onClick=${() => setCartesOuvertes(true)}>Une chose à la fois</button>`}
       <section class="plan-moment" aria-labelledby="titre-plan-moment">
         <div class="plan-moment-tete">

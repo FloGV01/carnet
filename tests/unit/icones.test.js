@@ -71,12 +71,13 @@ test('chaque icône du module sert dans l\'app, sauf celles qui attendent leur �
   const EN_ATTENTE = {
     lieuBureau: 'B1', lieuTeletravail: 'B1', lieuCongeRepos: 'B1', lieuArret: 'B1', lieuClinique: 'B1', lieuAutre: 'B1',
     energie: 'tâche 5, portes de l\'Analyse', rythmes: 'tâche 5, portes de l\'Analyse',
-    bienEtre: 'tâche 7, onglet Bien-être',
   };
   for (const n of Object.keys(EN_ATTENTE)) assert.ok(TRACES[n], `${n} : pas dans le module`);
   assert.deepEqual(Object.keys(TRACES).filter((n) => !employees.has(n) && !EN_ATTENTE[n]), []);
   // Celles des tâches 3 et 4 servent : Émotion du moment, bande du bas, « J'ai fini pour ce soir », replis d'Aujourd'hui.
   for (const n of ['ceQueJeFaisais', 'emotion', 'replierSoiree', 'peseRecharge', 'note']) assert.ok(employees.has(n), n);
+  // Celle de la tâche 7 sert : la feuille de l'onglet Bien-être, et le titre d'un exercice.
+  assert.ok(employees.has('bienEtre'), 'bienEtre');
 });
 
 test('toute icône nommée dans l\'app existe dans le module', () => {

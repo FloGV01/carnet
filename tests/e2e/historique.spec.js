@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
     await r.journal.patch('2026-09-30', { humeur: 6 });
     await r.episodes.creer({ date: '2026-09-21', heure: '14:30', emotion: 'emotion:colere', intensite: 8, declencheur: 'declencheur:pris_pour_un_con' });
   });
+  // v7 : l'Historique s'ouvre par sa porte, en haut de l'Analyse.
+  await page.getByRole('link', { name: 'Analyse' }).click();
   await page.getByRole('link', { name: 'Historique' }).click();
 });
 

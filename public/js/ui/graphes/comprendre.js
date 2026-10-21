@@ -72,6 +72,8 @@ const G = {
     montre: () => 'pour chaque qualité de nuit, une barre des émotions du moment notées ce jour-là, découpée par famille, longue comme le nombre de relevés' },
   autourExplosions: { titre: 'Autour de tes explosions',
     montre: () => 'une barre des émotions du moment notées dans les heures avant une explosion, une autre dans les heures après, découpées par famille' },
+  autourBienEtre: { titre: 'Autour du Bien-être',
+    montre: () => 'une barre des émotions du moment notées dans les heures avant une séance lancée depuis Bien-être, une autre dans les heures après, découpées par famille' },
 };
 export const GRAPHES = Object.keys(G);
 
