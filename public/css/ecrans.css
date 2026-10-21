@@ -317,76 +317,127 @@
   body, html { background: #FFFFFF; }
 }
 
-/* Aujourd'hui */
-.aujourdhui { gap: 5px; padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
-.entete-jour { display: flex; flex-direction: column; gap: 6px; }
-.ligne-jour { display: flex; align-items: center; min-height: var(--cible); margin: 0 -12px; }
-/* Jour ouvert depuis l'Historique (v6.1) : « ‹ Retour » juste au-dessus, son chevron aligné sur celui du jour précédent. */
-.entete-jour > .barre-retour { margin: 0 -12px -6px; }
-.entete-jour .retour { padding-left: 11px; }
-.nav-jour { width: var(--cible); height: var(--cible); flex: none; border: 0; background: none; color: var(--text); display: grid; place-items: center; padding: 0; }
-.nav-jour svg { width: 22px; height: 22px; }
-.nav-jour[disabled] { color: var(--line); cursor: default; }
-.titre-jour { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; min-height: var(--cible); }
-.titre-jour-date { position: relative; }
-.titre-jour h1 { font-size: 0.941rem; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Aujourd'hui (2b, v7) : en-tête, rubriques du soir en cartes, ligne Mémo vocal / J'ai fini, replis en liste groupée,
+   Ma journée, bande du bas. La saisie du soir tient sans défilement à 390 × 797 (6 rubriques par défaut) : cartes de
+   10 px de marge haute et basse (12 sur les côtés), 6 entre la tête et les choix, 8 entre deux blocs. Le geste
+   horizontal reste à la page (changer de jour en glissant), le défilement vertical à iOS. */
+/* Un champ qui reçoit le focus (clavier, VoiceOver) défile au-dessus de la bande et des onglets, jamais dessous. */
+html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + env(safe-area-inset-bottom)); }
+.aujourdhui {
+  gap: 8px; padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + 24px + env(safe-area-inset-bottom));
+  touch-action: pan-y pinch-zoom;
+}
+/* Un jour atteint en glissant entre de son côté : un petit déplacement de 200 ms au plus (rien avec « Réduire les
+   animations », base.css). La bande du bas, fixe, ne bouge pas. */
+.entree-veille > :not(.actions-flottantes) { animation: entree-veille var(--duree-anim) ease-out; }
+.entree-lendemain > :not(.actions-flottantes) { animation: entree-lendemain var(--duree-anim) ease-out; }
+@keyframes entree-veille { from { transform: translateX(-24px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes entree-lendemain { from { transform: translateX(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+
+/* En-tête : « Dimanche 18 octobre ⌄ » (23/600, il ouvre le sélecteur de date), ‹ › à droite en cibles de 44 ; dessous,
+   les familles du jour en points et le résumé, calés sous le titre. */
+.entete-jour { display: flex; flex-direction: column; }
+.ligne-jour { display: flex; align-items: center; min-height: var(--cible); margin-right: -6px; }
+/* 7 px au-dessus et au-dessous du titre (30 de haut sur une ligne : 44) : le résumé se cale 6 px plus haut, sous la
+   dernière ligne du titre, qu'il en ait une ou deux (grand texte). */
+.titre-jour { position: relative; flex: 0 1 auto; min-width: 0; margin-right: auto; display: flex; align-items: center; min-height: var(--cible); padding: 7px 0; }
+.titre-jour h1 { font: 600 var(--t-jour)/var(--l-jour) var(--police); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.fin-titre { white-space: nowrap; }
+.fin-titre svg { display: inline-block; vertical-align: -1px; width: 16px; height: 16px; margin-left: 6px; color: var(--text-2); }
 .choix-date { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; }
-.sous-jour { display: flex; gap: 8px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; }
+.nav-jour { width: var(--cible); height: var(--cible); flex: none; border: 0; background: none; color: var(--action); display: grid; place-items: center; padding: 0; }
+.nav-jour svg { width: 22px; height: 22px; }
+.nav-jour[disabled] { opacity: .4; cursor: default; }
+.entete-jour > .barre-retour { margin: 0 -8px; }
+.sous-jour { display: flex; align-items: center; gap: 8px; margin-top: -6px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; }
+.familles-jour { flex: none; display: inline-flex; align-items: center; gap: 3px; }
+.familles-jour i { width: 8px; height: 8px; border-radius: 4px; background: var(--c); }
 .resume-jour { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.indicateur { flex: none; color: var(--text); font-weight: 600; }
+.indicateur { flex: none; margin-left: auto; color: var(--text); font-weight: 600; }
 .sous-jour.echec .indicateur { flex: 1; white-space: normal; font-weight: 400; }
-.ligne-veille { font-size: var(--t-sous); color: var(--text-2); margin-top: -6px; }
-.revenir { align-self: flex-start; margin: -10px 0 -6px; }
+.ligne-veille { font-size: var(--t-sous); color: var(--text-2); margin-top: -4px; }
+.revenir { align-self: flex-start; margin: -8px 0 -6px; }
+
+/* Rubriques du soir : une carte --surface, rayon 14 ; en tête, un carré de 28 (rayon 7) à la couleur de la rubrique,
+   l'icône en -on, et le titre en --text 17/600 ; puis les choix, en grille de 3 et de 48 de haut. */
 .champ-jour { display: flex; flex-direction: column; gap: 4px; }
-.aujourdhui .ligne-champ { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
-.aujourdhui .ligne-champ > .rubrique { flex: 1 1 0; min-width: 96px; }
-.aujourdhui .ligne-champ > .segmente { flex: none; margin-left: auto; }
-/* Segments à leur largeur naturelle, à droite du libellé : chaque bouton garde la place de sa coche (composants.css),
-   en compact (coche de 15, écart de 4, marges de 8) pour que « Traitement pris » tienne sur une ligne à 390. */
-.aujourdhui .ligne-champ .segmente button { flex: none; min-width: 0; padding: 4px 8px; gap: 4px; --demi-coche: 9.5px; }
-.aujourdhui .ligne-champ .segmente .coche svg { width: 15px; height: 15px; }
-.aujourdhui .deux-colonnes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.aujourdhui .segmente button { font-size: var(--t-corps); }
-.aujourdhui .memo-vocal { margin-top: 0; }
-/* v6.1 : « J'ai fini pour ce soir » sur la ligne de « Mémo vocal », à droite, à la hauteur du bouton. */
-.memo-ligne > .fini-bouton { margin-left: auto; min-height: var(--cible); }
+.carte-champ { background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 10px 12px; gap: 6px; }
+.tete-rubrique { display: flex; align-items: center; gap: 10px; min-height: 28px; min-width: 0; }
+.carre-rubrique { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-rubrique svg { width: 17px; height: 17px; }
+.titre-rubrique { min-width: 0; font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
+.tete-rubrique .rubrique-sous { flex: none; font-size: var(--t-note); color: var(--text-2); }
+.carte-champ .segmente button, .carte-champ .pastille { min-height: var(--cible-grille); font-size: var(--t-corps); }
+/* Contact et Sport côte à côte : deux demi-cartes de même hauteur, leurs Oui / Non alignés en bas. Le titre y passe
+   en 15 px et sur deux lignes au besoin (« Sport / mouvement »), sans grandir la carte de plus de 4 px. */
+.aujourdhui .deux-colonnes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.deux-colonnes .carte-champ > .segmente { margin-top: auto; }
+.deux-colonnes .titre-rubrique { font-size: var(--t-sous); line-height: 16px; }
+.aujourdhui .segmente button { min-width: 0; }
+
+/* Mémo vocal (neutre) et « J'ai fini pour ce soir » (couleur action, sans fond) sur une ligne. */
+.aujourdhui .memo-vocal { margin-top: -2px; }
+.memo-ligne > .fini-bouton { margin-left: auto; min-height: var(--cible); padding: 0 2px 0 6px; gap: 6px; }
+.memo-ligne > .fini-bouton svg { width: 18px; height: 18px; }
 /* « Ce qui a pesé · ce qui a rechargé » (v6.1) : deux colonnes régulières, comme les étapes d'un épisode, un peu
    moins hautes pour que le repli ouvert tienne sur un écran. */
 .pastilles.pese-recharge .pastille { min-height: var(--cible); padding: 6px 10px; }
 .pastilles.reveils { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.6fr); }
-.replis { margin-top: 6px; border-bottom: 1.5px dashed var(--line); }
-.evenements-jour { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+
+/* Replis en liste groupée 2b : une carte, une rangée de 58 au moins par repli (carré à la couleur de la rubrique,
+   libellé 16/500, résumé 14 px sur une ligne coupée, chevron), filets décalés de 52. Ouvert, le repli se déploie
+   dans la carte. */
+.aujourdhui .replis { overflow: visible; }
+.replis > .repli.repli-carte { border-top: 0; border-radius: 0; background: none; padding: 0 12px; }
+.replis > .repli + .repli::before { content: ""; display: block; height: 1px; margin: 0 -12px 0 40px; background: var(--line); }
+.replis > .repli .repli-tete { min-height: 58px; gap: 12px; padding: 7px 0; flex-wrap: nowrap; }
+.replis > .repli .repli-icone { background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); }
+.repli-textes { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.replis > .repli .repli-titre { font-size: var(--t-corps); font-weight: 500; line-height: 1.25; }
+.replis > .repli .repli-resume { display: block; margin: 0; font-size: var(--t-petit); line-height: 1.3; }
+.replis > .repli .repli-fleche { flex: none; margin-left: auto; }
+.replis > .repli .repli-corps { padding: 2px 0 14px; }
+
+/* Ma journée : une carte, une rangée de 48 par relevé, épisode ou symptôme ; l'heure dans une colonne fixe de 70
+   (« vers 23 h » y tient), le point (sa famille pour un relevé noté d'une émotion, creux pour les autres relevés,
+   la couleur du parcours pour un épisode ou un symptôme), le texte, puis le chevron d'une fiche. */
+.evenements-jour { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .libelle-section { font-size: var(--t-section); font-weight: 600; letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2); padding-bottom: 4px; }
-.liste-evenements { list-style: none; margin: 0; padding: 0; }
+.evenements-jour > .libelle-section { padding: 0; }
+.liste-evenements { list-style: none; margin: 0; padding: 0 0 0 14px; }
+.liste-evenements:empty { display: none; }
+.liste-evenements > li + li { border-top: 1px solid var(--line); }
 .ligne-evenement {
-  min-height: var(--cible-grille); display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
-  font-size: var(--t-sous); border-bottom: 1.5px dashed var(--line);
+  min-height: var(--cible-grille); display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 0;
+  color: var(--text); text-decoration: none; font-size: var(--t-corps);
 }
-/* Colonne des heures de largeur fixe (v6.1) : « vers 23 h » y tient, « 10:20 » et un symptôme sans heure s'alignent dessus. */
-.ligne-evenement .heure { min-width: 4.4em; flex: none; white-space: nowrap; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ligne-evenement .heure { width: 70px; flex: none; white-space: nowrap; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
 .ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
-.point-evenement { width: 8px; height: 8px; border-radius: 4px; background: var(--c); flex: none; }
-/* Ma journée (v6.1) : une humeur du moment, point creux, la même pour toutes ; ni lien ni chevron. */
-.point-releve { background: none; border: 2px solid var(--c); }
+.point-evenement { width: 10px; height: 10px; border-radius: 5px; background: var(--c); flex: none; }
+.point-releve.point-creux { background: none; border: 1.5px solid var(--text-2); }
 .ajout-symptome { align-self: flex-start; font-size: var(--t-corps); }
 .ligne-rdv {
-  display: flex; align-items: center; gap: 8px; min-height: var(--cible); margin-top: 8px; padding: 8px 12px; border-radius: var(--r-moyen);
+  display: flex; align-items: center; gap: 10px; min-height: var(--cible-grille); margin-top: 2px; padding: 8px 12px; border-radius: var(--r-carte);
   background: var(--surface); color: var(--text); text-decoration: none; font-size: var(--t-sous); font-variant-numeric: tabular-nums;
 }
-.ligne-rdv svg { width: 18px; height: 18px; color: var(--action); flex: none; }
+.ligne-rdv svg { width: 18px; height: 18px; color: var(--text-2); flex: none; }
 .pied-jour { margin-top: 12px; font-size: var(--t-note); line-height: 1.4; color: var(--text-2); text-align: center; text-wrap: pretty; }
 .effacer-jour { align-self: center; font-size: var(--t-note); }
 .importer { align-self: center; font-weight: 400; font-size: var(--t-sous); }
-/* Boutons flottants, sur une bande au fond de l'écran : la page défile au-dessus, rien n'y reste caché. Fond
-   plein, collé à la barre d'onglets (v6) : le texte de la page ne passe plus entre les boutons. */
+/* « Soirée terminée » : une seule couleur, plus d'arc-en-ciel (brief §6). */
+.fini-soir .phrase-recap .valeur { color: var(--text); }
+
+/* Bande du bas (P5) : 64 de haut, au-dessus des onglets, fond --bg ; trois boutons de 48. « Moment difficile » sur deux
+   lignes (13/600, 113 de large) et « Émotion », le plus large (flex 1,2), en --surface avec un carré à la couleur de
+   leur parcours ; « + Épisode » (flex 1) en couleur action. Rien de touchable ne passe dessous. */
 .actions-flottantes {
   position: fixed; left: 0; right: 0; bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); z-index: 9;
-  display: flex; justify-content: space-between; align-items: center; gap: var(--esp-2);
-  padding: 4px calc(var(--marge) + env(safe-area-inset-right)) 4px calc(var(--marge) + env(safe-area-inset-left));
+  height: var(--h-bande); display: flex; align-items: center; gap: var(--ecart);
+  padding: 0 calc(var(--marge) + env(safe-area-inset-right)) 0 calc(var(--marge) + env(safe-area-inset-left));
   background: var(--bg);
 }
-.actions-flottantes .fab { position: static; }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
 /* Émotion du moment (v6, v7) : les heures de « C'était vers… » sous la barre, que « Maintenant ▾ » ouvre. */
 .choix-vers { padding-bottom: var(--esp-2); }
@@ -453,38 +504,32 @@
 .ligne-depuis input { width: auto; }
 .consultation .tableau-traitement { font-size: var(--t-corps); }
 
-/* Aujourd'hui v4 : détails sport et contact, pilule « Moment » */
+/* Aujourd'hui v4 : détails sport et contact */
 .detail-sport { display: flex; flex-direction: column; gap: 12px; }
 .activite { display: flex; flex-direction: column; gap: 6px; }
-.activite + .activite { border-top: 1.5px dashed var(--line); padding-top: 10px; }
+.activite + .activite { border-top: 1px solid var(--line); padding-top: 10px; }
 .activite-tete { display: flex; align-items: center; justify-content: space-between; min-height: var(--cible); }
 .activite-tete .etiquette { margin: 0; }
 .repli-corps .etiquette { font-size: var(--t-sous); margin-bottom: 0; }
-/* Bande flottante : tout est en em, pour que sa largeur suive la taille du texte iOS. Quand elle ne
-   tient plus sur une ligne (grand texte, écran étroit), les libellés « Moment difficile » et « Humeur »
-   s'effacent : restent les icônes, avec leur nom accessible. */
-/* La bande garde la base de 17 px (1rem) de ces mesures, même si le corps passe à 16 px (2b). */
-.actions-flottantes { flex-wrap: nowrap; gap: .3em; container: bande / inline-size; font-size: 1rem; }
-.actions-flottantes > * { flex: none; white-space: nowrap; }
-.actions-flottantes .pilule { padding: 0 .6em 0 .5em; gap: .4em; font-size: var(--t-sous); }
-.actions-flottantes .pilule svg { width: 1.2em; height: 1.2em; }
-.actions-flottantes .fab { padding: 0 .7em 0 .55em; gap: .35em; }
-.actions-flottantes .fab svg { width: 1.15em; height: 1.15em; }
-/* Paliers mesurés dans WebKit (e2e « sans défilement » et « grand texte ») : d'abord « Humeur »
-   perd son icône (seule, elle se lirait comme un signe moins), puis « Moment difficile » son
-   libellé, puis « Humeur » le sien (icône et nom accessible gardés). */
-/* Mesures (em de la bande) : 22,28 tout ; 20,87 palier 1 ; 13,69 palier 2 ; 11,37 palier 3. */
-@container bande (max-width: 22.3em) {
-  .actions-flottantes .moment svg { display: none; }
-  .actions-flottantes .moment { padding: 0 .55em; }
+/* Bande du bas : ses mesures sont en em de la bande (1rem, la base de 17 px), pour que sa largeur suive la taille du
+   texte d'iOS. Quand les trois ne tiennent plus sur une ligne (grand texte, écran étroit), « Moment difficile » perd
+   son libellé (reste son carré, avec son nom accessible). */
+.actions-flottantes { flex-wrap: nowrap; container: bande / inline-size; font-size: 1rem; }
+.actions-flottantes .action-bande, .actions-flottantes .fab {
+  position: static; box-shadow: none; min-width: 0; height: var(--cible-grille); border-radius: var(--r-bouton);
+  display: flex; align-items: center; text-decoration: none; white-space: nowrap;
 }
+.actions-flottantes .action-bande { gap: 8px; padding: 0 .6em 0 10px; background: var(--surface); color: var(--text); font-weight: 600; }
+.carre-action { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-action svg { width: 17px; height: 17px; }
+.actions-flottantes .action-bande.moment-difficile { flex: none; width: 6.65rem; font-size: var(--t-note); line-height: 1.15; white-space: normal; }
+.actions-flottantes .action-bande.moment { flex: 1.2 1 0; font-size: var(--t-bloc); }
+.actions-flottantes .fab { flex: 1 1 0; justify-content: center; gap: .3em; padding: 0 8px; font-size: var(--t-bloc); }
+.actions-flottantes .fab svg { width: 1.1em; height: 1.1em; flex: none; }
+/* Palier mesuré dans WebKit (e2e « grand texte ») : « Moment difficile » ne garde que son carré. */
 @container bande (max-width: 20.9em) {
+  .actions-flottantes .action-bande.moment-difficile { width: auto; padding: 0 10px; }
   .actions-flottantes .moment-difficile .libelle-action { display: none; }
-  .actions-flottantes .moment-difficile { padding: 0 .75em; }
-}
-@container bande (max-width: 13.8em) {
-  .actions-flottantes .moment svg { display: inline; }
-  .actions-flottantes .moment .libelle-action { display: none; }
 }
 
 /* Réglages › Le soir, Rappels, Mon plan, Après coup, Humeur du moment (v4) */

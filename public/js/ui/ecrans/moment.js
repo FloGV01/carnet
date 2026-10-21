@@ -13,7 +13,8 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { normaliserPlan } from '../../domain/mon-plan.js';
 import { regleRessourcer } from '../../domain/ressourcer.js';
-import { familleDe, libelleEmotion } from '../../domain/roue.js';
+import { familleDe } from '../../domain/roue.js';
+import { texteReleve } from '../../domain/releves.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Bulles } from '../composants/bulles.js';
 import { PastillesMultiples } from '../composants/multiples.js';
@@ -47,16 +48,6 @@ const cleQuand = (quand) => (quand ? `${quand.date} ${quand.heure}` : '');
 
 // « Ce que je faisais » replié : « travail, trajet ».
 const resumeFaisais = (ids, carte) => (ids || []).map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
-
-// Un relevé du jour : « Irrité · énergie moyenne » ; un ancien relevé garde sa note, « humeur 6 · énergie basse ».
-// Sans émotion, note ni énergie : « ce que je faisais : travail ».
-function texteReleve(h, carte) {
-  const texte = [libelleEmotion(h.emotion), h.humeur != null && `humeur ${h.humeur}`,
-    h.energie && `énergie ${minusculeInitiale(libelle(carte, h.energie))}`].filter(Boolean).join(' · ');
-  if (texte) return texte;
-  const faisais = resumeFaisais(h.faisais, carte);
-  return faisais ? `ce que je faisais : ${faisais}` : '·';
-}
 
 // « Maintenant ▾ », en haut à droite, ouvre les heures déjà passées du jour logique ; avant 6 h il n'y en a pas, la
 // puce reste fixe. Choisir une heure laisse la liste ouverte (v6.1) : seule la puce l'ouvre et la ferme, et elle
@@ -188,7 +179,7 @@ export function Moment() {
         <ul class="liste carte carte-groupe">${jour.map((h) => {
           const famille = familleDe(h.emotion);
           return html`<li class="ligne-releve">
-            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${famille ? `point-releve-moment emo-${famille}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte)}</span>
+            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${famille ? `point-releve-moment emo-${famille}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte) || '·'}</span>
             <button type="button" class="effacer" aria-label=${`Supprimer le relevé ${h.vers ? formaterVers(h.heure) : `de ${h.heure || 'cette heure'}`}`} onClick=${() => supprimer(h)}>${Icones.fermer()}</button>
           </li>`;
         })}</ul>

@@ -86,7 +86,8 @@ test('sans micro ni mémo, « J\'ai fini pour ce soir » reste là, à droite', 
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
   await expect(fini).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole('button', { name: 'Mémo vocal' })).toHaveCount(0);
-  const [bouton, positifs] = await Promise.all([fini.boundingBox(), boite(page, '#points-positifs')]);
+  // Son bord droit est celui des cartes (2b), comme celui de la carte des points positifs.
+  const [bouton, positifs] = await Promise.all([fini.boundingBox(), page.locator('.carte-champ', { has: page.locator('#points-positifs') }).boundingBox()]);
   expect(Math.abs((bouton.x + bouton.width) - (positifs.x + positifs.width))).toBeLessThanOrEqual(1);
 });
 

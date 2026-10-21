@@ -96,7 +96,7 @@ test('un long résumé replié reste dans la page : coupé par une ellipse, sans
   const resume = repli(page).locator('.repli-resume');
   await expect(resume).toContainText('pesé : bruit, lumière, monde, changement, attente · rechargé : être seul, calme');
   const mesures = await page.evaluate(() => {
-    const tete = document.querySelector('.repli.resume-sous .repli-tete');
+    const tete = [...document.querySelectorAll('.repli.resume-sous .repli-tete')].find((t) => t.textContent.includes('pesé'));
     const r = tete.querySelector('.repli-resume');
     return {
       droiteResume: r.getBoundingClientRect().right, droiteTete: tete.getBoundingClientRect().right,

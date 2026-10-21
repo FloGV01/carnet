@@ -36,9 +36,10 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bo
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
   await expect(groupe(page, 'Humeur')).toHaveCount(0);
   await sansDefilement(page);
-  // À 390 px : « Moment difficile » en toutes lettres, « Humeur » en texte (sans son icône).
+  // À 390 px : « Moment difficile » et « Émotion » en toutes lettres, chacun avec son carré.
   await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
   await expect(page.locator('.actions-flottantes .moment .libelle-action')).toBeVisible();
+  await expect(page.locator('.actions-flottantes .carre-action')).toHaveCount(2);
   await expect(page.getByRole('button', { name: /enregistrer/i })).toHaveCount(0);
   await expect(page.getByText('Enregistré')).toBeVisible();
   const entree = await entreeDuJour(page);
@@ -50,7 +51,9 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bo
   await expect(groupe(page, 'Lieu').getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('pire cas : 8 champs, Contact et Sport séparés, toujours sans défilement (390 et 375)', async ({ page }) => {
+// v7 (2b) : chaque rubrique est une carte. Avec les 8 champs (Humeur du soir et Explosions réaffichés, Contact et Sport
+// séparés), la saisie ne tient plus sur un écran : la page défile, et chaque champ passe au-dessus de la bande du bas.
+test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', {
     ordre: ['lieu', 'contact', 'sommeil', 'humeur', 'sport', 'explosions', 'traitement', 'positifs'], masques: [],
   }));
@@ -59,22 +62,36 @@ test('pire cas : 8 champs, Contact et Sport séparés, toujours sans défilement
     await page.reload();
     await expect(groupe(page, 'Explosions')).toHaveCount(1);
     await expect(page.locator('.deux-colonnes')).toHaveCount(0);
-    await sansDefilement(page);
+    // Chaque champ peut venir au-dessus de la bande : on fait défiler la page pour l'y poser, 8 px au-dessus.
+    const auDessus = (selecteur) => page.evaluate((s) => {
+      const el = document.querySelector(s);
+      const bande = document.querySelector('.actions-flottantes').getBoundingClientRect().top;
+      window.scrollBy(0, el.getBoundingClientRect().bottom - (bande - 8));
+      return el.getBoundingClientRect().bottom <= bande;
+    }, selecteur);
+    for (const nom of ['Lieu', 'Contact humain', 'Sommeil', 'Humeur', 'Sport / mouvement', 'Explosions', 'Traitement pris']) {
+      expect(await auDessus(`[role="group"][aria-label="${nom}"]`), nom).toBe(true);
+    }
+    expect(await auDessus('#points-positifs')).toBe(true);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
   await toucher(page, 'Explosions', '0');
   await expect.poll(async () => (await entreeDuJour(page))?.explosions).toBe(0);
 });
 
-test('grand texte iOS : la bande garde ses trois actions sur une ligne, icônes seules', async ({ page }) => {
+test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » réduit à son carré', async ({ page }) => {
   for (const largeur of [390, 375]) {
     await page.setViewportSize({ width: largeur, height: 797 });
     await page.evaluate(() => { document.documentElement.style.fontSize = '21px'; document.body.style.fontSize = '21px'; });
     const bande = page.locator('.actions-flottantes');
-    await expect(bande.locator('.libelle-action').first()).toBeHidden();
-    await expect(page.getByRole('link', { name: 'Humeur du moment' })).toBeVisible();
+    await expect(bande.locator('.moment-difficile .libelle-action')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Moment difficile' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Émotion du moment' })).toBeVisible();
     expect(await bande.evaluate((b) => {
       const marge = parseFloat(getComputedStyle(b).paddingRight);
-      return [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5);
+      return [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5
+        && k.scrollWidth <= k.clientWidth + 1);
     })).toBe(true);
   }
 });
@@ -88,7 +105,7 @@ test('un champ masqué qui porte une valeur reste affiché, et un second toucher
   });
   await page.evaluate((d) => { location.hash = `#/jour/${d}`; }, hier);
   await expect(groupe(page, 'Explosions').getByRole('button', { name: 'Explosions 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('link', { name: 'Humeur du moment' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Émotion du moment' })).toHaveCount(0);
   await toucher(page, 'Explosions', '1');
   await expect.poll(async () => (await entreeDuJour(page, hier))?.explosions).toBeNull();
 });

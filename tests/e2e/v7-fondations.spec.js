@@ -107,16 +107,16 @@ test('sélection commune 2b, en clair et en sombre : -fill, -on, 600 (700 pour u
     verifierChoisi(await styleDe(bureau), attendu(t, 'lieu'), `${schema} Bureau`);
     verifierChoisi(await styleDe(moyen), attendu(t, 'sommeil'), `${schema} Moyen`);
     verifierChoisi(await styleDe(oui), attendu(t, 'contact'), `${schema} Oui`);
-    // Non choisi, sur le fond de l'écran : --surface, sans bordure.
+    // Non choisi, dans la carte de sa rubrique (2b, tâche 4) : --surface-2, sans bordure.
     const teletravail = groupe(page, 'Lieu').getByRole('button', { name: 'Télétravail' });
-    verifierNonChoisi(await styleDe(teletravail), rgb(t.surface), `${schema} Télétravail`);
+    verifierNonChoisi(await styleDe(teletravail), rgb(t['surface-2']), `${schema} Télétravail`);
     expect(await teletravail.evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('0px');
     expect((await teletravail.boundingBox()).height).toBeGreaterThanOrEqual(48);
     await toucher(page, 'Lieu', 'Bureau');
     await toucher(page, 'Sommeil', 'Moyen');
     await toucher(page, 'Contact humain', 'Oui');
     await expect(bureau).toHaveAttribute('aria-pressed', 'false');
-    verifierNonChoisi(await styleDe(bureau), rgb(t.surface), `${schema} Bureau effacé`);
+    verifierNonChoisi(await styleDe(bureau), rgb(t['surface-2']), `${schema} Bureau effacé`);
 
     // Période de l'Analyse : couleur action, avec la coche.
     await aller(page, '#/analyse');
@@ -165,7 +165,9 @@ test('dans une carte, un choix non fait et un champ sont en --surface-2 ; sur le
       return r;
     });
     expect(fonds).toEqual({ carte: rgb(t.surface), bordure: '0px', rayon: '14px', choix: rgb(t['surface-2']), champ: rgb(t['surface-2']) });
-    expect(await page.locator('#points-positifs').evaluate((z) => getComputedStyle(z).backgroundColor)).toBe(rgb(t.surface));
+    // Aujourd'hui (tâche 4) : la zone des points positifs est dans sa carte, « Mémo vocal » sur le fond de l'écran.
+    expect(await page.locator('#points-positifs').evaluate((z) => getComputedStyle(z).backgroundColor)).toBe(rgb(t['surface-2']));
+    expect(await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => getComputedStyle(b).backgroundColor)).toBe(rgb(t.surface));
     // Le fond de la page, sans texture.
     expect(await page.evaluate(() => [getComputedStyle(document.documentElement).backgroundColor, getComputedStyle(document.body).backgroundImage]))
       .toEqual([rgb(t.bg), 'none']);
@@ -241,8 +243,8 @@ test('un toucher ne déplace pas les voisins : Sommeil, Traitement pris, « C\'�
     await expect(g.getByRole('button', { name: `${nom} : ${choix}` })).toHaveAttribute('aria-pressed', 'false');
     memesPlaces(avant, await boites(g), `${nom} › ${choix} effacé`);
   }
-  // « Traitement pris » tient sur une ligne, à côté de ses segments (390 de large).
-  expect(await page.locator('.ligne-champ', { has: groupe(page, 'Traitement pris') }).locator('.rubrique').evaluate((r) => r.getClientRects().length && r.getBoundingClientRect().height)).toBeLessThanOrEqual(24);
+  // « Traitement pris » : son titre tient sur une ligne, en tête de sa carte (2b, tâche 4).
+  expect(await page.locator('.carte-champ', { has: groupe(page, 'Traitement pris') }).locator('.titre-rubrique').evaluate((r) => r.getBoundingClientRect().height)).toBeLessThanOrEqual(24);
 
   // « C'était vers… » : choisir 14 h retire la coche de « Maintenant » ; ni la 1re rangée ni la 2e ne glissent.
   await aller(page, '#/moment');

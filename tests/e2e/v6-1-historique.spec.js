@@ -115,7 +115,7 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   const y = await defilerJusqua(page, lien);
   await lien.click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-10$/);
-  await expect(page.getByRole('heading', { name: 'jeudi 10 sept.', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Jeudi 10 septembre', level: 1 })).toBeVisible();
   await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
   await expect(onglet(page, 'Aujourd\'hui')).not.toHaveAttribute('aria-current', 'page');
   const retour = page.getByRole('button', { name: 'Retour', exact: true });
@@ -129,11 +129,11 @@ test('un jour ouvert depuis l\'Historique : onglet Historique allumé, ‹ et �
   // ‹ et › changent de jour, sans quitter l'Historique.
   await page.getByRole('button', { name: 'Jour précédent' }).click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-09$/);
-  await expect(page.getByRole('heading', { name: 'mercredi 9 sept.', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mercredi 9 septembre', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Jour suivant' }).click();
   await page.getByRole('button', { name: 'Jour suivant' }).click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-09-11$/);
-  await expect(page.getByRole('heading', { name: 'vendredi 11 sept.', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vendredi 11 septembre', level: 1 })).toBeVisible();
   await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
   await expect(retour).toBeVisible();
 
@@ -152,7 +152,7 @@ test('un jour ouvert depuis l\'Historique : « Revenir à aujourd\'hui » mène 
   await expect(page.getByRole('button', { name: 'Retour', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Revenir à aujourd\'hui' }).click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect(page.getByRole('heading', { name: /^Aujourd'hui · jeudi 15 oct\./, level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Jeudi 15 octobre', level: 1 })).toBeVisible();
   await expect(onglet(page, 'Aujourd\'hui')).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('button', { name: 'Retour', exact: true })).toHaveCount(0);
 });
@@ -232,7 +232,7 @@ test('aujourd\'hui ouvert depuis l\'Historique : même page, avec Retour', async
   await ouvrirHistorique(page);
   await page.getByRole('link', { name: /jeudi 15 oct\./ }).click();
   await expect(page).toHaveURL(/#\/historique\/jour\/2026-10-15$/);
-  await expect(page.getByRole('heading', { name: /^Aujourd'hui · jeudi 15 oct\./, level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Jeudi 15 octobre', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Jour suivant' })).toBeDisabled();
   await expect(onglet(page, 'Historique')).toHaveAttribute('aria-current', 'page');
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
@@ -249,7 +249,7 @@ test('ouvert autrement, le jour garde le comportement actuel : onglet Aujourd\'h
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 
   await aller(page, '#/jour/2026-09-10');
-  await expect(page.getByRole('heading', { name: 'jeudi 10 sept.', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Jeudi 10 septembre', level: 1 })).toBeVisible();
   await expect(onglet(page, 'Aujourd\'hui')).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('button', { name: 'Retour', exact: true })).toHaveCount(0);
 });

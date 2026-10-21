@@ -45,7 +45,7 @@ test('épisodes et modification d\'un jour passé', async ({ page }) => {
   await expect(page.getByRole('link', { name: /lundi 21 sept\. · 14:30/ })).toBeVisible();
   await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Jours/ }).click();
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
-  await expect(page.getByRole('heading', { name: 'lundi 21 sept.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lundi 21 septembre' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Humeur', exact: true }).getByRole('button', { name: 'Humeur 4' })).toHaveAttribute('aria-pressed', 'true');
 });
 

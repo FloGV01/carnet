@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('émotion du moment (v7) : famille et énergie, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
-  await page.getByRole('link', { name: 'Humeur du moment' }).click();
+  await page.getByRole('link', { name: 'Émotion du moment' }).click();
   const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
   await vue.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Sérénité' }).click();
   await vue.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Moyenne' }).click();
@@ -20,7 +20,7 @@ test('émotion du moment (v7) : famille et énergie, relevé à l\'heure réelle
   const releves = () => repo(page, () => window.__carnet.repo.humeurs.tous());
   await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', emotion: 'roue:serenite', humeur: null, energie: 'energie:moyenne' }]);
   // Une nouvelle ouverture crée un nouveau relevé ; la liste du jour montre les précédents.
-  await page.getByRole('link', { name: 'Humeur du moment' }).click();
+  await page.getByRole('link', { name: 'Émotion du moment' }).click();
   await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 Sérénité · énergie moyenne');
   await vue.getByRole('button', { name: 'Supprimer le relevé de 18:42' }).click();
   await expect.poll(async () => (await releves()).length).toBe(0);
