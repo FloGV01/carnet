@@ -165,7 +165,8 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   if (!items || !fiche) return html`<div class="parcours"></div>`;
   const carte = carteLibelles(items);
 
-  // Phrase des choix déjà faits, au-dessus de chaque étape. Le récapitulatif ne la répète pas (v6.1) : son tableau suffit.
+  // Phrase des choix déjà faits, dans une carte au-dessus de chaque étape (2b). Le récapitulatif ne la répète pas
+  // (v6.1) : son tableau suffit.
   const phrase = phraseResume(store === 'episodes' ? 'episode' : 'symptome', fiche, carte);
   const phraseEtape = phrase.length > 0 && html`<p class="phrase-resume">${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>`;
 
@@ -179,27 +180,31 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     if (idRef.current) { garder(); location.hash = versHash('apres-coup', { id: idRef.current }); }
   };
 
-  // « Mon plan » : une ligne fixe sous la date, à chaque étape et au récapitulatif (épisodes). Sur une
-  // fiche rouverte, « Après coup » et « En parler » (v6.1) sont à côté : visibles sans défiler. À chaud,
-  // rien n'y est ajouté. « En parler » ouvre la même feuille que le lien du bas.
+  // « Mon plan » (icône de carte) : à droite de la ligne de date (2b), à chaque étape et au récapitulatif (épisodes).
+  // Sur une fiche rouverte, « Après coup » et « En parler » (v6.1) le suivent, sur une ligne à eux sous la date :
+  // visibles sans défiler. À chaud, rien n'y est ajouté. « En parler » ouvre la même feuille que le lien du bas.
   const lignePlan = avecPlan && html`<div class="ligne-plan">
-    <button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => { annulerSuivant(); setVoirPlan(true); }}>${Icones.listes()}Mon plan</button>
+    <button type="button" class="btn-lien" ref=${boutonPlan} onClick=${() => { annulerSuivant(); setVoirPlan(true); }}>${Icones.monPlan()}Mon plan</button>
     ${rouvert && html`<span class="separateur-plan" aria-hidden="true">·</span>
       <a class="btn-lien" href=${hrefApresCoup} onClick=${ouvrirApresCoup}>Après coup</a>
       <span class="separateur-plan" aria-hidden="true">·</span>
       <${EnParler} store=${store} element=${{ ...fiche, id: idRef.current }} carte=${carte} court=${true} />`}
   </div>`;
   const feuillePlan = voirPlan && html`<${FeuillePlan} surFermer=${() => setVoirPlan(false)} retourFocus=${boutonPlan} />`;
-  const ligneDate = html`<div class="ligne-date">
-    <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => { annulerSuivant(); setEditionDate(!editionDate); }}>
-      ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
-    ${editionDate && html`<div class="edition-date">
-      <input type="date" class="champ-ligne" aria-label="Date" value=${fiche.date} max=${cleLocale(maintenant)}
-        onChange=${(e) => { const v = e.target.value; if (v && v <= cleLocale(maintenant)) { setFiche((f) => ({ ...f, date: v })); ecrire({ date: v }); } }} />
-      ${avecHeure && html`<input type="time" class="champ-ligne" aria-label="Heure" value=${fiche.heure || ''}
-        onChange=${(e) => { const v = e.target.value || null; setFiche((f) => ({ ...f, heure: v })); ecrire({ heure: v }); }} />`}
-    </div>`}
-  </div>`;
+  // La ligne de date se touche sur toute la place que lui laisse « Mon plan » ; elle ouvre, dessous, la date et l'heure.
+  const ligneDatePlan = html`<div class=${`ligne-date-plan${avecPlan && rouvert ? ' avec-liens' : ''}`}>
+    <div class="ligne-date">
+      <button type="button" class="btn-lien" aria-expanded=${editionDate ? 'true' : 'false'} onClick=${() => { annulerSuivant(); setEditionDate(!editionDate); }}>
+        ${libelleDate(fiche.date, maintenant)}${avecHeure ? ` · ${fiche.heure || 'heure'}` : ''}${Icones.chevronBas({ trait: 2 })}</button>
+    </div>
+    ${lignePlan}
+  </div>
+  ${editionDate && html`<div class="edition-date">
+    <input type="date" class="champ-ligne" aria-label="Date" value=${fiche.date} max=${cleLocale(maintenant)}
+      onChange=${(e) => { const v = e.target.value; if (v && v <= cleLocale(maintenant)) { setFiche((f) => ({ ...f, date: v })); ecrire({ date: v }); } }} />
+    ${avecHeure && html`<input type="time" class="champ-ligne" aria-label="Heure" value=${fiche.heure || ''}
+      onChange=${(e) => { const v = e.target.value || null; setFiche((f) => ({ ...f, heure: v })); ecrire({ heure: v }); }} />`}
+  </div>`}`;
 
   if (etape === 'recap') {
     const lignes = etapes.map((et, i) => {
@@ -209,7 +214,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
-    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
+    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
       pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
       <h2 class="titre-question">Récapitulatif</h2>
@@ -234,6 +239,8 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
   }
 
   const et = etapes[etape];
+  // Une étape à réponses courtes (`courte` : Intensité, En dessous, Réaction, Durée) pose sa question et sa grille en
+  // bas de l'écran, près du pouce (2b, P6) ; une liste longue remplit l'écran depuis le haut.
   // Glissement à l'arrivée d'une étape : depuis la droite quand on avance, depuis la gauche quand
   // on recule. Rien à l'ouverture. La classe reste la même tant que l'étape ne change pas.
   if (glisse.current.etape !== etape) {
@@ -241,20 +248,22 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
   }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
-  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${html`${ligneDate}${lignePlan}`}
+  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => { annulerSuivant(); setEtape(etape - 1); }}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
-    <div class=${`etape ${glisse.current.classe}`} key=${etape}>
+    <div class=${`etape${et.courte ? ' courte' : ''} ${glisse.current.classe}`} key=${etape}>
     ${phraseEtape}
-    <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
-    <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
-      colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
-      ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} teinte=${teinte}
-      surAjouter=${et.type === 'intensite' ? null : async (texte) => {
-        const item = await repo.listes.creer(et.liste, texte);
-        setItems(await repo.listes.items());
-        choisir(etape, et.champ)(item.id);
-      }} />
+    <div class="reponses-etape">
+      <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
+      <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
+        colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
+        ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} teinte=${teinte}
+        surAjouter=${et.type === 'intensite' ? null : async (texte) => {
+          const item = await repo.listes.creer(et.liste, texte);
+          setItems(await repo.listes.items());
+          choisir(etape, et.champ)(item.id);
+        }} />
+    </div>
     </div>
     ${feuillePlan}
   </${CadreParcours}>`;

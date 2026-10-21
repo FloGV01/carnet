@@ -561,10 +561,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }
 .feuille {
   width: 100%; max-width: 34rem; max-height: 85dvh; overflow-y: auto; background: var(--surface); --fond-choix: var(--surface-2);
-  border-radius: var(--r-carte) var(--r-carte) 0 0; padding: 16px var(--marge) calc(20px + env(safe-area-inset-bottom));
+  border-radius: var(--r-feuille) var(--r-feuille) 0 0; padding: 18px var(--marge) calc(20px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px;
 }
 .feuille-tete { display: flex; align-items: center; justify-content: space-between; }
+.feuille-tete .fermer { font-weight: 600; }
 .feuille-tete .fermer svg { width: 18px; height: 18px; }
 .contenu-plan { display: flex; flex-direction: column; gap: 12px; }
 .rubrique-plan p { font-size: var(--t-corps); line-height: 1.45; white-space: pre-wrap; }
@@ -606,7 +607,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    l'app, utile au guidage). En 4-6 le pic est à 40 % du cycle. Mouvement réduit : base.css coupe
    l'animation, et le cercle change de teinte d'un coup à chaque phase (pleine à l'inspiration, claire
    à l'expiration), en plus des mots. */
-.moment-difficile { gap: 28px; }
+/* En 2b (v7) : trois cartes à la couleur du parcours (bleu brume), serrées pour tenir sur l'écran. */
+.moment-difficile { gap: 10px; padding-top: 8px; }
 .respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
 .cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
 .cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--action); transform: scale(.55); }
@@ -622,10 +624,34 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .duree-respiration { display: block; }
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
+/* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
+   « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours. */
+.moment-difficile .respiration { gap: 12px; }
+.moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
+.moment-difficile .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
+.puces-respiration { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.puce-reglage { position: relative; display: inline-flex; align-items: center; }
+.puce-reglage select {
+  -webkit-appearance: none; appearance: none; min-height: var(--cible); padding: 0 36px 0 16px; margin: 0;
+  border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text);
+  font-size: max(16px, var(--t-corps)); font-weight: 500; font-variant-numeric: tabular-nums;
+}
+.puce-reglage svg { position: absolute; right: 12px; width: 16px; height: 16px; color: var(--text-2); pointer-events: none; }
+.puce-reglage select:disabled { opacity: 1; color: var(--text-2); }
+/* « Une chose à la fois › » : une carte d'une ligne, en 600, avec son chevron. */
+.une-chose-acces.ligne-carte { min-height: 54px; padding: 0 14px 0 16px; background: var(--surface); border-radius: var(--r-carte); font-weight: 600; }
+.une-chose-acces.ligne-carte svg { width: 18px; height: 18px; }
+/* Mon plan (2b) : une carte ; en tête, un carré de 28 à la couleur du parcours (icône Mon plan), le titre en 21/600 et
+   « Modifier » à droite (couleur action, 600, cible de 44). Les rubriques en capitales, le texte en 19, interligne 1,45. */
+.plan-moment { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 16px; }
 .plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
-/* Mon plan (v6.1) : « Modifier mon plan » à droite du titre, aligné sur sa ligne, en cible de 44 pt. */
-.plan-moment-tete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); }
-.plan-moment-tete .lien-discret { flex: none; display: inline-flex; align-items: center; min-width: var(--cible); }
+.plan-moment .libelle-section { padding-bottom: 2px; }
+.plan-moment > .btn-lien { align-self: flex-start; }
+.plan-moment-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+.titre-plan-moment { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 1.235rem/1.3 var(--police); color: var(--text); }
+.carre-plan { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-plan svg { width: 17px; height: 17px; }
+.modifier-plan { flex: none; min-width: var(--cible); justify-content: flex-end; font-weight: 600; }
 /* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
    texte est long, les boutons restent à l'écran. Aucun repère de position : rien n'est compté. */
 .une-chose { height: 100%; display: flex; flex-direction: column; }
@@ -634,16 +660,18 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-texte { font: 600 clamp(2rem, 9vw, 3rem)/1.25 var(--police); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
-.une-chose-tout { grid-column: 1 / -1; justify-content: center; }
+.une-chose-tout { grid-column: 1 / -1; justify-content: center; font-weight: 600; }
 /* Bien-être (v7) : la cohérence cardiaque dans une carte, les exercices en liste groupée 2b (titre 16/600, durée et
    description en 14 --text-2, chevron), la ligne fixe en bas. Aucun compteur, aucun repère de séance faite. */
 .bien-etre { gap: 12px; }
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
-/* Dans Bien-être, la respiration prend la couleur du parcours, comme dans le rendu 2b de Moment difficile : le cercle en
-   -tint-2 cerclé de la couleur, « Commencer » en -fill / -on. Sans mouvement, la phase d'inspiration reste plus soutenue. */
-.carte-respiration .cercle-respiration span { background: var(--c-tint-2); border-color: var(--c); }
+/* Dans une carte (Moment difficile, Bien-être), la respiration prend la couleur du parcours, comme dans le rendu 2b :
+   un cercle de 152 en -tint-2, cerclé de 2 px à la couleur, et dedans le disque qui respire, en -tint ; « Commencer » en
+   -fill / -on. Sans mouvement, le disque reste figé et, à l'inspiration, se remplit de la couleur. */
+.carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--c-tint-2); border: 2px solid var(--c); }
+.carte-respiration .cercle-respiration span { background: var(--c-tint); border: 0; }
 .carte-respiration .respiration .btn-plein { background: var(--c-fill); color: var(--c-on); }
 @media (prefers-reduced-motion: reduce) {
   .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c); }

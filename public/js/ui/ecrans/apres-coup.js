@@ -32,14 +32,15 @@ const SURCHARGE = ['typeExplosion:surcharge', 'typeExplosion:fige'];
 // aucun type, ou « Je ne sais pas » seul : pas d'étape 6. Une branche décochée qui porte des
 // réponses reste affichée (rien n'est caché ni effacé en silence). Le repère compte ces écrans.
 // recap : les lignes du récapitulatif, [libellé court à la première personne, champs…] (spec §8) ; la question
-// complète reste sur l'écran de l'étape.
+// complète reste sur l'écran de l'étape. courte : quelques réponses (types, échelles), posées en bas de l'écran,
+// près du pouce (2b, P6) ; les autres étapes remplissent l'écran depuis le haut.
 const rempli = (v) => v != null && !(Array.isArray(v) && v.length === 0);
 export function etapesPour(ac = {}) {
   const t = ac.types || [];
   const colere = t.includes(COLERE) || ['pieges', 'pensees', 'autreFacon'].some((c) => rempli(ac[c]));
   const surcharge = t.some((x) => SURCHARGE.includes(x)) || ['tropDe', 'besoins'].some((c) => rempli(ac[c]));
   return [
-    { cle: 'types', question: 'C\'était plutôt…', sous: 'Plusieurs choix possibles.', blocs: [{ type: 'multi', champ: 'types', liste: 'typeExplosion' }],
+    { cle: 'types', courte: true, question: 'C\'était plutôt…', sous: 'Plusieurs choix possibles.', blocs: [{ type: 'multi', champ: 'types', liste: 'typeExplosion' }],
       recap: [['C\'était plutôt', 'types']] },
     { cle: 'fragilites', question: 'Ce jour-là, ce qui me fragilisait déjà…', contexte: true, blocs: [{ type: 'multi', champ: 'fragilites', liste: 'fragilite' }],
       recap: [['Ce qui me fragilisait', 'fragilites']] },
@@ -47,7 +48,7 @@ export function etapesPour(ac = {}) {
       recap: [['Le déclencheur', 'declencheur']] },
     { cle: 'signes', question: 'Mes premiers signes', sous: 'Dans le corps, les gestes, la tête.', blocs: [{ type: 'multi', champ: 'signes', liste: 'signe' }, { type: 'texte', champ: 'signesTexte', etiquette: 'Autre chose' }],
       recap: [['Mes signes', 'signes', 'signesTexte']] },
-    { cle: 'repereA', question: 'Quand j\'ai remarqué que ça montait, j\'en étais à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'repereA' }],
+    { cle: 'repereA', courte: true, question: 'Quand j\'ai remarqué que ça montait, j\'en étais à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'repereA' }],
       recap: [['Ça montait à', 'repereA']] },
     colere && { cle: 'pensees', question: 'Ce que je me suis dit', blocs: [{ type: 'multi', champ: 'pieges', liste: 'piegePensee', titre: 'Ça ressemble à…' }, { type: 'texte', champ: 'pensees', etiquette: 'Avec mes mots' }],
       recap: [['Ce que je me suis dit', 'pensees'], ['Mes pièges', 'pieges']] },
@@ -59,7 +60,7 @@ export function etapesPour(ac = {}) {
       recap: [['Une autre façon de voir', 'autreFacon']] },
     { cle: 'siAlors', question: 'Pour la prochaine fois', blocs: [{ type: 'siAlors' }],
       recap: [['La prochaine fois', 'siAlors']] },
-    { cle: 'tensionApres', question: 'Maintenant, en y repensant, c\'est à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'tensionApres' }],
+    { cle: 'tensionApres', courte: true, question: 'Maintenant, en y repensant, c\'est à…', sous: '1 = à peine, 10 = maximum', blocs: [{ type: 'echelle', champ: 'tensionApres' }],
       recap: [['Tension après', 'tensionApres']] },
   ].filter(Boolean);
 }
@@ -205,10 +206,12 @@ export function ApresCoup({ id }) {
   return html`<${CadreParcours} titre="Après coup" teinte="ep" etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>${remplie ? 'Suivant' : 'Passer'}${Icones.chevron({ trait: 2 })}</button>`}>
-    <div class="etape" key=${et.cle}>
-      <div><h2 class="titre-question">${et.question}</h2>${et.sous && html`<p class="sous-question">${et.sous}</p>`}</div>
+    <div class=${`etape${et.courte ? ' courte' : ''}`} key=${et.cle}>
       ${et.contexte && phraseJour && phraseJour.length > 0 && html`<p class="phrase-resume">Ce jour-là : ${phraseJour}</p>`}
-      ${et.blocs.map(bloc)}
+      <div class="reponses-etape">
+        <div><h2 class="titre-question">${et.question}</h2>${et.sous && html`<p class="sous-question">${et.sous}</p>`}</div>
+        ${et.blocs.map(bloc)}
+      </div>
     </div>
   </${CadreParcours}>`;
 }

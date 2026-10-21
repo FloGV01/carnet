@@ -139,6 +139,8 @@
   display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 16px;
   background: var(--text); color: var(--bg); border-radius: var(--r-bouton); font-size: var(--t-sous);
 }
+/* Dans un parcours, en haut, sous « Fermer » : les réponses sont en bas, près du pouce (2b). */
+.toast.en-haut { top: calc(52px + env(safe-area-inset-top)); bottom: auto; }
 .toast-texte { flex: 1; }
 .toast button { border: 0; background: none; color: var(--bg); font-weight: 600; font-size: inherit; min-height: var(--cible); padding: 0 12px; text-decoration: underline; }
 
@@ -361,26 +363,33 @@ button.effacer svg { width: 18px; height: 18px; }
   background-color: var(--bg);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+/* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600) derrière un petit carré à sa couleur,
+   et, à droite, le repère d'étapes en points de 9 px, jamais une barre : faites, pleines à la couleur du parcours ;
+   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --surface-2. */
 .parcours-tete { display: flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 48px; }
-.parcours-tete .fermer { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; min-height: var(--cible); border: 0; background: none; color: var(--action); font-size: var(--t-corps); }
-.parcours-tete .fermer svg { width: 18px; height: 18px; }
-.parcours-tete .nom { font-weight: 600; font-size: var(--t-corps); display: inline-flex; align-items: center; gap: 8px; }
-.point-teinte { width: 10px; height: 10px; border-radius: 5px; background: var(--c, var(--action)); flex: none; }
-.reperes { margin-left: auto; display: flex; gap: 6px; padding-right: 8px; }
-.reperes i { width: 8px; height: 8px; border-radius: 4px; border: 1.5px solid var(--c, var(--action)); }
-.reperes i.fait { background: var(--c, var(--action)); }
+.parcours-tete .fermer { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; min-height: var(--cible); border: 0; background: none; color: var(--action); font-size: var(--t-corps); font-weight: 600; }
+.parcours-tete .fermer svg { width: 20px; height: 20px; }
+.parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
+.point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
+.reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 10px 0 8px; }
+.reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); }
+.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); }
+.reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
+/* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
+.reperes:has(i:nth-child(8)) { gap: 6px; }
+.reperes:has(i:nth-child(10)) { gap: 5px; }
+.reperes:has(i:nth-child(10)) i { width: 8px; height: 8px; }
 .parcours-corps { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 .parcours-pied {
   display: flex; justify-content: space-between; align-items: center; gap: var(--esp-3);
   padding: 6px 10px; border-top: 1px solid var(--line); background: var(--bg);
 }
-.parcours-pied .btn-lien { padding: 0 6px; gap: 2px; }
+.parcours-pied .btn-lien { padding: 0 6px; gap: 2px; font-weight: 600; }
 .parcours-pied .btn-lien svg { width: 20px; height: 20px; stroke-width: 2; }
 .parcours-pied .terminer { flex: 1; margin: 4px 6px; }
 /* Parcours 2b (v7, Émotion du moment) : une puce à droite de « Fermer », le titre en grand (25/600) avec l'icône dans
    un carré de 34 à la couleur du parcours, et le panneau des réponses collé en bas, près du pouce. */
 .parcours-droite { margin-left: auto; display: flex; align-items: center; padding-right: 6px; }
-.avec-panneau .parcours-tete .fermer { font-weight: 500; }
 .titre-parcours {
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
   font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty;
@@ -476,24 +485,38 @@ button.effacer svg { width: 18px; height: 18px; }
 }
 .puce-quand > .btn-lien svg { color: var(--text-2); }
 .parcours > .choix-vers { flex: none; padding: 2px var(--marge) var(--esp-2); }
-.edition-date { display: flex; gap: var(--esp-2); padding-bottom: var(--esp-2); }
+/* Épisode, symptôme (2b) : la date à gauche, « Mon plan » à droite, sur une ligne ; sur une fiche rouverte, « Mon plan ·
+   Après coup · En parler » passent sur une ligne à eux, sous la date. La date et l'heure s'ouvrent dessous. */
+.ligne-date-plan { flex: none; display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; padding: 0 var(--marge); }
+.ligne-date-plan > .ligne-date { flex: 1 1 auto; min-width: 0; padding: 0; }
+.ligne-date-plan > .ligne-plan { flex: none; margin-left: auto; padding: 0; }
+.ligne-date-plan.avec-liens > .ligne-plan { flex: 1 1 100%; margin-left: 0; }
+.ligne-plan > .btn-lien { font-weight: 600; }
+.edition-date { flex: none; display: flex; gap: var(--esp-2); padding: 0 var(--marge) var(--esp-2); }
 .edition-date input[type="date"] { flex: 1; }
 .edition-date input[type="time"] { width: 120px; flex: none; }
 
-/* Une étape : phrase résumé, question en serif, grille. */
+/* Une étape (2b) : le rappel des réponses dans une carte, la question (30 px) et son aide juste au-dessus de la grille.
+   Une étape à réponses courtes (.courte) occupe au moins la hauteur du corps : sa question et sa grille descendent en
+   bas de l'écran, près du pouce, juste au-dessus de « Retour » et « Passer » (P6). En grand texte, tout défile. */
 .etape { padding: 8px var(--marge) 20px; display: flex; flex-direction: column; gap: 18px; }
+.etape.courte { min-height: 100%; padding-bottom: 12px; }
+.etape.courte > .reponses-etape { margin-top: auto; }
+.reponses-etape { display: flex; flex-direction: column; gap: 14px; }
 .etape.entree-avant { animation: entree-avant var(--duree-glisse) ease-out; }
 .etape.entree-arriere { animation: entree-arriere var(--duree-glisse) ease-out; }
 @keyframes entree-avant { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes entree-arriere { from { transform: translateX(-28px); opacity: 0; } to { transform: none; opacity: 1; } }
-.sous-question { font-size: var(--t-sous); color: var(--text-2); margin-top: 4px; }
-.phrase-resume { font-size: var(--t-sous); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding-bottom: 10px; border-bottom: 1.5px dashed var(--line); }
+.sous-question { font-size: var(--t-sous); color: var(--text-2); margin-top: 2px; }
+.phrase-resume { font-size: var(--t-corps); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding: 14px 16px; border-radius: var(--r-carte); background: var(--surface); }
 .phrase-recap { font-size: 1.059rem; line-height: 1.45; color: var(--text); text-wrap: pretty; margin-top: -6px; }
 .phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text); }
 /* « Ce jour-là » (v7) : les familles des émotions du jour en points, devant leurs mots. */
 .emotions-jour .familles-jour { margin-right: 5px; vertical-align: 1px; }
-.pastilles.grille-choix.chiffres .pastille { min-height: 56px; font-size: 1.059rem; }
-.pastilles.grille-choix.chiffres { gap: 8px; }
+/* Intensité et échelles de 1 à 10 : 2 × 5 boutons de 64, chiffres en 21 (500, choisi 700). */
+.pastilles.grille-choix.chiffres .pastille { min-height: var(--h-grille-intensite); font-size: var(--t-grille-lg); font-weight: 500; }
+.pastilles.grille-choix.chiffres .pastille[aria-pressed="true"] { font-weight: 700; }
+.pastilles.grille-choix.chiffres { gap: var(--ecart); }
 .etape .pastille[aria-pressed="true"] { animation: rebond 130ms ease-out; }
 @keyframes rebond { 50% { transform: scale(1.07); } }
 

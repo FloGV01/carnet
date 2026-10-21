@@ -2,13 +2,14 @@ import { html } from '../lib.js';
 import { ParcoursFiche } from './parcours-fiche.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
 
-// Ordre retenu avec l'utilisateur : le déclencheur d'abord (plus facile à dire que l'émotion).
+// Ordre retenu avec l'utilisateur : le déclencheur d'abord (plus facile à dire que l'émotion). `courte` : réponses
+// en bas de l'écran, près du pouce (2b).
 export const ETAPES_EPISODE = [
   { champ: 'declencheur', liste: 'declencheur', question: 'Ça a démarré avec…', recap: 'Déclencheur' },
   { champ: 'emotion', liste: 'emotion', question: 'Ça ressemblait plutôt à…', recap: 'Émotion' },
-  { champ: 'intensite', type: 'intensite', question: 'Intensité', sousQuestion: '1 = à peine, 10 = maximum', recap: 'Intensité' },
-  { champ: 'dessous', liste: 'dessous', question: 'Et en dessous, il y avait peut-être…', recap: 'En dessous' },
-  { champ: 'reaction', liste: 'reaction', question: 'Ta réaction', recap: 'Réaction' },
+  { champ: 'intensite', type: 'intensite', question: 'Intensité', sousQuestion: '1 = à peine, 10 = maximum', recap: 'Intensité', courte: true },
+  { champ: 'dessous', liste: 'dessous', question: 'Et en dessous, il y avait peut-être…', recap: 'En dessous', courte: true },
+  { champ: 'reaction', liste: 'reaction', question: 'Ta réaction', recap: 'Réaction', courte: true },
 ];
 export const TEXTES_EPISODE = [
   { champ: 'situation', etiquette: 'Situation', icone: 'note', placeholder: "Ce qui s'est passé…" },

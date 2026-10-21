@@ -512,10 +512,11 @@ test('dans une carte, la durée de la respiration passe sous « Cohérence cardi
   const l = await lignesPhase(phaseCarte);
   expect(l.duree).toBeGreaterThanOrEqual(l.nom - 1);
 
-  // Moment difficile, hors carte, garde sa ligne (jusqu'au passage en 2b).
+  // Moment difficile (2b, tâche 8) : « Cohérence cardiaque » seul, la durée sur sa puce.
   await bouton(emo, 'Fermer').click();
   await aller(page, '#/moment-difficile');
-  await expect(vue(page, 'Moment difficile').locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+  await expect(vue(page, 'Moment difficile').locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  await expect(vue(page, 'Moment difficile').getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
 });
 
 test('la respiration crée une séance avec son origine : Bien-être (au bout, puis « Noter mon émotion »), Moment difficile, « Pour récupérer, je… »', async ({ page }) => {

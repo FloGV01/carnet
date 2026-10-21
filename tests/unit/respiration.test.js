@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DUREES, RYTHMES, CYCLE_MS, RESPIRATION_DEFAUT, normaliserRespiration, dureeEnMs, phaseRespiration, texteAvant, texteFin,
-  NOM_RESPIRATION, texteDuree,
+  NOM_RESPIRATION, texteDuree, texteRythme,
 } from '../../public/js/domain/respiration.js';
 
 const phases = (rythme, instants) => instants.map((t) => phaseRespiration(t, rythme));
@@ -87,4 +87,8 @@ test('les textes d\'avant et de fin suivent la durée ; « 5 minutes » ne se co
   }
   assert.equal(NOM_RESPIRATION, 'Cohérence cardiaque');
   assert.equal(texteDuree(10), '10\u00a0minutes');
+});
+
+test('le rythme en clair sur la puce de Moment difficile (2b) : inspirer, puis expirer, chaque durée d\'un tenant', () => {
+  assert.deepEqual(RYTHMES.map(texteRythme), ['5\u00a0s · 5\u00a0s', '4\u00a0s · 6\u00a0s']);
 });

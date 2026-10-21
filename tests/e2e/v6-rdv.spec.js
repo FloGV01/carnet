@@ -121,6 +121,9 @@ test('« En parler au rendez-vous » depuis un épisode : question déjà écrit
   await expect.poll(async () => (await lireRdv(page, 'rdv-oct')).questions).toEqual([attendue]);
   // Une seconde fois, le même texte : rien ne s'ajoute.
   await fiche.getByRole('button', { name: 'En parler au rendez-vous' }).click();
+  // La feuille prend le focus sur son titre à l'ouverture : on attend qu'elle l'ait fait, sinon le texte tapé
+  // tout de suite peut se perdre (le focus quitte le champ pendant la frappe) et la question pré-écrite part.
+  await expect(feuille.getByRole('heading', { name: 'En parler au rendez-vous' })).toBeFocused();
   await feuille.getByRole('textbox', { name: 'Question' }).fill(texte);
   await feuille.getByRole('button', { name: /Psychiatre/ }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Déjà dans ce rendez-vous' })).toBeVisible();

@@ -33,3 +33,5 @@ export const NOM_RESPIRATION = 'Cohérence cardiaque';
 export const texteDuree = (minutes) => `${minutes}\u00a0minutes`;
 export const texteAvant = (minutes) => `${NOM_RESPIRATION} · ${texteDuree(minutes)}`;
 export const texteFin = (minutes) => `${minutes}\u00a0minutes de respiration.`;
+// Le rythme en clair, sur la puce de Moment difficile (2b) : « 5 s · 5 s » (inspirer, expirer).
+export const texteRythme = (rythme) => rythme.split('-').map((n) => `${n}\u00a0s`).join(' · ');

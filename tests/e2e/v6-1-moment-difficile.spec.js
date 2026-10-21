@@ -52,12 +52,15 @@ test('« Modifier mon plan » à droite du titre, sur sa ligne, en 44 pt, visibl
   const ordre = await plan.evaluate((s) => [...s.querySelectorAll('h2, a[href="#/mon-plan"], .contenu-plan')].map((e) => e.tagName === 'H2' ? 'titre' : e.tagName === 'A' ? 'modifier' : 'contenu'));
   expect(ordre).toEqual(['titre', 'modifier', 'contenu']);
 
-  const [t, m, s] = await Promise.all([titre, modifier(vue), plan].map((l) => l.boundingBox()));
-  // Sur la ligne du titre : les deux boîtes se chevauchent en hauteur, le lien est à droite, calé sur le bord.
+  const [t, m] = await Promise.all([titre, modifier(vue)].map((l) => l.boundingBox()));
+  // Sur la ligne du titre : les deux boîtes se chevauchent en hauteur, le lien est à droite, calé sur le bord intérieur de
+  // la carte du plan (2b, v7). Il montre « Modifier », et se nomme « Modifier mon plan ».
   expect(m.y).toBeLessThan(t.y + t.height);
   expect(m.y + m.height).toBeGreaterThan(t.y);
   expect(m.x).toBeGreaterThanOrEqual(t.x + t.width);
-  expect(Math.abs((m.x + m.width) - (s.x + s.width))).toBeLessThanOrEqual(1);
+  const bordInterieur = await plan.evaluate((e) => e.getBoundingClientRect().right - parseFloat(getComputedStyle(e).paddingRight));
+  expect(Math.abs((m.x + m.width) - bordInterieur)).toBeLessThanOrEqual(1);
+  await expect(modifier(vue)).toHaveText('Modifier');
   // Une cible de 44 pt au moins dans les deux sens.
   expect(m.height).toBeGreaterThanOrEqual(44);
   expect(m.width).toBeGreaterThanOrEqual(44);
