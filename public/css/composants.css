@@ -297,11 +297,14 @@ button.effacer svg { width: 18px; height: 18px; }
 .repli.resume-sous .repli-tete { flex-wrap: wrap; align-content: center; gap: 0 var(--esp-2); padding: 6px 0; }
 .repli.resume-sous .repli-resume { flex: 1 1 calc(100% - 24px); margin: 0 0 0 24px; }
 .repli-corps { padding: 0 0 14px 24px; display: flex; flex-direction: column; gap: 10px; }
-/* Repli en carte (2b, v7) : l'icône dans un carré neutre à gauche, le chevron à droite, des rangées de 52. */
+/* Repli en carte (2b, v7) : l'icône dans un carré à gauche (neutre, ou à la couleur de la rubrique), le chevron à droite, des rangées de 52. */
 .repli.repli-carte { border-top: 0; background: var(--surface); border-radius: var(--r-carte); padding: 0 12px; --fond-choix: var(--surface-2); }
 .repli-carte .repli-tete { min-height: 52px; gap: 12px; }
 .repli-icone { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
 .repli-icone svg { width: 17px; height: 17px; }
+/* Avec une teinte (`teinte` de Repli), le carré prend la couleur de la rubrique, où que soit le repli : liste groupée
+   d'Aujourd'hui, « Tes points positifs » de Ma semaine. Sans teinte (Notes libres, Ce que je faisais), il reste neutre. */
+.repli.repli-carte[class*="teinte-"] .repli-icone { background: var(--c); color: var(--c-on); }
 .repli-carte .repli-titre { font-weight: 500; }
 .repli-carte .repli-titre + .repli-fleche { margin-left: auto; }
 .repli-carte .repli-corps { padding: 0 0 14px; }

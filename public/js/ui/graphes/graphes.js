@@ -114,9 +114,15 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     ${reperes.legende.map((r) => html`<li>${r.texte}</li>`)}</ul>`;
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
     <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
+  // Les anciennes notes : par semaine ou par mois, le point est une moyenne, et un anneau la dit faite de peu de
+  // valeurs. Des libellés fixes, sans valeur calculée.
+  const legendeNotes = g.notes.points.length > 0 && html`
+    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'note du jour' : 'moyenne des notes'}</span>
+    ${g.notes.points.some((p) => !p.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-anneau" cx="6" cy="6" r="3.5" /></svg>peu de valeurs</span>`}
+    ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}`;
   const legende = html`<p class="legende-graphe legende-frise">
     <${LegendeFamilles} familles=${familles} />
-    ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}
+    ${legendeNotes}
     <${LegendeNuits} lib=${lib} />
   </p>${legendeReperes}`;
   const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}

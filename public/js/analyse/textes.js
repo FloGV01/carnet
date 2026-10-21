@@ -5,12 +5,14 @@ import { SEUILS } from './seuils.js';
 
 export const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
 const E = SEUILS.emotions;
+const M = SEUILS.moments;
 // Le nombre de relevés d'une vue d'émotions, tiré du seuil (jamais recopié).
 const AU_MOINS_EMOTIONS = `au moins ${E.minReleves} émotions du moment`;
 export const REGLES = {
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
-  emotionsJournee: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, à leur heure (sans « C'était vers… »).`,
+  // Ta journée a deux rangées, chacune avec son seuil : la règle les dit toutes les deux (moments.js pour l'énergie).
+  emotionsJournee: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, ou, pour l'énergie, un créneau de ${M.largeurCreneau} h où elle est notée au moins ${M.minJours} jours différents. Seuls comptent les relevés notés à leur heure (sans « C'était vers… »).`,
 };
 // v6 · Comprendre (spec §2.1) : sous son seuil, chaque graphique donne sa règle fixe, sans aucun décompte. Les
 // nombres viennent de SEUILS.comprendre, jamais recopiés ; aucun libellé de liste modifiable n'y paraît.

@@ -142,3 +142,22 @@ test('v6 : « Ta journée heure par heure » laisse de côté les relevés « ve
   // Un relevé qui n'a qu'une émotion n'entre pas dans le profil d'énergie.
   assert.equal(profilJournee(jours.map((d) => rel(d, '10:00', null, { emotion: 'roue:colere' })), '2026-10-01', '2026-10-03').statut, 'insuffisant');
 });
+
+test('v7 · « Pourquoi ? » de Ta journée : la règle couvre ses deux rangées (émotions et énergie), ses nombres tirés de SEUILS', async () => {
+  const { REGLES } = await import('../../public/js/analyse/textes.js');
+  const { SEUILS } = await import('../../public/js/analyse/seuils.js');
+  const { RACINE, lire, sansCommentaires } = await import('../aides/fichiers.js');
+  const r = REGLES.emotionsJournee;
+  assert.match(r, /^La règle : .+\.$/);
+  assert.doesNotMatch(r, /undefined|NaN|null|\[object/);
+  // Les émotions : le seuil de relevés ; l'énergie : la largeur du créneau et le nombre de jours de moments.js.
+  assert.match(r, new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`));
+  assert.match(r, new RegExp(`pour l'énergie, un créneau de ${SEUILS.moments.largeurCreneau} h .*au moins ${SEUILS.moments.minJours} jours différents`));
+  // Les deux rangées laissent de côté les relevés « vers » (emotions.js, moments.js).
+  assert.match(r, /sans « C'était vers… »/);
+  // Aucun chiffre écrit à la main dans cette règle : le gabarit n'a que des ${…}.
+  const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
+  const ligne = code.split('\n').find((l) => l.trim().startsWith('emotionsJournee:'));
+  assert.ok(ligne, 'règle emotionsJournee introuvable');
+  assert.doesNotMatch(ligne.replace(/\$\{[^}]*\}/g, ''), /\d/);
+});

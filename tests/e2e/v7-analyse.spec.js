@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { addDays } from '../../public/js/domain/dates.js';
-import { contraste } from '../aides/couleurs.js';
+import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
 // v7 (5/9) · L'Analyse sans note de 1 à 10 (spec §5) : la porte « Historique › » avec les trois portes de Comprendre, Ma
 // semaine en tuiles dont « Tes émotions », Mes jours avec la rangée Émotions (et « Humeur (notes) » seulement avec des
@@ -10,6 +10,8 @@ import { contraste } from '../aides/couleurs.js';
 // vigilance 1 (sauvegarde v6.1 importée) et 5 (un jour qui mêle une note et une émotion). Données inventées.
 // Horloge : dimanche 18 octobre 2026, 21:00 (390 × 844).
 const AUJ = '2026-10-18';
+const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
+const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 const repo = (page, f, arg) => page.evaluate(f, arg);
 const mesJours = (page) => page.locator('figure', { has: page.getByText('Mes jours', { exact: true }) });
 const graphe = (page) => mesJours(page).locator('svg[role="img"]');
@@ -97,14 +99,23 @@ test('la rangée « Humeur (notes) » n\'apparaît qu\'avec des notes de 1 à 10
     await r.humeurs.creer({ date: '2026-09-08', heure: '10:00', humeur: 6, energie: null });
   });
   await aller(page, '#/analyse');
+  const legende = mesJours(page).locator('.legende-frise');
   await periode(page, '7 j').click();
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
+  await expect(legende).not.toContainText(/note|moyenne|peu de valeurs/);
   await periode(page, '30 j').click();
   await expect(etiquettes(page)).not.toContainText(['Humeur']);
+  await expect(legende).not.toContainText(/note|moyenne|peu de valeurs/);
   await periode(page, '3 mois').click();
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes']);
   await expect(graphe(page)).toHaveAttribute('aria-label', /émotions, humeur \(notes de 1 à 10\), nuits/);
   await expect(graphe(page).locator('g.teinte-humeur circle')).toHaveCount(1);
+  // Par semaine, le point est une moyenne ; une seule note dans la semaine : un anneau, « peu de valeurs ». La légende le dit.
+  await expect(graphe(page).locator('g.teinte-humeur circle.g-anneau')).toHaveCount(1);
+  await expect(legende.locator(':scope > span')).toContainText(['moyenne des notes', 'peu de valeurs']);
+  await expect(legende.locator(':scope > span', { hasText: 'moyenne des notes' }).locator('circle.g-point')).toHaveCount(1);
+  await expect(legende.locator(':scope > span', { hasText: 'peu de valeurs' }).locator('circle.g-anneau')).toHaveCount(1);
+  await expect(legende).not.toContainText('note du jour');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined/);
 });
 
@@ -163,6 +174,10 @@ test('point de vigilance 5 : un jour qui mêle une ancienne note et une émotion
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes', 'Énergie', 'basse']);
   await expect(graphe(page).locator('circle.g-emo.emo-colere')).toHaveCount(1);
   await expect(graphe(page).locator('g.teinte-humeur circle')).toHaveCount(1);
+  // Par jour, le point est la note du jour : la légende le dit, sans moyenne ni anneau.
+  const legende = mesJours(page).locator('.legende-frise');
+  await expect(legende.locator(':scope > span', { hasText: 'note du jour' }).locator('circle.g-point')).toHaveCount(1);
+  await expect(legende).not.toContainText(/moyenne|peu de valeurs/);
   // La même colonne, le jeudi : le point de l'émotion et celui de la note.
   const [emo, note] = await Promise.all([graphe(page).locator('circle.g-emo').getAttribute('cx'), graphe(page).locator('g.teinte-humeur circle').getAttribute('cx')]);
   expect(emo).toBe(note);
@@ -212,10 +227,17 @@ const textesEtFonds = (loc) => loc.evaluateAll((els) => els.map((e) => {
 
 test('AA des textes de l\'Analyse (2b), en clair et en sombre : portes, tuiles, étiquettes de rangées, légendes', async ({ page }) => {
   await quatorzeJours(page);
-  for (const schema of ['light', 'dark']) {
+  await repo(page, () => window.__carnet.repo.journal.patch('2026-10-17', { pointsPositifs: 'une marche au parc' }));
+  for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/analyse');
     await expect(page.getByRole('region', { name: 'Ma semaine' })).toBeVisible();
+    // « Tes points positifs » : le carré prend la couleur de sa rubrique hors de la liste groupée d'Aujourd'hui aussi
+    // (rendu 2b-analyse), et l'icône s'y lit (3:1 au moins).
+    const carre = await page.getByRole('region', { name: 'Ma semaine' }).locator('.repli-icone')
+      .evaluate((e) => ({ fond: getComputedStyle(e).backgroundColor, icone: getComputedStyle(e).color }));
+    expect(carre.fond, `${schema} : carré des points positifs`).toBe(rgb(t['c-positifs']));
+    expect(contraste(carre.icone, carre.fond), `${schema} : icône des points positifs`).toBeGreaterThanOrEqual(3);
     const selecteurs = ['.porte-titre', '.tuile-titre', '.tuile-valeur', '.nom-famille', '.compte-famille', '.carte-entete .note-carte-interne',
       'text.g-etiquette', 'text.g-tete', '.legende-graphe > span', '.titre-section', '.graphe-titre'];
     for (const sel of selecteurs) {

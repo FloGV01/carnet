@@ -400,7 +400,6 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .replis > .repli.repli-carte { border-top: 0; border-radius: 0; background: none; padding: 0 12px; }
 .replis > .repli + .repli::before { content: ""; display: block; height: 1px; margin: 0 -12px 0 40px; background: var(--line); }
 .replis > .repli .repli-tete { min-height: 58px; gap: 12px; padding: 7px 0; flex-wrap: nowrap; }
-.replis > .repli .repli-icone { background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); }
 .repli-textes { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .replis > .repli .repli-titre { font-size: var(--t-corps); font-weight: 500; line-height: 1.25; }
 .replis > .repli .repli-resume { display: block; margin: 0; font-size: var(--t-petit); line-height: 1.3; }
