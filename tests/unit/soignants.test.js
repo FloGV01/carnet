@@ -20,8 +20,9 @@ const SEPT = (date) => date >= '2026-09-01' && date <= '2026-09-30';
 // trou : aucune saisie du soir en septembre 2026 (et aucun épisode : ils tombent de juillet à début août) : des semaines
 // et un mois qui n'ont, avec energie, que de l'énergie.
 // jours : 200 pour que l'évolution passe par mois (au-delà de 26 semaines d'historique).
-// emotions (v7) : 6 relevés à émotion par jour, des 7 familles, tous les jours (des comptes à 3 chiffres « depuis le début »).
-function donnees({ extreme = false, energie = false, trou = false, jours = 180, emotions = false } = {}) {
+// emotions (v7) : parJour relevés à émotion par jour, des 7 familles, tous les jours (6 : des comptes à 3 chiffres « depuis
+// le début » ; 40 : à 4 chiffres, ce qui arrive après quelques années).
+function donnees({ extreme = false, energie = false, trou = false, jours = 180, emotions = false, parJour = 6 } = {}) {
   const journal = generer({ jours, seed: 7, scenario: 'bureau', debut: '2026-04-03' }).map((j) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée' }));
   const aujourdhui = journal[journal.length - 1].date;
   const long = (n) => 'Une question vraiment longue sur le sommeil et les effets du matin '.repeat(4).slice(0, n);
@@ -36,7 +37,8 @@ function donnees({ extreme = false, energie = false, trou = false, jours = 180, 
   ];
   const humeurs = [
     ...(energie ? journal.filter((j, i) => i % 2 === 0 || SEPT(j.date)).map((j, i) => ({ id: `h${i}`, date: j.date, heure: '15:00', humeur: null, energie: i % 3 ? 'energie:basse' : 'energie:haute' })) : []),
-    ...(emotions ? journal.flatMap((j, i) => Array.from({ length: 6 }, (_, r) => ({ id: `e${i}-${r}`, date: j.date, heure: `${String(8 + 2 * r).padStart(2, '0')}:00`,
+    ...(emotions ? journal.flatMap((j, i) => Array.from({ length: parJour }, (_, r) => ({ id: `e${i}-${r}`, date: j.date,
+      heure: `${String(8 + 2 * (r % 8)).padStart(2, '0')}:${String(5 * Math.floor(r / 8)).padStart(2, '0')}`,
       emotion: FAMILLES[(i + r) % 7].mots[0].id, humeur: null, energie: 'energie:basse' }))) : []),
   ];
   const data = { journal: trou ? journal.filter((j) => !SEPT(j.date)) : journal, episodes, symptomes, traitements, ...(energie || emotions ? { humeurs } : {}) };
@@ -64,16 +66,18 @@ test('le modèle exclut tout texte libre privé et le signal', () => {
   assert.ok(!json.includes('NaN') && !json.includes('undefined'));
 });
 
-test('une seule page : hauteur ≤ 273 mm, y compris dans le cas extrême (v7 : les 7 familles, des comptes à 3 chiffres, les notes)', () => {
+test('une seule page : hauteur ≤ 273 mm, y compris dans le cas extrême (v7 : les 7 familles, des comptes à 3 et à 4 chiffres, les notes)', () => {
   for (const extreme of [false, true]) {
-    for (const emotions of [false, true]) {
-      const m = cas({ extreme, emotions });
+    for (const parJour of [0, 6, 40]) {
+      const emotions = parJour > 0;
+      const m = cas({ extreme, emotions, parJour });
       const { hauteur, ops } = mettreEnPage(m);
-      assert.ok(hauteur <= A4.hauteurMax, `hauteur ${hauteur.toFixed(1)} mm (extrême : ${extreme}, émotions : ${emotions})`);
+      assert.ok(hauteur <= A4.hauteurMax, `hauteur ${hauteur.toFixed(1)} mm (extrême : ${extreme}, relevés par jour : ${parJour})`);
       assert.ok(ops.every((o) => Object.values(o).every((v) => typeof v !== 'number' || Number.isFinite(v))));
       if (emotions) {
         assert.equal(m.frise.familles.length, 7);
-        assert.ok(m.indicateurs[0].valeurs.at(-1).split(' · ').every((x) => /^\S+ \d{3}$|^sérénité \d{3}$/.test(x)), m.indicateurs[0].valeurs.at(-1));
+        const chiffres = new RegExp(`^\\S+ \\d{${parJour === 40 ? 4 : 3}}$`);
+        assert.ok(m.indicateurs[0].valeurs.at(-1).split(' · ').every((x) => chiffres.test(x)), m.indicateurs[0].valeurs.at(-1));
         assert.ok(m.frise.avecHumeur, 'et les anciennes notes');
         assert.ok(m.frise.reperes.length > 0, 'et des repères');
       }
@@ -333,6 +337,10 @@ test('v7 : une valeur « colère 3 · joie 4 » passe à la ligne entre deux fam
   assert.ok(lignes.length > 1);
   assert.equal(lignes.join(' · '), v);
   assert.ok(lignes.every((l) => l.split(' · ').every((x) => /^\S+ \d+$/.test(x))));
+  // Des comptes à 4 chiffres (après quelques années) : toujours deux familles par ligne. L'estimation de la largeur est
+  // prudente, et la page réduit au besoin la police d'une ligne un peu trop large.
+  assert.deepEqual(couperListe('colère 1028 · dégoût 1028 · tristesse 1028 · joie 1029 · surprise 1030 · peur 1029 · sérénité 1028', 7, 31.5),
+    ['colère 1028 · dégoût 1028', 'tristesse 1028 · joie 1029', 'surprise 1030 · peur 1029', 'sérénité 1028']);
   // Sur la page : la rangée prend la hauteur de sa plus longue valeur, la suivante vient dessous.
   const m = cas({ extreme: true, emotions: true });
   const { ops } = mettreEnPage(m);

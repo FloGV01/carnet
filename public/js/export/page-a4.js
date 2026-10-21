@@ -20,9 +20,12 @@ export function couperLignes(texte, taillePt, largeurMm) {
 }
 
 // Une valeur faite d'éléments séparés par « · » (« colère 3 · joie 4 · sérénité 5 ») : les éléments entiers, ligne après
-// ligne, sans couper un élément.
+// ligne, sans couper un élément. Une ligne peut dépasser l'estimation de 10 % : celle-ci est prudente (les espaces et
+// « · » sont étroits), et la page réduit au besoin la police d'un texte trop large (jusqu'à 75 %). Ainsi, des comptes à
+// 4 chiffres (« colère 1028 · dégoût 1028 ») gardent deux familles par ligne, et la page reste d'un seul tenant.
+const MARGE_LISTE = 0.9;
 export function couperListe(texte, taillePt, largeurMm) {
-  const max = Math.max(8, Math.floor(largeurMm / (taillePt * PT * LARGEUR_CAR)));
+  const max = Math.floor(Math.max(8, largeurMm / (taillePt * PT * LARGEUR_CAR)) / MARGE_LISTE);
   const lignes = [];
   for (const el of String(texte).split(' · ')) {
     const derniere = lignes.length - 1;

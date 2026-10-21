@@ -18,8 +18,9 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-// Le 14 : le soir au bureau, une ancienne note (09:00, 6), puis deux émotions ; le 12 : une famille seule ; le 15 à 1 h :
-// encore le 14. La semaine d'avant : une émotion le 6.
+// Le 14 : le soir au bureau, une ancienne note (09:00, 6), puis deux émotions ; le 12 : une famille seule. La bascule à
+// 4 h, dans les deux sens, avec des émotions notées nulle part ailleurs ce jour-là : le 15 à 1 h, c'est encore le 14
+// (craintif) ; le 14 à 3 h, c'est encore le 13 (amusé). La semaine d'avant : une émotion le 6.
 async function journeeMelee(page) {
   await repo(page, async () => {
     const r = window.__carnet.repo;
@@ -27,7 +28,8 @@ async function journeeMelee(page) {
     await r.humeurs.creer({ date: '2026-10-14', heure: '09:00', humeur: 6, energie: null });
     await r.humeurs.creer({ date: '2026-10-14', heure: '12:00', emotion: 'roue:colere:irrite', energie: 'energie:basse' });
     await r.humeurs.creer({ date: '2026-10-14', heure: '16:00', emotion: 'roue:serenite:calme', energie: null });
-    await r.humeurs.creer({ date: '2026-10-15', heure: '01:00', emotion: 'roue:colere:irrite', energie: null });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '01:00', emotion: 'roue:peur:craintif', energie: null });
+    await r.humeurs.creer({ date: '2026-10-14', heure: '03:00', emotion: 'roue:joie:amuse', energie: null });
     await r.humeurs.creer({ date: '2026-10-12', heure: '18:00', emotion: 'roue:tristesse', energie: null });
     await r.humeurs.creer({ date: '2026-10-06', heure: '10:00', emotion: 'roue:joie:amuse', energie: null });
   });
@@ -39,15 +41,16 @@ test('Export PSY : les émotions de chaque jour, l\'ancienne note gardée (vigil
   const apercu = page.getByLabel('Aperçu du texte');
   await expect(apercu).toContainText('PSY : fais-moi le récap');
   const texte = await apercu.textContent();
-  expect(texte).toContain('lun 12/10 · émotions : tristesse\n  humeur du moment : 18:00 tristesse\n');
-  expect(texte).toContain('mer 14/10 · Bureau · humeur 6 · émotions : irrité, calme\n'
-    + '  humeur du moment : 09:00 6 · 12:00 irrité (énergie basse) · 16:00 calme · 01:00 irrité\n');
-  expect(texte).toContain('cette semaine : humeur moyenne 6 (de 6 à 6) · jours au bureau 1 · émotions : colère 2 · tristesse 1 · sérénité 1\n');
+  expect(texte).toContain('lun 12/10 · émotions : tristesse\n  humeur du moment : 18:00 tristesse\n'
+    + 'mar 13/10 · émotions : amusé\n  humeur du moment : 03:00 amusé\n'
+    + 'mer 14/10 · Bureau · humeur 6 · émotions : irrité, calme, craintif\n'
+    + '  humeur du moment : 09:00 6 · 12:00 irrité (énergie basse) · 16:00 calme · 01:00 craintif\n');
+  expect(texte).toContain('cette semaine : humeur moyenne 6 (de 6 à 6) · jours au bureau 1 · émotions : colère 1 · tristesse 1 · joie 1 · peur 1 · sérénité 1\n');
   expect(texte).toContain('semaine d\'avant : émotions : joie 1\n');
   expect(texte).not.toMatch(RETIREES);
 });
 
-test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du jour, avec les points de leurs familles', async ({ page }) => {
+test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du jour (bascule à 4 h), avec les points de leurs familles', async ({ page }) => {
   await journeeMelee(page);
   const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-14', heure: '20:00', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 6 })).id);
   await aller(page, `#/apres-coup/${id}`);
@@ -55,10 +58,11 @@ test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du
   await vue.getByRole('button', { name: 'Passer' }).click();
   await expect(vue.getByRole('heading', { name: 'Ce jour-là, ce qui me fragilisait déjà…' })).toBeVisible();
   const phrase = vue.locator('.phrase-resume');
-  await expect(phrase).toHaveText('Ce jour-là : Bureau · humeur 6 · irrité, calme');
+  // Le 15 à 1 h (craintif) en est, le 14 à 3 h (amusé) n'en est pas.
+  await expect(phrase).toHaveText('Ce jour-là : Bureau · humeur 6 · irrité, calme, craintif');
   const points = phrase.locator('.familles-jour');
   await expect(points).toHaveAttribute('aria-hidden', 'true');
-  expect(await points.locator('i').evaluateAll((els) => els.map((e) => e.className))).toEqual(['emo-colere', 'emo-serenite']);
+  expect(await points.locator('i').evaluateAll((els) => els.map((e) => e.className))).toEqual(['emo-colere', 'emo-serenite', 'emo-peur']);
   // Un jour sans émotion ne parle pas d'émotions.
   const autre = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-08', heure: '20:00', emotion: 'emotion:colere' })).id);
   await aller(page, `#/apres-coup/${autre}`);
@@ -75,8 +79,8 @@ test('En consultation : les émotions des 30 jours par famille ; « Humeur (note
   await expect(chiffres).toBeVisible();
   await expect(chiffres.locator('.libelle-chiffre')).toHaveText(['Humeur (notes)', 'Nuits Mal', 'Explosions', 'Épisodes']);
   const familles = chiffres.locator('.barres-familles li');
-  await expect(familles.locator('.nom-famille')).toHaveText(['Colère', 'Tristesse', 'Joie', 'Sérénité']);
-  await expect(familles.locator('.compte-famille')).toHaveText(['2', '1', '1', '1']);
+  await expect(familles.locator('.nom-famille')).toHaveText(['Colère', 'Tristesse', 'Joie', 'Peur', 'Sérénité']);
+  await expect(familles.locator('.compte-famille')).toHaveText(['1', '1', '2', '1', '1']);
   await expect(chiffres).not.toContainText(/Humeur moyenne|%/);
   // Sans ancienne note : trois chiffres, sur toute la largeur.
   await repo(page, async () => {
@@ -107,8 +111,8 @@ test('Vue soignants : la page porte les couleurs des familles, et le PDF d\'une 
       for (const [nom, [r, g, b]] of Object.entries(couleurs)) if (Math.abs(d[i] - r) < 3 && Math.abs(d[i + 1] - g) < 3 && Math.abs(d[i + 2] - b) < 3) vues.add(nom);
     }
     return [...vues].sort();
-  }, Object.fromEntries(['colere', 'tristesse', 'joie', 'serenite', 'peur'].map((f) => [f, canaux(clair[`c-emo-${f}`])])));
-  expect(presentes).toEqual(['colere', 'joie', 'serenite', 'tristesse']);
+  }, Object.fromEntries(['colere', 'tristesse', 'joie', 'serenite', 'peur', 'surprise'].map((f) => [f, canaux(clair[`c-emo-${f}`])])));
+  expect(presentes).toEqual(['colere', 'joie', 'peur', 'serenite', 'tristesse']);
   await bouton.click();
   await expect.poll(async () => (await fichiersPartages(page)).length, { timeout: 30000 }).toBe(1);
   const [f] = await fichiersPartages(page);
