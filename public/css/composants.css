@@ -125,6 +125,10 @@
   background: var(--surface); color: var(--text); font-size: var(--t-sous);
 }
 .bandeau { flex-wrap: wrap; }
+/* Sur l'iPhone, les trois ne tiennent pas sur une ligne : « Nouvelle version prête » en haut, sur une ligne basse, et
+   les deux boutons côte à côte dessous (67 de haut, au lieu de 90 quand « Recharger » passait seul à la ligne). */
+.bandeau { row-gap: 0; }
+.bandeau > span:first-child { flex: 1 0 100%; text-align: center; padding-top: 4px; line-height: 1.25; }
 .bandeau button { border: 0; background: none; color: var(--action); font-weight: 600; font-size: inherit; padding: 0 6px; min-height: var(--cible); }
 .bandeau button[disabled] { color: var(--text-2); }
 .bandeau-test { background: var(--surface-2); text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--text-2); padding: 2px; }

@@ -297,11 +297,13 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     }
     return blocs;
   };
-  // Ma journée (2b) : une rangée par relevé, épisode ou symptôme, dans une carte ; l'heure dans sa colonne, le point,
-  // le texte, puis le chevron d'une fiche.
+  // Ma journée (2b) : une rangée par relevé, épisode ou symptôme, dans une carte ; l'heure dans sa colonne, le repère,
+  // le texte, puis le chevron d'une fiche. Le repère d'un épisode ou d'un symptôme est un petit carré à la couleur de
+  // son parcours, celui d'un relevé un rond : des couleurs de parcours et de familles se ressemblent (Symptôme et
+  // Sérénité, Épisode et Peur), la forme les distingue.
   const ligneEvenement = (cle, href, heure, texte, teinte, memo) => html`<li key=${cle}><a class="ligne-evenement" href=${href}>
     <span class="heure">${heure || ''}</span>
-    <span class=${`point-evenement teinte-${teinte}`} aria-hidden="true"></span>
+    <span class=${`point-evenement point-parcours teinte-${teinte}`} aria-hidden="true"></span>
     <span class="resume">${texte}</span>
     ${memo && html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`}
     ${Icones.chevron({ trait: 2 })}</a></li>`;
@@ -336,8 +338,8 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     : null;
 
   return html`<main class=${classeEcran}>
-    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} familles=${familles} surRetour=${retour} />
-    ${enVeille && html`<p class="ligne-veille">Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.</p>`}
+    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} familles=${familles} surRetour=${retour}
+      veille=${enVeille ? `Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.` : null} />
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 
     ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
@@ -400,7 +402,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
         <span class="carre-action" aria-hidden="true">${Icones.respiration()}</span><span class="libelle-action">Moment difficile</span></a>
       ${date === aujourdhui && html`<a class="action-bande moment teinte-humeur" href="#/moment" aria-label="Émotion du moment">
         <span class="carre-action" aria-hidden="true">${Icones.emotion()}</span><span class="libelle-action">Émotion</span></a>`}
-      <a class="fab" href="#/episode/nouveau">${Icones.plus({ trait: 2.2 })}<span>Épisode</span></a>
+      <a class="fab" href="#/episode/nouveau" aria-label="Épisode">${Icones.plus({ trait: 2.2 })}<span class="libelle-action">Épisode</span></a>
     </div>
   </main>`;
 }

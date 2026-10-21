@@ -72,10 +72,11 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six 
       expect(c.graisse, quoi).toBe('600');
       expect(contraste(c.couleurTitre, c.fond), quoi).toBeGreaterThanOrEqual(4.5);
     }
-    // Les choix d'une carte font 48 de haut, ceux de Lieu en grille de 3.
+    // Les choix d'une carte font 44 de haut (la cible ; 48 dans le lot, mais « J'ai fini » et la ligne Après coup doivent
+    // tenir au-dessus de la bande à 390 × 844), ceux de Lieu en grille de 3.
     const lieu = await groupe(page, 'Lieu').evaluate((g) => ({ colonnes: getComputedStyle(g).gridTemplateColumns.split(' ').length, h: [...g.children].map((b) => b.getBoundingClientRect().height) }));
     expect(lieu.colonnes).toBe(3);
-    for (const h of lieu.h) expect(h).toBe(48);
+    for (const h of lieu.h) expect(h).toBe(44);
     // Contact et Sport côte à côte, de même hauteur, leurs Oui / Non sur une même ligne.
     const [contact, sport] = await Promise.all(['Contact humain', 'Sport / mouvement'].map((n) => groupe(page, n).boundingBox()));
     expect(Math.abs(contact.y - sport.y)).toBeLessThanOrEqual(0.5);
@@ -98,6 +99,131 @@ test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son ic�
     const memo = await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => getComputedStyle(b).backgroundColor);
     expect(memo, `${schema} · Mémo vocal neutre`).toBe(rgb(t.surface));
   }
+});
+
+// ---------- Sans défiler : Après coup (P2), après minuit, bandeau de mise à jour ----------
+
+// La marge de chaque élément au-dessus de la bande du bas (positive : il est au-dessus), et le défilement de la page.
+const margesSurLaBande = (page, selecteurs) => page.evaluate((liste) => {
+  const bande = document.querySelector('.actions-flottantes').getBoundingClientRect().top;
+  return { scrollY: window.scrollY, marges: liste.map((x) => [x, bande - document.querySelector(x).getBoundingClientRect().bottom]) };
+}, selecteurs);
+const toutAuDessus = (m, quoi) => {
+  expect(m.scrollY, quoi).toBe(0);
+  for (const [x, marge] of m.marges) expect(marge, `${quoi} · ${x}`).toBeGreaterThanOrEqual(0);
+};
+
+test('P2 · avec un épisode récent, la ligne Après coup se voit sans défiler à 390 × 844, sous « J\'ai fini pour ce soir », en clair et en sombre', async ({ page }) => {
+  for (const schema of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: schema });
+    await viderBase(page);
+    await repo(page, () => window.__carnet.repo.episodes.creer({ date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', intensite: 5 }));
+    await page.reload();
+    await toucher(page, 'Lieu', 'Bureau');
+    const apres = page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ });
+    await expect(apres).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeInViewport({ ratio: 1 });
+    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton', '.ligne-apres-coup-jour']), schema);
+  }
+});
+
+test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résumé, sans hauteur : le soir tient sans défiler (797) et « J\'ai fini » se voit (844)', async ({ page }) => {
+  // À 21 h, la première carte est à cette hauteur ; à 01:30, elle n'a pas bougé.
+  const hautPremiereCarte = () => page.locator('.carte-champ').first().evaluate((c) => c.getBoundingClientRect().top);
+  await toucher(page, 'Lieu', 'Bureau');
+  const aVingtEtUneHeures = await hautPremiereCarte();
+  await page.clock.setSystemTime(new Date(2026, 9, 16, 1, 30));
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
+  const veille = page.locator('.sous-jour').getByText('Encore jeudi jusqu\'à 4 h.', { exact: true });
+  await expect(veille).toBeVisible();
+  await expect(page.locator('.resume-jour')).toHaveText('Bureau');
+  const [v, r] = await Promise.all([veille.boundingBox(), boite(page, '.resume-jour')]);
+  expect(Math.abs(v.y - r.y), 'sur la ligne du résumé').toBeLessThanOrEqual(1);
+  expect(v.x + v.width).toBeLessThanOrEqual(r.x);
+  expect(await hautPremiereCarte()).toBe(aVingtEtUneHeures);
+  for (const schema of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.setViewportSize({ width: 390, height: 797 });
+    await expect(veille).toBeVisible();
+    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), `${schema} · 797`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
+    await expect(fini).toBeInViewport({ ratio: 1 });
+    toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), `${schema} · 844`);
+  }
+});
+
+test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte ; le soir tient encore sans défiler (797) et « J\'ai fini » se voit (844)', async ({ page }) => {
+  for (const hauteur of [797, 844]) {
+    await page.setViewportSize({ width: 390, height: hauteur });
+    await viderBase(page);
+    await toucher(page, 'Lieu', 'Bureau');
+    await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+    const bandeau = page.locator('.bandeau');
+    await expect(bandeau).toBeVisible();
+    const b = await bandeau.evaluate((x) => {
+      const [texte, sauvegarder, recharger] = [...x.children].map((k) => k.getBoundingClientRect());
+      return { hauteur: x.getBoundingClientRect().height, texte, sauvegarder, recharger };
+    });
+    expect(b.hauteur).toBeLessThanOrEqual(68);
+    expect(b.sauvegarder.top).toBeGreaterThanOrEqual(b.texte.bottom - 0.5);
+    expect(Math.abs(b.sauvegarder.top - b.recharger.top), 'côte à côte').toBeLessThanOrEqual(0.5);
+    expect(Math.min(b.sauvegarder.height, b.recharger.height)).toBeGreaterThanOrEqual(44);
+    if (hauteur === 797) toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), '797');
+    else {
+      await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeInViewport({ ratio: 1 });
+      toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), '844');
+    }
+  }
+});
+
+// ---------- Grand texte ----------
+
+test('grand texte (17 à 28 px, 390 et 375) : rien ne sort des cartes, choix faits compris ; les titres des demi-cartes ont un interligne à leur taille, puis Contact et Sport passent l\'un sous l\'autre', async ({ page }) => {
+  // Les choix les plus larges, faits : leur coche compte.
+  await toucher(page, 'Lieu', 'Congé / repos');
+  await toucher(page, 'Sommeil', 'Moyen');
+  await toucher(page, 'Contact humain', 'Non');
+  await toucher(page, 'Sport / mouvement', 'Oui');
+  await toucher(page, 'Traitement pris', 'Partiel');
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    for (const px of [17, 21, 24, 28]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; document.body.style.fontSize = `${t}px`; }, px);
+      const quoi = `${largeur} · ${px} px`;
+      const m = await page.evaluate(() => {
+        const debords = [];
+        const interlignes = [];
+        for (const c of document.querySelectorAll('.carte-champ')) {
+          const carte = c.getBoundingClientRect();
+          if (c.scrollWidth > c.clientWidth) debords.push(`carte ${c.className}`);
+          for (const k of c.querySelectorAll('button, .titre-rubrique')) {
+            if (k.scrollWidth > k.clientWidth) debords.push(k.textContent.trim());
+            if (k.getBoundingClientRect().right > carte.right + 0.5) debords.push(`${k.textContent.trim()} hors de sa carte`);
+          }
+          // Les lignes d'un titre : chacune au moins 1,1 fois la taille du texte sous la précédente.
+          const titre = c.querySelector('.titre-rubrique');
+          const plage = document.createRange();
+          plage.selectNodeContents(titre);
+          const hauts = [...new Set([...plage.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top * 10) / 10))].sort((a, b) => a - b);
+          for (let i = 1; i < hauts.length; i++) interlignes.push([titre.textContent, (hauts[i] - hauts[i - 1]) / Number.parseFloat(getComputedStyle(titre).fontSize)]);
+        }
+        const [contact, sport] = [...document.querySelectorAll('.deux-colonnes > .carte-champ')].map((c) => c.getBoundingClientRect());
+        return { debords, interlignes, cote: Math.abs(contact.top - sport.top) < 1, pageLarge: document.documentElement.scrollWidth > window.innerWidth };
+      });
+      expect(m.debords, quoi).toEqual([]);
+      for (const [titre, pas] of m.interlignes) expect(pas, `${quoi} · ${titre}`).toBeGreaterThanOrEqual(1.1);
+      expect(m.pageLarge, quoi).toBe(false);
+      if (px === 17) expect(m.cote, `${quoi} : Contact et Sport côte à côte`).toBe(true);
+      if (px >= 24) expect(m.cote, `${quoi} : Contact et Sport l'un sous l'autre`).toBe(false);
+    }
+  }
+  // À 21 px sur 390, ils sont encore côte à côte, « Sport / mouvement » sur deux lignes.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = '21px'; document.body.style.fontSize = '21px'; });
+  const [contact, sport] = await Promise.all(['Contact humain', 'Sport / mouvement'].map((n) => groupe(page, n).boundingBox()));
+  expect(Math.abs(contact.y - sport.y)).toBeLessThanOrEqual(0.5);
 });
 
 // ---------- En-tête ----------
@@ -211,6 +337,32 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
   await aller(page, '#/jour/2026-10-12');
   await expect.poll(() => titreVu(page)).toBe('Lundi 12 octobre');
   await expect(page.locator('.familles-jour')).toHaveCount(0);
+});
+
+test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un petit carré (Symptôme et Sérénité, Épisode et Peur ont des couleurs voisines)', async ({ page }) => {
+  await repo(page, async () => {
+    const r = window.__carnet.repo;
+    await r.humeurs.creer({ date: '2026-10-15', heure: '09:00', emotion: 'roue:serenite:calme', energie: null });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '10:00', emotion: 'roue:peur:craintif', energie: null });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '11:00', humeur: 6, energie: null });
+    await r.episodes.creer({ date: '2026-10-15', heure: '12:00', emotion: 'emotion:colere', intensite: 5 });
+    await r.symptomes.creer({ date: '2026-10-15', symptome: 'symptome:ruminations', intensite: 4 });
+  });
+  for (const schema of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.reload();
+    await expect(page.locator('.liste-evenements > li')).toHaveCount(5);
+    const reperes = await page.locator('.liste-evenements .point-evenement').evaluateAll((els) => els.map((e) => {
+      const r = e.getBoundingClientRect();
+      return { texte: e.closest('li').querySelector('.resume').textContent, releve: Boolean(e.closest('.releve')), rayon: Number.parseFloat(getComputedStyle(e).borderTopLeftRadius), cote: [r.width, r.height] };
+    }));
+    expect(reperes.map((x) => [x.texte, x.releve]), schema).toEqual([['Calme', true], ['Craintif', true], ['humeur 6', true], ['Colère · 5', false], ['Ruminations · 4', false]]);
+    for (const x of reperes) {
+      expect(x.cote, `${schema} · ${x.texte}`).toEqual([10, 10]);
+      if (x.releve) expect(x.rayon, `${schema} · ${x.texte} : rond`).toBeGreaterThanOrEqual(5);
+      else expect(x.rayon, `${schema} · ${x.texte} : carré`).toBeLessThanOrEqual(2.5);
+    }
+  }
 });
 
 // ---------- Replis en liste groupée ----------

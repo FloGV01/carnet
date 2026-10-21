@@ -5,10 +5,12 @@ import { formaterJourComplet } from '../../domain/dates.js';
 const majusculeInitiale = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 // En-tête 2b : « Dimanche 18 octobre ⌄ » (« Aujourd'hui, » en plus pour VoiceOver, sans être affiché), qui ouvre le sélecteur de date d'iOS (bornes vérifiées en JS), puis ‹ › à
-// droite (› atténué sur aujourd'hui). Dessous : les familles d'émotions du jour en points de couleur (v7, au lieu de
-// l'humeur moyenne), le résumé de la journée et « Enregistré » ; un échec d'écriture prend la place des points et du
-// résumé, sans décaler les champs. Au-dessus, pour un jour ouvert depuis l'Historique (v6.1) : « ‹ Retour ».
-export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, familles = [], surRetour }) {
+// droite (› atténué sur aujourd'hui). Dessous, sur une seule ligne : « Encore jeudi jusqu'à 4 h. » avant 4 h (`veille`),
+// les familles d'émotions du jour en points de couleur (v7, au lieu de l'humeur moyenne), le résumé de la journée et
+// « Enregistré ». Rien de tout cela ne prend de hauteur : la saisie du soir tient sans défiler, après minuit aussi. Un
+// échec d'écriture prend la place de la ligne, sans décaler les champs. Au-dessus, pour un jour ouvert depuis
+// l'Historique (v6.1) : « ‹ Retour ».
+export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, familles = [], surRetour, veille = null }) {
   const estAujourdhui = date === aujourdhui;
   const surDate = (e) => {
     const v = e.target.value;
@@ -32,6 +34,7 @@ export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, fam
       <button type="button" class="nav-jour" aria-label="Jour suivant" disabled=${estAujourdhui} onClick=${() => surAller('suivant')}>${Icones.chevron({ trait: 2 })}</button>
     </div>
     <p class=${echec ? 'sous-jour echec' : 'sous-jour'}>
+      ${!echec && veille && html`<span class="veille-jour">${veille}</span>`}
       ${!echec && familles.length > 0 && html`<span class="familles-jour" role="img" aria-label=${`Émotions : ${familles.map((f) => f.libelle).join(', ')}`}>
         ${familles.map((f) => html`<i key=${f.cle} class=${`emo-${f.cle}`}></i>`)}</span>`}
       ${!echec && html`<span class="resume-jour">${resume || ''}</span>`}

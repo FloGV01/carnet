@@ -51,8 +51,11 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bo
   await expect(groupe(page, 'Lieu').getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-// v7 (2b) : chaque rubrique est une carte. Avec les 8 champs (Humeur du soir et Explosions réaffichés, Contact et Sport
-// séparés), la saisie ne tient plus sur un écran : la page défile, et chaque champ passe au-dessus de la bande du bas.
+// Exigence v4 (docs/v4-specification.md) : ce pire cas tenait sans défiler à 390 et 375 × 797. En v7, chaque rubrique est
+// une carte 2b : même resserrées (choix de 44, marges de 8), les 8 rubriques dépassent d'environ 270 px, et aucune mise en
+// page en cartes ne les fait tenir avec des cibles de 44. Cette exigence est EN ATTENTE de l'arbitrage de l'utilisateur
+// (docs/decisions.md, « v7 : en attente de l'utilisateur ») ; en attendant, la page défile et chaque champ peut passer
+// au-dessus de la bande du bas.
 test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', {
     ordre: ['lieu', 'contact', 'sommeil', 'humeur', 'sport', 'explosions', 'traitement', 'positifs'], masques: [],
@@ -80,19 +83,34 @@ test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne
   await expect.poll(async () => (await entreeDuJour(page))?.explosions).toBe(0);
 });
 
-test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » réduit à son carré', async ({ page }) => {
+// 21 px (xxxLarge), 28 (AX1) et 33 (AX2) : d'abord « Moment difficile » ne garde que son carré, puis « + Épisode » que son
+// « + ». « Émotion » garde son nom en entier et reste le plus large (P5) ; rien ne sort de son bouton.
+test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » puis « + Épisode » réduits', async ({ page }) => {
   for (const largeur of [390, 375]) {
     await page.setViewportSize({ width: largeur, height: 797 });
-    await page.evaluate(() => { document.documentElement.style.fontSize = '21px'; document.body.style.fontSize = '21px'; });
-    const bande = page.locator('.actions-flottantes');
-    await expect(bande.locator('.moment-difficile .libelle-action')).toBeHidden();
-    await expect(page.getByRole('link', { name: 'Moment difficile' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Émotion du moment' })).toBeVisible();
-    expect(await bande.evaluate((b) => {
-      const marge = parseFloat(getComputedStyle(b).paddingRight);
-      return [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5
-        && k.scrollWidth <= k.clientWidth + 1);
-    })).toBe(true);
+    for (const px of [21, 28, 33]) {
+      const quoi = `${largeur} · ${px} px`;
+      await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; document.body.style.fontSize = `${t}px`; }, px);
+      const bande = page.locator('.actions-flottantes');
+      await expect(bande.locator('.moment-difficile .libelle-action'), quoi).toBeHidden();
+      if (px === 21) await expect(bande.locator('.fab .libelle-action'), quoi).toBeVisible();
+      else await expect(bande.locator('.fab .libelle-action'), quoi).toBeHidden();
+      await expect(page.getByRole('link', { name: 'Moment difficile' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Émotion du moment' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Épisode', exact: true })).toBeVisible();
+      const m = await bande.evaluate((b) => {
+        const marge = parseFloat(getComputedStyle(b).paddingRight);
+        const emotion = b.querySelector('.moment');
+        const libelle = emotion.querySelector('.libelle-action');
+        return {
+          dedans: [...b.children].every((k) => k.getBoundingClientRect().right <= b.getBoundingClientRect().right - marge + 0.5),
+          debords: [...b.children].filter((k) => k.scrollWidth > k.clientWidth).map((k) => k.className),
+          emotionEntier: libelle.scrollWidth <= libelle.clientWidth && libelle.getBoundingClientRect().width > 0,
+          emotionPlusLarge: [...b.children].every((k) => k === emotion || k.getBoundingClientRect().width < emotion.getBoundingClientRect().width),
+        };
+      });
+      expect(m, quoi).toEqual({ dedans: true, debords: [], emotionEntier: true, emotionPlusLarge: true });
+    }
   }
 });
 
