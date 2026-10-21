@@ -11,6 +11,7 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { phraseResume } from '../../domain/phrase.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
+import { resumeEmotions } from '../../domain/releves.js';
 import { ajouterSiAlors, retirerSiAlors, normaliserPlan } from '../../domain/mon-plan.js';
 import { versHash } from '../../routeur.js';
 import { CadreParcours } from '../composants/parcours.js';
@@ -91,9 +92,10 @@ export function ApresCoup({ id }) {
       const j = jourEvenement(lu.date, lu.heure);
       const [entree, duJour, humeurs] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j), repo.humeurs.parJour(j, j)]);
       if (!actif) return;
-      // « Ce jour-là » dit l'humeur du jour (v6), comme tous les écrans, et non celle du soir.
+      // « Ce jour-là » dit l'humeur du jour (v6), comme tous les écrans, et non celle du soir ; depuis la v7, seuls les
+      // anciens relevés ont une note. Il dit aussi les émotions du jour (v7), chacune une fois, dans l'ordre des heures.
       const jourLu = avecHumeurDuJour([entree || { date: j }], humeurs).find((x) => x.date === j);
-      setJour({ entree: jourLu, nExplosions: duJour.filter(estExplosion).length });
+      setJour({ entree: jourLu, nExplosions: duJour.filter(estExplosion).length, emotions: resumeEmotions(humeurs, Infinity) });
       if (lu.apresCoup) setEtape('recap');
     })();
     return () => { actif = false; clearTimeout(suivant.current); };
@@ -155,7 +157,9 @@ export function ApresCoup({ id }) {
   }
 
   const et = etapes[etape];
-  const phraseJour = jour && phraseResume('jour', jour.entree, carte, { nExplosions: jour.nExplosions }).map((s) => s.texte).join('');
+  // Les émotions du jour : leurs familles en points de couleur (masqués aux lecteurs d'écran), puis les mots.
+  const phraseJour = jour && phraseResume('jour', jour.entree, carte, { nExplosions: jour.nExplosions, emotions: jour.emotions })
+    .map((s) => (s.rubrique === 'emotions' ? html`<span class="emotions-jour"><span class="familles-jour" aria-hidden="true">${s.familles.map((f) => html`<i key=${f.cle} class=${`emo-${f.cle}`}></i>`)}</span>${s.texte}</span>` : s.texte));
   const remplie = et.blocs.some((b) => (b.type === 'declencheur' ? ep.declencheur : b.type === 'siAlors' ? ac.siJe || ac.alorsJe : ac[b.champ]) != null);
   const bloc = (b, i) => {
     if (b.type === 'multi') {
@@ -203,7 +207,7 @@ export function ApresCoup({ id }) {
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>${remplie ? 'Suivant' : 'Passer'}${Icones.chevron({ trait: 2 })}</button>`}>
     <div class="etape" key=${et.cle}>
       <div><h2 class="titre-question">${et.question}</h2>${et.sous && html`<p class="sous-question">${et.sous}</p>`}</div>
-      ${et.contexte && phraseJour && html`<p class="phrase-resume">Ce jour-là : ${phraseJour}</p>`}
+      ${et.contexte && phraseJour && phraseJour.length > 0 && html`<p class="phrase-resume">Ce jour-là : ${phraseJour}</p>`}
       ${et.blocs.map(bloc)}
     </div>
   </${CadreParcours}>`;

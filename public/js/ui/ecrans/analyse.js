@@ -64,18 +64,23 @@ const Tuile = ({ titre, valeur, detail, fragile, rubrique, classe = '' }) => htm
   ${(detail || fragile) && html`<span class="tuile-detail">${detail || ''}${detail && fragile ? ' ' : ''}${fragile ? '(peu de valeurs)' : ''}</span>`}
 </div>`;
 
-// « Tes émotions » (v7) : une barre par famille notée, longue comme son nombre de relevés, et ce nombre. Ni pourcentage,
-// ni total, ni famille mise en avant : l'ordre est celui de la roue.
-function TuileEmotions({ compte }) {
+// Une barre par famille notée, longue comme son nombre de relevés, et ce nombre. Ni pourcentage, ni total, ni famille
+// mise en avant : l'ordre est celui de la roue. Aussi dans « En consultation » (v7).
+export function BarresFamilles({ compte }) {
   const familles = FAMILLES.filter((f) => compte[f.cle] > 0);
   const max = Math.max(1, ...familles.map((f) => compte[f.cle]));
+  return html`<ul class="barres-familles">${familles.map((f) => html`<li class=${`emo-${f.cle}`}>
+    <span class="nom-famille">${f.libelle}</span>
+    <svg class="barre-famille" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><rect class="g-emo" x="0" y="0" width=${((compte[f.cle] / max) * 100).toFixed(1)} height="10" /></svg>
+    <span class="compte-famille">${compte[f.cle]}</span>
+  </li>`)}</ul>`;
+}
+
+// « Tes émotions » (v7) : les barres par famille de la semaine.
+function TuileEmotions({ compte }) {
   return html`<div class="tuile tuile-emotions">
     <span class="tuile-titre">Tes émotions</span>
-    <ul class="barres-familles">${familles.map((f) => html`<li class=${`emo-${f.cle}`}>
-      <span class="nom-famille">${f.libelle}</span>
-      <svg class="barre-famille" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><rect class="g-emo" x="0" y="0" width=${((compte[f.cle] / max) * 100).toFixed(1)} height="10" /></svg>
-      <span class="compte-famille">${compte[f.cle]}</span>
-    </li>`)}</ul>
+    <${BarresFamilles} compte=${compte} />
   </div>`;
 }
 

@@ -118,7 +118,7 @@ test('humeur du jour : toutes les fenêtres la lisent, un jour de relevés seuls
   assert.equal(h.n, 5);
   assert.ok(Math.abs(h.moyenne - (8 + 8 + 7 + 4 + 13 / 3) / 5) < 1e-9);
   assert.deepEqual([h.min, h.max, h.minReleve, h.maxReleve], [4, 8, 3, 10]);
-  assert.deepEqual([h.haut, h.bas], [3, 1], '4,33 n\'est pas une journée à 4 ou moins');
+  assert.ok(!('haut' in h) && !('bas' in h), 'v7 : plus de journées à 7 ou plus, ni à 4 ou moins');
 });
 
 test('v6 : « Ta journée heure par heure » laisse de côté les relevés « vers » ; v7, elle ne lit plus que l\'énergie', () => {

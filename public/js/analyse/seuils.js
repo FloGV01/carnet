@@ -5,8 +5,6 @@ export const SEUILS = Object.freeze({
   moyenne: { peuDeValeurs: 3 },
   reveils: { plafond: 5 }, // 5 = « 5 ou plus » (§5.3)
   horaires: { minMedian: 3, dureeMin: 120, dureeMax: 960 },
-  // Anciennes notes de 1 à 10 (vue soignants) : journées à 7 ou plus, à 4 ou moins.
-  notes: { haut: 7, bas: 4 },
   classement: { minOccurrences: 3, minTop: 2 },
   export: { maxTexteLibre: 280 },
   // v4 : énergie du moment par créneau de 2 h ; notes réunies avant les explosions.

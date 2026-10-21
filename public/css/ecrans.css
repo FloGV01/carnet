@@ -174,7 +174,8 @@
 .quand-consultation { font-size: var(--t-corps); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .chiffres-consultation { display: flex; flex-direction: column; gap: 10px; }
 .legende-chiffres { font-size: var(--t-note); color: var(--text-2); }
-.grille-chiffres { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.grille-chiffres { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.emotions-consultation { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .cellule-chiffre { display: flex; flex-direction: column; gap: 4px; }
 .valeur-chiffre { font-size: var(--t-chiffre); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--c-text); }
 .valeur-chiffre.vide-chiffre { color: var(--text-2); }

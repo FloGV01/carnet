@@ -6,6 +6,7 @@
 import { html, useState } from '../lib.js';
 import { geometrieMesJours, geometrieJournee } from './geometrie.js';
 import { nombre, uneDecimale } from '../../analyse/textes.js';
+import { texteFamilles } from '../../analyse/emotions.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
 import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
@@ -55,8 +56,8 @@ export const LegendeNuits = ({ lib }) => html`<${LegendeRampe} classes=${['somme
 export const LegendeEnergie = ({ lib, unite }) => html`<${LegendeRampe} classes=${['energie-1', 'energie-2', 'energie-3']} teinte="energie" prefixe="énergie"
   libelles=${['energie:basse', 'energie:moyenne', 'energie:haute'].map((id) => lib(id).toLowerCase())} suffixe=${unite} />`;
 
-// « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro.
-export const texteFamilles = (compte) => FAMILLES.filter((f) => compte && compte[f.cle] > 0).map((f) => `${minusculeInitiale(f.libelle)} ${compte[f.cle]}`).join(' · ');
+// « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro (analyse/emotions.js).
+export { texteFamilles };
 // « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures.
 export const texteEmotions = (ids) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id) || id)).join(', ');
 

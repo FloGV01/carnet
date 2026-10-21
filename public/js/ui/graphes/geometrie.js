@@ -9,25 +9,14 @@ const ORDRE_FAMILLES = FAMILLES.map((f) => f.cle);
 
 const r1 = (x) => Math.round(x * 10) / 10;
 
-// ---------- v5 · Mes jours (frise) ----------
-// Rangées sur le même axe : humeur du jour (1 à 10, filets à 4 et 7), nuit, explosions et autres épisodes.
-// Une colonne vide ne dessine rien. Pure : rendue en SVG et sur canvas (PDF).
-// Par jour (v6), un trait vertical va du plus bas au plus haut des relevés : une journée mêlée se voit.
-// DIM_FRISE est celle du PDF. Avec DIM_FRISE_ENERGIE, la seule à avoir energieY, la rangée « énergie basse » (v6) vient
-// sous les autres épisodes. Sans energieY, aucune marque d'énergie : la frise du PDF ne change pas. v7 : l'écran dessine
-// Mes jours par geometrieMesJours (plus bas), avec ses étiquettes de rangées.
-// Repères de traitement (v6, analyse/reperes.js) : un trait fin au centre de chaque colonne qui porte un
-// changement, son numéro (①, ①–②) en haut, dans une bande ajoutée au-dessus de l'humeur : toutes les rangées
-// descendent d'autant, et `dim` rend les dimensions ainsi décalées (celles du viewBox). Deux numéros trop
-// proches passent sur un second rang. Sans repère, `dim` est la dimension reçue et rien ne bouge.
-export const DIM_FRISE = { largeur: 326, gauche: 22, droite: 6, haut: 8, basHumeur: 104, nuitY: 114, nuitH: 12, explY: 132, explH: 20, axeY: 168, hauteur: 172 };
-export const DIM_FRISE_ENERGIE = { ...DIM_FRISE, energieY: 168, energieH: 12, axeY: 194, hauteur: 198 };
+// ---------- Mes jours : constantes communes ----------
+// Repères de traitement (v6, analyse/reperes.js) : un trait fin au centre de chaque colonne qui porte un changement, son
+// numéro (①, ①–②) en haut. Deux numéros trop proches passent sur un second rang.
 const CLASSE_NUIT = { 'sommeil:mal': 'sommeil-1', 'sommeil:moyen': 'sommeil-2', 'sommeil:bien': 'sommeil-3' };
 const MOIS_AXE = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 // Taille des numéros (unités du graphique) : la même à l'écran (ecrans.css, .g-changement-num) et sur le PDF.
 export const TAILLE_REPERE = 11;
 const REPERE = { taille: TAILLE_REPERE, rang: 13, marge: 3, ecart: 2, rangsMax: 2 };
-const Y_FRISE = ['haut', 'basHumeur', 'nuitY', 'explY', 'energieY', 'axeY', 'hauteur'];
 const CERCLES = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]/u;
 // Largeur estimée d'un numéro : un chiffre cerclé fait environ un cadratin, le tiret et les chiffres moins.
 const largeurNumero = (t) => [...t].reduce((s, c) => s + (CERCLES.test(c) ? 1 : 0.6), 0) * REPERE.taille;
@@ -47,91 +36,22 @@ function placerNumeros(reperes, centre, largeur) {
   });
 }
 
-export function geometrieFrise({ pas, colonnes, reperes = [] }, base = DIM_FRISE) {
-  const n = Math.max(1, colonnes.length);
-  const largeurUtile = base.largeur - base.gauche - base.droite;
-  const l = largeurUtile / n;
-  const centre = (i) => base.gauche + l * (i + 0.5);
-  const numeros = placerNumeros(reperes, centre, base.largeur);
-  const rangs = numeros.length ? Math.max(...numeros.map((r) => r.rang)) + 1 : 0;
-  const bande = rangs ? rangs * REPERE.rang + REPERE.marge : 0;
-  const d = bande ? Object.fromEntries(Object.entries(base).map(([k, v]) => [k, Y_FRISE.includes(k) ? v + bande : v])) : base;
-  const y = (v) => r1(d.haut + ((10 - v) / 9) * (d.basHumeur - d.haut));
-  const larg = r1(Math.min(10, Math.max(2, l * 0.6)));
-  const points = [];
-  const traits = [];
-  const moyenne = [];
-  const nuits = [];
-  const encoches = [];
-  const autres = [];
-  const energieBasse = [];
-  const zones = [];
-  const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));
-  // Jours à énergie basse d'une colonne : 1 pour un jour « basse » (true), le nombre de jours par semaine ou mois.
-  const joursBas = (c) => (c.energieBasse === true ? 1 : c.energieBasse || 0);
-  const maxEnergie = Math.max(1, ...colonnes.map(joursBas));
-  let prec = null;
-  colonnes.forEach((c, i) => {
-    const x = r1(centre(i));
-    if (c.humeur != null) points.push({ x, y: y(c.humeur), plein: pas === 'jour' || !c.fragile, cle: c.cle });
-    if (pas === 'jour' && c.humeurMin != null && c.humeurMax > c.humeurMin) traits.push({ x, y1: y(c.humeurMax), y2: y(c.humeurMin) });
-    // Jour : trait de la moyenne des 7 jours ; semaine et mois : segments entre colonnes voisines.
-    const v = pas === 'jour' ? c.moyenne7 : c.humeur;
-    if (v != null) { const p = { x, y: y(v) }; if (prec && prec.i === i - 1) moyenne.push({ x1: prec.x, y1: prec.y, x2: p.x, y2: p.y }); prec = { ...p, i }; }
-    if (pas === 'jour') {
-      if (c.nuit && CLASSE_NUIT[c.nuit]) nuits.push({ x: r1(x - larg / 2), y: d.nuitY, l: larg, h: d.nuitH, classe: CLASSE_NUIT[c.nuit] });
-    } else if (c.nuits) {
-      const total = c.nuits.mal + c.nuits.moyen + c.nuits.bien;
-      let yy = d.nuitY + d.nuitH;
-      for (const [cle, classe] of [['mal', 'sommeil-1'], ['moyen', 'sommeil-2'], ['bien', 'sommeil-3']]) {
-        if (!c.nuits[cle]) continue;
-        const h = r1((c.nuits[cle] / total) * d.nuitH);
-        yy -= h;
-        nuits.push({ x: r1(x - larg / 2), y: r1(yy), l: larg, h, classe });
-      }
-    }
-    if (c.explosions > 0) {
-      const h = pas === 'jour' ? d.explH : r1(Math.max(3, (c.explosions / maxExpl) * d.explH));
-      encoches.push({ x: r1(x - larg / 2), y: r1(d.explY + d.explH - h), l: larg, h, n: c.explosions });
-    }
-    if (c.autres > 0) autres.push({ x, y: r1(d.explY + d.explH + 6), n: c.autres });
-    // Énergie basse : une marque les jours concernés, une barre du nombre de jours par semaine ou par mois.
-    // Faux, zéro et inconnu ne dessinent rien.
-    const jours = joursBas(c);
-    if (d.energieY != null && jours > 0) {
-      const h = pas === 'jour' ? d.energieH : r1(Math.max(3, (jours / maxEnergie) * d.energieH));
-      energieBasse.push({ x: r1(x - larg / 2), y: r1(d.energieY + d.energieH - h), l: larg, h, n: jours });
-    }
-    if (c.aDonnee) zones.push({ x: r1(d.gauche + l * i), l: r1(l), cle: c.cle, i });
-  });
-  // Étiquettes de l'axe : au plus 7, en partant de la colonne la plus récente.
-  const pasEtiquette = Math.max(1, Math.ceil(n / 7));
-  const texte = (c) => {
-    if (pas === 'mois') return MOIS_AXE[Number(c.cle.slice(5, 7)) - 1];
-    return `${Number(c.cle.slice(8))}/${c.cle.slice(5, 7)}`;
-  };
-  const etiquettes = colonnes.map((c, i) => ({ x: r1(centre(i)), texte: texte(c), visible: (n - 1 - i) % pasEtiquette === 0 })).filter((e) => e.visible);
-  // Le trait part sous son numéro et descend jusqu'au-dessus de l'axe, à travers toutes les rangées.
-  const traitsReperes = numeros.map((r) => ({ ...r, texteY: (r.rang + 1) * REPERE.rang - 2, y1: (r.rang + 1) * REPERE.rang + 1, y2: d.axeY - 10 }));
-  return {
-    points, traits, moyenne, nuits, encoches, autres, energieBasse, zones, etiquettes, largeurColonne: r1(l),
-    filets: [4, 7].map((v) => ({ v, y: y(v) })), graduations: [1, 4, 7, 10].map((v) => ({ v, y: y(v) })),
-    reperes: traitsReperes, dim: d,
-  };
-}
-
-// ---------- v7 · Mes jours à l'écran (2b) ----------
+// ---------- v7 · Mes jours, à l'écran (2b) et sur la page A4 ----------
 // Une étiquette au début de chaque rangée, les colonnes à droite, leurs noms en tête (L M M J V S D sur 7 jours). Rangées,
 // dans l'ordre : Émotions (un point par relevé, à la couleur de sa famille, dans l'ordre des heures, du bas vers le haut ;
 // par semaine ou par mois, une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de
 // relevés), Humeur (notes) seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait
 // du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté). Les
 // repères de traitement : leurs numéros sous les noms de colonnes, leurs traits à travers les rangées. Une colonne vide ne
-// dessine rien. La frise du PDF reste celle de geometrieFrise. Pure.
+// dessine rien. La Vue soignants (PDF) dessine la même frise par semaine ou par mois, aux dimensions DIM_MES_JOURS_PDF (sa
+// largeur suit le cadre de la page), sans la rangée d'énergie (avecEnergie faux). Pure.
+// barreMax : la largeur la plus grande d'une barre (12 à l'écran ; plus large sur la page, pour que le motif de chaque
+// famille se lise imprimé en noir et blanc).
 export const DIM_MES_JOURS = {
   largeur: 326, gauche: 80, droite: 4, teteH: 22, ecart: 8,
-  emotionsH: 44, humeurH: 40, nuitH: 14, explH: 16, autresH: 12, energieH: 12,
+  emotionsH: 44, humeurH: 40, nuitH: 14, explH: 16, autresH: 12, energieH: 12, barreMax: 12,
 };
+export const DIM_MES_JOURS_PDF = { ...DIM_MES_JOURS, gauche: 84, emotionsH: 56, humeurH: 28, barreMax: 40 };
 const LETTRES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const LIBELLES_RANGEES = {
   emotions: ['Émotions'], humeur: ['Humeur', '(notes)'], nuits: ['Nuits'], explosions: ['Explosions'],
@@ -158,7 +78,7 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const n = Math.max(1, colonnes.length);
   const l = (d.largeur - d.gauche - d.droite) / n;
   const centre = (i) => d.gauche + l * (i + 0.5);
-  const larg = r1(Math.min(12, Math.max(2, l * 0.6)));
+  const larg = r1(Math.min(d.barreMax ?? 12, Math.max(2, l * 0.6)));
   // Les noms des colonnes : au plus 7, en partant de la plus récente.
   const pasEtiquette = Math.max(1, Math.ceil(n / 7));
   const nom = (c) => {
@@ -191,13 +111,15 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
 
   const points = [];
   const barres = [];
-  const notes = { points: [], traits: [] };
+  // graduations : le haut (10) et le bas (1) de la rangée des notes, que la page A4 écrit à gauche des colonnes.
+  const notes = { points: [], traits: [], graduations: [] };
   const nuits = [];
   const encoches = [];
   const autres = [];
   const energieBasse = [];
   const zones = [];
   const yNote = (v) => r1(hum.y + ((10 - v) / 9) * hum.h);
+  if (hum) notes.graduations.push({ v: 10, y: yNote(10) }, { v: 1, y: yNote(1) });
   const totalFamilles = (c) => (c.familles ? Object.values(c.familles).reduce((s, x) => s + x, 0) : 0);
   const maxEmotions = Math.max(1, ...colonnes.map(totalFamilles));
   const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));

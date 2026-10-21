@@ -1,6 +1,7 @@
 // « En consultation » : le rendez-vous en plein écran, à garder sous les yeux pendant l'échange.
 // « La dernière fois » en haut, chiffres des 30 derniers jours, questions en grand (« Voir » ouvre la fiche liée en
-// lecture seule), compte rendu, prochaine étape, mémo.
+// lecture seule), compte rendu, prochaine étape, mémo. v7 : les émotions du moment des 30 jours, par famille ;
+// « Humeur (notes) » seulement si ces 30 jours ont d'anciennes notes de 1 à 10.
 // Tout est enregistré au fil des touchers : Fermer et Terminer ferment simplement.
 import { html, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
@@ -19,6 +20,8 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { indicateurs } from '../../analyse/fenetres.js';
 import { journalAvecExplosions, saisieDuSoir } from '../../domain/explosions.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
+import { relevesAEmotion, parFamille, nombreDeReleves } from '../../analyse/emotions.js';
+import { BarresFamilles } from './analyse.js';
 import { uneDecimale } from '../../analyse/textes.js';
 import { nomRdv, quandRdv } from './soins.js';
 import { TableauTraitement, lireTraitementActuel } from '../composants/traitement-actuel.js';
@@ -42,14 +45,16 @@ export function Consultation({ id: idRoute }) {
     // Les fiches qui existent encore : « Voir » disparaît quand la fiche liée a été supprimée.
     const existantes = new Set([['episodes', episodes], ['symptomes', symptomes], ['traitements', traitements]]
       .flatMap(([store, liste]) => liste.map((e) => `${store}:${e.id}`)));
-    return { ind: indicateurs({ journal: duJour, episodes, symptomes }, addDays(au, -29), au), carte: carteLibelles(items), traitement, rdvs, existantes, aujourdhui: au };
+    const du = addDays(au, -29);
+    const emotions = parFamille(relevesAEmotion(humeurs).filter((r) => r.date >= du && r.date <= au));
+    return { ind: indicateurs({ journal: duJour, episodes, symptomes }, du, au), emotions, carte: carteLibelles(items), traitement, rdvs, existantes, aujourdhui: au };
   }, []);
   if (!fiche || !donnees) return html`<div class="parcours"></div>`;
-  const { ind, carte, traitement, rdvs, existantes, aujourdhui } = donnees;
+  const { ind, emotions, carte, traitement, rdvs, existantes, aujourdhui } = donnees;
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const cellules = [
-    { libelle: 'Humeur moyenne', valeur: ind.humeur.n ? uneDecimale(ind.humeur.moyenne) : null, teinte: 'humeur' },
+    ...(ind.humeur.n ? [{ libelle: 'Humeur (notes)', valeur: uneDecimale(ind.humeur.moyenne), teinte: 'humeur' }] : []),
     { libelle: `Nuits ${libelle(carte, 'sommeil:mal')}`, valeur: ind.nuits.n ? String(ind.nuits.mal) : null, teinte: 'sommeil' },
     { libelle: 'Explosions', valeur: ind.explosions.n ? String(ind.explosions.total) : null, teinte: 'expl' },
     { libelle: 'Épisodes', valeur: String(ind.episodes.nombre), teinte: 'ep' },
@@ -67,6 +72,7 @@ export function Consultation({ id: idRoute }) {
         <div class="grille-chiffres">${cellules.map((c) => html`<div class="cellule-chiffre">
           <span class=${c.valeur == null ? 'valeur-chiffre vide-chiffre' : `valeur-chiffre teinte-${c.teinte}`}>${c.valeur ?? '·'}</span>
           <span class="libelle-chiffre">${c.libelle}</span></div>`)}</div>
+        ${nombreDeReleves(emotions) > 0 && html`<div class="emotions-consultation"><span class="legende-chiffres">Émotions</span><${BarresFamilles} compte=${emotions} /></div>`}
       </section>
       ${traitement.lignes.length > 0 && html`<section class="carte bloc-consultation" aria-label="Traitement actuel">
         <h2 class="titre-carte">Traitement actuel</h2><${TableauTraitement} traitement=${traitement} /></section>`}

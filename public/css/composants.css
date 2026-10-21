@@ -490,6 +490,8 @@ button.effacer svg { width: 18px; height: 18px; }
 .phrase-resume { font-size: var(--t-sous); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding-bottom: 10px; border-bottom: 1.5px dashed var(--line); }
 .phrase-recap { font-size: 1.059rem; line-height: 1.45; color: var(--text); text-wrap: pretty; margin-top: -6px; }
 .phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text); }
+/* « Ce jour-là » (v7) : les familles des émotions du jour en points, devant leurs mots. */
+.emotions-jour .familles-jour { margin-right: 5px; vertical-align: 1px; }
 .pastilles.grille-choix.chiffres .pastille { min-height: 56px; font-size: 1.059rem; }
 .pastilles.grille-choix.chiffres { gap: 8px; }
 .etape .pastille[aria-pressed="true"] { animation: rebond 130ms ease-out; }

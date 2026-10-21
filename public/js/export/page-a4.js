@@ -19,6 +19,27 @@ export function couperLignes(texte, taillePt, largeurMm) {
   return lignes;
 }
 
+// Une valeur faite d'éléments séparés par « · » (« colère 3 · joie 4 · sérénité 5 ») : les éléments entiers, ligne après
+// ligne, sans couper un élément.
+export function couperListe(texte, taillePt, largeurMm) {
+  const max = Math.max(8, Math.floor(largeurMm / (taillePt * PT * LARGEUR_CAR)));
+  const lignes = [];
+  for (const el of String(texte).split(' · ')) {
+    const derniere = lignes.length - 1;
+    if (derniere >= 0 && `${lignes[derniere]} · ${el}`.length <= max) lignes[derniere] += ` · ${el}`;
+    else lignes.push(el);
+  }
+  return lignes;
+}
+
+// Hauteur de la frise (mm) : sans ou avec la rangée « Humeur (notes) » (anciennes notes sur la période).
+export const HAUTEUR_FRISE = { seule: 30, avecNotes: 36 };
+// La légende des émotions : une case à motif par famille (lisible imprimée en noir et blanc), puis son nom.
+export const CASE_EMOTION = { l: 4.2, h: 2.6, ecart: 1, apres: 3.2, taille: 6.5 };
+const LIGNE_INDICATEUR = 3.9;
+const INTERLIGNE_LISTE = 7 * PT * 1.1;
+const largeurTexte = (t, taille) => t.length * taille * PT * LARGEUR_CAR;
+
 export function mettreEnPage(m) {
   const ops = [];
   const x0 = A4.marge;
@@ -32,11 +53,17 @@ export function mettreEnPage(m) {
       ops.push({ type: 'texte', x, y, taille, gras, texte: ligne, couleur });
     }
   };
-  const titreSection = (t) => { y += 2; texte(t.toUpperCase(), { taille: 7.5, gras: true, couleur: 'secondaire', interligne: 1.3 }); y += 0.8; ops.push({ type: 'ligne', x1: x0, y1: y, x2: x0 + largeur, y2: y }); y += 0.6; };
+  // droite : des éléments posés au bout de la ligne du titre (la légende des émotions), s'ils y tiennent.
+  const titreSection = (t, droite = null) => {
+    y += 2;
+    texte(t.toUpperCase(), { taille: 7.5, gras: true, couleur: 'secondaire', interligne: 1.3 });
+    if (droite) droite(y, x0 + largeurTexte(t, 7.5) + 4);
+    y += 0.8; ops.push({ type: 'ligne', x1: x0, y1: y, x2: x0 + largeur, y2: y }); y += 0.6;
+  };
 
   texte(m.entete, { taille: 12, gras: true });
   texte(m.sousTitre, { taille: 8, couleur: 'secondaire' });
-  texte(m.noteHumeur, { taille: 8, couleur: 'secondaire' });
+  texte(m.noteLecture, { taille: 8, couleur: 'secondaire' });
 
   titreSection('Indicateurs');
   const lNom = 54;
@@ -44,21 +71,56 @@ export function mettreEnPage(m) {
   y += 3.5;
   m.colonnes.forEach((c, i) => ops.push({ type: 'texte', x: x0 + lNom + i * lCol, y, taille: 7.5, gras: true, texte: c, couleur: 'secondaire' }));
   for (const ligne of m.indicateurs) {
-    y += 3.9;
+    y += LIGNE_INDICATEUR;
     ops.push({ type: 'texte', x: x0, y, taille: 7, gras: false, texte: ligne.nom, couleur: 'texte', maxLargeur: lNom - 1.5 });
-    ligne.valeurs.forEach((v, i) => ops.push({ type: 'texte', x: x0 + lNom + i * lCol, y, taille: 7, texte: v, couleur: 'texte', maxLargeur: lCol - 1.5 }));
+    // Une ligne multiligne (les émotions par famille) passe à la ligne entre deux éléments ; la rangée prend la hauteur
+    // de sa plus longue valeur.
+    let lignes = 1;
+    ligne.valeurs.forEach((v, i) => {
+      if (!ligne.multiligne) { ops.push({ type: 'texte', x: x0 + lNom + i * lCol, y, taille: 7, texte: v, couleur: 'texte', maxLargeur: lCol - 1.5 }); return; }
+      const morceaux = couperListe(v, 7, lCol - 1.5);
+      morceaux.forEach((t, k) => ops.push({ type: 'texte', x: x0 + lNom + i * lCol, y: y + k * INTERLIGNE_LISTE, taille: 7, texte: t, couleur: 'texte', maxLargeur: lCol - 1.5 }));
+      lignes = Math.max(lignes, morceaux.length);
+    });
+    y += (lignes - 1) * INTERLIGNE_LISTE;
     ops.push({ type: 'ligne', x1: x0, y1: y + 1.2, x2: x0 + largeur, y2: y + 1.2, fin: true });
   }
 
-  titreSection(m.titreEvolution);
+  // La frise (v7, la géométrie de « Mes jours ») : une étiquette par rangée, les émotions en barres empilées par famille
+  // dans l'ordre de la roue, « Humeur (notes) » seulement si la période a d'anciennes notes.
+  // La légende des émotions, au bout de la ligne du titre : une case par famille notée sur la frise, à sa couleur et à
+  // son motif, dans l'ordre de la roue (celui des barres, de bas en haut), puis son nom. Elle passe sous le titre si
+  // elle n'y tient pas.
+  const familles = m.frise.familles || [];
+  const legendeFamilles = (yLigne, xMin) => {
+    const T = CASE_EMOTION.taille;
+    const largeurs = familles.map((f) => CASE_EMOTION.l + CASE_EMOTION.ecart + largeurTexte(f.libelle, T));
+    const total = largeurs.reduce((a, b) => a + b, 0) + CASE_EMOTION.apres * (familles.length - 1);
+    let x = x0 + largeur - total;
+    if (x < xMin) { y += T * PT * 1.6; yLigne = y; x = x0; }
+    familles.forEach((f, i) => {
+      ops.push({ type: 'emotion', famille: f.cle, x, y: yLigne - CASE_EMOTION.h + 0.2, l: CASE_EMOTION.l, h: CASE_EMOTION.h });
+      ops.push({ type: 'texte', x: x + CASE_EMOTION.l + CASE_EMOTION.ecart, y: yLigne, taille: T, texte: f.libelle, couleur: 'secondaire' });
+      x += largeurs[i] + CASE_EMOTION.apres;
+    });
+  };
+  titreSection(m.titreEvolution, familles.length ? legendeFamilles : null);
   y += 1.5;
-  ops.push({ type: 'frise', y, hauteur: 36, largeur, x: x0, frise: m.frise });
-  y += 36 + 1;
+  const hFrise = m.frise.avecHumeur ? HAUTEUR_FRISE.avecNotes : HAUTEUR_FRISE.seule;
+  ops.push({ type: 'frise', y, hauteur: hFrise, largeur, x: x0, frise: m.frise });
+  y += hFrise + 1;
+  // Les rangées portent leur nom : la légende ne dit que ce qui ne se voit pas.
   const [mal, moyen, bien] = m.libellesSommeil;
-  // Repères de traitement (v6) : leur légende est la ligne numérotée de la section Traitement. Cette phrase
-  // tient sur la seconde ligne de la légende : la page ne grandit pas.
-  const reperes = m.frise.reperes && m.frise.reperes.length ? ' · trait numéroté : changement de traitement (voir Traitement)' : '';
-  texte(`Point : humeur moyenne (1 à 10 ; anneau : peu de valeurs) · nuits ${mal}, ${moyen}, ${bien}, du plus clair au plus foncé · barre : explosions · rond : autres épisodes${reperes}.`, { taille: 6.5, couleur: 'secondaire' });
+  const unite = m.frise.pas === 'mois' ? 'mois' : 'semaine';
+  const legende = [
+    familles.length && `Émotions : relevés par ${unite}, de bas en haut dans l'ordre de la légende`,
+    m.frise.avecHumeur && 'Humeur (notes) : 1 en bas, 10 en haut ; anneau : peu de valeurs',
+    `nuits ${mal}, ${moyen}, ${bien} : du plus clair au plus foncé`,
+    'Épisodes : autres que les explosions',
+    // Repères de traitement (v6) : leur légende est la ligne numérotée de la section Traitement.
+    m.frise.reperes && m.frise.reperes.length && 'trait numéroté : changement de traitement (voir Traitement)',
+  ].filter(Boolean);
+  texte(`${legende.join(' · ')}.`, { taille: 6.5, couleur: 'secondaire' });
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;

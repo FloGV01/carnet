@@ -6,6 +6,7 @@
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
 import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
+import { minusculeInitiale } from '../domain/phrase.js';
 import { clesDeColonnes, colonneDe } from './colonnes.js';
 import { SEUILS } from './seuils.js';
 
@@ -17,6 +18,9 @@ export const CLES_FAMILLES = FAMILLES.map((f) => f.cle);
 export const comptesVides = () => Object.fromEntries(CLES_FAMILLES.map((c) => [c, 0]));
 // Le nombre de relevés d'un compte par famille (le nombre de relevés, pas un score).
 export const nombreDeReleves = (compte) => (compte ? CLES_FAMILLES.reduce((s, c) => s + (compte[c] || 0), 0) : 0);
+// « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro ; '' sans relevé.
+// Pour Ta journée, Comprendre, l'Export PSY et la Vue soignants.
+export const texteFamilles = (compte) => FAMILLES.filter((f) => compte && compte[f.cle] > 0).map((f) => `${minusculeInitiale(f.libelle)} ${compte[f.cle]}`).join(' · ');
 // Seuil commun des vues d'émotions : sous 5 relevés, « Pas encore assez de données pour le dire. ».
 export const selonSeuilEmotions = (n) => (n >= S.minReleves ? 'ok' : 'insuffisant');
 

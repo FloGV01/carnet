@@ -1,5 +1,7 @@
 // Modèle de la vue soignants (une page A4, voix neutre). Exclut : situations, notes, points
-// positifs, « ce qui a aidé », détail jour par jour, signal, mémos. Pur.
+// positifs, « ce qui a aidé », détail jour par jour, signal, mémos, Bien-être. Pur.
+// v7 : les émotions du moment (roue), en nombre de relevés par famille, dans l'ordre de la roue ; les anciennes notes de
+// 1 à 10 gardent leur ligne « Humeur (notes) » tant qu'une colonne en a, et leur rangée sur la frise quand sa période en a.
 import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils } from '../analyse/textes.js';
@@ -10,16 +12,23 @@ import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { frise } from '../analyse/frise.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
 import { reperesTraitement } from '../analyse/reperes.js';
+import { relevesAEmotion, parFamille, texteFamilles } from '../analyse/emotions.js';
+import { FAMILLES, estEmotion } from '../domain/roue.js';
 
-const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
+const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions (épisodes)', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
 
+// « Émotions par famille » : une valeur par colonne, sur plusieurs lignes si besoin (multiligne, page-a4.js). « Humeur
+// (notes) » : seulement si une colonne a d'anciennes notes ; une colonne sans note dit « · ».
+export const NOM_EMOTIONS = 'Émotions par famille (relevés)';
+export const NOM_NOTES = 'Humeur (notes), moyenne (min-max)';
 function lignesIndicateurs(colonnes, lib) {
   const v = (f, fn) => fn(f);
   const sur = (n, unite = 'j') => (n ? ` (sur ${n} ${unite})` : '');
+  const avecNotes = colonnes.some((c) => c.f.humeur.n > 0);
+  const emotions = { nom: NOM_EMOTIONS, valeurs: colonnes.map((c) => texteFamilles(c.emotions) || '·'), multiligne: true };
   const defs = [
-    ['Humeur moyenne (min-max)', (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${nombre(f.humeur.minReleve)}-${nombre(f.humeur.maxReleve)}, sur ${f.humeur.n} j)` : '·')],
-    ['Journées à 7 ou plus / à 4 ou moins', (f) => (f.humeur.n ? `${f.humeur.haut} / ${f.humeur.bas}` : '·')],
+    ...(avecNotes ? [[NOM_NOTES, (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${nombre(f.humeur.minReleve)}-${nombre(f.humeur.maxReleve)}, sur ${f.humeur.n} j)` : '·')]] : []),
     ['Explosions (jours avec)', (f) => (f.explosions.n ? `${f.explosions.total} (${f.explosions.jours})` : '·')],
     [`Nuits ${lib('sommeil:mal')}`, (f) => (f.nuits.n ? `${f.nuits.mal}${sur(f.nuits.n, 'nuits')}` : '·')],
     ['Réveils nocturnes (moyenne)', (f) => (f.nuits.reveils.n ? `${moyenneReveils(f.nuits.reveils)}${sur(f.nuits.reveils.n)}` : '·')],
@@ -31,7 +40,7 @@ function lignesIndicateurs(colonnes, lib) {
     ['Épisodes (intensité moyenne)', (f) => `${f.episodes.nombre}${f.episodes.nIntensite ? ` (${nombre(f.episodes.intensite)})` : ''}`],
     ['Symptômes', (f) => String(f.symptomes.nombre)],
   ];
-  return defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }));
+  return [emotions, ...defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }))];
 }
 
 export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
@@ -39,19 +48,20 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   // Humeur du jour (v6, analyse/humeur-jour.js) : moyenne des relevés de chaque journée, sinon
   // l'humeur du soir. Un jour qui n'a que des relevés compte, mais jamais pour « 0 explosion ».
   const journal = avecHumeurDuJour(data.journal, data.humeurs || []);
-  const premier = premiereDate({ ...data, journal }, aujourdhui);
+  // Les relevés à émotion (v7) : rattachés à leur jour logique ; un jour qui n'a qu'eux date aussi le début des données.
+  const releves = relevesAEmotion(data.humeurs || []).filter((r) => r.date <= aujourdhui);
+  const emotionsEntre = (du, au) => parFamille(releves.filter((r) => r.date >= du && r.date <= au));
+  const premier = premiereDate({ ...data, journal: [...journal, ...releves.map((r) => ({ date: r.date }))] }, aujourdhui);
   data = { ...data, journal: journalAvecExplosions(journal, data.episodes || [], { zeroDepuis, jourNote: saisieDuSoir(data.journal) }) };
   // Le dernier rendez-vous : la même référence que « La dernière fois » (domain/soins.js), comptée depuis aujourd'hui.
   const dernierRdv = rdvReference(rdvs, { professionnel, avant: aujourdhui });
   const prochain = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui).aVenir[0] || null;
-  const colonnes = [
-    { titre: '7 j', f: indicateurs(data, addDays(aujourdhui, -6), aujourdhui) },
-    { titre: '30 j', f: indicateurs(data, addDays(aujourdhui, -29), aujourdhui) },
-  ];
+  const colonne = (titre, du) => ({ titre, f: indicateurs(data, du, aujourdhui), emotions: emotionsEntre(du, aujourdhui) });
+  const colonnes = [colonne('7 j', addDays(aujourdhui, -6)), colonne('30 j', addDays(aujourdhui, -29))];
   if (dernierRdv && dernierRdv.date && diffDays(dernierRdv.date, aujourdhui) <= 180) {
-    colonnes.push({ titre: `Depuis le RDV du ${formaterDateNumerique(dernierRdv.date).slice(0, 5)}`, f: indicateurs(data, dernierRdv.date, aujourdhui) });
+    colonnes.push(colonne(`Depuis le RDV du ${formaterDateNumerique(dernierRdv.date).slice(0, 5)}`, dernierRdv.date));
   }
-  colonnes.push({ titre: 'Depuis le début', f: indicateurs(data, premier || aujourdhui, aujourdhui) });
+  colonnes.push(colonne('Depuis le début', premier || aujourdhui));
 
   const classements = LISTES_CLASSEES.map(({ liste }) => {
     const c = analyse.classements['30'][liste];
@@ -70,8 +80,12 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     while (m < 1) { m += 12; a -= 1; }
     duFrise = `${a}-${String(m).padStart(2, '0')}-01`;
   }
-  // Sans les relevés : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni les colonnes ni aDonnee.
-  const f = frise({ journal: data.journal, episodes: data.episodes }, duFrise, aujourdhui);
+  // Les relevés n'y entrent que par leur émotion (v7) : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni
+  // les colonnes ni aDonnee.
+  const emotionsSeules = (data.humeurs || []).filter((h) => h && estEmotion(h.emotion)).map(({ date, heure, emotion, vers }) => ({ date, heure, emotion, vers }));
+  const f = frise({ journal: data.journal, episodes: data.episodes, humeurs: emotionsSeules }, duFrise, aujourdhui);
+  // Les familles notées sur la frise, dans l'ordre de la roue : la légende de ses barres empilées.
+  const famillesFrise = FAMILLES.filter((x) => f.colonnes.some((c) => c.familles && c.familles[x.cle] > 0)).map((x) => ({ cle: x.cle, libelle: x.libelle }));
 
   const actuel = normaliserTraitement(traitementActuel).lignes.slice(0, 4).map((l) => couper(`${l.nom || '·'} : ${resumeLigne(l) || '·'}`, 70));
   // Les changements datés des 90 derniers jours : 4 lignes au plus, 3 sous un traitement actuel.
@@ -90,13 +104,13 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   return {
     entete: `Suivi quotidien${prenom ? ` · ${prenom}` : ''} · édité le ${formaterDateNumerique(aujourdhui)}${premier ? ` · données depuis le ${formaterDateNumerique(premier)}` : ''}`,
     sousTitre: 'Données saisies par moi dans une application personnelle. Observations chiffrées, sans interprétation.',
-    noteHumeur: 'Humeur : moyenne des relevés de chaque journée.',
+    noteLecture: `Émotions : relevés notés, par famille de la roue.${colonnes.some((c) => c.f.humeur.n > 0) ? ' Humeur (notes) : anciennes notes de 1 à 10, moyenne de chaque journée.' : ''}`,
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
-    // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran.
-    // Sans les clés des émotions (v7, à l'écran pour l'instant ; la frise ne reçoit pas les relevés ici).
-    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, emotions, familles, nEmotions, ...c }) => c), reperes: reperesFrise.traits },
+    // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran. Par semaine ou par mois, chaque
+    // colonne porte ses familles (familles, nEmotions) ; avecHumeur dit si la période a d'anciennes notes.
+    frise: { pas: f.pas, colonnes: f.colonnes.map(({ entree, energieBasse, emotions, ...c }) => c), avecHumeur: f.avecHumeur, familles: famillesFrise, reperes: reperesFrise.traits },
     libellesSommeil: [lib('sommeil:mal'), lib('sommeil:moyen'), lib('sommeil:bien')],
     classements,
     traitement: lignesTraitement,
