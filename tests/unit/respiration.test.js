@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DUREES, RYTHMES, CYCLE_MS, RESPIRATION_DEFAUT, normaliserRespiration, dureeEnMs, phaseRespiration, texteAvant, texteFin,
+  NOM_RESPIRATION, texteDuree,
 } from '../../public/js/domain/respiration.js';
 
 const phases = (rythme, instants) => instants.map((t) => phaseRespiration(t, rythme));
@@ -81,5 +82,9 @@ test('les textes d\'avant et de fin suivent la durée ; « 5 minutes » ne se co
   for (const minutes of DUREES) {
     assert.equal(texteAvant(minutes), `Cohérence cardiaque · ${minutes}\u00a0minutes`);
     assert.equal(texteFin(minutes), `${minutes}\u00a0minutes de respiration.`);
+    // Dans une carte (v7), les deux morceaux sur deux lignes, sans « · ».
+    assert.equal(`${NOM_RESPIRATION} · ${texteDuree(minutes)}`, texteAvant(minutes));
   }
+  assert.equal(NOM_RESPIRATION, 'Cohérence cardiaque');
+  assert.equal(texteDuree(10), '10\u00a0minutes');
 });

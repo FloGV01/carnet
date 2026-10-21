@@ -15,7 +15,7 @@ import { versContacts } from '../domain/contacts.js';
 export const FORMAT = 'carnet-sauvegarde';
 export const FORMAT_VERSION = 5;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
-const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
+export const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
 const META_NON_EXPORTEES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
 // Gardée telle quelle si le fichier (ou la copie) ne l'a pas : date de la mise à jour v4,

@@ -4,10 +4,11 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES,
 } from '../../public/js/db/sauvegarde.js';
 import { SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
+import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
 
 const octetsDe = (f) => concatener(f.morceaux);
 const enc = new TextEncoder();
@@ -453,4 +454,16 @@ test('v7 : aperçu de l\'import, les séances ont leurs mots', () => {
   assert.equal(phrasePerte({ notes: 1, seances: 2 }), '1 note et 2 séances de Bien-être présentes ici et absentes du fichier seront effacées.');
   assert.equal(phrasePerte({ episodes: 1, seances: 1 }), '1 épisode et 1 séance de Bien-être présents ici et absents du fichier seront effacés.');
   assert.equal(phrasePerte({ seances: 0 }), null);
+});
+
+// « Tout effacer » vide tous les stores de données (STORES_DONNEES) : son texte les nomme tous. Un nouveau store fait
+// échouer ce test tant que le texte ne le cite pas.
+test('v7 : le texte de « Tout effacer » nomme tout ce que toutEffacer efface, séances de Bien-être comprises', () => {
+  const NOMS = {
+    journal: ['journées'], episodes: ['épisodes'], symptomes: ['symptômes'], traitements: ['fiches'], rdv: ['rendez-vous'],
+    humeurs: ['relevés d\'humeur du moment'], notes: ['notes'], seances: ['séances de Bien-être'], listes: ['Les listes'],
+    meta: ['Mon plan', 'ton traitement actuel', 'les réglages'], audios: ['mémos'],
+  };
+  assert.deepEqual(Object.keys(NOMS).sort(), [...STORES_DONNEES].sort());
+  for (const [store, mots] of Object.entries(NOMS)) for (const m of mots) assert.ok(TEXTE_EFFACER.includes(m), `${store} : « ${m} »`);
 });

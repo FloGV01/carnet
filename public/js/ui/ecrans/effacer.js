@@ -7,6 +7,11 @@ import { afficherToast } from '../composants/toast.js';
 import { useSauvegarde } from '../sauvegarde.js';
 import { reinitialiserHistorique } from './historique.js';
 
+// Ce que « Tout effacer » efface (toutEffacer, db/sauvegarde.js) : chaque store de données y est nommé.
+export const TEXTE_EFFACER = 'Toutes les journées, épisodes, symptômes, relevés d\'humeur du moment, notes, séances de Bien-être, '
+  + 'rendez-vous, fiches et mémos seront effacés de cet iPhone, copies de secours comprises, avec Mon plan et ton traitement '
+  + 'actuel. Les listes et les réglages reviennent à leur état de départ. Écris EFFACER pour continuer.';
+
 export function Effacer() {
   const [etape, setEtape] = useState(1);
   const [mot, setMot] = useState('');
@@ -32,7 +37,7 @@ export function Effacer() {
       </div>
       ${sauvegarde.message && html`<p class="note-import" role="status">${sauvegarde.message}</p>`}`
     : html`
-      <p class="texte-import">Toutes les journées, épisodes, symptômes, relevés d'humeur du moment, notes, rendez-vous, fiches et mémos seront effacés de cet iPhone, copies de secours comprises. Les listes reviennent à leur état de départ. Écris EFFACER pour continuer.</p>
+      <p class="texte-import">${TEXTE_EFFACER}</p>
       <input class="champ-ligne champ-effacer" aria-label="Écris EFFACER pour confirmer" placeholder="EFFACER" autocomplete="off" autocapitalize="characters"
         value=${mot} onInput=${(e) => setMot(e.target.value)} />
       <button type="button" class="btn btn-effacer" disabled=${!pret} onClick=${effacer}>Effacer définitivement</button>`}

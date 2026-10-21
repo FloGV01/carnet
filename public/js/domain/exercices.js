@@ -31,12 +31,12 @@ export const EXERCICES = Object.freeze([
     etapes: [
       e('Installe-toi, le dos droit sans être raide. Les épaules restent basses.', 15),
       e('Vide doucement l\'air de tes poumons.', 10),
-      e('Inspire par le nez en comptant jusqu\'à quatre.', 5),
-      e('Retiens l\'air en comptant jusqu\'à quatre.', 5),
-      e('Expire par la bouche en comptant jusqu\'à quatre.', 5),
-      e('Garde les poumons vides en comptant jusqu\'à quatre.', 5),
-      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 60),
-      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 60),
+      e('Inspire par le nez en comptant jusqu\'à quatre.', 9),
+      e('Retiens l\'air en comptant jusqu\'à quatre.', 9),
+      e('Expire par la bouche en comptant jusqu\'à quatre.', 9),
+      e('Garde les poumons vides en comptant jusqu\'à quatre.', 9),
+      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 52),
+      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 52),
       e('Laisse ta respiration redevenir libre.', 15),
     ],
   },
@@ -167,6 +167,12 @@ export const exerciceDe = (id) => EXERCICES.find((x) => x.id === id) || null;
 
 // La durée d'un exercice, en secondes : la somme de ses étapes (une étape sans durée compte pour rien).
 export const dureeExerciceS = (ex) => (ex ? ex.etapes.reduce((s, x) => s + (x.dureeS || 0), 0) : 0);
+
+// Un exercice est mené au bout quand sa dernière étape est atteinte après la moitié de sa durée au moins, en temps actif
+// (pauses exclues) : parcourir les textes, pour les relire, ne fait pas une séance. Sinon, la règle des 60 s joue.
+export const PART_MENEE_AU_BOUT = 0.5;
+export const exerciceMeneAuBout = (ex, { derniereAtteinte, dureeS } = {}) => Boolean(ex) && derniereAtteinte === true
+  && Number.isFinite(dureeS) && dureeS >= dureeExerciceS(ex) * PART_MENEE_AU_BOUT;
 
 // À l'écran : une espace insécable avant « : », « ; », « ? », « ! » et « » », et après « « » (la ponctuation haute ne
 // commence jamais une ligne). Les textes gardent des espaces simples, pour être relus et corrigés facilement.

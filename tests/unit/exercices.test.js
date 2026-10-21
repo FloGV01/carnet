@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { EXERCICES, exerciceDe, dureeExerciceS, pourAffichage } from '../../public/js/domain/exercices.js';
+import { EXERCICES, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT, pourAffichage } from '../../public/js/domain/exercices.js';
 import { doitEnregistrer, nouvelleSeance, dureeSeance, SEANCE_MIN_S } from '../../public/js/domain/seances.js';
 import { normaliser } from '../../public/js/domain/champs.js';
 import { trouverInterdits, normaliser as sansAccents } from '../aides/mots-interdits.js';
@@ -75,9 +75,54 @@ test('textes : aucune promesse d\'effet ni conseil de santé', () => {
   }
 });
 
-test('les titres et les étapes sont repris dans docs/decisions.md, pour être relus par l\'utilisateur', () => {
+test('les titres et les étapes sont repris dans docs/decisions.md, pour être relus par l\'utilisateur, avec leurs durées', () => {
   const doc = lire(join(RACINE, 'docs', 'decisions.md'));
   for (const x of EXERCICES) for (const t of textes(x)) assert.ok(doc.includes(t), `absent de decisions.md : ${t}`);
+  for (const x of EXERCICES) {
+    x.etapes.forEach((e, i) => assert.ok(doc.includes(`${i + 1}. ${e.texte} *(${e.dureeS} s)*`), `durée à jour dans decisions.md : ${e.texte}`));
+  }
+});
+
+// Voix allumée, l'étape suivante est lue à la fin de la durée de l'étape. Une consigne se dit à environ 3 mots par seconde
+// (voix française du système : « Inspire par le nez en comptant jusqu'à quatre. » prend de 2 à 2,5 s) : chaque étape
+// laisse au moins 3 s après sa lecture, et une étape qui fait compter jusqu'à quatre en laisse au moins 5 (4 s pour
+// compter, sans que la consigne suivante coupe le compte).
+test('voix allumée : chaque étape laisse le temps de faire ce qu\'elle dit après sa lecture', () => {
+  const lecture = (t) => t.split(/\s+/).length / 3;
+  for (const x of EXERCICES) {
+    for (const e of x.etapes) {
+      const reste = e.dureeS - lecture(e.texte);
+      assert.ok(reste >= 3, `${x.id} : ${e.texte} (${e.dureeS} s)`);
+      if (/compt\w* jusqu'à quatre/.test(e.texte)) assert.ok(reste >= 5, `le temps de compter : ${e.texte} (${e.dureeS} s)`);
+    }
+  }
+  const carree = exerciceDe('respiration-carree').etapes.filter((e) => /en comptant jusqu'à quatre/.test(e.texte));
+  assert.equal(carree.length, 4);
+  for (const e of carree) assert.ok(e.dureeS >= 8, e.texte);
+});
+
+test('exerciceMeneAuBout : la dernière étape atteinte après la moitié de la durée au moins, en temps actif', () => {
+  assert.equal(PART_MENEE_AU_BOUT, 0.5);
+  const pause = exerciceDe('pause-une-minute');
+  const scan = exerciceDe('scan-corporel');
+  assert.equal(dureeExerciceS(pause), 60);
+  assert.equal(exerciceMeneAuBout(pause, { derniereAtteinte: true, dureeS: 30 }), true);
+  assert.equal(exerciceMeneAuBout(pause, { derniereAtteinte: true, dureeS: 45 }), true);
+  // Les textes parcourus d'un bout à l'autre sans prendre le temps : pas mené au bout.
+  assert.equal(exerciceMeneAuBout(pause, { derniereAtteinte: true, dureeS: 0 }), false);
+  assert.equal(exerciceMeneAuBout(pause, { derniereAtteinte: true, dureeS: 29.9 }), false);
+  // Assez de temps, mais arrêté avant la dernière étape : pas mené au bout (la règle des 60 s joue seule).
+  assert.equal(exerciceMeneAuBout(pause, { derniereAtteinte: false, dureeS: 60 }), false);
+  assert.equal(exerciceMeneAuBout(scan, { derniereAtteinte: true, dureeS: dureeExerciceS(scan) / 2 }), true);
+  assert.equal(exerciceMeneAuBout(scan, { derniereAtteinte: true, dureeS: 120 }), false);
+  for (const brut of [{}, undefined, { derniereAtteinte: true }, { derniereAtteinte: true, dureeS: NaN }, { derniereAtteinte: 'oui', dureeS: 60 }]) {
+    assert.equal(exerciceMeneAuBout(pause, brut), false, JSON.stringify(brut));
+  }
+  assert.equal(exerciceMeneAuBout(null, { derniereAtteinte: true, dureeS: 600 }), false);
+  // Ce qui fait la séance : mené au bout, ou 60 s au moins.
+  const seance = (ex, derniereAtteinte, dureeS) => doitEnregistrer({ dureeS, terminee: exerciceMeneAuBout(ex, { derniereAtteinte, dureeS }) });
+  assert.deepEqual([seance(pause, true, 5), seance(pause, true, 35), seance(pause, false, 35), seance(scan, true, 50), seance(scan, false, 61)],
+    [false, true, false, false, true]);
 });
 
 test('doitEnregistrer : une séance menée au bout, ou arrêtée après 60 s au moins', () => {

@@ -217,8 +217,9 @@ Choix faits pendant la construction, à vérifier par l'utilisateur :
 - **Un exercice commence par « Commencer »** : Safari ne parle qu'après un toucher, et l'écran d'avant permet d'allumer la voix avant de fermer les yeux. Puis une consigne par écran, « Précédent », « Suivant », « Terminer », et le temps qui reste à l'étape. Aucun repère « 3 sur 8 ».
 - **Lecture à voix haute** : éteinte au départ, gardée sur l'iPhone (pas dans la sauvegarde) ; sans voix française, l'interrupteur n'apparaît pas. Allumée pendant une étape, elle lit l'étape et son temps repart.
 - **Arrière-plan, écran verrouillé, page cachée** : l'exercice se met en pause (voix coupée, verrou d'écran rendu) et attend « Reprendre ». S'il a duré 60 s ou plus, la séance est notée dès la pause (l'app peut ne pas revenir) ; reprise et finie, c'est la même séance, dont la durée est mise à jour.
-- **Une séance** commence à l'heure de « Commencer », et sa durée est celle de l'exercice actif, pauses exclues. « Terminer » avant la dernière étape, ou « Fermer », compte comme un arrêt (gardé à partir de 60 s).
-- **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée.
+- **Une séance** commence à l'heure de « Commencer », et sa durée est celle de l'exercice actif, pauses exclues. « Terminer » avant la dernière étape, ou « Fermer », compte comme un arrêt (gardé à partir de 60 s). Un exercice n'est mené au bout que si sa dernière étape est atteinte après la moitié de sa durée au moins, en temps actif : parcourir les textes pour les relire ne crée pas de séance (la règle des 60 s joue alors seule).
+- **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée. Seul le temps page visible compte : page cachée (écran verrouillé, autre app), le cercle s'arrête, le verrou d'écran est rendu et la séance est notée dès ce moment si elle a duré 60 s ; au retour, la respiration reprend là où elle en était, et c'est la même séance. Elle n'est menée au bout que si toute sa durée s'est écoulée page visible.
+- **Dans une carte** (Bien-être, « Pour récupérer, je… »), la durée de la respiration passe sous « Cohérence cardiaque », sans « · ». Moment difficile garde « Cohérence cardiaque · 5 minutes » sur une ligne jusqu'à son passage en 2b (tâche 8).
 - **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
 - **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
 
@@ -245,13 +246,15 @@ Inspirer, retenir, expirer, retenir : quatre temps chacun.
 
 1. Installe-toi, le dos droit sans être raide. Les épaules restent basses. *(15 s)*
 2. Vide doucement l'air de tes poumons. *(10 s)*
-3. Inspire par le nez en comptant jusqu'à quatre. *(5 s)*
-4. Retiens l'air en comptant jusqu'à quatre. *(5 s)*
-5. Expire par la bouche en comptant jusqu'à quatre. *(5 s)*
-6. Garde les poumons vides en comptant jusqu'à quatre. *(5 s)*
-7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(60 s)*
-8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(60 s)*
+3. Inspire par le nez en comptant jusqu'à quatre. *(9 s)*
+4. Retiens l'air en comptant jusqu'à quatre. *(9 s)*
+5. Expire par la bouche en comptant jusqu'à quatre. *(9 s)*
+6. Garde les poumons vides en comptant jusqu'à quatre. *(9 s)*
+7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(52 s)*
+8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(52 s)*
 9. Laisse ta respiration redevenir libre. *(15 s)*
+
+Les étapes 3 à 6 durent 9 s : voix allumée, la consigne se dit en 2 à 2,5 s, puis il faut environ 4 s pour compter jusqu'à quatre avant que l'étape suivante soit lue.
 
 #### Relaxation dynamique des épaules (5 min, `epaules`)
 

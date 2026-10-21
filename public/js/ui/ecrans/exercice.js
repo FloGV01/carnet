@@ -7,7 +7,8 @@
 // - L'écran reste allumé pendant l'exercice (verrou d'écran), rendu à la fin, en pause et à la sortie.
 // - En arrière-plan, écran verrouillé ou page cachée : pause, voix coupée, verrou rendu ; « Reprendre » repart de l'étape.
 // - Séance (ui/seance.js) : menée au bout, ou arrêtée après 60 s, une seule par exercice lancé, d'origine `bien-etre`.
-//   La durée est celle de l'exercice actif, pauses exclues. En fin d'exercice, le lien discret « Noter mon émotion ».
+//   La durée est celle de l'exercice actif, pauses exclues. Menée au bout : la dernière étape atteinte après la moitié
+//   de la durée de l'exercice au moins (domain/exercices.js). En fin d'exercice, le lien discret « Noter mon émotion ».
 // Les premières paroles partent d'un toucher (« Commencer », « Suivant », l'interrupteur) : Safari ne parle qu'après un geste.
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
@@ -16,7 +17,7 @@ import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { garderEcran, useSeance } from '../seance.js';
 import { NoterEmotion } from './bien-etre.js';
-import { exerciceDe, pourAffichage } from '../../domain/exercices.js';
+import { exerciceDe, exerciceMeneAuBout, pourAffichage } from '../../domain/exercices.js';
 
 export const CLE_VOIX = 'carnet:exercice:voix';
 const FIN = 'Fin de l\'exercice.';
@@ -85,7 +86,11 @@ function Deroule({ ex }) {
   const rendreVerrou = () => { if (verrou.current) { verrou.current.release().catch(() => {}); verrou.current = null; } };
   // Un verrou obtenu après la pause ou la fin est rendu tout de suite.
   const tenir = (v) => { if (v && courant.current.etat !== 'en-cours') { v.release().catch(() => {}); return; } if (v) verrou.current = v; };
-  const noter = (terminee) => seance.noter({ dureeS: ecoule() / 1000, terminee });
+  // `derniereAtteinte` : l'exercice est sur sa dernière étape ; il n'est mené au bout qu'après assez de temps actif.
+  const noter = (derniereAtteinte) => {
+    const dureeS = ecoule() / 1000;
+    return seance.noter({ dureeS, terminee: exerciceMeneAuBout(ex, { derniereAtteinte, dureeS }) });
+  };
 
   const aller = (n, lire = lecture) => {
     temps.current.debutEtape = ecoule();

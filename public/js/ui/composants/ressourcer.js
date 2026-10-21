@@ -16,7 +16,7 @@ export const lireRessourcer = () => repo.meta.lire('ressourcer').catch(() => nul
 // (la respiration le rendort s'il est éteint). La respiration crée une séance d'origine `ressourcer` (v7).
 function Respirer() {
   const [affichee, setAffichee] = useState(false);
-  if (affichee) return html`<${Respiration} demarrerTout=${true} origine="ressourcer" />`;
+  if (affichee) return html`<${Respiration} demarrerTout=${true} origine="ressourcer" dureeALaLigne=${true} />`;
   return html`<button type="button" class="btn btn-plein" onClick=${() => { preparerSon(); setAffichee(true); }}>${Icones.respiration()}Respirer</button>`;
 }
 

@@ -19,7 +19,7 @@ export function BienEtre() {
   return html`<main class="ecran bien-etre">
     <${Entete} titre="Bien-être" />
     <div class="carte carte-respiration teinte-bien-etre">
-      <${Respiration} origine="bien-etre" apres=${html`<${NoterEmotion} />`} />
+      <${Respiration} origine="bien-etre" dureeALaLigne=${true} apres=${html`<${NoterEmotion} />`} />
     </div>
     <h2 class="libelle-section">Exercices</h2>
     <ul class="liste carte carte-groupe exercices" aria-label="Exercices">${EXERCICES.map((x) => html`<li>
