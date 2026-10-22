@@ -11,6 +11,7 @@ import { repo } from '../../donnees.js';
 import { useDonnees, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { nouvelId } from '../../domain/ids.js';
 import { trierNotes, nouvelleNote, dateNote } from '../../domain/notes.js';
+import { pourAffichage } from '../../domain/typographie.js';
 
 const BROUILLON_NOUVELLE = 'carnet:brouillon:notes:nouvelle';
 const SANS_NOTE = 'Aucune note pour l\'instant.';
@@ -101,13 +102,14 @@ export function NotesEnVrac() {
   </div>`;
 }
 
-// En consultation : « Mes notes », à lire telles qu'écrites. On ne les modifie pas ici.
+// En consultation : « Mes notes », à lire telles qu'écrites. On ne les modifie pas ici. À l'affichage, pourAffichage
+// garde « : » ou « ? » sur la ligne du mot qui précède ; le texte enregistré ne change pas.
 export function ReplisNotes() {
   const { donnees } = useDonnees(() => repo.notes.tous(), []);
   const notes = donnees ? trierNotes(donnees) : [];
   return html`<${Repli} cle="mes-notes" titre="Mes notes">
     ${donnees && notes.length === 0 && html`<p class="discret">${SANS_NOTE}</p>`}
     ${notes.length > 0 && html`<ul class="notes-lecture" aria-label="Notes">
-      ${notes.map((n) => html`<li><span class="note-date">${dateNote(n)}</span><span class="note-texte">${n.texte}</span></li>`)}</ul>`}
+      ${notes.map((n) => html`<li><span class="note-date">${dateNote(n)}</span><span class="note-texte">${pourAffichage(n.texte)}</span></li>`)}</ul>`}
   </${Repli}>`;
 }

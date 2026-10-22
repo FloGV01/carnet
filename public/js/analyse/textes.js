@@ -62,12 +62,19 @@ const NOMS_SOURCE = {
   emotionMoment: 'relevés',
 };
 
+// Ex aequo affichés au plus, par liste : les 79 mots de la roue sont souvent à égalité (un ou deux relevés chacun), et la
+// phrase les enchaînait tous. Au-delà, les trois premiers, séparés par des virgules, puis « … ». Les autres listes les
+// gardent tous.
+const MAX_EGALITE = { emotionMoment: 3 };
+
 // `lib` (facultatif) : un libellé pour les identifiants qui ne sont pas dans `carte` (les mots de la roue, v7).
 export function phraseClassement(liste, c, carte, lib = (id) => (carte && carte.get(id)) || id) {
   if (c.statut === 'aucun') return liste === 'effetSecondaire' ? 'Aucun effet noté sur la période' : 'Rien de noté sur la période';
   const hors = c.hors.map((h) => `hors « ${lib(h.id)} » : ${h.n}`).join(', ');
   if (liste === 'effetSecondaire' && c.classables === 0) return `Aucun effet noté sur la période${hors ? ` (${hors})` : ''}`;
   if (c.statut === 'insuffisant') return PAS_ASSEZ;
-  const tete = c.top.length > 1 ? `à égalité : ${c.top.map(lib).join(' et ')}` : lib(c.top[0]);
+  const max = MAX_EGALITE[liste];
+  const egaux = max && c.top.length > max ? `${c.top.slice(0, max).map(lib).join(', ')}…` : c.top.map(lib).join(' et ');
+  const tete = c.top.length > 1 ? `à égalité : ${egaux}` : lib(c.top[0]);
   return `${tete} · ${c.nTop} ${NOMS_SOURCE[liste]} sur ${c.total}${hors ? ` (${hors})` : ''}`;
 }

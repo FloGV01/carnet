@@ -73,10 +73,11 @@ export function famillesParHeure(releves) {
   return res;
 }
 
-// Les colonnes de Comprendre (spec §5) : jour de la semaine (0 = lundi), mois de la période (vides compris), ou lieux notés
-// les jours qui ont des relevés (dans l'ordre de leur liste). `jours` : les jours (Map ou liste) qui portent `date`, `lieu`
-// et `familles` (une par relevé, facteursParJour). Chaque colonne : { cle, n (relevés), jours (jours qui en ont), familles }.
-// Sous 5 relevés en tout : aucune colonne.
+// Les colonnes de Comprendre (spec §5) : jour de la semaine (0 = lundi), mois de la période qui ont un relevé, ou lieux
+// notés les jours qui ont des relevés (dans l'ordre de leur liste). Un mois sans relevé à émotion (les mois d'avant la v7,
+// qui n'ont que des notes) n'a pas de ligne, comme dans le tableau. `jours` : les jours (Map ou liste) qui portent `date`,
+// `lieu` et `familles` (une par relevé, facteursParJour). Chaque colonne : { cle, n (relevés), jours (jours qui en ont),
+// familles }. Sous 5 relevés en tout : aucune colonne.
 const PAS = { jourSemaine: 'semaine', semaine: 'semaine', mois: 'mois', lieu: 'lieu' };
 export function famillesParColonnes(jours, periode, { cle }, items = []) {
   const pas = PAS[cle];
@@ -91,7 +92,7 @@ export function famillesParColonnes(jours, periode, { cle }, items = []) {
     for (const f of j.familles) if (Object.hasOwn(col.familles, f)) { col.familles[f] += 1; col.n += 1; }
   }
   const statut = selonSeuilEmotions(colonnes.reduce((s, c) => s + c.n, 0));
-  return { statut, colonnes: statut === 'ok' ? colonnes : [] };
+  return { statut, colonnes: statut === 'ok' ? colonnes.filter((c) => pas !== 'mois' || c.n > 0) : [] };
 }
 
 // Après une nuit Mal · Moyen · Bien (spec §5) : la nuit notée le jour D (celle qui précède D) et les émotions du jour D.

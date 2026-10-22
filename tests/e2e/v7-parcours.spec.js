@@ -363,6 +363,10 @@ test('Moment difficile 2b : la respiration en tête dans une carte (cercle bleu 
     await page.reload();
     await appPrete(page);
     const vue = await ouvrirDifficile(page);
+    // « Une chose à la fois » n'apparaît qu'une fois le plan et ses réglages lus : on l'attend avant de lire l'ordre
+    // (sans cela, le test lisait parfois l'écran avant, et ne trouvait que deux cartes).
+    await expect(vue.locator('.une-chose-acces')).toBeVisible();
+    await expect(vue.getByRole('link', { name: 'Modifier mon plan' })).toBeVisible();
     // L'ordre de la v6.1, la respiration en tête.
     const ordre = await vue.evaluate((v) => [...v.querySelectorAll('.parcours-corps .carte')].map((c) => (c.querySelector('.respiration') ? 'respiration'
       : c.classList.contains('une-chose-acces') ? 'une-chose' : c.classList.contains('plan-moment') ? 'plan' : '?')));

@@ -474,6 +474,56 @@ test('respiration, page cachée : le temps caché ne compte pas, la séance est 
   expect(await seances(page)).toHaveLength(2);
 });
 
+test('respiration : un tic de la minuterie entre « Arrêter » et le nettoyage ne relance pas le cercle ; une seule séance, le verrou rendu', async ({ page }) => {
+  // Relecture finale : Preact nettoie l'effet de la respiration après l'affichage. Un tic de 200 ms tombé entre le rendu
+  // d'« Arrêter » et ce nettoyage relançait le cercle : le toucher était perdu, la séance n'était pas notée et le verrou
+  // d'écran restait pris. Le tic est appelé ici à la main, dans cette fenêtre.
+  await installerVerrou(page);
+  await aller(page, '#/bien-etre');
+  const respiration = page.getByRole('region', { name: 'Cohérence cardiaque' });
+  await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeEnabled();
+  // La minuterie de 200 ms de la respiration : son rappel, et si elle a été effacée.
+  await page.evaluate(() => {
+    const m = { rappel: null, id: null, effacee: false };
+    window.__minuterie = m;
+    const poser = window.setInterval;
+    const effacer = window.clearInterval;
+    window.setInterval = function setInterval(rappel, ms, ...reste) {
+      const id = poser.call(this, rappel, ms, ...reste);
+      if (ms === 200) Object.assign(m, { rappel, id, effacee: false });
+      return id;
+    };
+    window.clearInterval = function clearInterval(id) { if (id === m.id) m.effacee = true; return effacer.call(this, id); };
+  });
+  await respiration.getByRole('button', { name: 'Commencer' }).click();
+  await page.clock.runFor(65000);
+  await expect(respiration.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
+  const course = await page.evaluate(async () => {
+    const m = window.__minuterie;
+    const zone = document.querySelector('main.bien-etre .respiration');
+    [...zone.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Arrêter').click();
+    // Le rendu de Preact suit le toucher d'une micro-tâche ; le nettoyage de l'effet attend l'affichage.
+    for (let i = 0; i < 20 && zone.querySelector('.cercle-respiration.en-cours'); i += 1) await Promise.resolve();
+    const rendu = !zone.querySelector('.cercle-respiration.en-cours');
+    const effaceeAvant = m.effacee;
+    m.rappel();
+    return { rendu, effaceeAvant };
+  });
+  expect(course).toEqual({ rendu: true, effaceeAvant: false });
+  await page.clock.runFor(1200);
+  await expect(respiration.locator('.cercle-respiration.en-cours')).toHaveCount(0);
+  await expect(respiration.getByRole('button', { name: 'Arrêter' })).toHaveCount(0);
+  await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeVisible();
+  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toBeVisible();
+  expect(await page.evaluate(() => window.__minuterie.effacee)).toBe(true);
+  await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
+  await expect.poll(() => seances(page)).toHaveLength(1);
+  expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'bien-etre' });
+  environ((await seances(page))[0].dureeS, 65);
+  await page.clock.runFor(2000);
+  expect(await seances(page)).toHaveLength(1);
+});
+
 // Les rectangles de la ligne de « Cohérence cardiaque » et de la durée, dans le texte de la phase.
 const lignesPhase = (phase) => phase.evaluate((p) => {
   const lignes = (n) => { const r = document.createRange(); r.selectNodeContents(n); return [...r.getClientRects()]; };

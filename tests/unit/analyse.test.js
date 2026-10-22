@@ -52,6 +52,19 @@ test('classements : hors classement, égalité, seuils', () => {
   assert.equal(phraseClassement('effetSecondaire', classer([], new Set()), carte), 'Aucun effet noté sur la période');
 });
 
+test('classements : les mots de la roue à égalité, trois au plus puis « … » ; les autres listes inchangées', () => {
+  const mots = { a: 'Irrité', b: 'Calme', c: 'Vide', d: 'Inquiet', e: 'Surpris' };
+  const lib = (id) => mots[id] || id;
+  const cinq = classer(['a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f'], new Set());
+  assert.equal(cinq.top.length, 5);
+  assert.equal(phraseClassement('emotionMoment', cinq, new Map(), lib), 'à égalité : Irrité, Calme, Vide… · 2 relevés sur 11');
+  // Trois ex aequo ou moins : tous, avec « et », comme avant.
+  const trois = classer(['a', 'a', 'b', 'b', 'c', 'c', 'f'], new Set());
+  assert.equal(phraseClassement('emotionMoment', trois, new Map(), lib), 'à égalité : Irrité et Calme et Vide · 2 relevés sur 7');
+  // La règle de classement ne change pas, ni les autres listes : leurs ex aequo restent tous dits.
+  assert.equal(phraseClassement('emotion', cinq, new Map(Object.entries(mots))), 'à égalité : Irrité et Calme et Vide et Inquiet et Surpris · 2 épisodes sur 11');
+});
+
 test('invariants : entrée vide, ordre des entrées ; v7, plus aucun constat calculé sur la note', () => {
   const journal = generer({ jours: 120, seed: 21, scenario: 'bureau' });
   const fin = journal[journal.length - 1].date;

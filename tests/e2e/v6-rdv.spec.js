@@ -218,3 +218,46 @@ test('« En parler au rendez-vous » sur un symptôme et sur l\'Après coup ; An
   await expect(feuille).toHaveCount(0);
   await expect(vue).toBeVisible();
 });
+
+// Pour chaque « : », « ; », « ? » ou « ! » d'un texte affiché : le haut de sa ligne et celui du caractère qui précède
+// l'espace (le dernier du mot d'avant). Une ponctuation qui commence une ligne a un haut plus bas que ce caractère.
+const lignesPonctuation = (loc) => loc.evaluate((el) => {
+  const noeud = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE);
+  const haut = (i) => { const r = document.createRange(); r.setStart(noeud, i); r.setEnd(noeud, i + 1); return r.getBoundingClientRect().top; };
+  const res = [];
+  for (let i = 2; i < noeud.data.length; i += 1) if (/[:;?!]/.test(noeud.data[i])) res.push({ signe: noeud.data[i], ponctuation: haut(i), avant: haut(i - 2) });
+  return { res, lignes: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)) };
+});
+
+test('relecture v7 : une question écrite avec une espace avant « : » ou « ? » ne coupe pas la ligne avant le signe ; le texte enregistré ne change pas', async ({ page }) => {
+  const texte = 'Le sommeil du week-end est plus décalé : est-ce gênant ? Et le réveil de 4 h : on en parle ?';
+  await creerRdv(page, [{ ...SUIVI[3], questions: [{ texte, abordee: false }] }]);
+  await page.evaluate(() => window.__carnet.repo.notes.creer({ date: '2026-10-14', heure: '18:40', texte: 'À dire au rendez-vous : le sommeil du week-end est décalé ; est-ce gênant ?' }));
+  await page.getByRole('link', { name: 'Soins' }).click();
+  const question = page.getByRole('region', { name: 'Prochain rendez-vous' }).locator('.texte-question');
+  await expect(question).toHaveText(texte);
+  for (const taille of [null, 19, 23, 28]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+    const { res, lignes } = await lignesPonctuation(question);
+    expect(lignes, `${taille || 'texte par défaut'} : la question tient sur plusieurs lignes`).toBeGreaterThan(1);
+    expect(res).toHaveLength(4);
+    for (const r of res) expect(r.ponctuation, `${taille || 'texte par défaut'} : « ${r.signe} »`).toBeCloseTo(r.avant, 0);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect((await lireRdv(page, 'rdv-oct')).questions).toEqual([{ texte, abordee: false }]);
+
+  // En consultation, la même question et « Mes notes ».
+  await aller(page, '#/consultation/rdv-oct');
+  const vue = page.getByRole('dialog', { name: 'En consultation' });
+  await vue.getByRole('button', { name: 'Mes notes' }).click();
+  const note = vue.getByRole('list', { name: 'Notes' }).locator('.note-texte');
+  await expect(note).toHaveText('À dire au rendez-vous : le sommeil du week-end est décalé ; est-ce gênant ?');
+  for (const loc of [vue.locator('.texte-question'), note]) {
+    for (const taille of [null, 23]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+      for (const r of (await lignesPonctuation(loc)).res) expect(r.ponctuation, `consultation ${taille || ''} : « ${r.signe} »`).toBeCloseTo(r.avant, 0);
+    }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect((await page.evaluate(() => window.__carnet.repo.notes.tous()))[0].texte).toBe('À dire au rendez-vous : le sommeil du week-end est décalé ; est-ce gênant ?');
+});

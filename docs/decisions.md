@@ -277,6 +277,14 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
 - **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
 - **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
 
+### Relecture finale (22/10)
+
+- **Respiration arrêtée** : un tic de la minuterie de 200 ms tombé entre le rendu d'« Arrêter » et le nettoyage de l'effet (Preact le fait après l'affichage) relançait le cercle. Le toucher était perdu, la séance n'était pas notée et le verrou d'écran restait pris. Le défaut existait en v6 ; il touchait les trois respirations (Moment difficile, Bien-être, « Pour récupérer, je… »). La minuterie ne fait plus rien une fois la respiration arrêtée. Un test appelle ce tic à la main, dans cette fenêtre.
+- **Comprendre › « Selon le mois », mesure Émotions** : seuls les mois qui ont un relevé à émotion ont une ligne, comme dans « Voir en tableau ». Les mois d'avant la v7, qui n'ont que des notes, ne s'alignent plus vides au-dessus du premier mois à émotions. Les jours de la semaine gardent leurs sept lignes.
+- **Analyse › Tous les chiffres** : les tuiles n'ont plus de cadre, comme celles de Ma semaine en 2b (fond `--surface` sur le fond de l'écran).
+- **Les plus fréquents › Émotion du moment** : au-delà de trois mots à égalité, les trois premiers, séparés par des virgules, puis « … » (« à égalité : Irrité, Calme, Vide… · 2 relevés sur 40 »). La règle de classement ne change pas ; les autres listes disent toujours tous leurs ex aequo.
+- **Questions d'un rendez-vous et Mes notes** (en consultation) : à l'affichage seulement, elles passent par `pourAffichage`. Une question écrite « décalé : est-ce gênant ? » ne coupe plus sa ligne juste avant « : ». Le texte enregistré, la sauvegarde et les exports ne changent pas.
+
 ### Le format de l'Export PSY change (à signaler)
 
 Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur moyenne », ses consignes sont à mettre à jour :
@@ -293,6 +301,7 @@ Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur 
 - **La roue et les exercices** : l'utilisateur relit les mots de la roue (l'image était peu nette) et les textes des exercices (plus bas) avant la publication.
 - **CLAUDE.md, vocabulaire de la roue** (plan v7, tâche 9) : la ligne suivante n'entre dans CLAUDE.md, sous « Règles qui priment sur tout », qu'avec l'accord de l'utilisateur : « **Le vocabulaire de la roue des émotions ne se lisse jamais non plus.** Il est dans `public/js/domain/roue.js`, figé une fois publié : un ajout se fait à la fin, jamais de renommage. »
 - **« Effacer définitivement » en rouge** : le dernier pas de « Tout effacer » garde son bouton rouge (`--danger`, AA en clair et en sombre), seul rouge de l'app hors de la roue. Le README du lot 2b dit « Il n'y a pas de rouge ». À confirmer, ou à passer en encre neutre comme les autres actions.
+- **La rubrique du soir « Humeur »** (grille de 1 à 10, masquée par défaut depuis la v6) reste dans Réglages › Le soir avec son interrupteur, à côté de l'« Émotion du moment ». Réaffichée, elle remet une note de 1 à 10 dans la saisie du soir. Cette note nourrit ensuite « Humeur (notes) » dans Mes jours et la Vue soignants, et « humeur du soir 6 » dans l'Export PSY, pour chaque soir à venir. La spec dit que « la note de 1 à 10 disparaît » (§2) et que l'humeur du soir « reste masquée » (§4.3), sans trancher. Deux voies : retirer « Humeur » des champs réaffichables quand la base n'a aucune humeur du soir ; ou la renommer « Humeur du soir (note de 1 à 10) » et la garder comme reliquat voulu. Rien n'est changé en attendant.
 
 ### À essayer sur l'iPhone
 

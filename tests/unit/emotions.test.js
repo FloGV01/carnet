@@ -109,6 +109,20 @@ test('famillesParColonnes : jour de la semaine, mois, lieu ; jours à émotion s
   assert.deepEqual(famillesParColonnes(plus, periode, { cle: 'lieu' }, items).colonnes.map((c) => [c.cle, c.n]), [['lieu:teletravail', 1], ['lieu:bureau', 4]]);
 });
 
+test('famillesParColonnes par mois : les mois sans relevé à émotion (notes seulement, ou rien) n\'ont pas de ligne', () => {
+  // Juillet et août n'ont que d'anciennes notes (aucune famille), septembre rien, octobre des émotions, novembre une.
+  const jours = [
+    { date: '2026-07-20', familles: [] }, { date: '2026-08-14', familles: [] },
+    { date: '2026-10-05', familles: ['colere', 'joie'] }, { date: '2026-10-06', familles: ['serenite', 'peur'] },
+    { date: '2026-11-02', familles: ['tristesse'] },
+  ];
+  const mois = famillesParColonnes(jours, { du: '2026-07-20', au: '2026-11-02' }, { cle: 'mois' });
+  assert.equal(mois.statut, 'ok');
+  assert.deepEqual(mois.colonnes.map((c) => [c.cle, c.n, c.jours]), [['2026-10', 4, 2], ['2026-11', 1, 1]]);
+  // Les jours de la semaine gardent leurs sept colonnes, vides comprises.
+  assert.equal(famillesParColonnes(jours, { du: '2026-07-20', au: '2026-11-02' }, { cle: 'jourSemaine' }).colonnes.length, 7);
+});
+
 test('apresNuit : la nuit notée le jour D et les émotions de D, bascule de 4 h comprise, sous 5 relevés insuffisant', () => {
   const journal = [
     { date: '2026-10-12', sommeilRessenti: 'sommeil:mal' }, { date: '2026-10-13', sommeilRessenti: 'sommeil:bien' },

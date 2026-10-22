@@ -220,7 +220,7 @@
 .ma-semaine .repli.repli-carte { padding: 0; background: none; }
 /* Ma semaine : « Tes émotions » sur toute la largeur, puis nuits Mal, explosions et épisodes côte à côte. */
 .tuiles-semaine { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.4em, 1fr)); gap: 8px; }
-.tuiles-semaine .tuile { border: 0; background: var(--surface-2); min-height: 0; padding: 12px 12px 14px; gap: 8px; }
+.tuiles-semaine .tuile { background: var(--surface-2); min-height: 0; padding: 12px 12px 14px; gap: 8px; }
 .tuiles-semaine .tuile-valeur { font-size: var(--t-tuile); color: var(--text); }
 .tuile-emotions { grid-column: 1 / -1; }
 .barres-familles { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -229,7 +229,7 @@
 .barre-famille { width: 100%; height: 10px; display: block; }
 .compte-famille { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.tuile { background: var(--surface); --fond-choix: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
+.tuile { background: var(--surface); --fond-choix: var(--surface-2); border: 0; border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
 .tuile-titre { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
 .tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--c-text); }
 .tuile-detail { font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }

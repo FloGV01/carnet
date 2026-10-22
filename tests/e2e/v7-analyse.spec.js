@@ -196,6 +196,11 @@ test('Comprendre (v7) : « Autour de tes explosions » et « Après une nuit »,
       await r.humeurs.creer({ date, heure: decale(2), emotion: 'roue:tristesse', energie: null });
       await r.journal.patch(date, { sommeilRessenti: 'sommeil:mal' });
     }
+    // Juillet et août : un soir et une ancienne note de 1 à 10, sans émotion (comme les mois d'avant la v7).
+    for (const date of ['2026-07-20', '2026-08-14']) {
+      await r.journal.patch(date, { sommeilRessenti: 'sommeil:bien' });
+      await r.humeurs.creer({ date, heure: '10:00', humeur: 6, emotion: null, energie: 'energie:moyenne' });
+    }
   });
   await aller(page, '#/comprendre/explosions');
   const autour = page.locator('figure.graphe', { has: page.getByText('Autour de tes explosions', { exact: true }) });
@@ -209,6 +214,13 @@ test('Comprendre (v7) : « Autour de tes explosions » et « Après une nuit »,
   const nuit = page.locator('figure.graphe', { has: page.getByText('Après une nuit', { exact: true }) });
   await expect(nuit.locator('text.g-nom')).toHaveText(['Mal', 'Moyen', 'Bien']);
   await expect(nuit.locator('rect.g-emo')).toHaveCount(2);
+  // « Selon le mois », période Tout (depuis juillet) : les mois qui n'ont que des notes n'ont pas de ligne vide, comme
+  // dans le tableau.
+  const mois = page.locator('figure.graphe', { has: page.getByText('Selon le mois', { exact: true }) });
+  await expect(mois.getByRole('img', { name: /^Selon le mois, sur tout ce que tu as noté : / })).toBeVisible();
+  await expect(mois.locator('text.g-nom')).toHaveText(['Octobre 2026']);
+  await mois.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(mois.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
 
@@ -244,6 +256,23 @@ test('AA des textes de l\'Analyse (2b), en clair et en sombre : portes, tuiles, 
       const mesures = await textesEtFonds(page.locator(`main ${sel}`));
       expect(mesures.length, `${schema} ${sel}`).toBeGreaterThan(0);
       for (const m of mesures) expect(contraste(m.couleur, m.fond), `${schema} ${sel} « ${m.texte} »`).toBeGreaterThanOrEqual(4.5);
+    }
+    // « Tous les chiffres » : des tuiles sans cadre, comme celles de Ma semaine (2b), au fond --surface sur celui de
+    // l'écran ; leurs textes restent AA.
+    // (L'écran reste le même d'un thème à l'autre : le repli peut être déjà ouvert.)
+    const tous = page.getByRole('button', { name: /^Tous les chiffres/ });
+    if (await tous.getAttribute('aria-expanded') !== 'true') await tous.click();
+    const tuiles = page.locator('main .tuiles .tuile');
+    await expect(tuiles.first()).toBeVisible();
+    const styles = await tuiles.evaluateAll((els) => els.map((e) => {
+      const s = getComputedStyle(e);
+      return { bord: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].join(' '), fond: s.backgroundColor };
+    }));
+    for (const s of styles) expect(s, `${schema} : tuile de Tous les chiffres`).toEqual({ bord: '0px 0px 0px 0px', fond: rgb(t.surface) });
+    for (const sel of ['.tuile-titre', '.tuile-valeur', '.tuile-detail']) {
+      for (const m of await textesEtFonds(page.locator(`main .tuiles ${sel}`))) {
+        expect(contraste(m.couleur, m.fond), `${schema} Tous les chiffres ${sel} « ${m.texte} »`).toBeGreaterThanOrEqual(4.5);
+      }
     }
   }
 });

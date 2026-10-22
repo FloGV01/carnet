@@ -74,8 +74,10 @@ export function Respiration({ demarrerTout = false, origine = null, apres = null
     // Le temps de respiration, page visible seulement, borné à la durée réglée.
     const ecoule = () => Math.min((cachee.current ?? performance.now()) - debut.current, dureeMs);
     const minuterie = setInterval(() => {
-      // Page cachée, le temps ne compte pas : la respiration ne peut pas finir hors de l'écran.
-      if (cachee.current != null) return;
+      // Page cachée, le temps ne compte pas : la respiration ne peut pas finir hors de l'écran. Respiration arrêtée
+      // (« Arrêter » ou la fin) : Preact ne nettoie cet effet qu'après l'affichage, et un tic tombé entre les deux
+      // relancerait le cercle (le toucher perdu, la séance non notée, le verrou gardé).
+      if (!actif.current || cachee.current != null) return;
       const p = phaseRespiration(performance.now() - debut.current, reglages.rythme, dureeMs);
       annoncer(p);
       setPhase(p);
