@@ -1,129 +1,185 @@
-/* Jetons de design : reprise de Claude Design (docs/design/retour-claude-design/Carnet.dc.html).
-   Clair par défaut, sombre selon le réglage de l'iPhone (prefers-color-scheme). */
+/* Jetons de design : piste 2b « Cartes noires » de Claude Design
+   (docs/design/retour-claude-design-v2/design_handoff_carnet_refonte/tokens.css), couleurs telles quelles,
+   à la police système (choix de l'utilisateur, 20/10 : pas de Lexend, rien à télécharger).
+   Clair = gris froid, sombre = noir profond, selon le réglage de l'iPhone (prefers-color-scheme).
+
+   Chaque couleur X a six rôles :
+   --c-X         icône, point, graphique (≥ 3:1 sur le fond) ;
+   --c-X-fill    fond du choix fait ;
+   --c-X-on      texte et coche sur -fill (AA) ;
+   --c-X-tint    fond teinté ;
+   --c-X-tint-2  teinte plus soutenue ;
+   --c-X-text    texte coloré (AA sur le fond, les cartes et la teinte).
+   -fill et -on sont les mêmes dans les deux thèmes. Une couleur est un repère (une rubrique, un parcours),
+   jamais une valeur bonne ou mauvaise. */
 :root {
   color-scheme: light dark;
-  --bg: #FAF8F5;
-  --surface: #FFFFFF;
-  --surface-2: #F2EEE8;
-  --text: #1F1D1A;
-  --text-2: #6B665E;
-  --border: #8C857B;
-  --hairline: #E4DFD8;
-  --accent: #3B4A6B;
-  --accent-texte: #FFFFFF;
-  --on-accent: var(--accent-texte);
-  --info-bg: #EEF1F7;
+
+  /* Base */
+  --bg: #e7eaee;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --line: #c2c4c8;
+  --text: #181b1f;
+  --text-2: #585b61;
+  --action: #181b1f;
+  --action-on: #fdfdfd;
+  /* Fond d'un bouton ou d'un champ non choisi : --surface sur le fond de l'écran, --surface-2 dans une carte. */
+  --fond-choix: var(--surface);
+
+  /* Rubriques du soir */
+  --c-lieu: #937c61; --c-lieu-fill: #cfb69a; --c-lieu-on: #171008; --c-lieu-tint: #f6ede2; --c-lieu-tint-2: #ecddcd; --c-lieu-text: #67543e;
+  --c-sommeil: #5f74e4; --c-sommeil-fill: #829afc; --c-sommeil-on: #0e111b; --c-sommeil-tint: #e9eeff; --c-sommeil-tint-2: #d5dffe; --c-sommeil-text: #3d4daa;
+  --c-contact: #1090a3; --c-contact-fill: #27d0eb; --c-contact-on: #071417; --c-contact-tint: #d5f5fc; --c-contact-tint-2: #b6eaf5; --c-contact-text: #0c6371;
+  --c-sport: #279936; --c-sport-fill: #6bd672; --c-sport-on: #0c140c; --c-sport-tint: #e1f5e0; --c-sport-tint-2: #caeaca; --c-sport-text: #046b1b;
+  --c-traitement: #8c6aca; --c-traitement-fill: #b392f6; --c-traitement-on: #131019; --c-traitement-tint: #f0ebff; --c-traitement-tint-2: #e3dafb; --c-traitement-text: #624595;
+  --c-positifs: #938013; --c-positifs-fill: #efd127; --c-positifs-on: #141207; --c-positifs-tint: #f4efd5; --c-positifs-tint-2: #e9e1b7; --c-positifs-text: #665801;
+  /* Parcours */
+  --c-humeur: #ca4b85; --c-humeur-fill: #ff88b9; --c-humeur-on: #190e12; --c-humeur-tint: #fee7ef; --c-humeur-tint-2: #ffd1e1; --c-humeur-text: #93285c;
+  --c-episode: #b156b7; --c-episode-fill: #dc7ee2; --c-episode-on: #160f16; --c-episode-tint: #fbe7fc; --c-episode-tint-2: #f3d4f4; --c-episode-text: #803385;
+  --c-symptome: #02967c; --c-symptome-fill: #1ae7c2; --c-symptome-on: #081511; --c-symptome-tint: #d7f7ed; --c-symptome-tint-2: #baecdd; --c-symptome-text: #056755;
+  --c-difficile: #5885ab; --c-difficile-fill: #85b4dc; --c-difficile-on: #0a131a; --c-difficile-tint: #e5f0fa; --c-difficile-tint-2: #d1e2f1; --c-difficile-text: #365c7b;
+  /* Énergie (pesé, rechargé, énergie basse) et explosions (brun sourd, jamais rouge) */
+  --c-energie: #b96a00; --c-energie-fill: #fca34c; --c-energie-on: #181008; --c-energie-tint: #ffeada; --c-energie-tint-2: #fbd8bb; --c-energie-text: #804802;
+  --c-explosions: #a7725a; --c-explosions-fill: #c79077; --c-explosions-on: #190f0a; --c-explosions-tint: #f9ebe5; --c-explosions-tint-2: #f0dad1; --c-explosions-text: #784c38;
+  /* Graphiques : rampe sommeil Mal · Moyen · Bien, une seule teinte */
+  --chart-sommeil-1: #c5d0f3; --chart-sommeil-2: #7e93e2; --chart-sommeil-3: #4455c2;
+
+  /* Roue des émotions (v7, spec §4.1) : la teinte de chaque famille vient de la roue de l'utilisateur, ajustée
+     pour AA, sur la même recette que le lot (OKLCH : accent L 0,60 en clair et 0,78 en sombre, texte 0,46 et 0,80).
+     Sérénité, ajoutée, est turquoise, entre Joie (vert) et Surprise (bleu). Ces couleurs valent pour la roue et
+     les graphiques d'émotions SEULEMENT : ailleurs, jamais de rouge ni de vert pour dire bien ou mal. */
+  --c-emo-colere: #db423c; --c-emo-colere-fill: #ff7267; --c-emo-colere-on: #1a0e0d; --c-emo-colere-tint: #fee9e6; --c-emo-colere-tint-2: #ffd4ce; --c-emo-colere-text: #9f2220;
+  --c-emo-degout: #c56001; --c-emo-degout-fill: #ff9550; --c-emo-degout-on: #190f0a; --c-emo-degout-tint: #ffeade; --c-emo-degout-tint-2: #fed6bf; --c-emo-degout-text: #894101;
+  --c-emo-tristesse: #888505; --c-emo-tristesse-fill: #c6c458; --c-emo-tristesse-on: #131308; --c-emo-tristesse-tint: #f0f0da; --c-emo-tristesse-tint-2: #e3e3b9; --c-emo-tristesse-text: #5e5b02;
+  --c-emo-joie: #36982d; --c-emo-joie-fill: #75d56b; --c-emo-joie-on: #0d140c; --c-emo-joie-tint: #e4f4e1; --c-emo-joie-tint-2: #cceac8; --c-emo-joie-text: #176b0f;
+  --c-emo-surprise: #2f82d6; --c-emo-surprise-fill: #59a8fe; --c-emo-surprise-on: #0b121a; --c-emo-surprise-tint: #e3f0ff; --c-emo-surprise-tint-2: #cae2ff; --c-emo-surprise-text: #11599c;
+  --c-emo-peur: #9364ce; --c-emo-peur-fill: #b88af7; --c-emo-peur-on: #131019; --c-emo-peur-tint: #f2eaff; --c-emo-peur-tint-2: #e6d8ff; --c-emo-peur-text: #674196;
+  --c-emo-serenite: #079390; --c-emo-serenite-fill: #46d6d1; --c-emo-serenite-on: #071514; --c-emo-serenite-tint: #d9f5f4; --c-emo-serenite-tint-2: #b6ece9; --c-emo-serenite-text: #046663;
+
+  /* « Effacer définitivement », dernier pas de « Tout effacer » : le seul bouton rouge de l'app, hors du lot 2b, gardé
+     (v7, tâche 9) parce qu'il signale une action sans retour, jamais une valeur. AA : 6,7:1 en clair, 8,3:1 en sombre.
+     À confirmer par l'utilisateur (docs/decisions.md, « En attente de l'utilisateur »). */
   --danger: #9E3B2F;
   --danger-texte: #FFFFFF;
-  --sommeil-1: #A9B5CF;
-  --sommeil-2: #6D7FA6;
-  --sommeil-3: #3B4A6B;
 
-  /* Couleurs de rubrique : repère visuel constant, jamais une valeur bonne ou mauvaise.
-     --c-* plein (texte, icône, choix), --t-* teinte (fond). Toutes ≥ 5:1 sur leur teinte. */
-  --c-lieu: #5F5648; --t-lieu: #EDE8E0;
-  --c-sommeil: #3B4A6B; --t-sommeil: #E6EAF3;
-  --c-humeur: #6E3F6B; --t-humeur: #F1E6F0;
-  --c-contact: #24636A; --t-contact: #DFEEEF;
-  --c-sport: #5E6326; --t-sport: #EEEFDC;
-  --c-expl: #8C5413; --t-expl: #F5E8D6;
-  --c-trt: #5A4E8C; --t-trt: #ECE9F5;
-  --c-pos: #7A6214; --t-pos: #F4EED6;
-
-  /* Fond plein d'un choix sélectionné, de « + Épisode » et de « Terminer » (--p-*), et son texte. En clair,
-     la couleur pleine de la rubrique ; en sombre (v6), une version moins lumineuse sous un texte clair, AA. */
-  --texte-plein: var(--accent-texte);
-  --p-accent: var(--accent);
-  --p-lieu: var(--c-lieu); --p-sommeil: var(--c-sommeil); --p-humeur: var(--c-humeur); --p-contact: var(--c-contact);
-  --p-sport: var(--c-sport); --p-expl: var(--c-expl); --p-trt: var(--c-trt); --p-pos: var(--c-pos);
-
-  --texture: radial-gradient(rgba(128, 118, 104, .10) 0.7px, transparent 0.8px),
-             radial-gradient(rgba(128, 118, 104, .07) 0.6px, transparent 0.7px);
-
-  /* Typographie : polices système uniquement (aucune police web). */
+  /* Typographie : police système (SF Pro sur l'iPhone), tailles et graisses du lot. En rem sur une base de
+     17 px (le corps d'iOS) : elles suivent la taille du texte réglée sur l'iPhone. Chiffres tabulaires. */
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  --police-titre: ui-serif, "New York", Georgia, serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
-  --t-corps: 1rem;
-  --t-pastille: 0.941rem;
-  --t-sous: 0.882rem;
-  --t-note: 0.765rem;
-  --t-etiquette: 0.735rem;
-  --t-legende: 0.706rem;
+  --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
+  --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
+  --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */
+  --t-bloc: 1rem; --l-bloc: 1.294rem;             /* 17 / 22 : titre de bloc ou de rubrique */
+  --t-section: 0.735rem; --ls-section: .07em;     /* 12,5 : libellé de section, en capitales */
+  --t-corps: 0.941rem; --l-corps: 1.35;           /* 16 */
+  --t-sous: 0.882rem;                             /* 15 : secondaire */
+  --t-petit: 0.824rem;                            /* 14 : résumé d'un repli, pastille */
+  --t-note: 0.765rem;                             /* 13 */
+  --t-legende: 0.706rem;                          /* 12 */
+  --t-onglet: 11px;                               /* comme les onglets d'iOS, sans grandir */
+  --t-grille: 1.176rem;                           /* 20 : grille de 1 à 10 */
+  --t-grille-lg: 1.235rem;                        /* 21 : intensité */
+  --t-tuile: 1.882rem;                            /* 32 : tuile chiffrée (2b) */
   --t-chiffre: 1.647rem;
 
-  /* Rayons */
-  --r-icone: 6px;
+  /* Formes : bouton 12, pastille 10, carte 14, feuille du bas 24, carré d'icône 7 */
+  --r-icone: 7px;
   --r-petit: 10px;
   --r-moyen: 12px;
-  --r-bouton: 14px;
-  --r-carte: 16px;
-  --r-plein: 22px;
+  --r-bouton: 12px;
+  --r-carte: 14px;
+  --r-feuille: 24px;
 
-  /* Espacements et cibles */
+  /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 14 (2b) */
   --esp-1: 4px;
   --esp-2: 8px;
   --esp-3: 12px;
   --esp-4: 16px;
   --esp-5: 24px;
   --esp-6: 32px;
+  --ecart: 6px;
+  --marge: 14px;
+
+  /* Cibles et hauteurs : toute cible fait 44 au moins */
   --cible: 44px;
   --cible-grille: 48px;
   --cible-bouton: 52px;
-  --marge: 16px;
+  --h-grille-humeur: 56px;
+  --h-grille-intensite: 64px;
+  --h-bande: 64px;
   /* Hauteur de la barre d'onglets, sans la zone du bas de l'iPhone : 1 de filet, 4 de marge, 45 d'onglet. */
   --hauteur-onglets: 50px;
 
-  /* Durées */
+  /* Durées : 200 ms au plus, supprimées avec « Réduire les animations » */
   --duree: 150ms;
+  --duree-anim: 200ms;
   --duree-glisse: 180ms;
   --delai-avance: 250ms;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1A1917;
-    --surface: #24221F;
-    --surface-2: #2E2B27;
-    --text: #EDE9E3;
-    --text-2: #A8A29A;
-    --border: #7A746B;
-    --hairline: #3A3632;
-    --accent: #9DB0D9;
-    --accent-texte: #1A1917;
-    --info-bg: #262B36;
+    --bg: #000000;
+    --surface: #1e1f21;
+    --surface-2: #2d2e30;
+    --line: #47484a;
+    --text: #bfc0c3;
+    --text-2: #97989b;
+    --action: #eaebed;
+    --action-on: #000000;
+
+    --c-lieu: #ccb397; --c-lieu-tint: #261c11; --c-lieu-tint-2: #362919; --c-lieu-text: #d0baa1;
+    --c-sommeil: #9fb3fc; --c-sommeil-tint: #161c36; --c-sommeil-tint-2: #20284b; --c-sommeil-text: #a7bafe;
+    --c-contact: #1fcde8; --c-contact-tint: #002228; --c-contact-tint-2: #00323a; --c-contact-text: #1fd4f0;
+    --c-sport: #68d36f; --c-sport-tint: #0c230d; --c-sport-tint-2: #133416; --c-sport-text: #7bd77f;
+    --c-traitement: #c1a6fc; --c-traitement-tint: #221b31; --c-traitement-tint-2: #2f2543; --c-traitement-text: #c7aefe;
+    --c-positifs: #d2b723; --c-positifs-tint: #241e00; --c-positifs-tint-2: #332b01; --c-positifs-text: #d8be34;
+    --c-humeur: #ff8ebc; --c-humeur-tint: #311420; --c-humeur-tint-2: #441c2d; --c-humeur-text: #fe9ac2;
+    --c-episode: #ed8ef3; --c-episode-tint: #2b162c; --c-episode-tint-2: #3b1f3d; --c-episode-text: #ee9af3;
+    --c-symptome: #0dd5b2; --c-symptome-tint: #00241c; --c-symptome-tint-2: #00342a; --c-symptome-text: #09dcb8;
+    --c-difficile: #8ebde6; --c-difficile-tint: #141f29; --c-difficile-tint-2: #1d2d3b; --c-difficile-text: #9ac3e7;
+    --c-energie: #fc9e3f; --c-energie-tint: #301903; --c-energie-tint-2: #422301; --c-energie-text: #fea753;
+    --c-explosions: #e2a88f; --c-explosions-tint: #281a14; --c-explosions-tint-2: #39261e; --c-explosions-text: #e4b19a;
+    --chart-sommeil-1: #394473; --chart-sommeil-2: #6073c7; --chart-sommeil-3: #9fb3fe;
+
+    --c-emo-colere: #ff968a; --c-emo-colere-tint: #321411; --c-emo-colere-tint-2: #461d19; --c-emo-colere-text: #ffa196;
+    --c-emo-degout: #ff9b5a; --c-emo-degout-tint: #301605; --c-emo-degout-tint-2: #442007; --c-emo-degout-text: #ffa56d;
+    --c-emo-tristesse: #c0bd52; --c-emo-tristesse-tint: #212000; --c-emo-tristesse-tint-2: #2e2d01; --c-emo-tristesse-text: #c4c36c;
+    --c-emo-joie: #71d268; --c-emo-joie-tint: #0f240d; --c-emo-joie-tint-2: #163313; --c-emo-joie-text: #85d57c;
+    --c-emo-surprise: #80bcfe; --c-emo-surprise-tint: #0a1f35; --c-emo-surprise-tint-2: #102c4a; --c-emo-surprise-text: #8cc2ff;
+    --c-emo-peur: #c7a2ff; --c-emo-peur-tint: #231832; --c-emo-peur-tint-2: #312246; --c-emo-peur-text: #ccabfe;
+    --c-emo-serenite: #3dcfcb; --c-emo-serenite-tint: #002423; --c-emo-serenite-tint-2: #013332; --c-emo-serenite-text: #63d3cf;
+
     --danger: #E8A195;
     --danger-texte: #1A1917;
-    --sommeil-1: #4A5878;
-    --sommeil-2: #7688B0;
-    --sommeil-3: #AFC0E3;
-    --c-lieu: #CFC3B0; --t-lieu: #2F2B25;
-    --c-sommeil: #9DB0D9; --t-sommeil: #262B36;
-    --c-humeur: #D8B0D4; --t-humeur: #33262F;
-    --c-contact: #8FCCD1; --t-contact: #1F3032;
-    --c-sport: #C9CD8E; --t-sport: #2C2D1E;
-    --c-expl: #E6B47A; --t-expl: #33281B;
-    --c-trt: #B9AEE6; --t-trt: #2A2638;
-    --c-pos: #DCC57A; --t-pos: #312B19;
-    /* Sélections adoucies (v6) : contraste ≥ 5:1 avec --texte-plein, et ≥ 2,5:1 avec --surface. */
-    --texte-plein: #F5F2ED;
-    --p-accent: #4D6091;
-    --p-lieu: #6E6352; --p-sommeil: #4D6091; --p-humeur: #80507B; --p-contact: #2E6F75;
-    --p-sport: #5F6629; --p-expl: #8F5A1C; --p-trt: #65579E; --p-pos: #7C6519;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { --duree: 0ms; --duree-glisse: 0ms; }
+  :root { --duree: 0ms; --duree-anim: 0ms; --duree-glisse: 0ms; }
 }
 
-/* Teinte locale par rubrique : les composants lisent var(--c), var(--t) et var(--p), sans style en ligne. */
-.teinte-lieu { --c: var(--c-lieu); --t: var(--t-lieu); --p: var(--p-lieu); }
-.teinte-sommeil { --c: var(--c-sommeil); --t: var(--t-sommeil); --p: var(--p-sommeil); }
-.teinte-humeur { --c: var(--c-humeur); --t: var(--t-humeur); --p: var(--p-humeur); }
-.teinte-contact { --c: var(--c-contact); --t: var(--t-contact); --p: var(--p-contact); }
-.teinte-sport { --c: var(--c-sport); --t: var(--t-sport); --p: var(--p-sport); }
-.teinte-expl { --c: var(--c-expl); --t: var(--t-expl); --p: var(--p-expl); }
-.teinte-trt { --c: var(--c-trt); --t: var(--t-trt); --p: var(--p-trt); }
-.teinte-pos { --c: var(--c-pos); --t: var(--t-pos); --p: var(--p-pos); }
-.teinte-ep { --c: var(--c-humeur); --t: var(--t-humeur); --p: var(--p-humeur); }
-.teinte-sy { --c: var(--c-contact); --t: var(--t-contact); --p: var(--p-contact); }
-.teinte-jour { --c: var(--c-sommeil); --t: var(--t-sommeil); --p: var(--p-sommeil); }
+/* Teinte locale d'une rubrique, d'un parcours ou d'une famille d'émotions : les composants lisent ses six rôles
+   sous des noms courts (--c, --c-fill, --c-on, --c-tint, --c-tint-2, --c-text), sans style en ligne.
+   Sans teinte, un choix fait prend la couleur action (segments, période, onglets). */
+.teinte-lieu { --c: var(--c-lieu); --c-fill: var(--c-lieu-fill); --c-on: var(--c-lieu-on); --c-tint: var(--c-lieu-tint); --c-tint-2: var(--c-lieu-tint-2); --c-text: var(--c-lieu-text); }
+.teinte-sommeil { --c: var(--c-sommeil); --c-fill: var(--c-sommeil-fill); --c-on: var(--c-sommeil-on); --c-tint: var(--c-sommeil-tint); --c-tint-2: var(--c-sommeil-tint-2); --c-text: var(--c-sommeil-text); }
+.teinte-contact { --c: var(--c-contact); --c-fill: var(--c-contact-fill); --c-on: var(--c-contact-on); --c-tint: var(--c-contact-tint); --c-tint-2: var(--c-contact-tint-2); --c-text: var(--c-contact-text); }
+.teinte-sport { --c: var(--c-sport); --c-fill: var(--c-sport-fill); --c-on: var(--c-sport-on); --c-tint: var(--c-sport-tint); --c-tint-2: var(--c-sport-tint-2); --c-text: var(--c-sport-text); }
+.teinte-trt { --c: var(--c-traitement); --c-fill: var(--c-traitement-fill); --c-on: var(--c-traitement-on); --c-tint: var(--c-traitement-tint); --c-tint-2: var(--c-traitement-tint-2); --c-text: var(--c-traitement-text); }
+.teinte-pos { --c: var(--c-positifs); --c-fill: var(--c-positifs-fill); --c-on: var(--c-positifs-on); --c-tint: var(--c-positifs-tint); --c-tint-2: var(--c-positifs-tint-2); --c-text: var(--c-positifs-text); }
+.teinte-humeur { --c: var(--c-humeur); --c-fill: var(--c-humeur-fill); --c-on: var(--c-humeur-on); --c-tint: var(--c-humeur-tint); --c-tint-2: var(--c-humeur-tint-2); --c-text: var(--c-humeur-text); }
+.teinte-ep { --c: var(--c-episode); --c-fill: var(--c-episode-fill); --c-on: var(--c-episode-on); --c-tint: var(--c-episode-tint); --c-tint-2: var(--c-episode-tint-2); --c-text: var(--c-episode-text); }
+.teinte-sy { --c: var(--c-symptome); --c-fill: var(--c-symptome-fill); --c-on: var(--c-symptome-on); --c-tint: var(--c-symptome-tint); --c-tint-2: var(--c-symptome-tint-2); --c-text: var(--c-symptome-text); }
+/* Moment difficile (et « Une chose à la fois », teinte « jour » depuis la v6). Bien-être (v7) prend la couleur de la
+   cohérence cardiaque, sa première pratique. */
+.teinte-difficile, .teinte-jour, .teinte-bien-etre { --c: var(--c-difficile); --c-fill: var(--c-difficile-fill); --c-on: var(--c-difficile-on); --c-tint: var(--c-difficile-tint); --c-tint-2: var(--c-difficile-tint-2); --c-text: var(--c-difficile-text); }
+.teinte-energie { --c: var(--c-energie); --c-fill: var(--c-energie-fill); --c-on: var(--c-energie-on); --c-tint: var(--c-energie-tint); --c-tint-2: var(--c-energie-tint-2); --c-text: var(--c-energie-text); }
+.teinte-expl { --c: var(--c-explosions); --c-fill: var(--c-explosions-fill); --c-on: var(--c-explosions-on); --c-tint: var(--c-explosions-tint); --c-tint-2: var(--c-explosions-tint-2); --c-text: var(--c-explosions-text); }
+/* Familles de la roue des émotions, dans l'ordre de la roue. */
+.emo-colere { --c: var(--c-emo-colere); --c-fill: var(--c-emo-colere-fill); --c-on: var(--c-emo-colere-on); --c-tint: var(--c-emo-colere-tint); --c-tint-2: var(--c-emo-colere-tint-2); --c-text: var(--c-emo-colere-text); }
+.emo-degout { --c: var(--c-emo-degout); --c-fill: var(--c-emo-degout-fill); --c-on: var(--c-emo-degout-on); --c-tint: var(--c-emo-degout-tint); --c-tint-2: var(--c-emo-degout-tint-2); --c-text: var(--c-emo-degout-text); }
+.emo-tristesse { --c: var(--c-emo-tristesse); --c-fill: var(--c-emo-tristesse-fill); --c-on: var(--c-emo-tristesse-on); --c-tint: var(--c-emo-tristesse-tint); --c-tint-2: var(--c-emo-tristesse-tint-2); --c-text: var(--c-emo-tristesse-text); }
+.emo-joie { --c: var(--c-emo-joie); --c-fill: var(--c-emo-joie-fill); --c-on: var(--c-emo-joie-on); --c-tint: var(--c-emo-joie-tint); --c-tint-2: var(--c-emo-joie-tint-2); --c-text: var(--c-emo-joie-text); }
+.emo-surprise { --c: var(--c-emo-surprise); --c-fill: var(--c-emo-surprise-fill); --c-on: var(--c-emo-surprise-on); --c-tint: var(--c-emo-surprise-tint); --c-tint-2: var(--c-emo-surprise-tint-2); --c-text: var(--c-emo-surprise-text); }
+.emo-peur { --c: var(--c-emo-peur); --c-fill: var(--c-emo-peur-fill); --c-on: var(--c-emo-peur-on); --c-tint: var(--c-emo-peur-tint); --c-tint-2: var(--c-emo-peur-tint-2); --c-text: var(--c-emo-peur-text); }
+.emo-serenite { --c: var(--c-emo-serenite); --c-fill: var(--c-emo-serenite-fill); --c-on: var(--c-emo-serenite-on); --c-tint: var(--c-emo-serenite-tint); --c-tint-2: var(--c-emo-serenite-tint-2); --c-text: var(--c-emo-serenite-text); }

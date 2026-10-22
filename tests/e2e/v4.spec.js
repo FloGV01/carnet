@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, entreeDuJour, viderBase, aller } from '../aides/saisie.js';
 
-// v4 : humeur du moment, détails du soir, Mon plan, Après coup, Ma journée, Analyse.
+// v4 : humeur du moment (émotion du moment en v7), détails du soir, Mon plan, Après coup, Ma journée, Analyse.
 const repo = (page, f, arg) => page.evaluate(f, arg);
 
 test.beforeEach(async ({ page }) => {
@@ -10,18 +10,18 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('humeur du moment : deux touchers, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
-  await page.getByRole('link', { name: 'Humeur du moment' }).click();
-  const vue = page.getByRole('dialog', { name: 'Humeur du moment' });
-  await vue.getByRole('button', { name: 'Humeur 6' }).click();
+test('émotion du moment (v7) : famille et énergie, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
+  await page.getByRole('link', { name: 'Émotion du moment' }).click();
+  const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
+  await vue.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Sérénité' }).click();
   await vue.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Moyenne' }).click();
-  await expect(page.getByText('Humeur du moment notée')).toBeVisible();
+  await expect(page.getByText('Émotion du moment notée')).toBeVisible();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   const releves = () => repo(page, () => window.__carnet.repo.humeurs.tous());
-  await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', humeur: 6, energie: 'energie:moyenne' }]);
+  await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', emotion: 'roue:serenite', humeur: null, energie: 'energie:moyenne' }]);
   // Une nouvelle ouverture crée un nouveau relevé ; la liste du jour montre les précédents.
-  await page.getByRole('link', { name: 'Humeur du moment' }).click();
-  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 humeur 6 · énergie moyenne');
+  await page.getByRole('link', { name: 'Émotion du moment' }).click();
+  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 Sérénité · énergie moyenne');
   await vue.getByRole('button', { name: 'Supprimer le relevé de 18:42' }).click();
   await expect.poll(async () => (await releves()).length).toBe(0);
   await page.getByRole('button', { name: 'Annuler' }).click();
@@ -121,12 +121,12 @@ test('Réglages › Le soir : afficher le compteur et l\'humeur du soir, changer
   expect(groupes.slice(0, 2)).toEqual(['Humeur', 'Lieu']);
 });
 
-test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure, avec tes notes seulement', async ({ page }) => {
+test('Analyse (v5) : tes moments étape par étape et ta journée heure par heure (v7 : les familles d\'émotions), avec tes notes seulement', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     for (const [d, f] of [['2026-10-01', ['fragilite:fatigue']], ['2026-10-02', ['fragilite:fatigue', 'fragilite:faim']], ['2026-10-03', null]]) {
       await r.episodes.creer({ date: d, heure: '19:00', reaction: 'reaction:explosion', declencheur: 'declencheur:conflit', apresCoup: f ? { fragilites: f, jour: d } : null });
-      for (const [heure, humeur] of [['10:00', 5], ['16:00', 7]]) await r.humeurs.creer({ date: d, heure, humeur, energie: 'energie:basse' });
+      for (const [heure, emotion] of [['10:00', 'roue:colere:irrite'], ['16:00', 'roue:serenite']]) await r.humeurs.creer({ date: d, heure, emotion, energie: 'energie:basse' });
     }
   });
   await page.getByRole('link', { name: 'Analyse' }).click();
@@ -137,7 +137,8 @@ test('Analyse (v5) : tes moments étape par étape et ta journée heure par heur
   await expect(avant).toContainText('Ce sont tes notes, rassemblées : pas des causes.');
   const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
   await journee.getByRole('button', { name: 'Voir en tableau' }).click();
-  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('humeur du moment 5,0 (peu de jours) · énergie : basse 3 jours');
+  await expect(journee.getByRole('row', { name: /10 h – 12 h/ })).toContainText('émotions : colère 3 · énergie : basse 3 jours');
+  await expect(journee.getByRole('row', { name: /16 h – 18 h/ })).toContainText('émotions : sérénité 3 · énergie : basse 3 jours');
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
 });
 

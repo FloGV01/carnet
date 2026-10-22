@@ -1,8 +1,9 @@
-// « Moment difficile » (v5) : à un toucher depuis Aujourd'hui. Cohérence cardiaque guidée (durée,
-// rythme et signal sonore réglés dans Réglages › Moment difficile), « Une chose à la fois » (le plan
+// « Moment difficile » (v5) : à un toucher depuis Aujourd'hui. Cohérence cardiaque guidée en tête (durée et
+// rythme réglables sur place, signal sonore dans Réglages › Moment difficile), « Une chose à la fois » (le plan
 // une ligne par écran, réglé au même endroit), puis Mon plan tel que l'utilisateur l'a écrit, avec
-// « Modifier mon plan » à droite de son titre (v6.1). Rien n'y est calculé ni choisi par l'app : ni
-// conseil, ni sélection de notes, ni compte à rebours.
+// « Modifier » à droite de son titre (v6.1). Rien n'y est calculé ni choisi par l'app : ni
+// conseil, ni sélection de notes, ni compte à rebours. La respiration crée une séance d'origine `moment-difficile` (v7).
+// En 2b (v7, tâche 8) : trois cartes, à la couleur du parcours (bleu brume) ; « Commencer » en -fill / -on.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Respiration } from '../composants/respiration.js';
@@ -33,19 +34,23 @@ export function MomentDifficile() {
   const quitterCartes = (vers) => () => { retour.current = vers; setCartesOuvertes(false); };
   const fermer = () => { location.hash = '#/aujourdhui'; };
   if (cartesOuvertes && cartes.length > 0) {
-    return html`<${CadreParcours} titre="Une chose à la fois" teinte="jour" surFermer=${quitterCartes('acces')} sansPoint=${true}>
+    return html`<${CadreParcours} titre="Une chose à la fois" teinte="difficile" surFermer=${quitterCartes('acces')}>
       <${UneChose} cartes=${cartes} surToutVoir=${quitterCartes('plan')} />
     </${CadreParcours}>`;
   }
-  return html`<${CadreParcours} titre="Moment difficile" teinte="jour" surFermer=${fermer} sansPoint=${true}
+  return html`<${CadreParcours} titre="Moment difficile" teinte="difficile" surFermer=${fermer}
     pied=${html`<a class="btn-lien" href="#/episode/nouveau">${Icones.plus({ trait: 2 })}Noter un épisode</a>`}>
     <div class="etape moment-difficile">
-      <${Respiration} />
-      ${cartes.length > 0 && html`<button type="button" class="btn une-chose-acces" ref=${acces} onClick=${() => setCartesOuvertes(true)}>Une chose à la fois</button>`}
-      <section class="plan-moment" aria-labelledby="titre-plan-moment">
+      <div class="carte carte-respiration">
+        <${Respiration} origine="moment-difficile" reglable=${true} />
+      </div>
+      ${cartes.length > 0 && html`<button type="button" class="carte ligne-carte une-chose-acces" ref=${acces} onClick=${() => setCartesOuvertes(true)}>
+        <span class="ligne-libelle">Une chose à la fois</span>${Icones.chevron({ trait: 2 })}</button>`}
+      <section class="carte plan-moment" aria-labelledby="titre-plan-moment">
         <div class="plan-moment-tete">
-          <h2 class="titre-question" id="titre-plan-moment" tabindex="-1" ref=${titrePlan}>Mon plan</h2>
-          ${plan && !planVide(plan) && html`<a class="lien-discret" href="#/mon-plan">Modifier mon plan</a>`}
+          <h2 class="titre-plan-moment" id="titre-plan-moment" tabindex="-1" ref=${titrePlan}>
+            <span class="carre-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
+          ${plan && !planVide(plan) && html`<a class="btn-lien modifier-plan" href="#/mon-plan" aria-label="Modifier mon plan">Modifier</a>`}
         </div>
         ${plan && (planVide(plan)
           ? html`<a class="btn-lien action" href="#/mon-plan">Écrire mon plan</a>`

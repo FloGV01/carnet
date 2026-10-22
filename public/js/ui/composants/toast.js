@@ -12,14 +12,15 @@ export function fermerToast(id) {
   if (t && (id == null || t.id === id)) etatApp.maj({ toast: null });
 }
 
-export function Toast({ toast }) {
+// `enHaut` : dans un parcours, sous « Fermer », loin des réponses posées en bas (app.js).
+export function Toast({ toast, enHaut = false }) {
   useEffect(() => {
     if (!toast) return undefined;
     const m = setTimeout(() => fermerToast(toast.id), toast.dureeMs);
     return () => clearTimeout(m);
   }, [toast && toast.id]);
   if (!toast) return null;
-  return html`<div class="toast" role="status" aria-live="polite">
+  return html`<div class=${enHaut ? 'toast en-haut' : 'toast'} role="status" aria-live="polite">
     <span class="toast-texte">${toast.texte}</span>
     ${toast.action && html`<span aria-hidden="true">·</span>
       <button type="button" onClick=${() => { fermerToast(toast.id); toast.action.faire(); }}>${toast.action.libelle}</button>`}

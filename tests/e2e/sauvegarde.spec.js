@@ -66,6 +66,19 @@ test('v6 : les notes sont dans le fichier, et une note absente du fichier est an
   expect(await page.evaluate(() => window.__carnet.repo.notes.tous())).toEqual([gardee]);
 });
 
+test('v7 : les séances sont dans le fichier, et une séance absente du fichier est annoncée avant d\'être effacée', async ({ page }) => {
+  const gardee = await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' }));
+  const f = await exporterVers(page);
+  expect(JSON.parse(Buffer.from(f.octets).toString('utf8'))).toMatchObject({ formatVersion: 5, schemaVersion: 5, counts: { seances: 1 } });
+  await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-09-30', heure: '20:30', exercice: 'coherence', dureeS: 120, origine: 'moment-difficile' }));
+  await page.locator('input[type=file]').setInputFiles({ name: f.nom, mimeType: 'application/json', buffer: Buffer.from(f.octets) });
+  await expect(page.getByText(/Ce fichier contient 0 journée, 0 épisode, 1 séance de Bien-être\./)).toBeVisible();
+  await expect(page.getByText('1 séance de Bien-être présente ici et absente du fichier sera effacée.')).toBeVisible();
+  await page.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(page.getByText('Import terminé.')).toBeVisible();
+  expect(await page.evaluate(() => window.__carnet.repo.seances.tous())).toEqual([gardee]);
+});
+
 test('avec un mémo, la sauvegarde est un ZIP qui se restaure avec le son', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.audios.creer({ parentStore: 'journal', parentId: '2026-09-30', dureeMs: 1000, mime: 'audio/mp4', data: new Uint8Array([9, 8, 7]).buffer }));
   const f = await exporterVers(page);

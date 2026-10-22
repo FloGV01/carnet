@@ -67,21 +67,28 @@ const JOUR = [
 
 // nExplosions : épisodes « Explosion » du jour (v4). Règle d'affichage de domain/explosions.js,
 // jamais enregistrée : le compteur s'il est noté (au moins le nombre d'épisodes), sinon les épisodes.
-function phraseJour(entree, carte, nExplosions) {
+// emotions (v7, facultatif) : les émotions du moment du jour (releves.js, resumeEmotions), placées après l'humeur, en un
+// segment « irrité, calme » de rubrique « emotions » qui porte ses familles (l'interface en fait des points de couleur).
+function phraseJour(entree, carte, nExplosions, emotions) {
   const segments = [];
+  const ajouter = (segment) => {
+    if (segments.length) segments.push({ texte: ' · ', valeur: false });
+    segments.push(segment);
+  };
   for (const [champ, rubrique, forme] of JOUR) {
     const v = champ === 'explosions' ? valeurExplosions(entree.explosions ?? null, nExplosions) : entree[champ];
-    if (v == null) continue;
-    if (segments.length) segments.push({ texte: ' · ', valeur: false });
-    segments.push({ texte: forme(v, carte), valeur: true, rubrique });
+    if (v != null) ajouter({ texte: forme(v, carte), valeur: true, rubrique });
+    if (champ === 'humeur' && emotions && emotions.mots.length) {
+      ajouter({ texte: `${emotions.mots.join(', ')}${emotions.plus ? '…' : ''}`, valeur: true, rubrique: 'emotions', familles: emotions.familles });
+    }
   }
   return segments;
 }
 
-export function phraseResume(type, fiche, carte, { nExplosions = 0 } = {}) {
+export function phraseResume(type, fiche, carte, { nExplosions = 0, emotions = null } = {}) {
   if (!fiche) return [];
   if (type === 'episode') return phraseFiche(EPISODE, fiche, carte);
   if (type === 'symptome') return phraseFiche(SYMPTOME, fiche, carte);
-  if (type === 'jour') return phraseJour(fiche, carte, nExplosions);
+  if (type === 'jour') return phraseJour(fiche, carte, nExplosions, emotions);
   return [];
 }

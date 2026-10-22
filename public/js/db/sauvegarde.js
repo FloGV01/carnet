@@ -13,9 +13,9 @@ import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 4;
+export const FORMAT_VERSION = 5;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
-const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'listes', 'meta', 'audios'];
+export const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
 const META_NON_EXPORTEES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
 // Gardée telle quelle si le fichier (ou la copie) ne l'a pas : date de la mise à jour v4,
@@ -69,7 +69,7 @@ export function construireSauvegarde(donnees, { maintenant, versionApp, seuil = 
   const data = {
     journal: donnees.journal || [], episodes: donnees.episodes || [], symptomes: donnees.symptomes || [],
     traitements: donnees.traitements || [], rdv: donnees.rdv || [], humeurs: donnees.humeurs || [], notes: donnees.notes || [],
-    listes: donnees.listes || [],
+    seances: donnees.seances || [], listes: donnees.listes || [],
     meta: (donnees.meta || []).filter((m) => !META_NON_EXPORTEES.has(m.cle)),
     audios: metaAudios,
   };
@@ -168,6 +168,14 @@ export const MISES_A_NIVEAU = {
     if (Array.isArray(data.meta)) data.meta = data.meta.map(masquerHumeur);
     return { ...s, formatVersion: 4, counts, data };
   },
+  // v4 -> v5 : séances de Bien-être (aucune) ; les humeurs du moment gagnent `emotion: null`, et leur
+  // note de 1 à 10 reste telle quelle.
+  4(s) {
+    const data = { ...(s.data || {}), seances: [] };
+    const counts = { ...(s.counts || {}), seances: 0 };
+    if (Array.isArray(data.humeurs)) data.humeurs = data.humeurs.map((h) => (h && typeof h === 'object' && !Array.isArray(h) ? { emotion: null, ...h } : h));
+    return { ...s, formatVersion: 5, counts, data };
+  },
 };
 export function mettreANiveauSauvegarde(s) {
   let courant = s;
@@ -243,7 +251,7 @@ export function analyserFichiers(fichiers) {
     resume: {
       journees: valides.journal.length, episodes: valides.episodes.length, symptomes: valides.symptomes.length,
       traitements: valides.traitements.length, rdv: valides.rdv.length, humeurs: valides.humeurs.length, notes: valides.notes.length,
-      memos: audios.length,
+      seances: valides.seances.length, memos: audios.length,
       du: dates[0] || null, au: dates[dates.length - 1] || null, exportedAt: s.exportedAt,
     },
   };
@@ -251,7 +259,7 @@ export function analyserFichiers(fichiers) {
 
 // Ce que l'import effacerait : éléments présents ici et absents du fichier.
 export function chiffrerPerte(actuel, analyse) {
-  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', humeurs: 'id', notes: 'id', audios: 'id' };
+  const cle = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id', humeurs: 'id', notes: 'id', seances: 'id', audios: 'id' };
   const res = {};
   for (const [store, k] of Object.entries(cle)) {
     const dansFichier = new Set((analyse.valides[store] || []).map((x) => x[k]));
@@ -268,7 +276,7 @@ async function prendreCopie(t, type, horodatage, donnees) {
   snaps.put({ id: `${type}-${horodatage}`, type, date: horodatage, schemaVersion: DB_VERSION, data: sansAudios });
 }
 
-const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'listes', 'audios'];
+const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'audios'];
 
 // Remplacement complet, en une seule transaction (copie de secours comprise).
 export async function remplacer(repo, analyse, { panne } = {}) {
@@ -304,10 +312,10 @@ export async function revenirAvantImport(repo) {
   const actuel = await lireTout(repo);
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
     await prendreCopie(t, 'avant-retour', h, actuel);
-    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'humeurs', 'notes']) {
+    for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'humeurs', 'notes', 'seances']) {
       // Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a
-      // pas de notes : on les laisse telles quelles.
-      if ((s === 'humeurs' || s === 'notes') && !Array.isArray(copie.data[s])) continue;
+      // pas de notes, une copie prise avant la v7 n'a pas de séances : on les laisse telles quelles.
+      if (['humeurs', 'notes', 'seances'].includes(s) && !Array.isArray(copie.data[s])) continue;
       t.objectStore(s).clear();
       // Une copie prise avant la v5 a encore un seul détail de contact par jour.
       for (const x of copie.data[s] || []) t.objectStore(s).put(s === 'journal' ? versContacts(x) : x);

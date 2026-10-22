@@ -2,6 +2,7 @@
 // et les imports. null est la seule façon de dire « non renseigné ».
 import { estDateValide, estHeureValide } from './dates.js';
 import { listeDe } from './listes-def.js';
+import { estEmotion } from './roue.js';
 
 const T = {
   date: { type: 'date' }, heure: { type: 'heure' }, texte: { type: 'texte' }, bool: { type: 'bool' },
@@ -12,6 +13,8 @@ const T = {
   // Objet de sous-champs (vide → null) et lignes d'objets (lignes vides retirées, aucune → null).
   // contexte : sous-champs remplis par l'app (le jour d'écriture), qui seuls ne gardent pas l'objet.
   objet: (champs, contexte = []) => ({ type: 'objet', champs, contexte }), lignes: (champs) => ({ type: 'lignes', champs }),
+  // v7 : un identifiant de la roue des émotions (domain/roue.js), et une valeur prise dans une liste fixe.
+  roue: { type: 'roue' }, choix: (valeurs) => ({ type: 'choix', valeurs }),
 };
 
 // Retour à froid sur un épisode (v4). Aucun champ obligatoire. Les clés sont FIGÉES une fois
@@ -27,6 +30,9 @@ export const APRES_COUP = {
 export const ACTIVITE = { type: T.ref('typeSport'), duree: T.ref('dureeSport') };
 // Un contact de la journée (v5) : avec qui (plusieurs choix), comment c'était.
 export const CONTACT = { avec: T.refs('contactAvec'), effet: T.ref('contactEffet') };
+
+// D'où une séance a été lancée (v7) : l'onglet Bien-être, Moment difficile ou la carte « Pour récupérer, je… ».
+export const ORIGINES_SEANCE = Object.freeze(['bien-etre', 'moment-difficile', 'ressourcer']);
 
 // cles : champs techniques. saisis : champs que l'utilisateur renseigne.
 export const SCHEMAS = {
@@ -57,9 +63,12 @@ export const SCHEMAS = {
   },
   // Humeur du moment (v4) : date calendaire réelle et heure, rattachées au jour par jourEvenement.
   // vers (v6) : relevé noté après coup, pour une heure passée. faisais : ce que je faisais.
+  // emotion (v7) : une famille ou un mot de la roue, à la place de la note ; humeur reste pour les
+  // anciens relevés et vaut null dans les nouveaux. Vide quand emotion, humeur, energie et faisais le
+  // sont tous (spec v7 §4.3) : « vers » seul ne garde pas un relevé, des activités le gardent.
   humeurs: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
-    saisis: { humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
+    saisis: { emotion: T.roue, humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
   },
   // Note du moment (v6) : comme l'humeur du moment, date calendaire réelle et heure.
   notes: {
@@ -72,6 +81,14 @@ export const SCHEMAS = {
       date: T.date, heure: T.heure, professionnel: T.ref('professionnel'), questions: T.questions,
       compteRendu: T.texte, prochaineEtape: T.texte,
     },
+  },
+  // Séance de Bien-être (v7) : une respiration ou un exercice mené au bout, ou arrêté après 60 s au moins.
+  // Date calendaire réelle et heure, rattachées au jour par jourEvenement, comme l'humeur du moment.
+  // exercice : `coherence` ou l'identifiant d'un exercice, posé par l'app, donc obligatoire (spec v7 §6.3) :
+  // une séance sans exercice est refusée. origine : l'écran d'où elle a été lancée.
+  seances: {
+    cles: { id: { type: 'id' }, date: T.date, heure: T.heure, exercice: T.texte },
+    saisis: { dureeS: T.int(0, 86400), origine: T.choix(ORIGINES_SEANCE) },
   },
 };
 export const STORES_SAISIE = Object.keys(SCHEMAS);
@@ -128,6 +145,12 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
       return v;
     case 'ref':
       if (typeof v !== 'string' || listeDe(v) !== def.liste) { erreurs.push(`${nom} : référence invalide`); return null; }
+      return v;
+    case 'roue':
+      if (!estEmotion(v)) { erreurs.push(`${nom} : émotion inconnue`); return null; }
+      return v;
+    case 'choix':
+      if (!def.valeurs.includes(v)) { erreurs.push(`${nom} : valeur inconnue`); return null; }
       return v;
     case 'refs': {
       if (!Array.isArray(v)) { erreurs.push(`${nom} : liste attendue`); return null; }
@@ -225,7 +248,8 @@ export function valider(store, brut, options) {
 }
 
 // Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
-const CONTEXTE = { episodes: ['heure'], humeurs: ['vers', 'faisais'] };
+// v7 : « Ce que je faisais » n'en est plus un (spec §4.3), seul « vers » le reste pour les relevés.
+const CONTEXTE = { episodes: ['heure'], humeurs: ['vers'] };
 
 export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];

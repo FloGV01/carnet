@@ -108,8 +108,7 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
       max: humeurs.length ? Math.max(...humeurs) : null,
       minReleve: avecHumeur.length ? Math.min(...avecHumeur.map((j) => j.humeurMin ?? j.humeur)) : null,
       maxReleve: avecHumeur.length ? Math.max(...avecHumeur.map((j) => j.humeurMax ?? j.humeur)) : null,
-      haut: compte(humeurs, (h) => h >= SEUILS.bonnesJournees.haut),
-      bas: compte(humeurs, (h) => h <= SEUILS.bonnesJournees.bas), fragile: humeurs.length < SEUILS.moyenne.peuDeValeurs,
+      fragile: humeurs.length < SEUILS.moyenne.peuDeValeurs,
     },
     explosions: { n: explosions.length, total: explosions.reduce((s, x) => s + x, 0), jours: compte(explosions, (x) => x > 0) },
     nuits: {

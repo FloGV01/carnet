@@ -1,70 +1,122 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieFrise, geometrieJournee, DIM_FRISE, DIM_FRISE_ENERGIE, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieMesJours, geometrieJournee, DIM_MES_JOURS, DIM_MES_JOURS_PDF, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
 
 const jour = (cle, extra = {}) => ({ cle, humeur: null, moyenne7: null, nuit: null, explosions: null, autres: 0, aDonnee: false, ...extra });
 
-test('frise par jour : y(10) au bord haut, colonne vide sans rien, trait de moyenne seulement entre jours voisins', () => {
+// v7 : la frise « Mes jours » (geometrieMesJours) sert à l'écran et sur la page A4 de la Vue soignants (DIM_MES_JOURS_PDF).
+const lignes = (g, cle) => g.rangees.find((r) => r.cle === cle);
+
+test('Mes jours par jour : la note du jour de 10 en haut à 1 en bas, colonne vide sans rien, un trait seulement là où il y a un écart', () => {
   const colonnes = [
-    jour('2026-10-01', { humeur: 10, moyenne7: 6, nuit: 'sommeil:mal', explosions: 2, aDonnee: true }),
+    jour('2026-10-01', { humeur: 10, nuit: 'sommeil:mal', explosions: 2, aDonnee: true }),
     jour('2026-10-02'),
-    jour('2026-10-03', { humeur: 1, moyenne7: 5, explosions: 0, autres: 1, aDonnee: true }),
-    jour('2026-10-04', { humeur: 4, moyenne7: 5.5, aDonnee: true }),
+    jour('2026-10-03', { humeur: 1, explosions: 0, autres: 1, aDonnee: true }),
+    jour('2026-10-04', { humeur: 5.5, humeurMin: 3, humeurMax: 8, aDonnee: true }),
+    jour('2026-10-05', { humeur: 5, humeurMin: 5, humeurMax: 5, aDonnee: true }),
   ];
-  const g = geometrieFrise({ pas: 'jour', colonnes });
-  assert.equal(g.points[0].y, DIM_FRISE.haut);
-  assert.equal(g.points[1].y, DIM_FRISE.basHumeur);
-  assert.equal(g.moyenne.length, 1, 'seulement entre le 3 et le 4');
+  const g = geometrieMesJours({ pas: 'jour', colonnes, avecHumeur: true });
+  const hum = lignes(g, 'humeur');
+  assert.equal(g.notes.points[0].y, hum.y);
+  assert.equal(g.notes.points[1].y, hum.y + hum.h);
+  assert.deepEqual(g.notes.graduations, [{ v: 10, y: hum.y }, { v: 1, y: hum.y + hum.h }]);
+  assert.equal(g.notes.traits.length, 1, 'ni un jour vide, ni des relevés tous égaux');
+  assert.equal(g.notes.traits[0].x, g.notes.points[2].x);
   assert.equal(g.encoches.length, 1, 'zéro explosion ne dessine rien');
   assert.equal(g.nuits.length, 1);
   assert.equal(g.autres.length, 1);
-  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-10-01', '2026-10-03', '2026-10-04'], 'rien à toucher sur un jour vide');
-  assert.ok(!JSON.stringify(g).includes('NaN'));
+  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-10-01', '2026-10-03', '2026-10-04', '2026-10-05'], 'rien à toucher sur un jour vide');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Sans note sur la période : ni rangée, ni graduation.
+  assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes, avecHumeur: false }).notes, { points: [], traits: [], graduations: [] });
 });
 
-test('v6 · frise par jour : un trait du plus bas au plus haut, seulement là où il y a un écart', () => {
+test('Mes jours par semaine : nuits empilées, anneau si fragile, explosions à l\'échelle, familles empilées dans l\'ordre de la roue', () => {
   const colonnes = [
-    jour('2026-10-01', { humeur: 5.5, humeurMin: 3, humeurMax: 8, aDonnee: true }),
-    jour('2026-10-02', { humeur: 6, humeurMin: null, humeurMax: null, aDonnee: true }),
-    jour('2026-10-03'),
-    jour('2026-10-04', { humeur: 5, humeurMin: 5, humeurMax: 5, aDonnee: true }),
+    { cle: '2026-09-21', humeur: 5, fragile: true, nuits: { mal: 1, moyen: 0, bien: 2 }, explosions: 3, autres: 0, aDonnee: true,
+      familles: { colere: 2, degout: 0, tristesse: 0, joie: 1, surprise: 0, peur: 0, serenite: 3 }, nEmotions: 6 },
+    { cle: '2026-09-28', humeur: 6, fragile: false, nuits: null, explosions: 1, autres: 2, aDonnee: true, familles: null, nEmotions: 0 },
   ];
-  const g = geometrieFrise({ pas: 'jour', colonnes });
-  assert.equal(g.traits.length, 1, 'ni le soir, ni un jour vide, ni des relevés tous égaux');
-  const [t] = g.traits;
-  assert.equal(t.x, g.points[0].x);
-  const y = (v) => Math.round((DIM_FRISE.haut + ((10 - v) / 9) * (DIM_FRISE.basHumeur - DIM_FRISE.haut)) * 10) / 10;
-  assert.deepEqual(t, { x: g.points[0].x, y1: y(8), y2: y(3) });
-  assert.ok(t.y1 < g.points[0].y && g.points[0].y < t.y2, 'le point est sur le trait');
-  assert.deepEqual(geometrieFrise({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', humeur: 5, humeurMin: 2, humeurMax: 9, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: true }] }).traits, [],
-    'par semaine ou par mois, la moyenne seule');
-});
-
-test('frise par semaine : nuits empilées, anneau si fragile, explosions à l\'échelle', () => {
-  const colonnes = [
-    { cle: '2026-09-21', humeur: 5, fragile: true, nuits: { mal: 1, moyen: 0, bien: 2 }, explosions: 3, autres: 0, aDonnee: true },
-    { cle: '2026-09-28', humeur: 6, fragile: false, nuits: null, explosions: 1, autres: 2, aDonnee: true },
-  ];
-  const g = geometrieFrise({ pas: 'semaine', colonnes });
-  assert.equal(g.points[0].plein, false);
+  const g = geometrieMesJours({ pas: 'semaine', colonnes, avecHumeur: true });
+  assert.equal(g.notes.points[0].plein, false);
   assert.equal(g.nuits.length, 2);
   assert.ok(g.encoches[0].h > g.encoches[1].h);
-  assert.equal(g.moyenne.length, 1);
+  assert.deepEqual(g.barres.map((b) => b.famille), ['colere', 'joie', 'serenite']);
+  assert.ok(g.barres[0].y > g.barres[1].y && g.barres[1].y > g.barres[2].y, 'de bas en haut');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
 });
 
-test('ta journée : 12 créneaux de 4 h à 4 h, points sans segments, énergie empilée', () => {
+test('v7 · Mes jours sur la page A4 : des barres plus larges (barreMax), les mêmes rangées et le même ordre qu\'à l\'écran', () => {
+  const colonnes = Array.from({ length: 12 }, (_, i) => ({ cle: `2026-${String(i + 1).padStart(2, '0')}`, humeur: 5, fragile: false, nuits: null, explosions: 1, autres: 0, aDonnee: true,
+    familles: { colere: 1, degout: 0, tristesse: 0, joie: 0, surprise: 0, peur: 0, serenite: 2 }, nEmotions: 3 }));
+  const ecran = geometrieMesJours({ pas: 'mois', colonnes, avecHumeur: true });
+  const pdf = geometrieMesJours({ pas: 'mois', colonnes, avecHumeur: true }, {}, { ...DIM_MES_JOURS_PDF, largeur: 900 });
+  assert.deepEqual(pdf.rangees.map((r) => r.cle), ecran.rangees.map((r) => r.cle));
+  assert.deepEqual(pdf.barres.map((b) => b.famille), ecran.barres.map((b) => b.famille));
+  assert.equal(ecran.barres[0].l, DIM_MES_JOURS.barreMax);
+  assert.ok(pdf.barres[0].l > ecran.barres[0].l && pdf.barres[0].l <= DIM_MES_JOURS_PDF.barreMax);
+  assert.deepEqual(horsCadre(pdf, pdf.dim.largeur, pdf.dim.hauteur), []);
+});
+
+test('ta journée (v7) : 12 créneaux de 4 h à 4 h, les familles d\'émotions empilées par créneau, l\'énergie empilée', async () => {
+  const { famillesParHeure } = await import('../../public/js/analyse/emotions.js');
   assert.deepEqual(CRENEAUX.slice(0, 2), [4, 6]);
   assert.equal(CRENEAUX[CRENEAUX.length - 1], 2);
-  const g = geometrieJournee([{ debut: 10, fin: 12, moyenne: 6, fragile: false, energie: { 'energie:basse': 2, 'energie:moyenne': 1, 'energie:haute': 0 } }, { debut: 0, fin: 2, moyenne: null, energie: { 'energie:basse': 1 } }]);
-  assert.equal(g.points.length, 1, 'créneau sans humeur : pas de point');
+  const creneaux = [{ debut: 10, fin: 12, energie: { 'energie:basse': 2, 'energie:moyenne': 1, 'energie:haute': 0 } }, { debut: 0, fin: 2, energie: { 'energie:basse': 1 } }];
+  // 10 h et 11 h : même créneau ; 01 h : le créneau de minuit, après la soirée.
+  const parHeure = famillesParHeure([
+    { heure: '10:00', famille: 'colere' }, { heure: '11:30', famille: 'serenite' }, { heure: '11:40', famille: 'colere' }, { heure: '01:00', famille: 'joie' },
+  ]);
+  const g = geometrieJournee({ parHeure, creneaux });
+  assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'energie']);
+  assert.deepEqual(g.barres.map((b) => [b.debut, b.famille]), [[10, 'colere'], [10, 'serenite'], [0, 'joie']], 'dans l\'ordre de la roue, du bas vers le haut');
+  assert.ok(g.barres[1].y < g.barres[0].y, 'la sérénité au-dessus de la colère');
   assert.equal(g.energies.length, 3);
   assert.ok(g.zones[1].x > g.zones[0].x, 'minuit après la soirée');
-  assert.ok(!('segments' in g));
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Sans émotion (sous le seuil, parHeure nul) : la seule rangée Énergie ; sans rien : aucune rangée.
+  assert.deepEqual(geometrieJournee({ parHeure: null, creneaux }).rangees.map((r) => r.cle), ['energie']);
+  assert.deepEqual(geometrieJournee({ parHeure: null, creneaux: [] }).rangees, []);
 });
 
-// v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement. Les dimensions du PDF
-// (DIM_FRISE) n'ont pas cette rangée : la même colonne y donne exactement la même frise.
-test('v6 · frise par jour : une marque par jour à énergie basse, rien pour les autres jours', () => {
+test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa famille, « Humeur (notes) » seulement avec des notes', async () => {
+  const { geometrieMesJours } = await import('../../public/js/ui/graphes/geometrie.js');
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const humeurs = [
+    { date: '2026-10-12', heure: '09:00', emotion: 'roue:colere:irrite' }, { date: '2026-10-12', heure: '18:00', emotion: 'roue:serenite' },
+    { date: '2026-10-12', heure: '20:00', emotion: 'roue:joie:amuse' }, { date: '2026-10-14', heure: '10:00', emotion: 'roue:peur' },
+  ];
+  const f = frise({ journal: [{ date: '2026-10-13', sommeilRessenti: 'sommeil:mal' }], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g = geometrieMesJours(f);
+  assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'nuits', 'explosions', 'autres'], 'sans note ni énergie : ni « Humeur (notes) » ni « Énergie basse »');
+  assert.deepEqual(g.libelles.map((l) => l.lignes.map((x) => x.texte).join(' ')), ['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
+  assert.deepEqual(g.etiquettes.map((e) => e.texte), ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+  assert.deepEqual(g.points.map((p) => [p.cle, p.famille]), [['2026-10-12', 'colere'], ['2026-10-12', 'serenite'], ['2026-10-12', 'joie'], ['2026-10-14', 'peur']]);
+  assert.ok(g.points[2].y < g.points[0].y, 'le troisième relevé du jour monte d\'un rang');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Avec une ancienne note : la rangée « Humeur (notes) », sous les émotions.
+  const avecNote = frise({ journal: [{ date: '2026-10-13', humeur: 6, humeurN: 1 }], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g2 = geometrieMesJours(avecNote);
+  assert.deepEqual(g2.rangees.map((r) => r.cle), ['emotions', 'humeur', 'nuits', 'explosions', 'autres']);
+  assert.deepEqual(g2.libelles[1].lignes.map((x) => x.texte), ['Humeur', '(notes)']);
+  assert.equal(g2.notes.points.length, 1);
+  assert.deepEqual(horsCadre(g2, g2.dim.largeur, g2.dim.hauteur), []);
+  // Par semaine : une barre par colonne, empilée par famille dans l'ordre de la roue.
+  const parSemaine = frise({ journal: [], episodes: [], humeurs }, '2026-07-20', '2026-10-18');
+  const g3 = geometrieMesJours(parSemaine);
+  assert.equal(parSemaine.pas, 'semaine');
+  assert.deepEqual(g3.barres.map((b) => b.famille), ['colere', 'joie', 'peur', 'serenite']);
+  assert.deepEqual(horsCadre(g3, g3.dim.largeur, g3.dim.hauteur), []);
+  // Beaucoup de relevés un même jour, sur 31 colonnes étroites : les points restent dans leur rangée.
+  const plein = Array.from({ length: 14 }, (_, i) => ({ date: '2026-10-01', heure: `${String(6 + i).padStart(2, '0')}:00`, emotion: 'roue:joie' }));
+  const g4 = geometrieMesJours(frise({ journal: [], episodes: [], humeurs: plein }, '2026-09-18', '2026-10-18'));
+  const emo = g4.rangees[0];
+  assert.ok(g4.points.every((p) => p.y - p.r >= emo.y - 0.1 && p.y + p.r <= emo.y + emo.h + 0.1));
+});
+
+// v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement (avecEnergie). La page A4 ne la reçoit
+// jamais : sans avecEnergie, la même colonne donne exactement la même frise.
+test('v6 · Mes jours par jour : une marque par jour à énergie basse, rien pour les autres jours', () => {
   const colonnes = [
     jour('2026-10-01', { energieBasse: true, aDonnee: true }),
     jour('2026-10-02', { energieBasse: false }),
@@ -72,43 +124,71 @@ test('v6 · frise par jour : une marque par jour à énergie basse, rien pour le
     jour('2026-10-04'),
     jour('2026-10-05', { energieBasse: true, humeur: 5, aDonnee: true }),
   ];
-  const d = DIM_FRISE_ENERGIE;
-  const g = geometrieFrise({ pas: 'jour', colonnes }, d);
+  const g = geometrieMesJours({ pas: 'jour', colonnes, avecEnergie: true });
+  const ene = lignes(g, 'energie');
   assert.equal(g.energieBasse.length, 2, 'ni les jours sans basse, ni les jours sans relevé, ni zéro');
-  assert.ok(g.energieBasse.every((m) => m.y === d.energieY && m.h === d.energieH && m.n === 1), 'la même marque chaque jour');
+  assert.ok(g.energieBasse.every((m) => m.y === ene.y && m.h === ene.h && m.n === 1), 'la même marque chaque jour');
   assert.deepEqual(g.energieBasse.map((m) => m.x + m.l / 2), [g.zones[0].x + g.zones[0].l / 2, g.zones[1].x + g.zones[1].l / 2], 'au milieu de la colonne');
-  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-10-01', '2026-10-05'], 'se touchent : les jours qui portent une donnée');
-  assert.ok(d.energieY >= d.explY + d.explH + 6 + 2.5, 'sous les autres épisodes');
-  assert.ok(d.energieY + d.energieH < d.axeY, 'au-dessus de l\'axe');
-  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+  assert.equal(g.rangees.at(-1).cle, 'energie', 'sous les autres épisodes');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
 });
 
-test('v6 · frise par semaine ou par mois : une barre longue du nombre de jours, comme les explosions', () => {
+test('v6 · Mes jours par semaine ou par mois : une barre longue du nombre de jours, comme les explosions', () => {
   const col = (cle, energieBasse, extra = {}) => ({ cle, humeur: null, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: energieBasse > 0, energieBasse, ...extra });
   const colonnes = [col('2026-09-14', 6), col('2026-09-21', 1), col('2026-09-28', 0), col('2026-10-05', null), col('2026-10-12', 3)];
-  const d = DIM_FRISE_ENERGIE;
   for (const pas of ['semaine', 'mois']) {
-    const g = geometrieFrise({ pas, colonnes }, d);
+    const g = geometrieMesJours({ pas, colonnes, avecEnergie: true });
+    const ene = lignes(g, 'energie');
     assert.deepEqual(g.energieBasse.map((m) => m.n), [6, 1, 3], 'zéro jour et jour inconnu ne dessinent rien');
-    assert.deepEqual(g.energieBasse.map((m) => m.h), [d.energieH, 3, 6], 'à l\'échelle de la plus haute, 3 au moins');
-    assert.ok(g.energieBasse.every((m) => m.y + m.h === d.energieY + d.energieH), 'posées sur le bas de la rangée');
-    assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+    assert.deepEqual(g.energieBasse.map((m) => m.h), [ene.h, 3, 6], 'à l\'échelle de la plus haute, 3 au moins');
+    assert.ok(g.energieBasse.every((m) => m.y + m.h === ene.y + ene.h), 'posées sur le bas de la rangée');
+    assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
   }
 });
 
-test('v6 · frise : sans les dimensions de la rangée (le PDF), aucune marque et rien d\'autre ne change', () => {
+test('v6 · Mes jours sans avecEnergie (la page A4) : ni rangée, ni marque, et rien d\'autre ne change', () => {
   const col = (cle, extra) => ({ cle, humeur: 5, fragile: false, nuits: { mal: 1, moyen: 0, bien: 1 }, explosions: 1, autres: 1, aDonnee: true, ...extra });
   const avec = [col('2026-09-21', { energieBasse: 4 }), col('2026-09-28', { energieBasse: 0 })];
   const sans = avec.map(({ energieBasse, ...c }) => c);
-  const pdf = geometrieFrise({ pas: 'semaine', colonnes: avec });
-  assert.deepEqual(pdf, geometrieFrise({ pas: 'semaine', colonnes: sans }));
+  const pdf = geometrieMesJours({ pas: 'semaine', colonnes: avec, avecHumeur: true }, {}, { ...DIM_MES_JOURS_PDF, largeur: 900 });
+  assert.deepEqual(pdf, geometrieMesJours({ pas: 'semaine', colonnes: sans, avecHumeur: true }, {}, { ...DIM_MES_JOURS_PDF, largeur: 900 }));
   assert.deepEqual(pdf.energieBasse, []);
-  assert.equal(DIM_FRISE.energieY, undefined);
-  assert.equal(geometrieFrise({ pas: 'semaine', colonnes: avec }, { ...DIM_FRISE, largeur: 400 }).energieBasse.length, 0, 'même avec la largeur du PDF');
-  // Au-dessus de la rangée, l'écran garde les mêmes formes qu'avant.
-  const ecran = geometrieFrise({ pas: 'semaine', colonnes: sans }, DIM_FRISE_ENERGIE);
-  for (const cle of ['points', 'nuits', 'encoches', 'autres', 'moyenne', 'filets', 'graduations']) assert.deepEqual(ecran[cle], pdf[cle], cle);
+  assert.ok(!pdf.rangees.some((r) => r.cle === 'energie'));
 });
+
+
+test('v7 · Mes jours, rangée Bien-être : le même repère pour chaque colonne qui a une séance, sans nombre ; pas de rangée sans avecBienEtre', () => {
+  const colonnes = [
+    jour('2026-10-01', { bienEtre: true, aDonnee: true }), jour('2026-10-02', { bienEtre: false }), jour('2026-10-03'),
+    jour('2026-10-04', { bienEtre: true, energieBasse: true, aDonnee: true }),
+  ];
+  const g = geometrieMesJours({ pas: 'jour', colonnes, avecEnergie: true, avecBienEtre: true });
+  const bie = lignes(g, 'bienEtre');
+  assert.deepEqual(bie.libelle, ['Bien-être']);
+  assert.equal(g.rangees.at(-1).cle, 'bienEtre', 'la dernière rangée, sous l\'énergie basse');
+  assert.deepEqual(g.bienEtre.map((m) => m.cle), ['2026-10-01', '2026-10-04']);
+  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && !('n' in m)), 'la même marque, sans nombre');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Par semaine : un repère, qu'il y ait une séance ou dix dans la semaine.
+  const semaines = geometrieMesJours({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', bienEtre: true, aDonnee: true }, { cle: '2026-10-05', bienEtre: false }], avecBienEtre: true });
+  assert.equal(semaines.bienEtre.length, 1);
+  // Sans avecBienEtre (période sans séance, page A4) : ni rangée ni repère, et rien d'autre ne bouge.
+  const sans = geometrieMesJours({ pas: 'jour', colonnes, avecEnergie: true });
+  assert.deepEqual(sans.bienEtre, []);
+  assert.ok(!sans.rangees.some((r) => r.cle === 'bienEtre'));
+  assert.deepEqual(sans.energieBasse, g.energieBasse);
+  assert.ok(sans.dim.hauteur < g.dim.hauteur);
+});
+
+test('v7 · Mes jours, détail d\'une colonne : « Bien-être » pour un jour ou une semaine avec une séance, jamais leur nombre', async () => {
+  const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
+  const lib = (id) => id;
+  assert.deepEqual(detailColonne('jour', { bienEtre: true, entree: {} }, lib), ['Bien-être']);
+  assert.deepEqual(detailColonne('jour', { bienEtre: false, entree: {} }, lib), []);
+  assert.deepEqual(detailColonne('semaine', { humeur: null, bienEtre: true }, lib), ['Bien-être']);
+  assert.deepEqual(detailColonne('mois', { humeur: null, bienEtre: false }, lib), []);
+});
+
 
 test('v6 · Mes jours, détail d\'une colonne : l\'humeur, avec une décimale, et son écart', async () => {
   const { detailColonne } = await import('../../public/js/ui/graphes/graphes.js');
@@ -198,30 +278,12 @@ test('v6 · Comprendre, graphique aligné : un bloc par facteur, dans son cadre,
   assert.deepEqual(geometrieAligne([]), []);
 });
 
-const colH = (cle, n, moyenne, min, max) => ({ cle, n, moyenne: n ? moyenne : null, min: n ? min : null, max: n ? max : null, fragile: n < 3 });
 const colB = (cle, oui, n) => ({ cle, n, oui: n ? oui : 0, part: n ? oui / n : null, fragile: n < 3, libelle: n ? `${oui} jour${oui > 1 ? 's' : ''}` : null });
-
-test('v6 · Comprendre, colonnes d\'humeur : point à la moyenne sur l\'axe 1 à 10, trait du plus bas au plus haut, anneau sous 3 valeurs, rien sans valeur', async () => {
-  const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  const colonnes = [colH(0, 5, 10, 10, 10), colH(1, 2, 5.5, 3, 8), colH(2, 0), colH(3, 4, 1, 1, 1), colH(4, 3, 6, 4, 8), colH(5, 0), colH(6, 0)];
-  const g = geometrieColonnes({ pas: 'semaine', mesure: 'humeur', colonnes });
-  const y = (v) => r1(d.haut + ((10 - v) / 9) * (d.bas - d.haut));
-  assert.deepEqual(g.points.map((p) => p.cle), [0, 1, 3, 4], 'une colonne sans valeur ne dessine rien');
-  assert.deepEqual([g.points[0].y, g.points[2].y], [d.haut, d.bas]);
-  assert.deepEqual(g.points.map((p) => p.plein), [true, false, true, true], 'anneau creux sous 3 valeurs');
-  assert.deepEqual(g.traits, [{ x: g.points[1].x, y1: y(8), y2: y(3), cle: 1 }, { x: g.points[3].x, y1: y(8), y2: y(4), cle: 4 }]);
-  assert.deepEqual(g.filets.map((f) => [f.v, f.y]), [[4, y(4)], [7, y(7)]]);
-  assert.deepEqual(g.graduations.map((t) => t.v), [1, 4, 7, 10]);
-  assert.deepEqual([g.barres, g.comptes], [[], []]);
-  assert.deepEqual(g.etiquettes.map((e) => e.cle), [0, 1, 2, 3, 4, 5, 6], 'les sept jours sur l\'axe');
-  assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
-});
 
 test('v6 · Comprendre, colonnes des autres mesures : barre haute de oui / n, compte au-dessus, creuse sous 3 valeurs, rien sans valeur', async () => {
   const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const colonnes = [colB(0, 3, 10), colB(1, 0, 4), colB(2, 0, 0), colB(3, 2, 2), colB(4, 10, 10), colB(5, 1, 5), colB(6, 0, 0)];
-  const g = geometrieColonnes({ pas: 'semaine', mesure: 'nuitMal', colonnes });
-  assert.deepEqual(g.points, []);
+  const g = geometrieColonnes({ pas: 'semaine', colonnes });
   assert.deepEqual(g.barres.map((b) => b.cle), [0, 3, 4, 5], 'zéro : pas de barre ; sans valeur : rien');
   assert.deepEqual(g.comptes.map((c) => c.cle), [0, 1, 3, 4, 5], '« 0 mardi » est un vrai compte ; une colonne sans valeur n\'a pas d\'étiquette');
   const par = new Map(g.barres.map((b) => [b.cle, b]));
@@ -257,12 +319,12 @@ test('v6 · Comprendre, colonnes par mois : au plus 7 étiquettes depuis le mois
 test('v6 · Comprendre, colonnes par lieu : étiquettes sur deux rangs quand les lieux sont serrés, toujours dans le cadre', async () => {
   const { geometrieColonnes, DIM_COLONNES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const lieux = ['bureau', 'teletravail', 'conge_repos', 'arret', 'clinique', 'autre'].map((s) => `lieu:${s}`);
-  const g = geometrieColonnes({ pas: 'lieu', mesure: 'humeur', colonnes: lieux.map((cle, i) => colH(cle, i + 1, 5, 4, 6)) });
+  const g = geometrieColonnes({ pas: 'lieu', colonnes: lieux.map((cle, i) => colB(cle, 1, i + 1)) });
   assert.equal(g.etiquettes.length, 6);
   assert.equal(new Set(g.etiquettes.map((e) => e.y)).size, 2, 'deux rangs');
   assert.ok(g.hauteur > d.hauteur);
   assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
-  const g4 = geometrieColonnes({ pas: 'lieu', mesure: 'humeur', colonnes: lieux.slice(0, 4).map((cle) => colH(cle, 3, 5, 4, 6)) });
+  const g4 = geometrieColonnes({ pas: 'lieu', colonnes: lieux.slice(0, 4).map((cle) => colB(cle, 1, 3)) });
   assert.equal(new Set(g4.etiquettes.map((e) => e.y)).size, 1, 'un seul rang quand « Congé / repos » a la place');
   assert.equal(g4.hauteur, d.hauteur);
 });
@@ -349,10 +411,11 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(libelleAutres({ oui: 0, n: 0, peu: true }), null);
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
-  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge']);
+  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge',
+    'apresNuit', 'autourExplosions', 'autourBienEtre']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
-    for (const mesure of ['humeur', 'nuitMal', 'explosion', 'energieBasse']) {
+    for (const mesure of ['emotions', 'nuitMal', 'explosion', 'energieBasse']) {
       const p3 = phraseAria(graphe, '3mois', lib, mesure);
       const pt = phraseAria(graphe, 'tout', lib, mesure);
       for (const p of [p3, pt]) {
@@ -365,7 +428,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
     }
   }
   // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas.
-  assert.equal(phrases.size, 2 * (7 + 3 * 4));
+  assert.equal(phrases.size, 2 * (10 + 3 * 4));
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -373,7 +436,7 @@ test('v6 · Comprendre, phrase d\'accessibilité : la période est la clé du s�
   const { phraseAria, GRAPHES } = await import('../../public/js/ui/graphes/comprendre.js');
   const lib = (id) => id;
   for (const periode of [undefined, null, '90', 'Tout', 'toString', { du: '2026-01-01', au: '2026-10-15' }, ['2026-01-01', '2026-10-15']]) {
-    assert.throws(() => phraseAria('semaine', periode, lib, 'humeur'), /Période inconnue/, String(periode));
+    assert.throws(() => phraseAria('semaine', periode, lib, 'emotions'), /Période inconnue/, String(periode));
   }
   // Les zones de toucher n'ont pas de rôle : la phrase ne promet pas ce qu'un lecteur d'écran ne peut pas faire.
   for (const graphe of GRAPHES) assert.doesNotMatch(phraseAria(graphe, 'tout', lib), /[Tt]ouche/, graphe);
@@ -385,8 +448,9 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   const { SEUILS } = await import('../../public/js/analyse/seuils.js');
   const { RACINE, lire, sansCommentaires } = await import('../aides/fichiers.js');
   const S = SEUILS.comprendre;
-  // Chaque graphique (toutes les cartes PasAssez de l'écran en prennent un) a sa règle, et rien d'autre.
-  assert.deepEqual(Object.keys(R).sort(), [...GRAPHES].sort());
+  // Chaque graphique (toutes les cartes PasAssez de l'écran en prennent un) a sa règle, et rien d'autre ; les colonnes à la
+  // mesure « Émotions » (v7) ont la règle des émotions, celle du lieu à part.
+  assert.deepEqual(Object.keys(R).sort(), [...GRAPHES, 'emotions', 'emotionsLieu'].sort());
   for (const [graphe, regle] of Object.entries(R)) {
     assert.equal(typeof regle, 'string', graphe);
     assert.match(regle, /^La règle : .+\.$/, graphe);
@@ -396,6 +460,10 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
   for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
+  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  for (const g of ['autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`), g);
+  // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit.
+  assert.match(R.autourBienEtre, /séance lancée depuis Bien-être/);
   // Aucun chiffre écrit à la main dans le bloc des règles : ils viennent tous de SEUILS.comprendre.
   const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
   const bloc = code.slice(code.indexOf('SEUILS.comprendre'), code.indexOf('export const PIED_EXPLOSIONS'));
@@ -407,63 +475,58 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
 
 // ---------- v6 · repères de traitement (spec §3) ----------
 
-const colonnesJour = (n, extra = () => ({})) => Array.from({ length: n }, (_, i) => jour(`2026-09-${String(i + 1).padStart(2, '0')}`, { humeur: 10, moyenne7: 10, nuit: 'sommeil:bien', explosions: 1, autres: 1, aDonnee: true, ...extra(i) }));
+const colonnesJour = (n, extra = () => ({})) => Array.from({ length: n }, (_, i) => jour(`2026-09-${String(i + 1).padStart(2, '0')}`, { humeur: 10, nuit: 'sommeil:bien', explosions: 1, autres: 1, aDonnee: true, emotions: ['roue:joie'], ...extra(i) }));
 const repere = (i, etiquette, cle = `c${i}`) => ({ i, cle, numeros: [], etiquette });
 
 test('v6 · repères : sans repère, la frise ne change pas d\'un trait', () => {
   const colonnes = colonnesJour(7);
-  for (const d of [DIM_FRISE, DIM_FRISE_ENERGIE]) {
-    const sans = geometrieFrise({ pas: 'jour', colonnes }, d);
-    assert.deepEqual(geometrieFrise({ pas: 'jour', colonnes, reperes: [] }, d), sans);
+  for (const d of [DIM_MES_JOURS, { ...DIM_MES_JOURS_PDF, largeur: 900 }]) {
+    const sans = geometrieMesJours({ pas: 'jour', colonnes, avecHumeur: true, avecEnergie: true }, {}, d);
+    assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes, avecHumeur: true, avecEnergie: true }, { reperes: [] }, d), sans);
     assert.deepEqual(sans.reperes, []);
-    assert.equal(sans.dim, d, 'les dimensions reçues');
   }
 });
 
-test('v6 · repères : un trait fin par repère au centre de sa colonne, son numéro dans une bande en haut, tout dans le cadre', () => {
+test('v6 · repères : un trait fin par repère au centre de sa colonne, son numéro dans une bande sous les noms de colonnes, tout dans le cadre', () => {
   const colonnes = colonnesJour(7, (i) => ({ energieBasse: i % 2 === 0 }));
-  for (const base of [DIM_FRISE, DIM_FRISE_ENERGIE]) {
-    const sans = geometrieFrise({ pas: 'jour', colonnes }, base);
-    const g = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(1, '①'), repere(6, '②–③')] }, base);
-    const d = g.dim;
-    const bande = d.hauteur - base.hauteur;
+  for (const d of [DIM_MES_JOURS, { ...DIM_MES_JOURS_PDF, largeur: 900 }]) {
+    const f = { pas: 'jour', colonnes, avecHumeur: true, avecEnergie: true };
+    const sans = geometrieMesJours(f, {}, d);
+    const g = geometrieMesJours(f, { reperes: [repere(1, '①'), repere(6, '②–③')] }, d);
+    const bande = g.dim.hauteur - sans.dim.hauteur;
     assert.ok(bande > 0, 'une bande s\'ajoute');
     // Toutes les rangées descendent d'autant ; la largeur ne change pas.
-    for (const k of ['haut', 'basHumeur', 'nuitY', 'explY', 'axeY', ...(base.energieY != null ? ['energieY'] : [])]) assert.equal(d[k], base[k] + bande, k);
-    assert.equal(d.largeur, base.largeur);
-    assert.equal(g.points[0].y, d.haut, 'y(10) au nouveau bord haut');
-    assert.deepEqual(g.points.map((p) => p.y - bande), sans.points.map((p) => p.y));
+    assert.deepEqual(g.rangees.map((r) => r1(r.y - bande)), sans.rangees.map((r) => r.y));
+    assert.equal(g.dim.largeur, sans.dim.largeur);
     assert.deepEqual(g.zones.map((z) => z.x), sans.zones.map((z) => z.x));
-    assert.ok(g.zones.length && g.zones.every((z) => z.cle), 'les zones restent');
-    // Les traits : au centre de la colonne, du dessous du numéro jusqu'au-dessus de l'axe, sous toutes les rangées.
     assert.deepEqual(g.reperes.map((r) => [r.cle, r.etiquette]), [['c1', '①'], ['c6', '②–③']]);
+    const premiere = g.rangees[0];
+    const derniere = g.rangees.at(-1);
     for (const r of g.reperes) {
       const z = g.zones.find((zz) => zz.i === Number(r.cle.slice(1)));
-      assert.equal(r.x, Math.round((z.x + z.l / 2) * 10) / 10);
-      assert.ok(r.texteY < r.y1 && r.y1 < d.haut, 'le numéro en haut, au-dessus du trait et de l\'humeur');
-      assert.equal(r.y2, d.axeY - 10);
-      const bas = d.energieY != null ? d.energieY + d.energieH : d.explY + d.explH + 6;
-      assert.ok(r.y2 >= bas && r.y2 < d.axeY, 'le trait traverse toutes les rangées, sans toucher l\'axe');
+      assert.equal(r.x, r1(z.x + z.l / 2));
+      assert.ok(r.texteY > d.teteH - 4 && r.texteY < r.y1 && r.y1 < premiere.y, 'le numéro sous les noms de colonnes, au-dessus du trait et des rangées');
+      assert.ok(r.y2 >= derniere.y + derniere.h - 0.1, 'le trait traverse toutes les rangées');
     }
-    assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
+    assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
   }
 });
 
 test('v6 · repères : deux numéros trop proches passent sur un second rang ; un numéro au bord reste dans le cadre', () => {
   const colonnes = colonnesJour(30);
-  const loin = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(3, '①'), repere(10, '②')] });
+  const loin = geometrieMesJours({ pas: 'jour', colonnes }, { reperes: [repere(3, '①'), repere(10, '②')] });
   assert.deepEqual(loin.reperes.map((r) => r.rang), [0, 0]);
-  const proches = geometrieFrise({ pas: 'jour', colonnes, reperes: [repere(10, '①'), repere(11, '②'), repere(12, '③'), repere(29, '④–⑤')] });
+  const proches = geometrieMesJours({ pas: 'jour', colonnes }, { reperes: [repere(10, '①'), repere(11, '②'), repere(12, '③'), repere(29, '④–⑤')] });
   assert.deepEqual(proches.reperes.map((r) => r.rang), [0, 1, 0, 0], 'le 11 descend, le 12 remonte');
   assert.ok(proches.dim.hauteur > loin.dim.hauteur, 'un second rang, une bande plus haute');
   assert.ok(proches.reperes[1].texteY > proches.reperes[0].texteY);
-  assert.ok(proches.reperes[1].texteY < proches.dim.haut);
+  assert.ok(proches.reperes[1].texteY < proches.rangees[0].y);
   const dernier = proches.reperes[3];
   assert.ok(dernier.texteX < dernier.x, 'le numéro du bord droit est ramené dans le cadre, son trait reste à sa date');
   assert.deepEqual(horsCadre(proches, proches.dim.largeur, proches.dim.hauteur), []);
-  // Par mois sur la largeur du PDF : de la place, un seul rang.
+  // Par mois sur la largeur de la page A4 : de la place, un seul rang.
   const mois = Array.from({ length: 12 }, (_, i) => ({ cle: `2026-${String(i + 1).padStart(2, '0')}`, humeur: 5, fragile: false, nuits: null, explosions: null, autres: 0, aDonnee: true }));
-  const pdf = geometrieFrise({ pas: 'mois', colonnes: mois, reperes: mois.map((c, i) => repere(i, '⑦–⑨', c.cle)) }, { ...DIM_FRISE, largeur: 888 });
+  const pdf = geometrieMesJours({ pas: 'mois', colonnes: mois, avecHumeur: true }, { reperes: mois.map((c, i) => repere(i, '⑦–⑨', c.cle)) }, { ...DIM_MES_JOURS_PDF, largeur: 900 });
   assert.ok(pdf.reperes.every((r) => r.rang === 0));
-  assert.deepEqual(horsCadre(pdf, 888, pdf.dim.hauteur), []);
+  assert.deepEqual(horsCadre(pdf, 900, pdf.dim.hauteur), []);
 });

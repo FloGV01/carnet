@@ -8,7 +8,7 @@ import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
 import { EnParler } from '../composants/en-parler.js';
 import { Confirmation } from '../composants/confirmation.js';
-import { Rubrique, LibelleChamp } from '../composants/rubrique.js';
+import { LibelleChamp } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { useFiche } from '../fiche.js';
@@ -44,7 +44,7 @@ export function Traitement({ id: idRoute }) {
         exclusifs=${exclusifs} surChoix=${(v) => ecrire({ effetsSecondaires: v })} />
     </div>
     <div class="champ-fiche">
-      <${Rubrique} teinte="humeur" icone="humeur" libelle="Effet ressenti" />
+      <${LibelleChamp} icone="humeur">Effet ressenti</${LibelleChamp}>
       <${Segmente} etiquette="Effet ressenti" options=${options(items, 'effetRessenti', fiche.effetRessenti)} valeur=${fiche.effetRessenti}
         surChoix=${(v) => ecrire({ effetRessenti: v })} classe="large" />
     </div>

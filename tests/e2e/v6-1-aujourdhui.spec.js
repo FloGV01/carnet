@@ -86,7 +86,8 @@ test('sans micro ni mémo, « J\'ai fini pour ce soir » reste là, à droite', 
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
   await expect(fini).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole('button', { name: 'Mémo vocal' })).toHaveCount(0);
-  const [bouton, positifs] = await Promise.all([fini.boundingBox(), boite(page, '#points-positifs')]);
+  // Son bord droit est celui des cartes (2b), comme celui de la carte des points positifs.
+  const [bouton, positifs] = await Promise.all([fini.boundingBox(), page.locator('.carte-champ', { has: page.locator('#points-positifs') }).boundingBox()]);
   expect(Math.abs((bouton.x + bouton.width) - (positifs.x + positifs.width))).toBeLessThanOrEqual(1);
 });
 
@@ -167,7 +168,7 @@ test('Ma journée d\'un jour passé : un épisode sans heure vient après les re
   await expect(page.locator('.evenements-jour')).not.toContainText(/17:00|NaN|undefined|null/);
 });
 
-test('« Effacer cette journée » : la confirmation dit que les humeurs du moment restent, et elles restent dans Ma journée', async ({ page }) => {
+test('« Effacer cette journée » : la confirmation dit que les émotions du moment (relevés) restent, et elles restent dans Ma journée', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     await r.journal.patch('2026-10-15', { lieu: 'lieu:bureau' });
@@ -176,7 +177,7 @@ test('« Effacer cette journée » : la confirmation dit que les humeurs du mome
   await page.reload();
   await page.getByRole('button', { name: 'Effacer cette journée' }).click();
   const boite = page.getByRole('alertdialog', { name: 'Effacer la journée du jeudi 15 oct. ?' });
-  await expect(boite.getByText('Les épisodes, symptômes et humeurs du moment de ce jour sont conservés.', { exact: true })).toBeVisible();
+  await expect(boite.getByText('Les épisodes, symptômes et émotions du moment de ce jour sont conservés.', { exact: true })).toBeVisible();
   await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');

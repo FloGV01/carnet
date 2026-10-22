@@ -3,7 +3,8 @@ import { viderBase, aller } from '../aides/saisie.js';
 import { LISTES, NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 
 // v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Rappels) et « Moment
-// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis Analyse, À propos, Zone sensible.
+// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 : la section
+// Analyse disparaît avec le signal de ressemblance et les tendances).
 // « Le soir » (ex-« Ma journée ») ne règle plus que les champs du soir ; les heures de l'humeur du moment passent
 // dans Rappels, dans la même méta. L'index des Listes est rangé par écran. Écran de 390 × 844, celui du projet.
 const nav = (page, nom) => page.getByRole('navigation').getByRole('link', { name: nom, exact: true });
@@ -18,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », puis Analyse, À propos, Zone sensible', async ({ page }) => {
+test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », puis À propos, Zone sensible ; v7, plus de section Analyse', async ({ page }) => {
   await nav(page, 'Réglages').click();
   await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
   // Intertitres et liens, dans l'ordre du document.
@@ -27,8 +28,10 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
     'Sauvegarde',
     'Ma saisie', 'Le soir', 'Listes', 'Rappels',
     'Moment difficile', 'Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone',
-    'Analyse', 'À propos', 'Zone sensible', 'Tout effacer',
+    'À propos', 'Zone sensible', 'Tout effacer',
   ]);
+  await expect(page.locator('main.reglages')).not.toContainText(/Signal de ressemblance|Tendances/);
+  await expect(page.getByRole('switch')).toHaveCount(0);
   // Chaque groupe de liens porte le nom de son intertitre et mène où il faut.
   const liens = async (nom) => page.getByRole('list', { name: nom, exact: true }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href')));
   expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/rappel']);
@@ -67,6 +70,10 @@ test('Rappels : les heures de l\'humeur du moment s\'y choisissent d\'un toucher
   await expect(heures(page).getByRole('button')).toHaveCount(18);
   await expect(heures(page).getByRole('button', { pressed: true })).toHaveCount(0);
   await expect(page.locator('main.rappel')).toContainText('Refais les mêmes étapes pour chaque heure choisie.');
+  // v7 : l'écran s'appelle « Émotion du moment », et le bouton de la bande du bas « Émotion ».
+  await expect(page.getByRole('heading', { name: 'Émotion du moment', level: 2 })).toBeVisible();
+  await expect(page.locator('main.rappel')).toContainText('Texte de la notification : « Émotion du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Émotion », en bas.');
+  await expect(page.locator('main.rappel')).not.toContainText('Humeur');
   expect(await lireJournee(page)).toBeNull();
 
   // Des réglages du soir déjà faits : les heures s'y ajoutent sans rien toucher d'autre.
@@ -100,7 +107,7 @@ test('Rappels : les heures de l\'humeur du moment s\'y choisissent d\'un toucher
 // Écrit en dur : l'index montre chaque liste sous l'écran où on la choisit, avec son libellé de toujours.
 const GROUPES = [
   ['Le soir', ['Lieu', 'Sommeil ressenti', 'Contact : avec qui', 'Contact : comment c\'était', 'Types de sport', 'Durée du sport', 'Traitement pris', 'Ce qui a pesé', 'Ce qui a rechargé']],
-  ['Humeur du moment', ['Énergie', 'Ce que je faisais']],
+  ['Émotion du moment', ['Énergie', 'Ce que je faisais']],
   ['Épisode', ['Déclencheur', 'Émotion', 'Ce qu\'il y avait dessous', 'Réaction', 'Professionnel']],
   ['Après coup', ['C\'était plutôt', 'Fragilités', 'Premiers signes', 'Ça ressemble à', 'Ce qui était trop', 'Besoins', 'Sur le moment', 'Plus tard']],
   ['Symptôme', ['Symptôme', 'Durée']],
@@ -121,7 +128,7 @@ test('Listes : l\'index rangé par écran sous six intertitres, toutes les liste
   expect(tous.map(([nom]) => nom).sort()).toEqual([...NOMS_LISTES].sort());
   for (const [nom, libelle] of tous) expect(libelle).toBe(LISTES[nom].libelle);
   // Une liste ouverte depuis son groupe, puis Retour vers l'index.
-  await page.getByRole('list', { name: 'Humeur du moment', exact: true }).getByRole('link', { name: 'Énergie' }).click();
+  await page.getByRole('list', { name: 'Émotion du moment', exact: true }).getByRole('link', { name: 'Énergie' }).click();
   await expect(page).toHaveURL(/#\/reglages\/listes\/energie$/);
   await expect(page.getByRole('heading', { name: 'Énergie', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Retour' }).click();

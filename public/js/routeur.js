@@ -37,6 +37,9 @@ export const ROUTES = [
   { nom: 'comprendre', motif: `/comprendre/(${ONGLETS_COMPRENDRE.join('|')})`, params: ['onglet'] },
   { nom: 'export-psy', motif: '/export-psy' },
   { nom: 'soignants', motif: '/soignants' },
+  // Bien-être (v7, spec §6) : l'onglet, et un exercice de sophrologie (domain/exercices.js).
+  { nom: 'bien-etre', motif: '/bien-etre' },
+  { nom: 'exercice', motif: `/bien-etre/exercice/${ID}`, params: ['id'] },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
 
 export function lireRoute(hash) {
@@ -60,12 +63,12 @@ export function versHash(nom, params = {}) {
   return `#${chemin}`;
 }
 
-// Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins, un jour ouvert depuis
-// l'Historique garde l'onglet Historique (v6.1).
+// Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins. v7 : l'Historique sort de la
+// barre et s'ouvre par sa porte en haut de l'Analyse ; lui et un jour ouvert depuis lui allument l'onglet Analyse.
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
-  if (['analyse', 'comprendre'].includes(nom)) return 'analyse';
-  if (['historique', 'historique-jour'].includes(nom)) return 'historique';
+  if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
+  if (['bien-etre', 'exercice'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

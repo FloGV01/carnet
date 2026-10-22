@@ -4,10 +4,11 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES,
 } from '../../public/js/db/sauvegarde.js';
 import { SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
+import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
 
 const octetsDe = (f) => concatener(f.morceaux);
 const enc = new TextEncoder();
@@ -182,14 +183,14 @@ test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les resta
   assert.equal(await b.repo.meta.lire('journee'), null, 'absente du fichier : retirée');
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je sors' });
   assert.equal(await b.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'absente du fichier : gardée');
-  assert.equal(await b.repo.meta.lire('schema'), 4);
+  assert.equal(await b.repo.meta.lire('schema'), 5);
 
   await revenirAvantImport(b.repo);
   assert.deepEqual(metaRemplacee([{ cle: 'monPlan', valeur: { a: 1 } }, { cle: 'journee', valeur: { b: 2 } }, { cle: 'schema', valeur: 2 }, { cle: 'explosionsDepuis', valeur: 'x' }],
     [{ cle: 'journee', valeur: { b: 2 } }]), ['monPlan'], 'aperçu : seul ce qui change est annoncé');
   assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
-  assert.equal(await b.repo.meta.lire('schema'), 4);
+  assert.equal(await b.repo.meta.lire('schema'), 5);
 });
 
 test('v5 : une sauvegarde v2 (un détail de contact par jour) devient une ligne de contacts, telle quelle', () => {
@@ -227,7 +228,7 @@ test('v6 : une sauvegarde au format 3 se met à niveau (listes v6, notes vides, 
   const avant = structuredClone(v3);
   const a = analyserFichiers(json(v3));
   assert.deepEqual(v3, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
-  assert.equal(a.sauvegarde.formatVersion, 4);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.equal(a.sauvegarde.counts.listes, 2 + IDS_V6.length - 1);
   for (const id of IDS_V6) assert.equal(a.sauvegarde.data.listes.filter((i) => i.id === id).length, 1, id);
   assert.deepEqual(a.valides.listes.find((i) => i.id === 'pese:bruit'), v3.data.listes[1]);
@@ -258,8 +259,8 @@ test('v6 : les notes et le lien d\'une question survivent à un export suivi d\'
   const rdv = await a.repo.rdv.creer({ professionnel: 'professionnel:psychiatre', questions: [{ texte: 'Parler de la colère', lien: { store: 'episodes', id: ep.id } }] });
   const [f] = await exporter(a.repo, { versionApp: '6.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 4);
-  assert.equal(contenu.schemaVersion, 4);
+  assert.equal(contenu.formatVersion, 5);
+  assert.equal(contenu.schemaVersion, 5);
   assert.equal(contenu.counts.notes, 1);
   assert.deepEqual(contenu.data.notes, [note]);
   const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
@@ -334,4 +335,135 @@ test('v6 : aperçu de l\'import, les notes et les nouveaux réglages ont leurs m
 test('v6.1 : les réglages de meta.journee se nomment d\'après Le soir et Rappels, plus d\'après « Ma journée »', () => {
   assert.equal(phraseMeta(['journee']), 'Les réglages du soir et des rappels seront remplacés par ce que contient le fichier.');
   assert.equal(phraseMeta(['monPlan', 'journee']), 'Mon plan et les réglages du soir et des rappels seront remplacés par ce que contient le fichier.');
+});
+
+// ---- v7 ----
+
+test('v7 : les séances et les émotions survivent à un export suivi d\'un import', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const s1 = await a.repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'scan-corporel', dureeS: 600, origine: 'bien-etre' });
+  const s2 = await a.repo.seances.creer({ date: '2026-10-01', heure: '01:30', exercice: 'coherence', dureeS: 75, origine: 'moment-difficile' });
+  const hu = await a.repo.humeurs.creer({ date: '2026-09-30', heure: '20:00', emotion: 'roue:colere:irrite', energie: 'energie:moyenne' });
+  const [f] = await exporter(a.repo, { versionApp: '7.0.0' });
+  const contenu = contenuDe(f);
+  assert.equal(contenu.formatVersion, 5);
+  assert.equal(contenu.schemaVersion, 5);
+  assert.equal(contenu.counts.seances, 2);
+  assert.deepEqual(Object.keys(contenu.data), ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios']);
+  assert.deepEqual(contenu.data.seances, [s1, s2].sort((x, y) => x.id.localeCompare(y.id)));
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  assert.equal(analyse.resume.seances, 2);
+  const b = nouveauRepo();
+  await remplacer(b.repo, analyse);
+  assert.deepEqual((await b.repo.seances.tous()).sort((x, y) => x.id.localeCompare(y.id)), [s1, s2].sort((x, y) => x.id.localeCompare(y.id)));
+  assert.deepEqual(await b.repo.humeurs.lire(hu.id), hu);
+  assert.deepEqual((await b.repo.seances.parJour('2026-09-30', '2026-09-30')).map((x) => x.id), [s1.id, s2.id], 'bascule de 4 h gardée');
+});
+
+test('v7 : l\'import remplace les séances, la perte les annonce, « Revenir » les remet', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const [f] = await exporter(a.repo, { versionApp: '7.0.0' });
+  const b = nouveauRepo();
+  const ici = await b.repo.seances.creer({ date: '2026-09-30', heure: '20:00', exercice: 'coherence', dureeS: 120, origine: 'ressourcer' });
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.equal(chiffrerPerte(await lireTout(b.repo), analyse).seances, 1);
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.seances.tous(), [], 'absente du fichier : effacée');
+  assert.deepEqual((await copieAvantImport(b.repo)).data.seances, [ici]);
+  await revenirAvantImport(b.repo);
+  assert.deepEqual(await b.repo.seances.tous(), [ici]);
+});
+
+test('v7 : « Revenir » vers une copie prise avant la v7 garde les séances', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  // Copie « avant-import » telle que la v6 l'écrivait : pas de séances.
+  const { seances, audios, ...data } = await lireTout(a.repo);
+  await poserCopie(a.repo, { id: 'avant-import-2026-09-30T17:00:00.000Z', type: 'avant-import', date: '2026-09-30T17:00:00.000Z', schemaVersion: 4, data });
+  const se = await a.repo.seances.creer({ date: '2026-10-01', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
+  await a.repo.journal.patch('2026-10-01', { lieu: 'lieu:bureau' });
+  await revenirAvantImport(a.repo);
+  assert.equal(await a.repo.journal.lire('2026-10-01'), null, 'la copie est restaurée');
+  assert.deepEqual(await a.repo.seances.tous(), [se]);
+});
+
+test('v7 : une sauvegarde au format 4 passe au format 5 (point de vigilance 1) : notes gardées, émotion vide, aucune séance', async () => {
+  const releves = [
+    { id: 'hu_0000000000000001', date: '2026-10-18', heure: '12:00', humeur: 6, energie: 'energie:moyenne', vers: null, faisais: null, createdAt: 'x', updatedAt: 'x' },
+    { id: 'hu_0000000000000002', date: '2026-10-19', heure: '01:30', humeur: 4, energie: null, vers: true, faisais: ['activiteMoment:repos'], createdAt: 'x', updatedAt: 'x' },
+  ];
+  const v4 = {
+    format: 'carnet-sauvegarde', formatVersion: 4, schemaVersion: 4, exportedAt: '2026-10-19T19:00:00.000Z',
+    counts: { journal: 1, humeurs: 2, notes: 1 },
+    data: {
+      journal: [{ date: '2026-10-18', humeur: 5, lieu: 'lieu:bureau' }],
+      humeurs: releves,
+      notes: [{ id: 'no_1', date: '2026-10-18', heure: '21:00', texte: 'Une idée' }],
+    },
+  };
+  const avant = structuredClone(v4);
+  const a = analyserFichiers(json(v4));
+  assert.deepEqual(v4, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
+  assert.equal(a.sauvegarde.formatVersion, 5);
+  assert.deepEqual(a.sauvegarde.data.seances, []);
+  assert.equal(a.sauvegarde.counts.seances, 0);
+  assert.equal(a.resume.seances, 0);
+  assert.deepEqual(a.sauvegarde.data.humeurs.map((h) => h.emotion), [null, null], 'emotion: null ajouté aux relevés');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(a.valides.humeurs.map((h) => [h.id, h.humeur, h.emotion, h.energie, h.vers]), [
+    ['hu_0000000000000001', 6, null, 'energie:moyenne', null], ['hu_0000000000000002', 4, null, null, true]]);
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  const lus = (await repo.humeurs.tous()).sort((x, y) => x.id.localeCompare(y.id));
+  assert.deepEqual(lus.map((h) => [h.humeur, h.emotion]), [[6, null], [4, null]], 'les notes de 1 à 10 restent');
+  assert.equal((await repo.journal.lire('2026-10-18')).humeur, 5, 'l\'humeur du soir aussi');
+  assert.equal((await repo.notes.tous()).length, 1);
+  assert.deepEqual(await repo.seances.tous(), []);
+  // Un fichier au format 4 tronqué reste refusé.
+  assert.throws(() => analyserFichiers(json({ ...v4, counts: { humeurs: 3 } })), (e) => e.code === 'BACKUP_INCOMPLET');
+});
+
+test('v7 : le format 6 est refusé, un format 5 tronqué aussi, une séance illisible est ignorée', () => {
+  assert.equal(FORMAT_VERSION, 5);
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 6, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 5, counts: { seances: 2 }, data: { seances: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  const a = analyserFichiers(json({
+    format: 'carnet-sauvegarde', formatVersion: 5, exportedAt: '2026-10-20T19:00:00.000Z', counts: { seances: 3, humeurs: 1 },
+    data: {
+      seances: [
+        { id: 'se_1', date: '2026-10-20', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' },
+        { id: 'se_2', date: '2026-10-20', heure: '10:00', exercice: 'coherence', origine: 'ailleurs' },
+        { id: 'se_3', date: '2026-10-20', heure: '10:30', dureeS: 300, origine: 'bien-etre' },
+      ],
+      humeurs: [{ id: 'hu_1', date: '2026-10-20', heure: '11:00', emotion: 'roue:colere:inconnu' }],
+    },
+  }));
+  assert.equal(a.valides.seances.length, 1);
+  assert.equal(a.valides.humeurs.length, 0);
+  assert.equal(a.erreurs.length, 3);
+  assert.match(a.erreurs.join(' ; '), /seances n° 2 : origine/);
+  assert.match(a.erreurs.join(' ; '), /seances n° 3 : exercice : absente/, 'une séance sans exercice est illisible');
+  assert.match(a.erreurs.join(' ; '), /humeurs n° 1 : emotion/);
+});
+
+test('v7 : aperçu de l\'import, les séances ont leurs mots', () => {
+  assert.equal(phrasePerte({ seances: 1 }), '1 séance de Bien-être présente ici et absente du fichier sera effacée.');
+  assert.equal(phrasePerte({ notes: 1, seances: 2 }), '1 note et 2 séances de Bien-être présentes ici et absentes du fichier seront effacées.');
+  assert.equal(phrasePerte({ episodes: 1, seances: 1 }), '1 épisode et 1 séance de Bien-être présents ici et absents du fichier seront effacés.');
+  assert.equal(phrasePerte({ seances: 0 }), null);
+});
+
+// « Tout effacer » vide tous les stores de données (STORES_DONNEES) : son texte les nomme tous. Un nouveau store fait
+// échouer ce test tant que le texte ne le cite pas.
+test('v7 : le texte de « Tout effacer » nomme tout ce que toutEffacer efface, séances de Bien-être comprises', () => {
+  const NOMS = {
+    journal: ['journées'], episodes: ['épisodes'], symptomes: ['symptômes'], traitements: ['fiches'], rdv: ['rendez-vous'],
+    humeurs: ['relevés d\'émotion du moment'], notes: ['notes'], seances: ['séances de Bien-être'], listes: ['Les listes'],
+    meta: ['Mon plan', 'ton traitement actuel', 'les réglages'], audios: ['mémos'],
+  };
+  assert.deepEqual(Object.keys(NOMS).sort(), [...STORES_DONNEES].sort());
+  for (const [store, mots] of Object.entries(NOMS)) for (const m of mots) assert.ok(TEXTE_EFFACER.includes(m), `${store} : « ${m} »`);
 });

@@ -1,7 +1,7 @@
 // Racine de l'interface : route courante, onglets, bandeau de mise à jour, toast.
 import { html, useEffect, useState } from './ui/lib.js';
 import { etatApp } from './store.js';
-import { ongletDe } from './routeur.js';
+import { lireRoute, ongletDe } from './routeur.js';
 import { BarreOnglets } from './ui/composants/barre-onglets.js';
 import { BandeauMaj } from './ui/composants/bandeau-maj.js';
 import { Toast } from './ui/composants/toast.js';
@@ -36,6 +36,8 @@ import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
+import { BienEtre } from './ui/ecrans/bien-etre.js';
+import { Exercice } from './ui/ecrans/exercice.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -68,6 +70,8 @@ const ECRANS = {
   'listes-index': () => html`<${IndexListes} />`,
   soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
+  'bien-etre': () => html`<${BienEtre} />`,
+  exercice: (p) => html`<${Exercice} key=${p.id} id=${p.id} />`,
 };
 
 function useEtatApp() {
@@ -81,11 +85,14 @@ export function App({ guide }) {
   if (guide) return html`<${Guide} />`;
   const { route } = etat;
   const rendu = ECRANS[route.nom] || ECRANS.aujourdhui;
+  // Dans un parcours, le toast se pose en haut : il ne couvre pas les réponses, près du pouce (2b). Pas celui qu'un
+  // parcours affiche en se fermant (l'adresse a déjà changé, l'écran pas encore) : il reste en bas, sans sauter.
+  const toastEnHaut = etat.parcoursOuvert && lireRoute(location.hash).nom === route.nom;
   return html`<div class="app">
     ${estSiteTest() && html`<div class="bandeau-test">TEST</div>`}
     ${etat.majDisponible && !etat.parcoursOuvert && html`<${BandeauMaj} surRecharger=${appliquerMaj} />`}
     ${rendu(route.params)}
-    <${Toast} toast=${etat.toast} />
+    <${Toast} toast=${etat.toast} enHaut=${toastEnHaut} />
     ${!etat.parcoursOuvert && html`<${BarreOnglets} actif=${ongletDe(route.nom)} />`}
   </div>`;
 }

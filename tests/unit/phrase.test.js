@@ -79,3 +79,20 @@ test('élément inconnu : libellé de repli, jamais undefined', () => {
   const s = phraseResume('episode', { declencheur: 'declencheur:disparu' }, carte);
   assert.ok(!texte(s).includes('undefined'));
 });
+
+test('journée v7 : les émotions du jour (Après coup, « Ce jour-là »), après l\'humeur, avec leurs familles ; sans elles, rien ne change', async () => {
+  const { resumeEmotions } = await import('../../public/js/domain/releves.js');
+  const releves = [
+    { date: '2026-10-14', heure: '18:00', emotion: 'roue:serenite:calme' }, { date: '2026-10-14', heure: '09:00', emotion: 'roue:colere:irrite' },
+    { date: '2026-10-14', heure: '12:00', humeur: 6 }, { date: '2026-10-15', heure: '01:00', emotion: 'roue:colere:irrite' },
+  ];
+  const emotions = resumeEmotions(releves, Infinity);
+  const entree = { lieu: 'lieu:bureau', humeur: 6, explosions: 1 };
+  const s = phraseResume('jour', entree, carte, { emotions });
+  assert.equal(texte(s), 'Bureau · humeur 6 · irrité, calme · explosions 1', 'un jour mêlé garde sa note (vigilance 5)');
+  const seg = s.find((x) => x.rubrique === 'emotions');
+  assert.deepEqual(seg.familles.map((f) => f.cle), ['colere', 'serenite']);
+  assert.equal(texte(phraseResume('jour', { lieu: 'lieu:bureau' }, carte, { emotions })), 'Bureau · irrité, calme');
+  assert.equal(texte(phraseResume('jour', {}, carte, { emotions })), 'irrité, calme', 'un jour qui n\'a que des émotions');
+  assert.deepEqual(phraseResume('jour', entree, carte, { emotions: resumeEmotions([], Infinity) }), phraseResume('jour', entree, carte));
+});

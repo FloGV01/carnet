@@ -41,7 +41,7 @@ export const NOMS_LISTES = Object.keys(LISTES);
 // Vue soignants de Soins. Toutes les listes y sont, une seule fois.
 export const GROUPES_LISTES = [
   { ecran: 'Le soir', listes: ['lieu', 'sommeil', 'contactAvec', 'contactEffet', 'typeSport', 'dureeSport', 'traitementPris', 'pese', 'recharge'] },
-  { ecran: 'Humeur du moment', listes: ['energie', 'activiteMoment'] },
+  { ecran: 'Émotion du moment', listes: ['energie', 'activiteMoment'] },
   { ecran: 'Épisode', listes: ['declencheur', 'emotion', 'dessous', 'reaction', 'professionnel'] },
   { ecran: 'Après coup', listes: ['typeExplosion', 'fragilite', 'signe', 'piegePensee', 'sourceSurcharge', 'besoin', 'consequenceCourt', 'consequenceLong'] },
   { ecran: 'Symptôme', listes: ['symptome', 'duree'] },

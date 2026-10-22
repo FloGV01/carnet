@@ -12,8 +12,8 @@ import { carteLibelles } from '../domain/libelles.js';
 
 export { DataError };
 
-const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au', humeurs: 'hu', notes: 'no' };
-const AVEC_HEURE = new Set(['episodes', 'humeurs', 'notes']);
+const PREFIXES = { episodes: 'ep', symptomes: 'sy', traitements: 'tr', rdv: 'rdv', audios: 'au', humeurs: 'hu', notes: 'no', seances: 'se' };
+const AVEC_HEURE = new Set(['episodes', 'humeurs', 'notes', 'seances']);
 const ERREURS_CONNEXION = new Set(['InvalidStateError', 'UnknownError', 'TransactionInactiveError']);
 const PARENTS_AUDIO = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv'];
 // Méta qui ne comptent pas comme une saisie (pas de mise à jour de derniereEcriture).
@@ -137,7 +137,7 @@ export function creerRepository({
     dates: () => tx(['journal'], 'readonly', (t) => req(t.objectStore('journal').getAllKeys())),
   };
 
-  // ---------- événements datés (épisodes, symptômes, traitements) et rendez-vous ----------
+  // ---------- événements datés (épisodes, symptômes, traitements, humeurs, notes, séances) et rendez-vous ----------
   function evenements(store) {
     const stores = [store, 'listes', 'meta', 'audios'];
     return {
@@ -456,6 +456,7 @@ export function creerRepository({
     rdv: evenements('rdv'),
     humeurs: evenements('humeurs'),
     notes: evenements('notes'),
+    seances: evenements('seances'),
     listes,
     audios,
     meta,

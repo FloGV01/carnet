@@ -68,7 +68,7 @@ test('un épisode noté à 01:30 apparaît sous la veille ; il se rouvre sur le 
   await page.evaluate(() => window.__carnet.repo.episodes.creer({ date: '2026-10-01', heure: '01:30', emotion: 'emotion:anxiete' }));
   await page.clock.setSystemTime(new Date(2026, 9, 1, 2, 0));
   await page.reload();
-  await expect(page.getByRole('heading', { name: "Aujourd'hui · mercredi 30 sept." })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Aujourd'hui, Mercredi 30 septembre" })).toBeVisible();
   await page.getByRole('link', { name: /01:30\s+Anxiété/ }).click();
   await expect(grille(page).getByRole('button', { name: 'Terminer' })).toBeVisible();
   await expect(grille(page).getByRole('button', { name: /Émotion\s*Anxiété/ })).toBeVisible();

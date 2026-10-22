@@ -1,10 +1,11 @@
 import { html, useRef, useState } from '../lib.js';
-import { Icones } from '../icones.js';
+import { coche, libelleChoix } from './coche.js';
 import { decouperLibelle } from '../../domain/libelles.js';
 
 // Grille de choix : un toucher choisit, un second toucher sur le choix sélectionné l'efface.
 // L'écriture part au click (jamais au touchstart) pour qu'un défilement ne sélectionne rien.
-// `teinte` donne la couleur de rubrique du choix (repère visuel, jamais une valeur).
+// `teinte` donne la couleur de rubrique du choix (repère visuel, jamais une valeur). Choisi : fond plein,
+// graisse 600 et coche (sélection commune, composants.css).
 export function Pastilles({ etiquette, options, valeur, surChoix, colonnes = 3, classe = '', ariaPrefixe, surAjouter, teinte }) {
   return html`<div class=${`pastilles colonnes-${colonnes} ${classe}${teinte ? ` teinte-${teinte}` : ''}`} role="group" aria-label=${etiquette}>
     ${options.map((o) => {
@@ -13,8 +14,8 @@ export function Pastilles({ etiquette, options, valeur, surChoix, colonnes = 3, 
       return html`<button type="button" class="pastille" aria-pressed=${choisi ? 'true' : 'false'}
         aria-label=${ariaPrefixe ? `${ariaPrefixe} ${o.libelle}` : null}
         onClick=${() => surChoix(choisi ? null : o.valeur)}>
-        <span class="coche" aria-hidden="true">${Icones.coche({ trait: 2.2 })}</span>
-        <span class="texte-pastille"><span>${principal}</span>${precision && html`<small>${precision}</small>`}</span>
+        ${coche()}
+        <span class="texte-pastille">${libelleChoix(principal)}${precision && html`<small>${libelleChoix(precision)}</small>`}</span>
       </button>`;
     })}
     ${surAjouter && html`<${PastilleAjout} etiquette=${etiquette} surAjouter=${surAjouter} />`}

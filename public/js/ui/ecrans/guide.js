@@ -1,10 +1,11 @@
 import { html } from '../lib.js';
 import { Icones } from '../icones.js';
 
+// Des espaces insécables dans les guillemets : un « » ne commence ni ne finit jamais seul une ligne.
 const ETAPES = [
-  { icone: 'points', texte: 'Touche « ••• », puis « Partager », puis « Sur l’écran d’accueil ».' },
-  { icone: 'bascule', texte: 'Vérifie que « Ouvrir comme app web » est activé.' },
-  { icone: 'ajouter', texte: 'Touche « Ajouter », puis ouvre Carnet depuis son icône.' },
+  { icone: 'points', texte: 'Touche «\u00a0•••\u00a0», puis «\u00a0Partager\u00a0», puis «\u00a0Sur l’écran d’accueil\u00a0».' },
+  { icone: 'bascule', texte: 'Vérifie que «\u00a0Ouvrir comme app web\u00a0» est activé.' },
+  { icone: 'ajouter', texte: 'Touche «\u00a0Ajouter\u00a0», puis ouvre Carnet depuis son icône.' },
 ];
 
 // Seul écran affiché dans Safari : la saisie n'existe que dans l'app installée.

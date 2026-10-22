@@ -1,0 +1,310 @@
+/* Carnet · jetons de la piste 2 (Lexend, couleurs franches)
+   Clair = gris froid, Sombre = noir profond. Contraste AA vérifié pour tout texte.
+   Rôles par couleur : --c-X (icône, bande, graphique) · -fill (fond du choix fait)
+   · -on (texte sur -fill) · -tint (fond de fiche) · -tint-2 (bouton non choisi teinté) · -text (texte coloré). */
+
+@font-face {
+  font-family: "Lexend";
+  src: url("../fonts/Lexend-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+  --font-sans: "Lexend", system-ui, -apple-system, sans-serif;
+
+  /* Typographie : trois niveaux fixes + corps */
+  --fs-screen: 30px;   --lh-screen: 38px;   /* titre d'écran, question d'un parcours */
+  --fs-day: 23px;      --lh-day: 30px;      /* titre du jour (laisse la place à ‹ ›) */
+  --fs-block: 17px;    --lh-block: 22px;    /* titre de bloc / de rubrique */
+  --fs-section: 12.5px; --ls-section: .07em; /* libellé de section, capitales */
+  --fs-body: 16px;     --lh-body: 1.35;
+  --fs-small: 14px;
+  --fs-pill: 14px;
+  --fs-tab: 11px;
+  --fs-grid: 20px;     /* grille Humeur 1–10 */
+  --fs-grid-lg: 21px;  /* grille Intensité */
+  --fs-number: 34px;   /* tuiles chiffrées */
+  --fw-regular: 400; --fw-medium: 500; --fw-strong: 600; --fw-number: 700;
+
+  /* Formes */
+  --radius-pill: 10px;
+  --radius-button: 12px;
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+  --radius-band: 26px;
+
+  /* Espacements */
+  --space-1: 4px; --space-2: 6px; --space-3: 8px; --space-4: 10px;
+  --space-5: 12px; --space-6: 16px; --space-7: 20px; --space-8: 24px;
+  --gutter: 12px;          /* marge latérale (2a ; 2b = 14px ; 2c = 18px) */
+
+  /* Cibles tactiles */
+  --target: 44px; --target-grid: 48px; --h-grid-humeur: 56px; --h-grid-intensite: 64px;
+  --h-pill: 34px; --h-band: 64px; --h-tabbar: 83px; --h-status: 47px;
+
+  /* Durées */
+  --dur: 200ms; --dur-fast: 150ms; --ease: cubic-bezier(.2,.7,.3,1);
+  --saved-visible: 1500ms;
+
+  --bg: #e7eaee;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --line: #c2c4c8;
+  --text: #181b1f;
+  --text-2: #585b61;
+  --action: #181b1f;
+  --action-on: #fdfdfd;
+  --c-humeur: #ca4b85;
+  --c-humeur-fill: #ff88b9;
+  --c-humeur-on: #190e12;
+  --c-humeur-tint: #fee7ef;
+  --c-humeur-tint-2: #ffd1e1;
+  --c-humeur-text: #93285c;
+  --c-energie: #b96a00;
+  --c-energie-fill: #fca34c;
+  --c-energie-on: #181008;
+  --c-energie-tint: #ffeada;
+  --c-energie-tint-2: #fbd8bb;
+  --c-energie-text: #804802;
+  --c-positifs: #938013;
+  --c-positifs-fill: #efd127;
+  --c-positifs-on: #141207;
+  --c-positifs-tint: #f4efd5;
+  --c-positifs-tint-2: #e9e1b7;
+  --c-positifs-text: #665801;
+  --c-sport: #279936;
+  --c-sport-fill: #6bd672;
+  --c-sport-on: #0c140c;
+  --c-sport-tint: #e1f5e0;
+  --c-sport-tint-2: #caeaca;
+  --c-sport-text: #046b1b;
+  --c-symptome: #02967c;
+  --c-symptome-fill: #1ae7c2;
+  --c-symptome-on: #081511;
+  --c-symptome-tint: #d7f7ed;
+  --c-symptome-tint-2: #baecdd;
+  --c-symptome-text: #056755;
+  --c-contact: #1090a3;
+  --c-contact-fill: #27d0eb;
+  --c-contact-on: #071417;
+  --c-contact-tint: #d5f5fc;
+  --c-contact-tint-2: #b6eaf5;
+  --c-contact-text: #0c6371;
+  --c-difficile: #5885ab;
+  --c-difficile-fill: #85b4dc;
+  --c-difficile-on: #0a131a;
+  --c-difficile-tint: #e5f0fa;
+  --c-difficile-tint-2: #d1e2f1;
+  --c-difficile-text: #365c7b;
+  --c-sommeil: #5f74e4;
+  --c-sommeil-fill: #829afc;
+  --c-sommeil-on: #0e111b;
+  --c-sommeil-tint: #e9eeff;
+  --c-sommeil-tint-2: #d5dffe;
+  --c-sommeil-text: #3d4daa;
+  --c-traitement: #8c6aca;
+  --c-traitement-fill: #b392f6;
+  --c-traitement-on: #131019;
+  --c-traitement-tint: #f0ebff;
+  --c-traitement-tint-2: #e3dafb;
+  --c-traitement-text: #624595;
+  --c-episode: #b156b7;
+  --c-episode-fill: #dc7ee2;
+  --c-episode-on: #160f16;
+  --c-episode-tint: #fbe7fc;
+  --c-episode-tint-2: #f3d4f4;
+  --c-episode-text: #803385;
+  --c-lieu: #937c61;
+  --c-lieu-fill: #cfb69a;
+  --c-lieu-on: #171008;
+  --c-lieu-tint: #f6ede2;
+  --c-lieu-tint-2: #ecddcd;
+  --c-lieu-text: #67543e;
+  --c-explosions: #a7725a;
+  --c-explosions-fill: #c79077;
+  --c-explosions-on: #190f0a;
+  --c-explosions-tint: #f9ebe5;
+  --c-explosions-tint-2: #f0dad1;
+  --c-explosions-text: #784c38;
+  --chart-sommeil-1: #c5d0f3;
+  --chart-sommeil-2: #7e93e2;
+  --chart-sommeil-3: #4455c2;
+}
+
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1e1f21;
+  --surface-2: #2d2e30;
+  --line: #47484a;
+  --text: #bfc0c3;
+  --text-2: #97989b;
+  --action: #eaebed;
+  --action-on: #000000;
+  --c-humeur: #ff8ebc;
+  --c-humeur-fill: #ff88b9;
+  --c-humeur-on: #190e12;
+  --c-humeur-tint: #311420;
+  --c-humeur-tint-2: #441c2d;
+  --c-humeur-text: #fe9ac2;
+  --c-energie: #fc9e3f;
+  --c-energie-fill: #fca34c;
+  --c-energie-on: #181008;
+  --c-energie-tint: #301903;
+  --c-energie-tint-2: #422301;
+  --c-energie-text: #fea753;
+  --c-positifs: #d2b723;
+  --c-positifs-fill: #efd127;
+  --c-positifs-on: #141207;
+  --c-positifs-tint: #241e00;
+  --c-positifs-tint-2: #332b01;
+  --c-positifs-text: #d8be34;
+  --c-sport: #68d36f;
+  --c-sport-fill: #6bd672;
+  --c-sport-on: #0c140c;
+  --c-sport-tint: #0c230d;
+  --c-sport-tint-2: #133416;
+  --c-sport-text: #7bd77f;
+  --c-symptome: #0dd5b2;
+  --c-symptome-fill: #1ae7c2;
+  --c-symptome-on: #081511;
+  --c-symptome-tint: #00241c;
+  --c-symptome-tint-2: #00342a;
+  --c-symptome-text: #09dcb8;
+  --c-contact: #1fcde8;
+  --c-contact-fill: #27d0eb;
+  --c-contact-on: #071417;
+  --c-contact-tint: #002228;
+  --c-contact-tint-2: #00323a;
+  --c-contact-text: #1fd4f0;
+  --c-difficile: #8ebde6;
+  --c-difficile-fill: #85b4dc;
+  --c-difficile-on: #0a131a;
+  --c-difficile-tint: #141f29;
+  --c-difficile-tint-2: #1d2d3b;
+  --c-difficile-text: #9ac3e7;
+  --c-sommeil: #9fb3fc;
+  --c-sommeil-fill: #829afc;
+  --c-sommeil-on: #0e111b;
+  --c-sommeil-tint: #161c36;
+  --c-sommeil-tint-2: #20284b;
+  --c-sommeil-text: #a7bafe;
+  --c-traitement: #c1a6fc;
+  --c-traitement-fill: #b392f6;
+  --c-traitement-on: #131019;
+  --c-traitement-tint: #221b31;
+  --c-traitement-tint-2: #2f2543;
+  --c-traitement-text: #c7aefe;
+  --c-episode: #ed8ef3;
+  --c-episode-fill: #dc7ee2;
+  --c-episode-on: #160f16;
+  --c-episode-tint: #2b162c;
+  --c-episode-tint-2: #3b1f3d;
+  --c-episode-text: #ee9af3;
+  --c-lieu: #ccb397;
+  --c-lieu-fill: #cfb69a;
+  --c-lieu-on: #171008;
+  --c-lieu-tint: #261c11;
+  --c-lieu-tint-2: #362919;
+  --c-lieu-text: #d0baa1;
+  --c-explosions: #e2a88f;
+  --c-explosions-fill: #c79077;
+  --c-explosions-on: #190f0a;
+  --c-explosions-tint: #281a14;
+  --c-explosions-tint-2: #39261e;
+  --c-explosions-text: #e4b19a;
+  --chart-sommeil-1: #394473;
+  --chart-sommeil-2: #6073c7;
+  --chart-sommeil-3: #9fb3fe;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #1e1f21;
+    --surface-2: #2d2e30;
+    --line: #47484a;
+    --text: #bfc0c3;
+    --text-2: #97989b;
+    --action: #eaebed;
+    --action-on: #000000;
+    --c-humeur: #ff8ebc;
+    --c-humeur-fill: #ff88b9;
+    --c-humeur-on: #190e12;
+    --c-humeur-tint: #311420;
+    --c-humeur-tint-2: #441c2d;
+    --c-humeur-text: #fe9ac2;
+    --c-energie: #fc9e3f;
+    --c-energie-fill: #fca34c;
+    --c-energie-on: #181008;
+    --c-energie-tint: #301903;
+    --c-energie-tint-2: #422301;
+    --c-energie-text: #fea753;
+    --c-positifs: #d2b723;
+    --c-positifs-fill: #efd127;
+    --c-positifs-on: #141207;
+    --c-positifs-tint: #241e00;
+    --c-positifs-tint-2: #332b01;
+    --c-positifs-text: #d8be34;
+    --c-sport: #68d36f;
+    --c-sport-fill: #6bd672;
+    --c-sport-on: #0c140c;
+    --c-sport-tint: #0c230d;
+    --c-sport-tint-2: #133416;
+    --c-sport-text: #7bd77f;
+    --c-symptome: #0dd5b2;
+    --c-symptome-fill: #1ae7c2;
+    --c-symptome-on: #081511;
+    --c-symptome-tint: #00241c;
+    --c-symptome-tint-2: #00342a;
+    --c-symptome-text: #09dcb8;
+    --c-contact: #1fcde8;
+    --c-contact-fill: #27d0eb;
+    --c-contact-on: #071417;
+    --c-contact-tint: #002228;
+    --c-contact-tint-2: #00323a;
+    --c-contact-text: #1fd4f0;
+    --c-difficile: #8ebde6;
+    --c-difficile-fill: #85b4dc;
+    --c-difficile-on: #0a131a;
+    --c-difficile-tint: #141f29;
+    --c-difficile-tint-2: #1d2d3b;
+    --c-difficile-text: #9ac3e7;
+    --c-sommeil: #9fb3fc;
+    --c-sommeil-fill: #829afc;
+    --c-sommeil-on: #0e111b;
+    --c-sommeil-tint: #161c36;
+    --c-sommeil-tint-2: #20284b;
+    --c-sommeil-text: #a7bafe;
+    --c-traitement: #c1a6fc;
+    --c-traitement-fill: #b392f6;
+    --c-traitement-on: #131019;
+    --c-traitement-tint: #221b31;
+    --c-traitement-tint-2: #2f2543;
+    --c-traitement-text: #c7aefe;
+    --c-episode: #ed8ef3;
+    --c-episode-fill: #dc7ee2;
+    --c-episode-on: #160f16;
+    --c-episode-tint: #2b162c;
+    --c-episode-tint-2: #3b1f3d;
+    --c-episode-text: #ee9af3;
+    --c-lieu: #ccb397;
+    --c-lieu-fill: #cfb69a;
+    --c-lieu-on: #171008;
+    --c-lieu-tint: #261c11;
+    --c-lieu-tint-2: #362919;
+    --c-lieu-text: #d0baa1;
+    --c-explosions: #e2a88f;
+    --c-explosions-fill: #c79077;
+    --c-explosions-on: #190f0a;
+    --c-explosions-tint: #281a14;
+    --c-explosions-tint-2: #39261e;
+    --c-explosions-text: #e4b19a;
+    --chart-sommeil-1: #394473;
+    --chart-sommeil-2: #6073c7;
+    --chart-sommeil-3: #9fb3fe;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: 0ms; --dur-fast: 0ms; }
+}

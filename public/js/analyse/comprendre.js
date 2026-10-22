@@ -2,13 +2,15 @@
 // aligné : des jours repères (explosions, jours à énergie basse, retours au bureau), lus à quelques jours de
 // décalage. Puis les colonnes (jour de la semaine, lieu, mois), les nuits selon le soir du coucher, l'énergie
 // selon ce que je faisais, et ce qui a pesé ou rechargé. Des comptes seulement, rassemblés : jamais une cause,
-// jamais une phrase calculée. La date du jour arrive par la période, qui finit aujourd'hui. Pur.
+// jamais une phrase calculée. v7 : la note de 1 à 10 n'est plus une mesure ; les colonnes comptent les émotions du
+// moment par famille (emotions.js). La date du jour arrive par la période, qui finit aujourd'hui. Pur.
 import { addDays, jourEvenement, jourSemaine, JOURS } from '../domain/dates.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
-import { avecHumeurDuJour, estHumeur } from './humeur-jour.js';
 import { energieBasseParJour } from './energie-jour.js';
+import { famillesParJour, famillesParColonnes } from './emotions.js';
+import { ordreDeListe, clesDeColonnes, colonneDe } from './colonnes.js';
 import { bornesFenetre, dureeNuit, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
-import { moyenne, mediane } from './stats.js';
+import { mediane } from './stats.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.comprendre;
@@ -40,33 +42,30 @@ function contactCouteux(j) {
   return null;
 }
 
-// Les facteurs de chaque jour logique, rangés par date. Chaque jour garde aussi son humeur du jour et
-// son lieu (pour les colonnes). Un jour a une entrée dès qu'il porte une saisie du soir, un relevé ou un
-// épisode d'explosion.
+// Les facteurs de chaque jour logique, rangés par date. Chaque jour garde aussi son lieu (pour les colonnes) et
+// les familles de ses émotions du moment, une par relevé (v7). Un jour a une entrée dès qu'il porte une saisie du
+// soir, un relevé d'énergie ou d'émotion, ou un épisode d'explosion.
 export function facteursParJour({ journal = [], humeurs = [], episodes = [], zeroDepuis = null } = {}) {
-  // Comme l'Analyse (analyse/index.js) : l'humeur du jour, puis les explosions. Un jour qui n'a que des
-  // relevés n'a pas de saisie du soir : il ne vaut jamais 0 explosion.
-  const entrees = journalAvecExplosions(avecHumeurDuJour(journal, humeurs), episodes, { zeroDepuis, jourNote: saisieDuSoir(journal) });
+  // Comme l'Analyse (analyse/index.js) : les explosions. Un jour qui n'a que des relevés n'a pas de saisie du soir :
+  // il ne vaut jamais 0 explosion.
+  const entrees = journalAvecExplosions(journal, episodes, { zeroDepuis, jourNote: saisieDuSoir(journal) });
   const energie = energieBasseParJour(humeurs);
+  const familles = famillesParJour(humeurs, '0000-01-01', '9999-12-31');
   const presentes = new Set(entrees.map((j) => j.date));
-  for (const date of energie.keys()) if (!presentes.has(date)) entrees.push({ date });
+  for (const date of [...energie.keys(), ...familles.keys()]) if (!presentes.has(date)) { entrees.push({ date }); presentes.add(date); }
   entrees.sort((a, b) => a.date.localeCompare(b.date));
-  return new Map(entrees.map((j) => {
-    const humeur = estHumeur(j.humeur) ? j.humeur : null;
-    return [j.date, {
-      date: j.date,
-      humeur,
-      lieu: j.lieu || null,
-      nuitMal: selon(j.sommeilRessenti, NUIT_MAL),
-      energieBasse: energie.has(j.date) ? energie.get(j.date) : null,
-      contactCouteux: contactCouteux(j),
-      bureau: selon(j.lieu, BUREAU),
-      explosion: j.explosions == null ? null : j.explosions >= 1,
-      humeurBasse: humeur == null ? null : humeur <= SEUILS.bonnesJournees.bas,
-      pese: listeNotee(j.pese),
-      recharge: listeNotee(j.recharge),
-    }];
-  }));
+  return new Map(entrees.map((j) => [j.date, {
+    date: j.date,
+    lieu: j.lieu || null,
+    familles: familles.get(j.date) || [],
+    nuitMal: selon(j.sommeilRessenti, NUIT_MAL),
+    energieBasse: energie.has(j.date) ? energie.get(j.date) : null,
+    contactCouteux: contactCouteux(j),
+    bureau: selon(j.lieu, BUREAU),
+    explosion: j.explosions == null ? null : j.explosions >= 1,
+    pese: listeNotee(j.pese),
+    recharge: listeNotee(j.recharge),
+  }]));
 }
 
 // ---------- Le graphique aligné (§2.2) ----------
@@ -116,14 +115,6 @@ export function elementsFrequents(jours, periode, liste, min) {
 
 const fixes = (...cles) => cles.map((cle) => ({ cle, valeur: (j) => j[cle] }));
 
-// Compare deux identifiants dans l'ordre de leur liste (Réglages › Listes) ; un identifiant absent de
-// `items` va à la fin, rangé par identifiant.
-function ordreDeListe(items) {
-  const rang = new Map(items.map((i) => [i.id, i.ordre]));
-  const pos = (id) => (rang.has(id) ? rang.get(id) : Number.MAX_SAFE_INTEGER);
-  return (a, b) => pos(a) - pos(b) || (a < b ? -1 : a > b ? 1 : 0);
-}
-
 // Les éléments pesés ou rechargés de la période, dans l'ordre de leur liste. Connus seulement les jours où
 // la liste du soir est remplie.
 function elements(jours, periode, liste, items) {
@@ -161,7 +152,7 @@ export function explosionsAvant(jours, periode, items = []) {
 }
 export function explosionsApres(jours, periode, items = []) {
   return explosions(jours, periode, APRES,
-    [...fixes('humeurBasse', 'energieBasse', 'nuitMal'), ...elements(jours, periode, 'recharge', items)]);
+    [...fixes('energieBasse', 'nuitMal'), ...elements(jours, periode, 'recharge', items)]);
 }
 
 // Avant les jours à énergie basse (§2.4). Autres jours : énergie notée sans « basse », sans exclusion
@@ -185,52 +176,32 @@ export function retoursBureau(jours, periode) {
   return graphe(jours, periode, {
     evenements,
     decalages: RETOUR,
-    facteurs: fixes('humeurBasse', 'nuitMal', 'energieBasse', 'explosion', 'contactCouteux'),
+    facteurs: fixes('nuitMal', 'energieBasse', 'explosion', 'contactCouteux'),
     autres: joursDeLaPeriode(jours, periode, (j) => !exclus.has(j.date)),
   });
 }
 
 // ---------- Les colonnes (§2.5) : jour de la semaine, lieu, mois ----------
 
-// Le choix « Humeur · Nuits Mal · Explosions · Énergie basse » : l'humeur du jour, puis les facteurs de
-// facteursParJour. Une nuit Mal compte pour le jour où elle est notée.
-export const MESURES = ['humeur', 'nuitMal', 'explosion', 'energieBasse'];
+// Le choix « Émotions · Nuits Mal · Explosions · Énergie basse » (v7 : les émotions du moment par famille remplacent
+// l'humeur). Une nuit Mal compte pour le jour où elle est notée.
+export const MESURES = ['emotions', 'nuitMal', 'explosion', 'energieBasse'];
 
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 // Un graphique en colonnes apparaît à partir de 2 colonnes d'au moins 3 valeurs. Dessous : aucune colonne.
-// Sous 3 valeurs, une colonne est `fragile` (point creux, trait en pointillé) : la même règle « moins de 3
-// valeurs » que `peu` dans aligne(). n === 0 veut dire « aucune valeur » (rien à dessiner, pas d'étiquette) :
-// à tester avant `fragile`, qui est aussi vrai à n = 0.
+// Sous 3 valeurs, une colonne est `fragile` (barre creuse) : la même règle « moins de 3 valeurs » que `peu` dans
+// aligne(). n === 0 veut dire « aucune valeur » (rien à dessiner, pas d'étiquette) : à tester avant `fragile`, qui
+// est aussi vrai à n = 0.
 const selonSeuil = (colonnes) => (colonnes.filter((c) => c.n >= S.minValeurs).length >= S.minColonnes
   ? { statut: 'ok', colonnes } : { statut: 'insuffisant', colonnes: [] });
 
-// Les colonnes de chaque découpage, dans l'ordre d'affichage : les 7 jours de la semaine (lundi = 0), les
-// lieux présents dans la période (dans l'ordre de leur liste), les mois calendaires de la période, vides compris.
-function clesDeColonnes(pas, jours, periode, items) {
-  if (pas === 'semaine') return [0, 1, 2, 3, 4, 5, 6];
-  if (pas === 'lieu') return [...new Set(jours.map((j) => j.lieu).filter(Boolean))].sort(ordreDeListe(items));
-  const mois = new Set();
-  for (let d = periode.du; d <= periode.au; d = addDays(d, 1)) mois.add(d.slice(0, 7));
-  return [...mois];
-}
-const colonneDe = { semaine: (j) => jourSemaine(j.date), lieu: (j) => j.lieu, mois: (j) => j.date.slice(0, 7) };
 // Le mot qui suit le compte d'une barre : « 3 lundis », « 3 jours ».
 const motDe = { semaine: (cle) => JOURS[cle], lieu: () => 'jour', mois: () => 'jour' };
 
-// Humeur : la moyenne des humeurs du jour de la colonne, de la plus basse à la plus haute.
-function colonneHumeur(cle, jours) {
-  const humeurs = jours.map((j) => j.humeur).filter((h) => h != null);
-  return {
-    cle, n: humeurs.length, moyenne: moyenne(humeurs),
-    min: humeurs.length ? Math.min(...humeurs) : null, max: humeurs.length ? Math.max(...humeurs) : null,
-    fragile: humeurs.length < S.minValeurs,
-  };
-}
-// Les autres mesures sont oui / non / inconnu, comme les facteurs. La part vaut oui / n ; le libellé ne dit
-// que le compte de oui : n, le nombre de jours connus, ne va que dans « Voir en tableau ». Sans aucune
-// valeur connue (n = 0), pas de libellé : un jour non noté n'est pas un zéro. « 0 lundi » reste dit quand
-// des lundis sont connus et qu'aucun n'est oui.
+// Les mesures oui / non / inconnu, comme les facteurs. La part vaut oui / n ; le libellé ne dit que le compte de
+// oui : n, le nombre de jours connus, ne va que dans « Voir en tableau ». Sans aucune valeur connue (n = 0), pas de
+// libellé : un jour non noté n'est pas un zéro. « 0 lundi » reste dit quand des lundis sont connus et qu'aucun n'est oui.
 function colonneOuiNon(cle, jours, quoi, mot) {
   const connus = jours.map((j) => j[quoi]).filter((v) => v != null);
   const oui = connus.filter(Boolean).length;
@@ -242,13 +213,14 @@ function colonneOuiNon(cle, jours, quoi, mot) {
 
 // jours : le résultat de facteursParJour. pas : 'semaine' (clé 0 à 6), 'lieu' (clé : l'identifiant du lieu) ou
 // 'mois' (clé : « 2026-09 »). items : les lieux, pour leur ordre. Une colonne à n === 0 n'a aucune valeur
-// (ni point, ni barre, ni libellé) : à tester avant `fragile`, aussi vrai à n = 0.
+// (ni barre, ni libellé). La mesure « emotions » rend les colonnes de famillesParColonnes (emotions.js), à son seuil.
 export function parColonnes(jours, periode, { cle: pas, mesure: quoi }, items = []) {
+  if (quoi === 'emotions') return famillesParColonnes(jours, periode, { cle: pas }, items);
   const ici = dans(periode);
   const dansPeriode = [...jours.values()].filter((j) => ici(j.date));
   const parCle = new Map(clesDeColonnes(pas, dansPeriode, periode, items).map((c) => [c, []]));
   for (const j of dansPeriode) parCle.get(colonneDe[pas](j))?.push(j);
-  return selonSeuil([...parCle].map(([c, js]) => (quoi === 'humeur' ? colonneHumeur(c, js) : colonneOuiNon(c, js, quoi, motDe[pas](c)))));
+  return selonSeuil([...parCle].map(([c, js]) => colonneOuiNon(c, js, quoi, motDe[pas](c))));
 }
 
 // ---------- Tes nuits selon le jour (§2.5, graphique 4) ----------

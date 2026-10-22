@@ -7,6 +7,15 @@ import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE } from '../../domain/journee.js';
+import { CarreIcone } from '../composants/rubrique.js';
+
+// Le carré de chaque champ (2b) : l'icône et la couleur de sa rubrique, comme ses cartes sur Aujourd'hui.
+const CARRES = {
+  lieu: ['lieu', 'lieu'], sommeil: ['sommeil', 'sommeil'], humeur: ['humeur', 'humeur'], contact: ['contact', 'contact'],
+  sport: ['sport', 'sport'], explosions: ['explosions', 'expl'], traitement: ['traitement', 'trt'], positifs: ['positifs', 'pos'],
+  [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'],
+};
+const Carre = ({ champ }) => (CARRES[champ] ? html`<${CarreIcone} icone=${CARRES[champ][0]} teinte=${CARRES[champ][1]} />` : null);
 
 // meta.journee, lue puis changée par « Le soir » et par Rappels : chaque changement passe par une file
 // et se fait sur la valeur relue en base, pour que deux touchers rapprochés ne s'écrasent pas.
@@ -43,8 +52,8 @@ export function MaJournee() {
   return html`<main class="ecran fiche ma-journee">
     <${Entete} titre="Le soir" retour=${retour} />
     <p class="texte-secondaire">Les champs de la saisie du soir. Un champ masqué garde ses données passées.</p>
-    <ul class="liste carte carte-groupe">${j.ordre.map((c, i) => html`<li class="ligne-champ-reglage" key=${c}>
-      <span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
+    <ul class="liste carte carte-groupe avec-carres">${j.ordre.map((c, i) => html`<li class="ligne-champ-reglage" key=${c}>
+      <${Carre} champ=${c} /><span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
       <div class="ordre">
         <button type="button" class="fleche" data-fleche=${`${c}:-1`} aria-label=${`Monter ${NOMS_CHAMPS[c]}`} aria-disabled=${i === 0 ? 'true' : 'false'} onClick=${deplacer(c, -1, i === 0)}>${Icones.monter()}</button>
         <button type="button" class="fleche" data-fleche=${`${c}:1`} aria-label=${`Descendre ${NOMS_CHAMPS[c]}`} aria-disabled=${i === j.ordre.length - 1 ? 'true' : 'false'} onClick=${deplacer(c, 1, i === j.ordre.length - 1)}>${Icones.descendre()}</button>
@@ -53,7 +62,7 @@ export function MaJournee() {
         surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== c) : [...x.masques, c] }))} />
     </li>`)}
       <li class="ligne-champ-reglage">
-        <span class="ligne-libelle">${NOM_PESE_RECHARGE}</span>
+        <${Carre} champ=${MASQUE_PESE_RECHARGE} /><span class="ligne-libelle">${NOM_PESE_RECHARGE}</span>
         <${Interrupteur} etiquette=${`Afficher ${NOM_PESE_RECHARGE}`} actif=${!j.masques.includes(MASQUE_PESE_RECHARGE)}
           surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== MASQUE_PESE_RECHARGE) : [...x.masques, MASQUE_PESE_RECHARGE] }))} />
       </li>

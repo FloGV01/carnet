@@ -20,6 +20,9 @@ const ouvrir = async (page) => {
   return page.getByRole('dialog', { name: 'Moment difficile' });
 };
 const bouton = (page, nom) => page.getByRole('button', { name: nom, exact: true });
+// Moment difficile (2b, v7) : « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces (menus de l'iPhone).
+const puce = (vue, nom) => vue.getByRole('combobox', { name: nom, exact: true });
+const textePuce = (vue, nom) => puce(vue, nom).evaluate((s) => s.selectedOptions[0].textContent.replace(/\u00a0/g, ' '));
 
 // Monte la respiration comme le fait « Respirer » (carte « Pour récupérer, je… »), avec `demarrerTout`.
 // `prepare` : l'appelant a appelé `preparerSon()` dans son toucher, avant le montage (synchrone, sans
@@ -53,14 +56,17 @@ test('Réglages › Moment difficile : 5 min, 5-5, signal éteint, et la phrase 
 
 test('la durée réglée change le texte d\'avant et celui de fin : 2 min, puis 10 min', async ({ page }) => {
   const vue0 = await ouvrir(page);
-  await expect(vue0.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+  await expect(vue0.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  expect(await textePuce(vue0, 'Durée')).toBe('5 minutes');
 
   await aller(page, '#/reglages/moment-difficile');
   await bouton(page, 'Durée : 2 min').click();
   await expect(bouton(page, 'Durée : 2 min')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => lire(page)).toEqual({ duree: 2, rythme: '5-5', son: false });
   const vue = await ouvrir(page);
-  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 2 minutes');
+  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  await expect(puce(vue, 'Durée')).toHaveValue('2');
+  expect(await textePuce(vue, 'Durée')).toBe('2 minutes');
   await vue.getByRole('button', { name: 'Commencer' }).click();
   await expect(vue.locator('.phase-respiration')).toHaveText('Inspire');
   await page.clock.runFor(116 * 1000);
@@ -71,7 +77,8 @@ test('la durée réglée change le texte d\'avant et celui de fin : 2 min, puis 
 
   await ecrire(page, { duree: 10, rythme: '5-5', son: false });
   const vue10 = await ouvrir(page);
-  await expect(vue10.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 10 minutes');
+  await expect(puce(vue10, 'Durée')).toHaveValue('10');
+  expect(await textePuce(vue10, 'Durée')).toBe('10 minutes');
   await vue10.getByRole('button', { name: 'Commencer' }).click();
   // Dix minutes pas à pas coûteraient une demi-minute : un saut suffit, la phase se relit sur l'horloge.
   await page.clock.fastForward(596 * 1000);
@@ -198,7 +205,7 @@ test('signal sonore activé : contexte créé au toucher, une note par phase, mi
   await page.clock.runFor(2000);
   expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'suspended', suspensions: 1, fermes: 0, session: 'auto' });
   expect((await audio(page)).notes).toHaveLength(3);
-  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
 
   // Un second exercice reprend le même contexte.
   await vue.getByRole('button', { name: 'Commencer' }).click();
@@ -285,7 +292,9 @@ test('lecture des réglages impossible : les valeurs par défaut s\'appliquent, 
     meta.lire = (cle) => (cle === 'respiration' ? Promise.reject(new Error('lecture refusée')) : lireVraiment(cle));
   });
   const vue = await ouvrir(page);
-  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque · 5 minutes');
+  await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  await expect(puce(vue, 'Durée')).toHaveValue('5');
+  await expect(puce(vue, 'Rythme')).toHaveValue('5-5');
   await expect(vue.getByRole('button', { name: 'Commencer' })).toBeEnabled();
   await vue.getByRole('button', { name: 'Commencer' }).click();
   await expect(vue.locator('.phase-respiration')).toHaveText('Inspire');

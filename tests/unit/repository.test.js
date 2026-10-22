@@ -10,7 +10,7 @@ test('base neuve : 197 éléments de liste (v1, v4 et v6), aujourd\'hui suit le 
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 4);
+  assert.equal(await repo.meta.lire('schema'), 5);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {
@@ -297,12 +297,14 @@ test('v6 : un relevé déjà créé passe à « vers » : date, heure et vers ch
   assert.equal((await repo.humeurs.tous()).length, 1, 'un seul relevé, jamais de doublon');
 });
 
-test('v6 : un relevé « vers » vidé est supprimé ; « vers » et activités seuls ne le gardent pas', async () => {
+test('v6 : un relevé « vers » vidé est supprimé ; « vers » seul ne le garde pas, des activités le gardent (v7, spec §4.3)', async () => {
   const { repo } = nouveauRepo();
   const r = await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', vers: true, humeur: 5, energie: 'energie:basse' });
   const sansHumeur = await repo.humeurs.modifier(r.id, { humeur: null, faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
   assert.deepEqual([sansHumeur.energie, sansHumeur.vers, sansHumeur.faisais], ['energie:basse', true, ['activiteMoment:travail', 'activiteMoment:trajet']]);
-  assert.equal(await repo.humeurs.modifier(r.id, { energie: null }), null, 'vers et activités seuls : le relevé part');
+  const activites = await repo.humeurs.modifier(r.id, { energie: null });
+  assert.deepEqual([activites.humeur, activites.energie, activites.vers, activites.faisais], [null, null, true, ['activiteMoment:travail', 'activiteMoment:trajet']], 'vers et activités : le relevé reste');
+  assert.equal(await repo.humeurs.modifier(r.id, { faisais: null }), null, 'vers seul : le relevé part');
   assert.equal(await repo.humeurs.lire(r.id), null);
   assert.deepEqual(await repo.humeurs.tous(), []);
   // Les activités sont des références de liste vérifiées.
@@ -341,4 +343,63 @@ test('v6 : notes en vrac, créer et modifier, jour logique, texte effacé suppri
   assert.equal(await repo.notes.lire(n.id), null);
   assert.equal((await repo.notes.tous()).length, 2);
   assert.equal(changements.filter((c) => c.store === 'notes').length, 5, 'trois créations, deux modifications');
+});
+
+// ---- v7 ----
+
+test('v7 : un relevé avec une émotion seule est gardé ; famille, mot, retour à la famille, puis plus rien', async () => {
+  const { repo } = nouveauRepo();
+  const r = await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', emotion: 'roue:colere' });
+  assert.equal(r.emotion, 'roue:colere');
+  assert.equal(r.humeur, null, 'plus de note dans un nouveau relevé');
+  assert.equal((await repo.humeurs.modifier(r.id, { emotion: 'roue:colere:irrite' })).emotion, 'roue:colere:irrite');
+  assert.equal((await repo.humeurs.modifier(r.id, { emotion: 'roue:colere' })).emotion, 'roue:colere');
+  assert.equal((await repo.humeurs.lire(r.id)).emotion, 'roue:colere');
+  assert.equal(await repo.humeurs.modifier(r.id, { emotion: null }), null, 'sans émotion ni énergie, le relevé part');
+  assert.equal(await repo.humeurs.lire(r.id), null);
+  // Avec l'énergie, retirer l'émotion garde le relevé.
+  const s2 = await repo.humeurs.creer({ date: '2026-09-30', heure: '15:00', emotion: 'roue:serenite:en-securite', energie: 'energie:haute' });
+  assert.equal((await repo.humeurs.modifier(s2.id, { emotion: null })).energie, 'energie:haute');
+  await assert.rejects(repo.humeurs.creer({ date: '2026-09-30', heure: '16:00', emotion: 'roue:colere:inconnu' }), ErreurValidation);
+  await assert.rejects(repo.humeurs.creer({ date: '2026-09-30', heure: '16:00', emotion: 'emotion:colere' }), ErreurValidation, 'une émotion d\'épisode n\'est pas un mot de la roue');
+  assert.equal((await repo.humeurs.tous()).length, 1);
+  // Spec §4.3 : retirer l'émotion d'un relevé qui a encore « Ce que je faisais » le garde, activités comprises.
+  const s3 = await repo.humeurs.creer({ date: '2026-09-30', heure: '17:00', emotion: 'roue:colere', faisais: ['activiteMoment:travail'] });
+  const sansEmotion = await repo.humeurs.modifier(s3.id, { emotion: null });
+  assert.deepEqual([sansEmotion.emotion, sansEmotion.energie, sansEmotion.faisais], [null, null, ['activiteMoment:travail']]);
+  assert.deepEqual((await repo.humeurs.lire(s3.id)).faisais, ['activiteMoment:travail'], '« travail » n\'est pas perdu');
+  assert.equal(await repo.humeurs.modifier(s3.id, { faisais: null }), null, 'plus rien : le relevé part');
+  assert.equal((await repo.humeurs.tous()).length, 1);
+});
+
+test('v7 : séances, créer, modifier, supprimer, jour logique, aucune référence de liste', async () => {
+  const { repo, changements } = nouveauRepo();
+  const a = await repo.seances.creer({ date: '2026-10-01', heure: '01:30', exercice: 'coherence', dureeS: 300, origine: 'moment-difficile' });
+  assert.match(a.id, /^se_[0-9a-f]{16}$/);
+  assert.deepEqual({ exercice: a.exercice, dureeS: a.dureeS, origine: a.origine }, { exercice: 'coherence', dureeS: 300, origine: 'moment-difficile' });
+  assert.ok(a.createdAt && a.updatedAt);
+  await repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'scan-corporel', dureeS: 600, origine: 'bien-etre' });
+  await repo.seances.creer({ date: '2026-10-01', heure: '09:00', exercice: 'coherence', dureeS: 120, origine: 'ressourcer' });
+  assert.deepEqual((await repo.seances.parJour('2026-09-30', '2026-09-30')).map((x) => x.heure), ['18:00', '01:30'], 'avant 04:00, c\'est la veille');
+  assert.deepEqual((await repo.seances.parJour('2026-10-01', '2026-10-01')).map((x) => x.heure), ['09:00']);
+  assert.equal((await repo.seances.modifier(a.id, { dureeS: 240 })).dureeS, 240);
+  const photo = await repo.seances.supprimer(a.id);
+  assert.equal(await repo.seances.lire(a.id), null);
+  await repo.seances.restaurer(photo);
+  assert.equal((await repo.seances.lire(a.id)).dureeS, 240);
+  assert.equal((await repo.seances.tous()).length, 3);
+  assert.ok(changements.some((c) => c.store === 'seances'));
+  assert.ok(await repo.meta.lire('derniereEcriture'), 'une séance compte comme une écriture');
+  for (const brut of [
+    { date: '2026-10-01', heure: '10:00', exercice: 'coherence', dureeS: 60, origine: 'ailleurs' },
+    { date: '2026-10-01', heure: '10:00', exercice: 'coherence', dureeS: -1, origine: 'bien-etre' },
+    { date: '2026-10-01', heure: '10:00', exercice: 'coherence', dureeS: 86401, origine: 'bien-etre' },
+    { date: '2026-10-01', heure: '10:00', exercice: 'coherence', dureeS: 1.5, origine: 'bien-etre' },
+    { date: '2026-10-01', exercice: 'coherence', dureeS: 60, origine: 'bien-etre' },
+    { date: '2026-10-01', heure: '10:00', dureeS: 60, origine: 'bien-etre' },
+    { date: '2026-10-01', heure: '10:00', exercice: '   ', dureeS: 60, origine: 'bien-etre' },
+  ]) await assert.rejects(repo.seances.creer(brut), ErreurValidation, JSON.stringify(brut));
+  await assert.rejects(repo.seances.modifier(a.id, { exercice: null }), ErreurValidation, 'l\'exercice ne s\'efface pas');
+  assert.equal((await repo.seances.lire(a.id)).exercice, 'coherence');
+  assert.equal((await repo.seances.tous()).length, 3, 'rien n\'est écrit');
 });

@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exportPsy, reperesPsy } from '../../public/js/export/psy.js';
+import { exportPsy } from '../../public/js/export/psy.js';
 import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
+import { trouverInterdits } from '../aides/mots-interdits.js';
 
-const carte = carteLibelles(seedItems(SEED_V1, 'x'));
+const carte = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V2_AJOUTS }, 'x'));
 const J = (date, o) => ({ date, lieu: null, sommeilRessenti: null, humeur: null, contactHumain: null, sportMouvement: null, explosions: null,
   traitementPris: null, pointsPositifs: null, heureCoucher: null, heureLever: null, reveilsNocturnes: null, notes: null, ...o });
 
@@ -28,9 +29,17 @@ const episodes = [
     reaction: 'reaction:retrait_isolement', situation: null, ceQuiAAide: null },
 ];
 const symptomes = [{ id: 's1', date: '2026-09-25', symptome: 'symptome:ruminations', intensite: 6, duree: 'duree:quelques_heures', contexte: "après les échanges de l'après-midi", note: null }];
-const reperes = [
-  'Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).',
-  "Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.",
+// v7 : des émotions du moment (roue), dont une famille seule, un relevé « vers », un relevé de 02:15 rattaché à la veille, et
+// un jour qui mêle une ancienne note de 1 à 10 et une émotion (point de vigilance 5) ; un relevé la semaine d'avant.
+const humeurs = [
+  { id: 'h1', date: '2026-09-17', heure: '11:00', emotion: 'roue:peur:preoccupe', energie: null, humeur: null },
+  { id: 'h2', date: '2026-09-22', heure: '18:30', emotion: 'roue:serenite:calme', energie: null, humeur: null },
+  { id: 'h3', date: '2026-09-22', heure: '09:10', emotion: 'roue:colere:irrite', energie: 'energie:basse', humeur: null },
+  { id: 'h4', date: '2026-09-23', heure: '02:15', emotion: 'roue:colere:irrite', energie: null, humeur: null },
+  { id: 'h5', date: '2026-09-25', heure: '20:00', emotion: 'roue:tristesse', energie: 'energie:basse', humeur: null, vers: true },
+  { id: 'h6', date: '2026-09-26', heure: '10:00', humeur: 6, energie: null },
+  { id: 'h7', date: '2026-09-26', heure: '15:20', emotion: 'roue:joie:amuse', energie: 'energie:haute', humeur: null },
+  { id: 'h8', date: '2026-09-27', heure: '12:00', emotion: 'roue:serenite:en-securite', energie: null, humeur: null },
 ];
 
 const ATTENDU = `SUIVI APP · 7 jours du lun 21/09 au dim 27/09/2026
@@ -39,15 +48,19 @@ JOURS
 lun 21/09 · Bureau · nuit Mal (2 réveils) · humeur du soir 5 · contact oui · sport non · explosions 1
   + café avec Léo, point projet qui s'est bien passé
   note : open space très bruyant l'après-midi
-mar 22/09 · Télétravail · nuit Moyen · humeur du soir 6 · contact non · sport oui · explosions 0
+mar 22/09 · Télétravail · nuit Moyen · humeur du soir 6 · émotions : irrité, calme · contact non · sport oui · explosions 0
+  humeur du moment : 09:10 irrité (énergie basse) · 18:30 calme · 02:15 irrité
   + marche de 40 min au soleil
 mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur du soir 7 · contact oui · sport non · explosions 0
   + bloc 7h-9h tenu, déjeuner avec l'équipe
-ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur du soir 4 · contact non · sport non · explosions 1
+ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur du soir 4 · émotions : tristesse · contact non · sport non · explosions 1
+  humeur du moment : vers 20 h tristesse (énergie basse)
   + j'ai tenu aujourd'hui
-sam 26/09 · Congé / repos · nuit Moyen · humeur du soir 7 · contact oui · sport oui · explosions 0
+sam 26/09 · Congé / repos · nuit Moyen · humeur 6 · émotions : amusé · contact oui · sport oui · explosions 0
+  humeur du moment : 10:00 6 · 15:20 amusé (énergie haute)
   + repas en famille
-dim 27/09 · Congé / repos · nuit Bien · humeur du soir 8 · contact oui · sport oui · explosions 0
+dim 27/09 · Congé / repos · nuit Bien · humeur du soir 8 · émotions : en sécurité · contact oui · sport oui · explosions 0
+  humeur du moment : 12:00 en sécurité
   + vélo, bonne soirée
 
 ÉPISODES (2)
@@ -60,21 +73,26 @@ SYMPTÔMES (1)
 ven 25/09 · Ruminations 6/10 · durée : Quelques heures · contexte : après les échanges de l'après-midi
 
 COMPTEURS
-cette semaine : humeur moyenne 6,2 (de 4 à 8) · explosions 2 · jours au bureau 2 · contact humain 4 jours · sport 3 jours · nuits Mal 2
-semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1
-
-REPÈRES DE L'APP (tout l'historique)
-- Plus présent dans mes journées à 7 ou plus : une journée au bureau (15 sur 22, contre 1 sur 11 journées à 4 ou moins).
-- Sommeil et humeur : une nuit notée Mal va avec une humeur plus basse le jour même (4,9 contre 6,8 après une nuit Bien). Le lendemain, pas d'écart net.
+cette semaine : humeur moyenne 6 (de 4 à 8) · explosions 2 · jours au bureau 2 · contact humain 4 jours · sport 3 jours · nuits Mal 2 · émotions : colère 2 · tristesse 1 · joie 1 · sérénité 2
+semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1 · émotions : peur 1
 
 PSY : fais-moi le récap de la semaine, format habituel.`;
 
-test('instantané exact de l\'exemple du plan', () => {
-  assert.equal(exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes }), ATTENDU);
+test('instantané exact de l\'exemple du plan ; v7 : les émotions du jour et par famille, sans « REPÈRES DE L\'APP »', () => {
+  assert.equal(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: '2026-09-27', carte }), ATTENDU);
+});
+
+// Les phrases calculées retirées en v7 (spec §5) : aucune ne revient, ni aucun mot interdit ; jamais « positive » ni
+// « négative » à propos d'une émotion.
+const RETIREES = /REPÈRES|journées à 7|à 4 ou moins|Sommeil et humeur|Tendances|Signal|ressembl|bonnes journées|Pas d'écart net|positi|négati/i;
+test('v7 : aucune phrase retirée, aucun mot interdit', () => {
+  const t = exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: '2026-09-27', carte });
+  assert.doesNotMatch(t, RETIREES);
+  assert.deepEqual(trouverInterdits(t.replace(/\+ .*\n/g, '')), []);
 });
 
 test('exclusions : ni traitement, ni rendez-vous, ni jour manquant mentionné', () => {
-  const t = exportPsy({ journal, episodes, symptomes }, { aujourdhui: '2026-09-27', carte, reperes: [] });
+  const t = exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: '2026-09-27', carte });
   assert.ok(!/traitement|rendez-vous|RDV|jeu 24\/09|jours? (notés|remplis)|\/7\b/i.test(t), t);
 });
 
@@ -83,13 +101,6 @@ test('textes coupés à 280 caractères, rubriques vides omises', () => {
   const t = exportPsy({ journal: [J('2026-09-27', { pointsPositifs: long })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
   assert.ok(t.includes(`  + ${'a'.repeat(279)}…`));
   assert.ok(!t.includes('ÉPISODES') && !t.includes('SYMPTÔMES'));
-});
-
-test('repères : insuffisant et phrases en voix « je »', () => {
-  const analyse = { bonnesJournees: { statut: 'insuffisant', constats: [] }, sommeil: { meme: { statut: 'insuffisant' }, lendemain: { statut: 'insuffisant' } } };
-  assert.deepEqual(reperesPsy(analyse, carte), ['Bonnes journées : pas encore assez de données.', 'Sommeil et humeur : pas encore assez de données pour le dire.']);
-  const avecTendance = { ...analyse, tendances: { statut: 'ok', constat: { sens: 'bas', moyR: 4.6, moyB: 6.1 } } };
-  assert.equal(reperesPsy(avecTendance, carte)[2], "Tendances (4 dernières semaines contre les 8 d'avant) : mon humeur est plus basse : 4,6 en moyenne, contre 6,1.");
 });
 
 // ---------- v6 : humeur du jour ----------
@@ -182,4 +193,46 @@ test('v6 : le « vers 0 h » de la nuit vient après le relevé de 22 h, au jour
   ]);
   assert.equal(ligneMoments(t), '  humeur du moment : vers 22 h 6 · 23:10 5 · vers 0 h 3');
   assert.ok(t.includes('sam 26/09 · humeur 4,7 (de 3 à 6)\n'), t);
+});
+
+// ---------- v7 : les émotions du moment (spec §5) ----------
+
+const rel = (date, heure, emotion, o = {}) => ({ id: `${date}-${heure}`, date, heure, emotion, humeur: null, energie: null, ...o });
+const exportEmotions = (h, j = []) => exportPsy({ journal: j, episodes: [], symptomes: [], humeurs: h }, { aujourdhui: '2026-09-27', carte: carteMoments });
+const ligneDu = (t, debut) => t.split('\n').find((l) => l.startsWith(debut));
+
+test('v7 : la ligne d\'un jour dit « émotions : irrité, calme », en minuscules, chacune une fois, dans l\'ordre des heures', () => {
+  const t = exportEmotions([
+    rel('2026-09-26', '18:00', 'roue:serenite:calme'), rel('2026-09-26', '09:00', 'roue:colere:irrite'),
+    rel('2026-09-26', '21:00', 'roue:colere:irrite'), rel('2026-09-27', '00:30', 'roue:peur'), rel('2026-09-26', '12:00', null, { energie: 'energie:basse' }),
+  ]);
+  assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · émotions : irrité, calme, peur', 'la famille seule, en minuscules ; 00:30 est encore le 26');
+  assert.equal(ligneMoments(t), '  humeur du moment : 09:00 irrité · 12:00 (énergie basse) · 18:00 calme · 21:00 irrité · 00:30 peur');
+  assert.ok(!t.includes('\ndim 27/09'), 'aucun jour sans relevé');
+});
+
+test('v7 · vigilance 5 : un jour qui mêle une ancienne note et une émotion donne « humeur 6 » et les émotions', () => {
+  const t = exportEmotions([rel('2026-09-26', '09:00', null, { humeur: 6 }), rel('2026-09-26', '14:00', 'roue:serenite:calme', { energie: 'energie:moyenne' })],
+    [J('2026-09-26', { lieu: 'lieu:bureau' })]);
+  assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · Bureau · humeur 6 · émotions : calme');
+  assert.equal(ligneMoments(t), '  humeur du moment : 09:00 6 · 14:00 calme (énergie moyenne)');
+  assert.match(t, /cette semaine : humeur moyenne 6 \(de 6 à 6\) · jours au bureau 1 · émotions : sérénité 1\n/);
+});
+
+test('v7 : COMPTEURS « émotions : colère 3 · sérénité 2 », dans l\'ordre des familles, sans les familles à zéro', () => {
+  const t = exportEmotions([
+    rel('2026-09-21', '09:00', 'roue:serenite:calme'), rel('2026-09-22', '09:00', 'roue:colere:irrite'), rel('2026-09-23', '09:00', 'roue:colere'),
+    rel('2026-09-24', '09:00', 'roue:serenite:apaise'), rel('2026-09-25', '09:00', 'roue:colere:furieux'),
+    // La semaine d'avant, et un relevé de 01:00 le lundi 21 qui appartient encore au dimanche 20.
+    rel('2026-09-15', '09:00', 'roue:joie:amuse'), rel('2026-09-21', '01:00', 'roue:peur:craintif'),
+  ]);
+  const compteurs = t.split('COMPTEURS\n')[1].split('\n\n')[0];
+  assert.equal(compteurs, 'cette semaine : émotions : colère 3 · sérénité 2\nsemaine d\'avant : émotions : joie 1 · peur 1');
+  assert.ok(!/humeur moyenne|dégoût 0|0 ·/.test(compteurs), 'sans note, pas d\'humeur moyenne ; aucune famille à zéro');
+});
+
+test('v7 : sans aucune émotion, ni la ligne du jour ni les COMPTEURS ne parlent d\'émotions', () => {
+  const t = exportEmotions([rel('2026-09-26', '09:00', null, { humeur: 5, energie: 'energie:basse' })]);
+  assert.doesNotMatch(t, /émotion/);
+  assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · humeur 5');
 });

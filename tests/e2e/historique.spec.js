@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
     await r.journal.patch('2026-09-30', { humeur: 6 });
     await r.episodes.creer({ date: '2026-09-21', heure: '14:30', emotion: 'emotion:colere', intensite: 8, declencheur: 'declencheur:pris_pour_un_con' });
   });
+  // v7 : l'Historique s'ouvre par sa porte, en haut de l'Analyse.
+  await page.getByRole('link', { name: 'Analyse' }).click();
   await page.getByRole('link', { name: 'Historique' }).click();
 });
 
@@ -45,7 +47,7 @@ test('épisodes et modification d\'un jour passé', async ({ page }) => {
   await expect(page.getByRole('link', { name: /lundi 21 sept\. · 14:30/ })).toBeVisible();
   await page.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Jours/ }).click();
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
-  await expect(page.getByRole('heading', { name: 'lundi 21 sept.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lundi 21 septembre' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Humeur', exact: true }).getByRole('button', { name: 'Humeur 4' })).toHaveAttribute('aria-pressed', 'true');
 });
 
@@ -53,7 +55,7 @@ test('effacer une journée : confirmation, épisodes conservés, Annuler', async
   await page.getByRole('link', { name: /lundi 21 sept\./ }).click();
   await page.getByRole('button', { name: 'Effacer cette journée' }).click();
   const boite = page.getByRole('alertdialog', { name: 'Effacer la journée du lundi 21 sept. ?' });
-  await expect(boite.getByText('Les épisodes, symptômes et humeurs du moment de ce jour sont conservés.')).toBeVisible();
+  await expect(boite.getByText('Les épisodes, symptômes et émotions du moment de ce jour sont conservés.')).toBeVisible();
   await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');

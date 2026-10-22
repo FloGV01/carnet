@@ -31,7 +31,7 @@ export function Rdv({ id: idRoute }) {
     <${Entete} titre="Rendez-vous" retour=${retour}
       droite=${html`<span class="indicateur-fiche" role="status">${indicateur === 'ok' ? 'Enregistré' : ''}</span>`} />
     ${id ? html`<${BoutonConsultation} href=${versHash('consultation', { id })} />`
-      : html`<button type="button" class="pilule teintee teinte-trt btn-consultation" onClick=${enConsultation}>${Icones.bulle()}En consultation</button>`}
+      : html`<button type="button" class="pilule teintee teinte-trt btn-consultation" onClick=${enConsultation}><span class="carre-pilule" aria-hidden="true">${Icones.bulle({ trait: 2 })}</span>En consultation</button>`}
     <div class="ligne-date-heure">
       <div class="champ-date">
         <${LibelleChamp} icone="soins" pour="rdv-date">Date</${LibelleChamp}>
@@ -56,7 +56,7 @@ export function Rdv({ id: idRoute }) {
         surAjouter=${async (t) => { const it = await repo.listes.creer('professionnel', t); setItems(await repo.listes.items('professionnel')); ecrire({ professionnel: it.id }); }} />
     </div>
     <div class="champ-fiche">
-      <${LibelleChamp} icone="bulle">Questions</${LibelleChamp}>
+      <${LibelleChamp} icone="questions">Questions</${LibelleChamp}>
       ${questions.length > 0 && html`<div class="carte-questions"><${QuestionsACocher} questions=${questions} surChanger=${majQuestions}
         surRetirer=${(i) => majQuestions(questions.filter((_, k) => k !== i))} /></div>`}
       <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />

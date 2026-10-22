@@ -4,8 +4,8 @@
 import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { DataError } from './erreurs.js';
 
-export const DB_VERSION = 4;
-export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs', 'notes'];
+export const DB_VERSION = 5;
+export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs', 'notes', 'seances'];
 export const MAX_SNAPSHOTS = 3;
 
 export const MIGRATIONS = {
@@ -78,6 +78,12 @@ export const MIGRATIONS = {
       }
     };
     meta.put({ cle: 'schema', valeur: 4 });
+  },
+  // v7 : séances de Bien-être. Rien d'autre : le champ `emotion` des humeurs du moment n'a pas besoin de
+  // migration (un ancien relevé n'en a pas, il se lit vide) et aucune fiche n'est transformée. Synchrone.
+  5(db, tx) {
+    db.createObjectStore('seances', { keyPath: 'id' }).createIndex('date', 'date');
+    tx.objectStore('meta').put({ cle: 'schema', valeur: 5 });
   },
 };
 

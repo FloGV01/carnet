@@ -1,12 +1,14 @@
 // Questions d'un rendez-vous : à cocher une fois abordées (en gris, jamais barrées), et champ
 // d'ajout au style Dicter. Retour ajoute la question et garde le champ prêt pour la suivante ;
-// la sortie du champ l'ajoute aussi, pour ne jamais perdre une question.
+// la sortie du champ l'ajoute aussi, pour ne jamais perdre une question. À l'affichage seulement, une question passe par
+// pourAffichage : « : » ou « ? » ne commence plus une ligne. Le texte enregistré ne change pas.
 import { html, useRef, useState } from '../lib.js';
 import { Icones } from '../icones.js';
 import { BoutonDicter, AIDE_DICTER } from './dicter.js';
 import { Repli } from './repli.js';
 import { formaterJourMois } from '../../domain/dates.js';
 import { dejaPosee } from '../../domain/soins.js';
+import { pourAffichage } from '../../domain/typographie.js';
 
 // `voir(q)` (consultation) : la fonction qui ouvre la fiche liée à la question depuis son bouton « Voir », ou null
 // (pas de lien, ou fiche supprimée : pas de « Voir »).
@@ -19,7 +21,7 @@ export function QuestionsACocher({ questions, surChanger, grand = false, surReti
       <button type="button" class="question-case" aria-pressed=${q.abordee ? 'true' : 'false'}
         onClick=${() => surChanger(questions.map((x, k) => (k === i ? { ...x, abordee: !x.abordee } : x)))}>
         <span class="case-question" aria-hidden="true">${q.abordee && Icones.coche({ trait: 3 })}</span>
-        <span class="texte-question">${q.texte}</span>
+        <span class="texte-question">${pourAffichage(q.texte)}</span>
       </button>
       ${ouvrir && html`<button type="button" class="btn-lien voir-question" aria-label=${`Voir ${q.texte}`} onClick=${(e) => ouvrir(e.currentTarget)}>Voir</button>`}
       ${surRetirer && html`<button type="button" class="effacer" aria-label=${`Retirer la question ${q.texte}`} onClick=${() => surRetirer(i)}>${Icones.fermer()}</button>`}
@@ -52,7 +54,7 @@ export function AjoutQuestion({ surAjouter }) {
 }
 
 export function BoutonConsultation({ href }) {
-  return html`<a class="pilule teintee teinte-trt btn-consultation" href=${href}>${Icones.bulle()}En consultation</a>`;
+  return html`<a class="pilule teintee teinte-trt btn-consultation" href=${href}><span class="carre-pilule" aria-hidden="true">${Icones.bulle({ trait: 2 })}</span>En consultation</a>`;
 }
 
 // « La dernière fois » (v6) : un repli fermé qui reprend, tels qu'écrits, le compte rendu et la prochaine étape du
@@ -68,7 +70,7 @@ export function DerniereFois({ derniere, questions, surReprendre }) {
     ${aReprendre.length > 0 && html`<div class="bloc-lecture"><h3 class="libelle-section">Questions non abordées</h3>
       <ul class="questions">${aReprendre.map((q) => {
         const reprise = dejaPosee(questions, q.texte);
-        return html`<li class="question-ligne question-reprendre"><span class="texte-question">${q.texte}</span>
+        return html`<li class="question-ligne question-reprendre"><span class="texte-question">${pourAffichage(q.texte)}</span>
           <button type="button" class="btn-lien" disabled=${reprise} aria-label=${`${reprise ? 'Reprise' : 'Reprendre'} : ${q.texte}`}
             onClick=${() => surReprendre(q)}>${reprise ? 'Reprise' : 'Reprendre'}</button></li>`;
       })}</ul></div>`}

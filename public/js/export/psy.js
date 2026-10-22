@@ -1,13 +1,17 @@
-// Export vers le projet Claude « PSY » : texte brut des 7 derniers jours, voix « je ».
+// Export vers le projet Claude « PSY » : texte brut des 7 derniers jours, voix « je ». v7 : les émotions du moment de
+// chaque jour, et leurs comptes par famille dans les COMPTEURS ; les anciennes notes de 1 à 10 restent dites.
 // Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
 import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
-import { nombre, phraseConstat, phrasesSommeil, phraseTendance, PAS_ASSEZ } from '../analyse/textes.js';
+import { nombre } from '../analyse/textes.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
+import { relevesAEmotion, parFamille, texteFamilles } from '../analyse/emotions.js';
 import { resumeContacts } from '../domain/contacts.js';
+import { libelleEmotion } from '../domain/roue.js';
+import { resumeEmotions } from '../domain/releves.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
 const couper = (t) => {
@@ -33,11 +37,13 @@ function phraseHumeur(j) {
   return `humeur ${nombre(j.humeur)}${j.humeurMin !== j.humeurMax ? ` (de ${j.humeurMin} à ${j.humeurMax})` : ''}`;
 }
 
-// Un relevé d'humeur du moment : « 18:42 7 (énergie moyenne) » ; noté après coup, « vers 14 h 5
+// Un relevé du moment : « 18:42 irrité (énergie moyenne) » (v7, l'émotion de la roue, en minuscules ; une famille seule,
+// « colère ») ; un ancien relevé garde sa note, « 18:42 7 (énergie moyenne) » ; noté après coup, « vers 14 h calme
 // (énergie basse ; travail, trajet) » : l'énergie, puis ce que je faisais, entre parenthèses.
 function releveMoment(h, lib) {
   const details = [h.energie && `énergie ${minuscule(lib(h.energie))}`, h.faisais && h.faisais.length > 0 && listeLib(h.faisais, lib)].filter(Boolean).join(' ; ');
-  return [h.vers ? formaterVers(h.heure) : h.heure, h.humeur != null && `${h.humeur}`, details && `(${details})`].filter(Boolean).join(' ');
+  const emotion = libelleEmotion(h.emotion);
+  return [h.vers ? formaterVers(h.heure) : h.heure, emotion && minuscule(emotion), h.humeur != null && `${h.humeur}`, details && `(${details})`].filter(Boolean).join(' ');
 }
 
 function ligneJour(j, lib, moments = []) {
@@ -51,6 +57,10 @@ function ligneJour(j, lib, moments = []) {
   const h = [j.heureCoucher && `coucher ${j.heureCoucher}`, j.heureLever && `lever ${j.heureLever}`].filter(Boolean).join(' ');
   if (h) m.push(h);
   if (j.humeur != null) m.push(phraseHumeur(j));
+  // v7 : les émotions notées ce jour-là (le mot, ou la famille seule), chacune une fois, dans l'ordre des heures. Un jour
+  // qui mêle d'anciennes notes et des émotions garde les deux (« humeur 6 · émotions : calme »).
+  const emotions = resumeEmotions(moments, Infinity).mots;
+  if (emotions.length) m.push(`émotions : ${emotions.join(', ')}`);
   const contact = detailContact(j, lib);
   if (j.contactHumain != null || contact) m.push(`contact${j.contactHumain != null ? ` ${ouiNon(j.contactHumain)}` : ''}${contact ? ` (${contact})` : ''}`);
   const sport = detailSport(j, lib);
@@ -108,7 +118,10 @@ function ligneSymptome(s, lib) {
   return lignes;
 }
 
-function compteurs(f, complet, lib) {
+// emotions : le nombre de relevés de chaque famille sur la semaine (v7), en dernier : tout ce qui suit « émotions : » est
+// une famille, dans l'ordre de la roue, sans les familles à zéro. « humeur moyenne » ne reste que pour une semaine qui a
+// d'anciennes notes de 1 à 10.
+function compteurs(f, complet, lib, emotions) {
   const m = [];
   if (f.humeur.n) m.push(`humeur moyenne ${nombre(f.humeur.moyenne)}${complet ? ` (de ${nombre(f.humeur.minReleve)} à ${nombre(f.humeur.maxReleve)})` : ''}`);
   if (f.explosions.n) m.push(`explosions ${f.explosions.total}`);
@@ -118,27 +131,12 @@ function compteurs(f, complet, lib) {
     if (f.sport.n) m.push(`sport ${f.sport.oui} jour${f.sport.oui > 1 ? 's' : ''}`);
     if (f.nuits.n) m.push(`nuits ${lib('sommeil:mal')} ${f.nuits.mal}`);
   }
+  const familles = texteFamilles(emotions);
+  if (familles) m.push(`émotions : ${familles}`);
   return m.join(' · ');
 }
 
-// Repères issus de l'analyse (tout l'historique), en voix « je ».
-export function reperesPsy(analyse, carte) {
-  if (!analyse) return [];
-  const lignes = [];
-  const bj = analyse.bonnesJournees;
-  if (bj.constats.length) for (const c of bj.constats) lignes.push(phraseConstat(c, carte, 'je'));
-  else if (bj.statut === 'insuffisant') lignes.push('Bonnes journées : pas encore assez de données.');
-  const s = analyse.sommeil;
-  if (s.meme.statut === 'ok' || s.lendemain.statut === 'ok') {
-    const ph = phrasesSommeil(s, carte).join(' ');
-    lignes.push(`Sommeil et humeur : ${ph.charAt(0).toLowerCase()}${ph.slice(1)}`);
-  } else lignes.push(`Sommeil et humeur : ${PAS_ASSEZ.charAt(0).toLowerCase()}${PAS_ASSEZ.slice(1)}`);
-  // Tendances (v5) : sur leurs propres fenêtres, pas sur tout l'historique, d'où le préfixe.
-  if (analyse.tendances && analyse.tendances.constat) lignes.push(`Tendances (4 dernières semaines contre les 8 d'avant) : ${phraseTendance(analyse.tendances.constat, 'je', { court: true })}`);
-  return lignes;
-}
-
-export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujourdhui, carte, reperes = [], signal = null, zeroDepuis = null }) {
+export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujourdhui, carte, zeroDepuis = null }) {
   const lib = (id) => carte.get(id) || id;
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;
@@ -174,13 +172,13 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   if (anciens.length) blocs.push(['APRÈS COUP (épisodes plus anciens)', ...anciens.flatMap((e) => [ligneEpisode(e, lib)[0], ...lignesApresCoup(e.apresCoup, lib)])].join('\n'));
   if (sys.length) blocs.push([`SYMPTÔMES (${sys.length})`, ...sys.flatMap((s) => ligneSymptome(s, lib))].join('\n'));
   const data = { journal: journalExpl, episodes, symptomes };
-  const cette = compteurs(indicateurs(data, du, aujourdhui), true, lib);
-  const avant = compteurs(indicateurs(data, addDays(du, -7), addDays(du, -1)), false, lib);
+  const releves = relevesAEmotion(humeurs);
+  const emotionsEntre = (a, b) => parFamille(releves.filter((r) => r.date >= a && r.date <= b));
+  const cette = compteurs(indicateurs(data, du, aujourdhui), true, lib, emotionsEntre(du, aujourdhui));
+  const avant = compteurs(indicateurs(data, addDays(du, -7), addDays(du, -1)), false, lib, emotionsEntre(addDays(du, -7), addDays(du, -1)));
   const lignesCompteurs = [cette && `cette semaine : ${cette}`, avant && `semaine d'avant : ${avant}`].filter(Boolean);
   if (lignesCompteurs.length) blocs.push(['COMPTEURS', ...lignesCompteurs].join('\n'));
-  const rep = [...reperes];
-  if (signal) rep.push(`Signal : ${signal}`);
-  if (rep.length) blocs.push(['REPÈRES DE L\'APP (tout l\'historique)', ...rep.map((r) => `- ${r}`)].join('\n'));
+  // v7 : plus de « REPÈRES DE L'APP » : les phrases calculées sur la note de 1 à 10 sont retirées de l'Analyse.
   blocs.push('PSY : fais-moi le récap de la semaine, format habituel.');
   return blocs.join('\n\n');
 }

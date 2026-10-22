@@ -96,3 +96,80 @@ test('v6 · la frise dessine un numéro par trait, chacun repris par une ligne d
   assert.ok(Math.min(...ys) >= 0);
   assert.ok(Math.max(...xs) * echelle > op.largeur * k * 0.95, 'toute la largeur du cadre');
 });
+
+// ---------- v7 : les émotions sur la page (barres empilées lisibles en noir et blanc) ----------
+
+// Un contexte factice qui note, avec chaque appel, la couleur de remplissage et de trait du moment.
+function toileNotee() {
+  const appels = [];
+  const etat = { fillStyle: null, strokeStyle: null };
+  const ctx = new Proxy(etat, {
+    get: (cible, nom) => (nom in cible ? cible[nom] : (...args) => {
+      appels.push({ nom, args, fill: cible.fillStyle, stroke: cible.strokeStyle });
+      return nom === 'measureText' ? { width: String(args[0]).length * 10 } : undefined;
+    }),
+    set: (cible, nom, v) => { cible[nom] = v; return true; },
+  });
+  return { toile: { getContext: () => ctx }, appels };
+}
+
+test('v7 · les couleurs des familles sont celles de la roue (tokens.css, en clair), et chaque famille a son motif', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { COULEURS_EMOTIONS, MOTIFS } = await import('../../public/js/ui/graphes/dessin-canvas.js');
+  const { FAMILLES } = await import('../../public/js/domain/roue.js');
+  const jetons = readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8');
+  const clair = jetons.slice(0, jetons.indexOf('@media'));
+  for (const f of FAMILLES) {
+    const m = clair.match(new RegExp(`--c-emo-${f.cle}:\\s*(#[0-9a-f]{6})`, 'i'));
+    assert.ok(m, f.cle);
+    assert.equal(COULEURS_EMOTIONS[f.cle].toLowerCase(), m[1].toLowerCase(), f.cle);
+  }
+  assert.deepEqual(Object.keys(MOTIFS), FAMILLES.map((f) => f.cle));
+  assert.equal(new Set(Object.values(MOTIFS)).size, 7, 'sept motifs différents : lisible en noir et blanc');
+});
+
+test('v7 · la frise dessine les familles empilées dans l\'ordre de la roue, de bas en haut, avec leur motif ; la légende aussi', async () => {
+  const { dessinerPage, COULEURS_EMOTIONS, MOTIFS, geometriePage } = await import('../../public/js/ui/graphes/dessin-canvas.js');
+  const { mettreEnPage } = await import('../../public/js/export/page-a4.js');
+  const { modeleSoignants } = await import('../../public/js/export/soignants.js');
+  const { analyze } = await import('../../public/js/analyse/index.js');
+  const { SEED_V1, seedItems } = await import('../../public/js/domain/vocabulaire.js');
+  const { carteLibelles } = await import('../../public/js/domain/libelles.js');
+  const { FAMILLES } = await import('../../public/js/domain/roue.js');
+  const items = seedItems(SEED_V1, 'x');
+  // Une semaine avec toutes les familles (une par jour), et une note ancienne.
+  const humeurs = FAMILLES.map((f, i) => ({ id: `h${i}`, date: `2026-10-${String(5 + i).padStart(2, '0')}`, heure: '10:00', emotion: f.mots[0].id, humeur: null }));
+  const data = { journal: [{ date: '2026-09-01', humeur: 6 }], episodes: [], symptomes: [], traitements: [], humeurs };
+  const aujourdhui = '2026-10-14';
+  const m = modeleSoignants(data, { aujourdhui, carte: carteLibelles(items), analyse: analyze(data, { aujourdhui, items }), professionnel: null, prenom: '' });
+  const page = mettreEnPage(m);
+  const { toile, appels } = toileNotee();
+  dessinerPage(toile, page);
+  const couleurs = new Map(Object.entries(COULEURS_EMOTIONS).map(([k, v]) => [v, k]));
+  // Dans la frise (de son save(), suivi de translate() et scale(), au restore() qui lui répond) : un rectangle par famille,
+  // dans l'ordre de la roue, chacun au-dessus du précédent.
+  const debut = appels.findIndex((a, i) => a.nom === 'save' && appels[i + 1].nom === 'translate');
+  let fin = debut;
+  for (let niveau = 0; ; fin += 1) {
+    if (appels[fin].nom === 'save') niveau += 1;
+    if (appels[fin].nom === 'restore' && --niveau === 0) break;
+  }
+  const segments = appels.slice(debut, fin).filter((a) => a.nom === 'fillRect' && couleurs.has(a.fill));
+  assert.deepEqual(segments.map((a) => couleurs.get(a.fill)), FAMILLES.map((f) => f.cle));
+  assert.ok(segments.every((a, i) => i === 0 || a.args[1] < segments[i - 1].args[1]), 'de bas en haut');
+  // Le motif : des traits ou des points blancs, coupés au rectangle, pour toutes les familles sauf la colère (pleine).
+  const motifs = appels.filter((a) => a.nom === 'clip').length;
+  assert.equal(motifs, 2 * (FAMILLES.length - 1), 'la frise et la légende');
+  assert.equal(Object.values(MOTIFS).filter((x) => x === 'plein').length, 1);
+  // La légende : une case par famille, hors de la frise, dans l'ordre de la roue.
+  const legende = [...appels.slice(0, debut), ...appels.slice(fin)].filter((a) => a.nom === 'fillRect' && couleurs.has(a.fill));
+  assert.deepEqual(legende.map((a) => couleurs.get(a.fill)), FAMILLES.map((f) => f.cle));
+  // La rangée des notes, ses graduations, et les étiquettes des rangées.
+  const textes = appels.filter((a) => a.nom === 'fillText').map((a) => a.args[0]);
+  for (const t of ['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes', '10', '1']) assert.ok(textes.includes(t), t);
+  assert.ok(!textes.includes('Énergie'), 'jamais l\'énergie sur la page');
+  // La géométrie suit le rapport du cadre : rien n'est écrasé.
+  const op = page.ops.find((o) => o.type === 'frise');
+  const g = geometriePage(op);
+  assert.ok(Math.abs(g.dim.largeur / g.dim.hauteur - op.largeur / op.hauteur) < 0.01);
+});

@@ -1,6 +1,6 @@
 import { html } from '../lib.js';
 import { basculerMultiple } from '../../domain/champs.js';
-import { Icones } from '../icones.js';
+import { coche, libelleChoix } from './coche.js';
 
 // Choix multiple en pastilles ; les éléments « exclusifs » (Aucun) retirent les autres.
 // `classe` : « souples » par défaut (largeur naturelle) ; « colonnes-2 grille-choix » (v6.1) pose une
@@ -11,7 +11,7 @@ export function PastillesMultiples({ etiquette, options, valeurs, exclusifs = ne
     ${options.map((o) => {
       const choisi = actuels.includes(o.valeur);
       return html`<button type="button" class="pastille" aria-pressed=${choisi ? 'true' : 'false'}
-        onClick=${() => surChoix(basculerMultiple(actuels, o.valeur, exclusifs))}><span class="coche" aria-hidden="true">${Icones.coche({ trait: 2.2 })}</span><span>${o.libelle}</span></button>`;
+        onClick=${() => surChoix(basculerMultiple(actuels, o.valeur, exclusifs))}>${coche()}${libelleChoix(o.libelle)}</button>`;
     })}
   </div>`;
 }

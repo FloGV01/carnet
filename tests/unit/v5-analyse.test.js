@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { frise, pasFrise } from '../../public/js/analyse/frise.js';
-import { tendances, ecartTendance } from '../../public/js/analyse/tendances.js';
 import { tesMoments } from '../../public/js/analyse/avant-explosions.js';
 import { indicateurs } from '../../public/js/analyse/fenetres.js';
 import { profilJournee } from '../../public/js/analyse/moments.js';
@@ -135,36 +134,7 @@ function serie(jours, f) {
   return res;
 }
 
-test('tendances : rien avant 12 semaines, écart net dans les deux sens, jamais sur une fluctuation', () => {
-  const court = serie(60, () => 6);
-  assert.equal(tendances(court, court[court.length - 1].date).statut, 'insuffisant');
-  // Humeur qui alterne autour de 6 sur 400 jours, puis 4 semaines à 3 : écart net vers le bas.
-  const bas = serie(400, (i) => (i >= 372 ? 3 + (i % 2) : 5 + (i % 3)));
-  const r = tendances(bas, addDays('2025-01-01', 399));
-  assert.equal(r.statut, 'ok');
-  assert.equal(r.constat.sens, 'bas');
-  assert.ok(r.constat.moyB > r.constat.moyR);
-  const haut = serie(400, (i) => (i >= 372 ? 9 + (i % 2) : 5 + (i % 3)));
-  assert.equal(tendances(haut, addDays('2025-01-01', 399)).constat.sens, 'haut');
-  const plat = serie(400, (i) => 5 + (i % 3));
-  const p = tendances(plat, addDays('2025-01-01', 399));
-  assert.equal(p.statut, 'ok');
-  assert.equal(p.constat, null);
-  // 4 dernières semaines presque vides : on ne compare rien et on ne dit rien (statut muet).
-  const rare = serie(400, (i) => (i >= 372 ? (i % 6 === 0 ? 2 : null) : 5 + (i % 3)));
-  assert.equal(ecartTendance(new Map(rare.map((j) => [j.date, j.humeur])), addDays('2025-01-01', 399)).calculable, false);
-  assert.deepEqual(tendances(rare, addDays('2025-01-01', 399)), { statut: 'muet', constat: null });
-});
-
-test('tendances : une phrase déjà affichée reste tant que l\'écart tient (pas de clignotement)', () => {
-  const bas = serie(400, (i) => (i >= 372 ? 3 + (i % 2) : 5 + (i % 3)));
-  const J = addDays('2025-01-01', 399);
-  const r = tendances(bas, J);
-  assert.ok(r.constat);
-  assert.ok(tendances(bas, J, new Set([r.constat.cle])).constat);
-});
-
-test('humeur du jour : un jour qui n\'a que des relevés entre dans Tendances et dans la frise', () => {
+test('humeur du jour : un jour qui n\'a que des relevés (anciennes notes) entre dans la frise', () => {
   // 372 soirs autour de 6, puis 28 jours sans soir, avec deux relevés (3 et 4) : 3,5 par jour.
   const journal = serie(372, (i) => 5 + (i % 3));
   const humeurs = [];
@@ -174,26 +144,13 @@ test('humeur du jour : un jour qui n\'a que des relevés entre dans Tendances et
   }
   const J = addDays('2025-01-01', 399);
   const a = analyze({ journal, humeurs, episodes: [], symptomes: [], traitements: [] }, { aujourdhui: J, items, zeroDepuis: '2025-01-01' });
-  assert.equal(a.tendances.constat.sens, 'bas');
-  assert.equal(a.tendances.constat.moyR, 3.5);
+  assert.equal(a.frise['30'].avecHumeur, true, 'la rangée « Humeur (notes) »');
   const c = a.frise['30'].colonnes;
   const dernier = c[c.length - 1];
   assert.deepEqual([dernier.humeur, dernier.humeurMin, dernier.humeurMax, dernier.explosions, dernier.aDonnee], [3.5, 3, 4, null, true]);
   assert.equal(dernier.moyenne7, 3.5);
   // Un soir (une seule valeur) : pas de trait du plus bas au plus haut.
   assert.deepEqual([c[0].cle, c[0].humeur, c[0].humeurMin, c[0].humeurMax], [addDays('2025-01-01', 370), 6, null, null]);
-});
-
-test('v6 : les textes de l\'humeur parlent de l\'humeur, plus de l\'humeur du soir', async () => {
-  const { phraseTendance, REGLES, POURQUOI_TENDANCE, ligneHumeurSemaine } = await import('../../public/js/analyse/textes.js');
-  const c = { sens: 'bas', moyR: 4.6, moyB: 6.1 };
-  assert.equal(phraseTendance(c, 'tu'), 'Ces 4 dernières semaines, ton humeur est plus basse que sur les 8 semaines d\'avant : 4,6 en moyenne, contre 6,1.');
-  assert.equal(phraseTendance(c, 'neutre', { court: true }), 'l\'humeur est plus basse : 4,6 en moyenne, contre 6,1.');
-  assert.equal(REGLES.tendances, 'La règle : comparer l\'humeur des 4 dernières semaines à celle des 8 d\'avant, une fois environ 3 mois réunis.');
-  assert.ok(POURQUOI_TENDANCE.endsWith('Les moyennes ne portent que sur les jours où une humeur est notée.'));
-  // Ma semaine : le plus bas et le plus haut des valeurs notées, la moyenne des humeurs du jour.
-  assert.equal(ligneHumeurSemaine({ n: 5, moyenne: 5.6, min: 4.5, max: 6.5, minReleve: 3, maxReleve: 8, fragile: false }), 'Humeur : de 3 à 8, 5,6 en moyenne');
-  assert.equal(ligneHumeurSemaine({ n: 2, moyenne: 6, min: 6, max: 6, minReleve: 6, maxReleve: 6, fragile: true }), 'Humeur : 6, 6,0 en moyenne (peu de valeurs)');
 });
 
 test('tes moments : groupes Explosions et par type d\'Après coup, citations datées, rien de rassemblé sur les pensées', () => {
@@ -234,10 +191,9 @@ test('détails en jours : paires (avec qui, effet) et (activité, durée)', () =
   assert.equal(f.sportDetail.paires.jours['typeSport:marche'], 1);
 });
 
-test('ta journée : énergie en jours, anneau sous 5 jours', () => {
+test('ta journée : énergie en jours', () => {
   const h = (date, heure, humeur, energie) => ({ id: `${date}${heure}`, date, heure, humeur, energie });
   const humeurs = ['2026-10-01', '2026-10-02', '2026-10-03'].flatMap((d) => [h(d, '10:00', 5, 'energie:basse'), h(d, '11:00', 6, 'energie:basse')]);
   const p = profilJournee(humeurs, '2026-10-01', '2026-10-03');
   assert.equal(p.creneaux[0].energie['energie:basse'], 3, '6 relevés, 3 jours');
-  assert.equal(p.creneaux[0].fragile, true);
 });

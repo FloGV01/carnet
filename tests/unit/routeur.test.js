@@ -96,14 +96,38 @@ test('v6 · Aide iPhone : /reglages/aide-iphone, sans suite ni variante', () => 
   }
 });
 
-test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour/DATE) garde l\'onglet Historique ; /jour/DATE garde Aujourd\'hui', () => {
+test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour/DATE) garde l\'onglet de l\'Historique (v7 : Analyse) ; /jour/DATE garde Aujourd\'hui', () => {
   assert.deepEqual(lireRoute('#/historique/jour/2026-09-21'), { nom: 'historique-jour', params: { date: '2026-09-21' }, chemin: '/historique/jour/2026-09-21' });
   assert.equal(versHash('historique-jour', { date: '2026-09-21' }), '#/historique/jour/2026-09-21');
-  assert.equal(ongletDe('historique-jour'), 'historique');
-  assert.equal(ongletDe('historique'), 'historique');
+  assert.equal(ongletDe('historique-jour'), 'analyse');
+  assert.equal(ongletDe('historique'), 'analyse');
   assert.equal(ongletDe('jour'), 'aujourdhui', 'ouvert autrement, le jour garde l\'onglet Aujourd\'hui');
   assert.deepEqual(lireRoute('#/historique'), { nom: 'historique', params: {}, chemin: '/historique' });
   for (const h of ['#/historique/jour', '#/historique/jour/', '#/historique/jour/2026-9-21', '#/historique/2026-09-21']) {
     assert.equal(lireRoute(h).inconnue, true, h);
+  }
+});
+
+test('v7 · Bien-être : /bien-etre et /bien-etre/exercice/ID allument l\'onglet Bien-être ; l\'Historique, sorti de la barre, allume l\'Analyse', () => {
+  assert.deepEqual(lireRoute('#/bien-etre'), { nom: 'bien-etre', params: {}, chemin: '/bien-etre' });
+  assert.deepEqual(lireRoute('#/bien-etre/exercice/ancrage-54321'), { nom: 'exercice', params: { id: 'ancrage-54321' }, chemin: '/bien-etre/exercice/ancrage-54321' });
+  assert.equal(versHash('bien-etre'), '#/bien-etre');
+  assert.equal(versHash('exercice', { id: 'scan-corporel' }), '#/bien-etre/exercice/scan-corporel');
+  assert.equal(ongletDe('bien-etre'), 'bien-etre');
+  assert.equal(ongletDe('exercice'), 'bien-etre');
+  for (const h of ['#/bien-etre/', '#/bien-etre/exercice', '#/bien-etre/exercice/', '#/exercice/scan-corporel']) assert.equal(lireRoute(h).inconnue, true, h);
+  // L'Historique garde sa route et ses jours ; il n'a plus d'onglet à lui.
+  assert.equal(lireRoute('#/historique').nom, 'historique');
+  assert.equal(ongletDe('historique'), 'analyse');
+  assert.equal(ongletDe('historique-jour'), 'analyse');
+  assert.equal(ongletDe('moment'), 'aujourdhui', 'l\'Émotion du moment, ouverte depuis Bien-être, reste un parcours d\'Aujourd\'hui');
+});
+
+test('v7 · la barre d\'onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages, chacun avec une route et son onglet', async () => {
+  const { ONGLETS_V1 } = await import('../../public/js/ui/composants/barre-onglets.js');
+  assert.deepEqual(ONGLETS_V1.map((o) => o.libelle), ['Aujourd\'hui', 'Analyse', 'Bien-être', 'Soins', 'Réglages']);
+  for (const o of ONGLETS_V1) {
+    assert.equal(ongletDe(lireRoute(o.hash).nom), o.id, o.libelle);
+    assert.equal(lireRoute(o.hash).inconnue, undefined, o.hash);
   }
 });

@@ -1,16 +1,22 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
-// n'existent pas ici : ni ligne vide, ni décompte. L'humeur d'un jour (ligne et filtre) est
-// l'humeur du jour (v6) : un jour qui n'a que des humeurs du moment a sa ligne.
+// n'existent pas ici : ni ligne vide, ni décompte. v7 : la ligne d'un jour donne ses émotions du moment
+// (deux au plus, puis « … », avec les points de leurs familles) ; un jour qui n'a que des relevés a sa ligne.
+// Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
+// filtre « Humeur » n'est proposé que si une note existe. L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa
+// porte en haut de l'Analyse, et « Retour » y ramène.
 import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
 import { Pastilles } from '../composants/pastilles.js';
+import { coche, libelleChoix } from '../composants/coche.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { formaterSemaine, formaterJour, jourEvenement, addDays } from '../../domain/dates.js';
+import { resumeEmotions } from '../../domain/releves.js';
+import { estEmotion } from '../../domain/roue.js';
 import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, chercher } from '../../domain/historique.js';
 import { phraseResume } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
@@ -21,6 +27,9 @@ import { options } from './aujourdhui.js';
 const SEGMENTS = [{ valeur: 'jours', libelle: 'Jours' }, { valeur: 'episodes', libelle: 'Épisodes' }, { valeur: 'symptomes', libelle: 'Symptômes' }];
 const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }];
 const HUMEURS = [{ valeur: 'bas', libelle: '1-4' }, { valeur: 'moyen', libelle: '5-6' }, { valeur: 'haut', libelle: '7-10' }];
+// L'icône de chaque rubrique d'une puce (2b) : la même que sa carte sur Aujourd'hui, à sa couleur.
+const ICONES_PUCE = { lieu: 'lieu', sommeil: 'sommeil', humeur: 'humeur', contact: 'contact', sport: 'sport', expl: 'explosions', trt: 'traitement' };
+const Puce = ({ p }) => html`<span class=${`puce teinte-${p.rubrique}`}>${ICONES_PUCE[p.rubrique] && Icones[ICONES_PUCE[p.rubrique]]({ trait: 2.2 })}${p.texte}</span>`;
 const AVANT_EXTRAIT = 18;
 const APRES_EXTRAIT = 28;
 
@@ -48,7 +57,7 @@ const IconeMemo = () => html`<span class="icone-memo" role="img" aria-label="ave
 function Bascules({ etiquette, choix, f, majF }) {
   return html`<div class="pastilles souples" role="group" aria-label=${etiquette}>
     ${choix.map((c) => html`<button type="button" class="pastille" aria-pressed=${f[c.cle] ? 'true' : 'false'}
-      onClick=${() => majF(c.cle)(!f[c.cle])}><span class="texte-pastille"><span>${c.libelle}</span></span></button>`)}
+      onClick=${() => majF(c.cle)(!f[c.cle])}>${coche()}<span class="texte-pastille">${libelleChoix(c.libelle)}</span></button>`)}
   </div>`;
 }
 
@@ -79,7 +88,17 @@ export function Historique() {
     const [journal, episodes, symptomes, items, avecMemo, humeurs] = await Promise.all([
       repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(), repo.humeurs.tous(),
     ]);
-    return { journal: avecHumeurDuJour(journal, humeurs), episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
+    // Les relevés de chaque jour logique ; un jour qui n'a que des relevés à émotion reçoit une entrée minimale.
+    const releves = new Map();
+    for (const h of humeurs) {
+      const j = jourEvenement(h.date, h.heure);
+      if (!releves.has(j)) releves.set(j, []);
+      releves.get(j).push(h);
+    }
+    const jours = avecHumeurDuJour(journal, humeurs);
+    const presents = new Set(jours.map((j) => j.date));
+    for (const [date, liste] of releves) if (!presents.has(date) && liste.some((h) => estEmotion(h.emotion))) jours.push({ date });
+    return { journal: jours, releves, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
   }, []);
   // Avant que l'écran ne s'affiche : la liste revient là où on l'avait laissée.
   useLayoutEffect(() => {
@@ -89,7 +108,8 @@ export function Historique() {
     memoriser({ position: window.scrollY });
   }, [donnees]);
 
-  if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" /></main>`;
+  const versAnalyse = () => { location.hash = '#/analyse'; };
+  if (!donnees) return html`<main class="ecran"><${Entete} titre="Historique" retour=${versAnalyse} /></main>`;
   const { carte, items, avecMemo, aujourdhui } = donnees;
   const periode = f.periode === '7' ? addDays(aujourdhui, -6) : f.periode === '30' ? addDays(aujourdhui, -29) : null;
   const q = requete.trim();
@@ -116,6 +136,7 @@ export function Historique() {
         <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
         <ul class="liste carte carte-groupe">${g.elements.map((j) => {
           const puces = phraseResume('jour', j, carte, { nExplosions: nExplosions(j.date) }).filter((s) => s.valeur);
+          const emo = resumeEmotions(donnees.releves.get(j.date));
           const note = [];
           for (const e of (episodesDuJour.get(j.date) || []).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''))) {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
@@ -125,7 +146,9 @@ export function Historique() {
           return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
-              ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<span class=${`puce teinte-${p.rubrique}`}>${p.texte}</span>`)}</span>`}
+              ${emo.mots.length > 0 && html`<span class="hist-emotions"><span class="familles-jour" aria-hidden="true">${emo.familles.map((x) => html`<i class=${`emo-${x.cle}`}></i>`)}</span>
+                <span class="mots-jour">${emo.mots.join(', ')}${emo.plus ? '…' : ''}</span></span>`}
+              ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<${Puce} p=${p} />`)}</span>`}
               ${q ? html`<${Extrait} ex=${trouves.get(j.date)} />` : note.length > 0 && html`<span class="hist-note">${note.join(' · ')}</span>`}
             </span>
             ${Icones.chevron({ trait: 2 })}
@@ -175,7 +198,7 @@ export function Historique() {
   };
 
   return html`<main class="ecran historique">
-    <${Entete} titre="Historique" />
+    <${Entete} titre="Historique" retour=${versAnalyse} />
     <${Segmente} etiquette="Afficher" options=${SEGMENTS} valeur=${segment} classe="large" sansVide=${true}
       surChoix=${(v) => { if (v && v !== segment) { setSegment(v); setF({}); ecrireLocal(CLE_SEGMENT, v); } }} />
     <div class="barre-recherche">
@@ -190,7 +213,7 @@ export function Historique() {
       <${GroupeFiltre} titre="Période"><${Pastilles} etiquette="Période" options=${PERIODES} valeur=${f.periode ?? null} surChoix=${majF('periode')} classe="souples" /></${GroupeFiltre}>
       ${segment === 'jours' && html`
         <${GroupeFiltre} titre="Lieu"><${Pastilles} etiquette="Lieu" options=${optionsListe('lieu')} valeur=${f.lieu ?? null} surChoix=${majF('lieu')} classe="souples" /></${GroupeFiltre}>
-        <${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>
+        ${(f.humeur || donnees.journal.some((j) => j.humeur != null)) && html`<${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>`}
         <${GroupeFiltre} titre="Avec"><${Bascules} etiquette="Avec" f=${f} majF=${majF}
           choix=${[{ cle: 'avecExplosions', libelle: 'Avec explosions' }, { cle: 'avecNotes', libelle: 'Avec notes' }]} /></${GroupeFiltre}>`}
       ${segment === 'episodes' && html`
