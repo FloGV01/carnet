@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { EXERCICES, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT, pourAffichage } from '../../public/js/domain/exercices.js';
+import { EXERCICES, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT } from '../../public/js/domain/exercices.js';
 import { doitEnregistrer, nouvelleSeance, dureeSeance, SEANCE_MIN_S } from '../../public/js/domain/seances.js';
 import { normaliser } from '../../public/js/domain/champs.js';
 import { trouverInterdits, normaliser as sansAccents } from '../aides/mots-interdits.js';
@@ -147,10 +147,4 @@ test('nouvelleSeance : la date et l\'heure du début, l\'exercice, l\'origine, l
     assert.deepEqual(normaliser('seances', { ...c, id: 'se_y' }, { origine: 'app' }).erreurs, [], origine);
   }
   assert.deepEqual([dureeSeance(-3), dureeSeance(59.5), dureeSeance(1e9), dureeSeance(undefined)], [0, 60, 86400, 0]);
-});
-
-test('pourAffichage : une espace insécable avant la ponctuation haute et dans les guillemets, le reste intact', () => {
-  assert.equal(pourAffichage('Va vers tes pieds : les orteils.'), 'Va vers tes pieds\u00a0: les orteils.');
-  assert.equal(pourAffichage('avec « Suivant » ; ou ? et !'), 'avec «\u00a0Suivant\u00a0»\u00a0; ou\u00a0? et\u00a0!');
-  assert.equal(pourAffichage('Sens tes pieds sur le sol.'), 'Sens tes pieds sur le sol.');
 });

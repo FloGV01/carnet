@@ -17,7 +17,8 @@ import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { garderEcran, useSeance } from '../seance.js';
 import { NoterEmotion } from './bien-etre.js';
-import { exerciceDe, exerciceMeneAuBout, pourAffichage } from '../../domain/exercices.js';
+import { exerciceDe, exerciceMeneAuBout } from '../../domain/exercices.js';
+import { pourAffichage } from '../../domain/typographie.js';
 
 export const CLE_VOIX = 'carnet:exercice:voix';
 const FIN = 'Fin de l\'exercice.';

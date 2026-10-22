@@ -7,8 +7,8 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 // en clair et en sombre.
 // - Contraste : tout texte visible a au moins 4,5:1 sur son fond calculé (approximation du plan : la couleur du premier
 //   ancêtre opaque ; la couleur du texte est fondue dans ce fond selon son alpha et l'opacité de ses ancêtres). Le texte
-//   d'un contrôle inactif (WCAG l'exempte), les textes d'aide des champs (placeholder) et la page A4 dessinée (canvas,
-//   lisible imprimée, B3) n'entrent pas dans la mesure.
+//   d'aide d'un champ vide (placeholder) est mesuré à sa couleur propre (::placeholder). Le texte d'un contrôle inactif
+//   (WCAG l'exempte) et la page A4 dessinée (canvas, lisible imprimée, B3) n'entrent pas dans la mesure.
 // - Débordement : à 390 px, au texte par défaut et en grand texte (23 px), la page ne défile pas de côté et aucun
 //   élément visible ne sort de l'écran.
 // - Pas de tirets (2b) : aucun filet ni cadre en pointillés sur ces écrans ; tout choix fait a sa coche.
@@ -24,7 +24,8 @@ const PLAN = {
 };
 
 // Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
-// deux rendez-vous, un changement de traitement, une note, une séance. Renvoie les identifiants utiles.
+// deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
+// texte d'aide est mesuré. Renvoie les identifiants utiles.
 async function verser(page) {
   return page.evaluate(async (plan) => {
     const r = window.__carnet.repo;
@@ -33,7 +34,7 @@ async function verser(page) {
       await r.journal.patch(d, {
         lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
         contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
-        pointsPositifs: i % 2 ? 'Une bonne marche.' : null, pese: ['pese:bruit'], recharge: ['recharge:calme'],
+        pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
       });
     }
     await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
@@ -96,19 +97,22 @@ const contrastesFaibles = (page, racine = 'body') => page.evaluate((sel) => {
   const elements = [...racine.querySelectorAll('*')].filter((e) => !['SCRIPT', 'STYLE', 'OPTION', 'CANVAS'].includes(e.tagName));
   for (const el of elements) {
     const champ = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
-    const texte = champ ? (el.tagName === 'SELECT' ? (el.selectedOptions[0] || {}).textContent || '' : (['checkbox', 'radio', 'file', 'range'].includes(el.type) ? '' : el.value))
+    const saisissable = champ && el.tagName !== 'SELECT' && !['checkbox', 'radio', 'file', 'range'].includes(el.type);
+    // Un champ vide montre son texte d'aide, dans la couleur de son ::placeholder.
+    const aide = saisissable && !el.value && el.placeholder ? '::placeholder' : null;
+    const texte = champ ? (el.tagName === 'SELECT' ? (el.selectedOptions[0] || {}).textContent || '' : (saisissable ? el.value || el.placeholder : ''))
       : [...el.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.data).join('').trim();
     if (!texte || !visible(el)) continue;
     if (el.closest('[disabled], [aria-disabled="true"]')) continue;
-    const s = getComputedStyle(el);
+    const s = getComputedStyle(el, aide);
     const svg = el instanceof SVGElement;
     const c = rgba(svg ? s.fill : s.color);
     if (!c) continue;
     const f = fond(svg ? el.closest('svg') || el : el);
-    const a = c[3] * opacite(el);
+    const a = c[3] * opacite(el) * (aide ? parseFloat(s.opacity) : 1);
     const vu = [0, 1, 2].map((i) => a * c[i] + (1 - a) * f[i]);
     const r = ratio(vu, f);
-    if (r < 4.5) fautes.push(`${texte.slice(0, 40)} (${el.tagName.toLowerCase()}.${String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className).split(' ').join('.')}) : ${r.toFixed(2)}`);
+    if (r < 4.5) fautes.push(`${texte.slice(0, 40)} (${el.tagName.toLowerCase()}.${String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className).split(' ').join('.')}${aide || ''}) : ${r.toFixed(2)}`);
   }
   return [...new Set(fautes)];
 }, racine);
@@ -296,6 +300,70 @@ test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neu
     expect(soir.map((x) => x.texte)).toEqual(Object.keys(couleurs));
     for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[`c-${couleurs[x.texte]}`]));
   }
+});
+
+// Chaque rangée des listes à carrés : son nombre de lignes de texte, sa hauteur, et l'écart entre son texte et ses bords
+// (là où passent les filets), filet propre de la rangée exclu.
+const margesTexte = (page) => page.evaluate(() => [...document.querySelectorAll('main .avec-carres > li')].map((li) => {
+  const s = getComputedStyle(li);
+  const b = li.getBoundingClientRect();
+  const r = { top: b.top + parseFloat(s.borderTopWidth), bottom: b.bottom - parseFloat(s.borderBottomWidth) };
+  r.height = r.bottom - r.top;
+  const plage = document.createRange();
+  const lignes = [];
+  const marche = document.createTreeWalker(li, NodeFilter.SHOW_TEXT);
+  for (let n = marche.nextNode(); n; n = marche.nextNode()) {
+    if (!n.data.trim() || n.parentElement.closest('.visuellement-cache')) continue;
+    plage.selectNodeContents(n);
+    lignes.push(...[...plage.getClientRects()].filter((q) => q.height > 0));
+  }
+  return {
+    texte: li.textContent.trim(), lignes: new Set(lignes.map((q) => Math.round(q.top))).size, hauteur: Math.round(r.height),
+    haut: Math.round(Math.min(...lignes.map((q) => q.top)) - r.top), bas: Math.round(r.bottom - Math.max(...lignes.map((q) => q.bottom))),
+  };
+}));
+
+test('Réglages et Le soir : au texte par défaut et en grand texte (23 px), le libellé d\'une rangée reste à 8 px au moins de ses filets ; une rangée d\'une ligne garde 52', async ({ page }) => {
+  for (const [route, attendu] of [['#/reglages', '.reglages .a-propos'], ['#/reglages/journee', '.ma-journee .avec-carres']]) {
+    await aller(page, route);
+    await expect(page.locator(attendu)).toBeVisible();
+    for (const taille of [null, 23]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+      await stabiliser(page);
+      const rangees = await margesTexte(page);
+      // Réglages : Sauvegarde (2), Ma saisie (3), Moment difficile (4) ; Le soir : 8 champs et pesé · rechargé.
+      expect(rangees.length, route).toBe(9);
+      for (const x of rangees) {
+        const ou = `${route} ${taille ? `${taille} px` : 'défaut'} : ${x.texte}`;
+        expect(x.haut, ou).toBeGreaterThanOrEqual(8);
+        expect(x.bas, ou).toBeGreaterThanOrEqual(8);
+        expect(x.hauteur, ou).toBeGreaterThanOrEqual(52);
+        if (!taille && x.lignes === 1) expect(x.hauteur, ou).toBe(52);
+      }
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  }
+});
+
+// Les guillemets du texte de l'écran qui touchent une espace ordinaire (« suivi d'une espace, ou une espace suivie de ») :
+// ils pourraient commencer ou finir seuls une ligne.
+const guillemetsSeuls = (page) => page.locator('main').first().evaluate((m) => m.textContent.match(/.{0,24}(« | »).{0,24}/g) || []);
+
+test('Réglages, Rappels et guide d\'installation : chaque guillemet tient à son mot par une espace insécable', async ({ page }) => {
+  await aller(page, '#/reglages');
+  await expect(page.locator('.reglages .a-propos')).toBeVisible();
+  await expect(page.locator('main.reglages')).toContainText('Nouvelle version prête');
+  expect(await guillemetsSeuls(page)).toEqual([]);
+  await aller(page, '#/reglages/rappel');
+  await expect(page.locator('main.rappel')).toContainText('chaque heure choisie');
+  expect(await guillemetsSeuls(page)).toEqual([]);
+  // Avec des heures choisies, le texte de la notification suit la liste des heures.
+  await page.getByRole('group', { name: 'Heures des rappels' }).getByRole('button', { name: '9 h', exact: true }).click();
+  await expect(page.locator('main.rappel')).toContainText('09:00');
+  expect(await guillemetsSeuls(page)).toEqual([]);
+  await page.goto('/?forcer-guide');
+  await expect(page.locator('.guide')).toBeVisible();
+  expect(await guillemetsSeuls(page)).toEqual([]);
 });
 
 test('Historique 2b : « Semaine du… » en libellé de section, puces neutres avec l\'icône de leur rubrique à sa couleur, en clair et en sombre', async ({ page }) => {

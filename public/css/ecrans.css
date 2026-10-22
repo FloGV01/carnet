@@ -478,6 +478,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .liste.avec-carres > li + li::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--line); }
 .avec-carres .ligne-carte { min-height: 52px; padding-left: 12px; gap: 12px; }
 .avec-carres .ligne-champ-reglage { padding-left: 12px; gap: 12px; }
+/* Un libellé coupé sur plusieurs lignes (grand texte) garde 8 px jusqu'aux filets ; sur une ligne, la rangée garde 52. */
+.avec-carres .ligne-champ-reglage .ligne-libelle { padding-block: 8px; }
 .avec-carres .ligne-champ-reglage .ordre { margin-left: -6px; }
 /* Sur le bord, comme les titres de section et les cartes (v6.1). */
 .aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0; }

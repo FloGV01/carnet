@@ -173,8 +173,6 @@
 .etiquette-icone { display: flex; align-items: center; gap: 6px; }
 .etiquette-icone svg { width: 18px; height: 18px; color: var(--text-2); flex: none; }
 .facultatif { color: var(--text-2); font-size: var(--t-note); }
-.ligne-champ { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); }
-.ligne-champ > .rubrique, .ligne-champ > .etiquette { margin: 0; flex: none; }
 .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); }
 /* Champs 2b : un fond plein (--surface sur l'écran, --surface-2 dans une carte), sans filet visible ; au focus,
    un filet en couleur action. */
@@ -198,6 +196,9 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 .case { display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); }
 .case input { width: 22px; height: 22px; accent-color: var(--action); }
 .champ-texte:focus, .champ-ligne:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 1px var(--action); }
+/* Le texte d'aide d'un champ vide, en texte secondaire : AA en clair et en sombre (le gris de WebKit, #a9a9a9, n'avait
+   que 2:1 environ sur --surface-2). */
+input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 
 /* Sélection commune (2b) à tous les choix : pastilles, grilles, choix multiples, segmentés, Oui / Non, période.
    Non choisi : --fond-choix (--surface sur l'écran, --surface-2 dans une carte), rayon 12, sans bordure.

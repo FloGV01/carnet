@@ -132,3 +132,14 @@ test('teintes locales : chaque classe .teinte-* et .emo-* donne les six rôles d
     assert.equal(new Set(cibles.map((m) => m[2])).size, 1, `${selecteurs} : une seule couleur`);
   }
 });
+
+// Relecture de la tâche 9 : les règles des classes que l'app ne pose plus disparaissent avec leur composant (Rubrique,
+// .ligne-champ d'Aujourd'hui avant les cartes 2b, .filet-tirets).
+test('aucune règle pour une classe retirée de l\'app : .rubrique, .rubrique-icone, .rubrique-dessous, .ligne-champ, .filet-tirets', () => {
+  const RETIREES = new Set(['rubrique', 'rubrique-icone', 'rubrique-dessous', 'ligne-champ', 'filet-tirets']);
+  const fautes = [];
+  for (const f of CSS) {
+    for (const m of sansCommentaires(lire(f)).matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) if (RETIREES.has(m[1])) fautes.push(`${rel(f)} : .${m[1]}`);
+  }
+  assert.deepEqual(fautes, []);
+});

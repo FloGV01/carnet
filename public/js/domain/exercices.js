@@ -173,7 +173,3 @@ export const dureeExerciceS = (ex) => (ex ? ex.etapes.reduce((s, x) => s + (x.du
 export const PART_MENEE_AU_BOUT = 0.5;
 export const exerciceMeneAuBout = (ex, { derniereAtteinte, dureeS } = {}) => Boolean(ex) && derniereAtteinte === true
   && Number.isFinite(dureeS) && dureeS >= dureeExerciceS(ex) * PART_MENEE_AU_BOUT;
-
-// À l'écran : une espace insécable avant « : », « ; », « ? », « ! » et « » », et après « « » (la ponctuation haute ne
-// commence jamais une ligne). Les textes gardent des espaces simples, pour être relus et corrigés facilement.
-export const pourAffichage = (texte) => String(texte).replace(/ ([:;?!»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');

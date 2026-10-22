@@ -7,7 +7,8 @@ import { html } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Respiration } from '../composants/respiration.js';
 import { Icones } from '../icones.js';
-import { EXERCICES, pourAffichage } from '../../domain/exercices.js';
+import { EXERCICES } from '../../domain/exercices.js';
+import { pourAffichage } from '../../domain/typographie.js';
 import { versHash } from '../../routeur.js';
 
 export const LIGNE_FIXE = 'Tu peux t\'arrêter à tout moment.';

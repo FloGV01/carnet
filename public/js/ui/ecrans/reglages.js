@@ -14,6 +14,7 @@ import { revenirAvantImport } from '../../db/sauvegarde.js';
 import { afficherToast } from '../composants/toast.js';
 import { repo } from '../../donnees.js';
 import { cleLocale, formaterDateLongue } from '../../domain/dates.js';
+import { pourAffichage } from '../../domain/typographie.js';
 import { useSauvegarde, analyserChoix } from '../sauvegarde.js';
 
 function useAppuiLong(action, ms = 700) {
@@ -76,7 +77,7 @@ export function Reglages() {
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
     <p class="aide-carte">Enregistrer dans Fichiers, puis iCloud Drive, dossier Carnet.</p>
-    <p class="aide-carte">Supprimer l'icône efface tout ce qui est noté ici. Pour une mise à jour, le bandeau « Nouvelle version prête » suffit.</p>
+    <p class="aide-carte">${pourAffichage('Supprimer l\'icône efface tout ce qui est noté ici. Pour une mise à jour, le bandeau « Nouvelle version prête » suffit.')}</p>
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 

@@ -91,7 +91,8 @@ on reprend le rendu, jamais le code des maquettes de `references/` (React, style
   Diagnostic, bandeau, confirmations. Les couleurs des familles de la roue suivent la recette du lot.
 - **Écarts au lot**, pour garder la saisie du soir sans défilement à 390 × 797 et « J'ai fini » à 390 × 844 : choix de
   44 au lieu de 48 dans les cartes d'Aujourd'hui, marges resserrées. « Effacer définitivement » reste rouge, seul de
-  son espèce. Le détail est dans `docs/decisions.md`, à l'entrée du 22/10.
+  son espèce, en attendant l'accord de l'utilisateur. Le détail est dans `docs/decisions.md`, à l'entrée du 22/10.
 - **Vérification** : captures Playwright (WebKit, 390 × 844, clair et sombre) de tous les écrans, hors dépôt, comparées
-  aux rendus 2b ; un test e2e vérifie un contraste d'au moins 4,5:1 pour tout texte visible des écrans principaux, en
-  clair et en sombre, et l'absence de débordement à 390 px, en grand texte compris.
+  aux rendus 2b ; un test e2e vérifie un contraste d'au moins 4,5:1 pour tout texte visible des écrans principaux
+  (textes d'aide des champs compris, mesurés à leur `::placeholder`), en clair et en sombre, et l'absence de
+  débordement à 390 px, en grand texte compris.

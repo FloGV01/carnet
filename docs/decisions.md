@@ -257,10 +257,12 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
   - « En consultation » : une pilule neutre avec un carré violet, comme les boutons de la bande du bas ; « Effet ressenti » d'une fiche de traitement a l'icône grise des autres champs (il prenait le rose d'Émotion du moment) ;
   - Bien-être : la carte de respiration est celle de Moment difficile (voir Bien-être, plus bas) ;
   - « Émotion du moment » partout où l'app nommait encore l'« humeur du moment » : Rappels (et le texte de la notification, qui renvoie au bouton « Émotion »), l'index des Listes, l'import d'une sauvegarde, « Tout effacer », « Effacer cette journée » ;
-  - « Effacer définitivement » reste le seul bouton rouge de l'app : une action sans retour, jamais une valeur (AA en clair et en sombre) ;
+  - « Effacer définitivement » reste le seul bouton rouge de l'app : une action sans retour, jamais une valeur (AA en clair et en sombre). Le README 2b dit pourtant « Il n'y a pas de rouge » : ce choix attend l'utilisateur (plus bas) ;
   - le bandeau « Nouvelle version prête » a un filet en bas, sans hauteur en plus : le soir tient toujours sans défiler ;
-  - des espaces insécables dans les guillemets du guide d'installation et de Rappels : un guillemet ne commence ni ne finit plus seul une ligne ; le rapport du Diagnostic se coupe en grand texte au lieu de déborder.
-- **Contrôle global** (tâche 9) : un test parcourt les écrans principaux en clair et en sombre (37 écrans, données inventées) : tout texte visible a au moins 4,5:1 sur son fond, aucun tiret ; à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l'écran de côté.
+  - des espaces insécables dans les guillemets du guide d'installation, de Rappels et de l'aide de Réglages (`pourAffichage`, dans `domain/typographie.js`, partagé avec les exercices) : un guillemet ne commence ni ne finit plus seul une ligne ; le rapport du Diagnostic se coupe en grand texte au lieu de déborder ;
+  - le texte d'aide d'un champ vide (placeholder) est en texte secondaire : 6,0:1 sur `--surface-2` et 6,8:1 sur blanc en clair, 4,7:1 et 5,7:1 en sombre. Le gris de WebKit (#a9a9a9) n'avait que 2,1:1 sur `--surface-2` ;
+  - Réglages › Le soir : un libellé coupé sur plusieurs lignes (grand texte) garde 8 px jusqu'aux filets ; sur une ligne, la rangée garde ses 52.
+- **Contrôle global** (tâche 9) : un test parcourt les écrans principaux en clair et en sombre (37 écrans, données inventées) : tout texte visible, textes d'aide des champs compris, a au moins 4,5:1 sur son fond, aucun tiret ; à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l'écran de côté.
 
 #### Bien-être (tâche 7)
 
@@ -289,6 +291,8 @@ Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur 
 - **Pire cas du soir à 8 rubriques** (Humeur du soir et Explosions réaffichées, Contact et Sport séparés). La v4 l'exigeait sans défilement à 390 et 375 × 797. En cartes 2b, même resserrées, les 8 rubriques dépassent d'environ 270 px : aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Deux voies : accepter que ce cas défile (c'est l'état actuel, le test le vérifie), ou une mise en page sans cartes au-delà de 6 rubriques. Les 6 rubriques par défaut tiennent, elles.
 - **Aujourd'hui, écarts au lot 2b** pour garder P2 (Après coup sans défiler) et P3 (« J'ai fini » sans défiler) à 390 × 844, et le soir sans défilement à 390 × 797 après minuit ou avec le bandeau « Nouvelle version prête » : les choix des cartes font 44 de haut au lieu de 48, les cartes ont 8 de marge haute et basse, 4 entre la tête et les choix, et 6 entre deux blocs (4 avec le bandeau). À revoir sur l'iPhone.
 - **La roue et les exercices** : l'utilisateur relit les mots de la roue (l'image était peu nette) et les textes des exercices (plus bas) avant la publication.
+- **CLAUDE.md, vocabulaire de la roue** (plan v7, tâche 9) : la ligne suivante n'entre dans CLAUDE.md, sous « Règles qui priment sur tout », qu'avec l'accord de l'utilisateur : « **Le vocabulaire de la roue des émotions ne se lisse jamais non plus.** Il est dans `public/js/domain/roue.js`, figé une fois publié : un ajout se fait à la fin, jamais de renommage. »
+- **« Effacer définitivement » en rouge** : le dernier pas de « Tout effacer » garde son bouton rouge (`--danger`, AA en clair et en sombre), seul rouge de l'app hors de la roue. Le README du lot 2b dit « Il n'y a pas de rouge ». À confirmer, ou à passer en encre neutre comme les autres actions.
 
 ### À essayer sur l'iPhone
 
