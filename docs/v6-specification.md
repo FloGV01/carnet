@@ -612,3 +612,14 @@ Là où elle s'écarte de cette spécification, la v6.1 fait foi. Par exemple :
 - le prénom de la page se règle dans la Vue soignants (« Prénom sur la page »), et non plus dans Réglages › Analyse.
 
 Le détail, les arbitrages A1 à A5 et ce qui attend Claude Design (P5, P6) sont dans `docs/decisions.md`, à l'entrée du 18/10.
+
+## 15. v7 (22/10)
+
+Version 7.0.0, construite du 20 au 22/10 en 9 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-10-20-carnet-v7-emotions-bien-etre-design.md`, qui fait foi là où elle s'écarte de celle-ci :
+- l'humeur du moment devient l'**émotion du moment** (une roue de 7 familles en bulles, puis un mot), sans note de 1 à 10 ; les anciennes notes restent affichées ;
+- les analyses fondées sur la note (tendances, journées à 7 ou plus, sommeil et humeur, signal de ressemblance) sont retirées, avec leurs réglages ; l'Analyse et Comprendre parlent d'émotions ;
+- un onglet **Bien-être** (cohérence cardiaque, exercices de sophrologie, séances) remplace l'Historique dans la barre ; l'Historique s'ouvre par sa porte en haut de l'Analyse ;
+- toute l'app passe à l'apparence **2b** de Claude Design, à la police système ;
+- la base passe à `DB_VERSION` 5 (store `seances`), la sauvegarde au format 5 ; le format de l'Export PSY change.
+
+Le détail, les appels du concepteur et ce qui attend l'utilisateur sont dans `docs/decisions.md`, à l'entrée du 22/10.

@@ -1,8 +1,8 @@
 // Onglet Bien-être (v7, spec §6.2) : pour pratiquer hors des moments de crise. En tête, la cohérence cardiaque (le même
-// composant que Moment difficile, avec ses réglages et son signal facultatif) ; puis les exercices de sophrologie, un par
-// carte (titre, durée approximative, une ligne de description) ; en bas, une ligne fixe. Aucun compteur : ni nombre de
-// séances, ni série, ni « déjà fait aujourd'hui », ni rappel. Une séance notée laisse un lien discret, « Noter mon
-// émotion » ; rien ne s'ouvre tout seul.
+// composant que Moment difficile, dans la même carte 2b : la durée et le rythme en puces, réglés au même endroit, et son
+// signal facultatif) ; puis les exercices de sophrologie, un par carte (titre, durée approximative, une ligne de
+// description) ; en bas, une ligne fixe. Aucun compteur : ni nombre de séances, ni série, ni « déjà fait aujourd'hui », ni
+// rappel. Une séance notée laisse un lien discret, « Noter mon émotion » ; rien ne s'ouvre tout seul.
 import { html } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Respiration } from '../composants/respiration.js';
@@ -19,7 +19,7 @@ export function BienEtre() {
   return html`<main class="ecran bien-etre">
     <${Entete} titre="Bien-être" />
     <div class="carte carte-respiration teinte-bien-etre">
-      <${Respiration} origine="bien-etre" dureeALaLigne=${true} apres=${html`<${NoterEmotion} />`} />
+      <${Respiration} origine="bien-etre" reglable=${true} apres=${html`<${NoterEmotion} />`} />
     </div>
     <h2 class="libelle-section">Exercices</h2>
     <ul class="liste carte carte-groupe exercices" aria-label="Exercices">${EXERCICES.map((x) => html`<li>

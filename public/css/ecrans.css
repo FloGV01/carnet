@@ -15,7 +15,7 @@
 .diag dd { margin: 0; word-break: break-word; }
 .diag .actions { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 .diag .resultat { margin-top: var(--esp-3); }
-.diag pre { white-space: pre-wrap; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }
+.diag pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }
 
 /* Historique */
 .barre-recherche { display: flex; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
@@ -38,7 +38,8 @@
 .groupe-filtre { display: flex; flex-direction: column; gap: 6px; }
 .titre-filtre { font-size: var(--t-note); color: var(--text-2); }
 .semaine { display: flex; flex-direction: column; gap: 6px; margin-top: var(--esp-3); }
-.titre-semaine { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); padding-top: 8px; }
+/* « Semaine du 12 octobre » : un libellé de section 2b (12,5 en capitales). */
+.titre-semaine { font-size: var(--t-section); font-weight: 600; letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2); padding-top: 10px; }
 .ligne-hist { min-height: 56px; padding: 10px 10px 10px 16px; align-items: center; }
 .hist-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hist-date { font-size: var(--t-sous); font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -47,11 +48,14 @@
 /* v7 : les émotions du jour, deux mots au plus, avec les points de leurs familles. */
 .hist-emotions { display: flex; align-items: center; gap: 6px; font-size: var(--t-sous); line-height: 1.3; min-width: 0; }
 .mots-jour { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Puces d'un jour (2b, comme les pastilles du lot) : neutres, l'icône de la rubrique à sa couleur, le texte en --text. */
 .puces { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 0 1px; }
 .puce {
-  font-size: var(--t-legende); line-height: 19px; padding: 0 7px; border-radius: var(--r-icone);
-  background: var(--c-tint); color: var(--c-text); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--t-legende); line-height: 20px; padding: 0 7px 0 5px; border-radius: var(--r-icone);
+  background: var(--surface-2); color: var(--text); font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
+.puce svg { flex: none; width: 13px; height: 13px; color: var(--c); }
 .icone-memo { display: inline-flex; width: 15px; height: 15px; color: var(--text-2); }
 .icone-memo svg { width: 15px; height: 15px; }
 .extrait mark { background: var(--surface-2); color: var(--text); border-radius: 3px; padding: 0 2px; font-weight: 600; }
@@ -274,7 +278,7 @@
 .analyse .selon-periode > .repli { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .chiffres-base { margin-top: 4px; }
 .apercu-export { max-height: 330px; overflow: auto; -webkit-overflow-scrolling: touch; white-space: pre-wrap; word-break: break-word; margin: 0;
-  font: 0.706rem/1.55 var(--police-mono); color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  font: 0.706rem/1.55 var(--police-mono); color: var(--text); background: var(--surface); border: 0;
   border-radius: var(--r-bouton); padding: 12px 14px; user-select: text; -webkit-user-select: text; }
 
 /* Listes */
@@ -465,6 +469,16 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-carte.action.petite { font-size: var(--t-sous); min-height: var(--cible); }
 .ligne-carte.action svg { width: 20px; height: 20px; }
 .ligne-carte.action[disabled] { color: var(--text-2); }
+/* Listes groupées 2b à carrés d'icônes (Réglages, Le soir), comme les réglages de l'iPhone : le carré de 28 (rayon 7),
+   neutre ou à la couleur de sa teinte, puis le libellé ; rangées de 52 au moins, filets décalés après le carré
+   (12 + 28 + 12 = 52), comme les replis d'Aujourd'hui. */
+.carre-ligne { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
+.ligne-carte .carre-ligne svg, .carre-ligne svg { width: 17px; height: 17px; color: inherit; }
+.liste.avec-carres > li + li { border-top: 0; position: relative; }
+.liste.avec-carres > li + li::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--line); }
+.avec-carres .ligne-carte { min-height: 52px; padding-left: 12px; gap: 12px; }
+.avec-carres .ligne-champ-reglage { padding-left: 12px; gap: 12px; }
+.avec-carres .ligne-champ-reglage .ordre { margin-left: -6px; }
 /* Sur le bord, comme les titres de section et les cartes (v6.1). */
 .aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0; }
 .aide-carte .lien { display: flex; }
@@ -624,11 +638,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .duree-respiration { display: block; }
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
-/* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
+/* Moment difficile et Bien-être (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
    « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours. */
-.moment-difficile .respiration { gap: 12px; }
-.moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
-.moment-difficile .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
+.moment-difficile .respiration, .bien-etre .respiration { gap: 12px; }
+.moment-difficile .phase-respiration, .bien-etre .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
+.moment-difficile .respiration .btn, .bien-etre .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
 .puces-respiration { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .puce-reglage { position: relative; display: inline-flex; align-items: center; }
 .puce-reglage select {

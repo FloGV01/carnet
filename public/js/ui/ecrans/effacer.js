@@ -8,7 +8,7 @@ import { useSauvegarde } from '../sauvegarde.js';
 import { reinitialiserHistorique } from './historique.js';
 
 // Ce que « Tout effacer » efface (toutEffacer, db/sauvegarde.js) : chaque store de données y est nommé.
-export const TEXTE_EFFACER = 'Toutes les journées, épisodes, symptômes, relevés d\'humeur du moment, notes, séances de Bien-être, '
+export const TEXTE_EFFACER = 'Toutes les journées, épisodes, symptômes, relevés d\'émotion du moment, notes, séances de Bien-être, '
   + 'rendez-vous, fiches et mémos seront effacés de cet iPhone, copies de secours comprises, avec Mon plan et ton traitement '
   + 'actuel. Les listes et les réglages reviennent à leur état de départ. Écris EFFACER pour continuer.';
 

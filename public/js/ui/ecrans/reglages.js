@@ -4,6 +4,7 @@
 // tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
+import { CarreIcone } from '../composants/rubrique.js';
 import { Icones } from '../icones.js';
 import { VERSION, VERSION_APP } from '../../version.js';
 import { etatStockage, formaterOctets } from '../../plateforme/persistance.js';
@@ -24,8 +25,10 @@ function useAppuiLong(action, ms = 700) {
 
 export const dateIso = (iso) => formaterDateLongue(cleLocale(new Date(iso)));
 
-const LigneLien = ({ href, icone, titre }) => html`<li><a class="ligne-carte" href=${href}>
-  ${icone && Icones[icone]()}<span class="ligne-libelle">${titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`;
+// Liste groupée 2b : l'icône dans un carré de 28, neutre ou à la couleur d'un parcours (Moment difficile, énergie pour
+// « Me ressourcer »), le libellé, le chevron ; filets décalés après le carré.
+const LigneLien = ({ href, icone, teinte, titre }) => html`<li><a class="ligne-carte" href=${href}>
+  ${icone && html`<${CarreIcone} icone=${icone} teinte=${teinte} />`}<span class="ligne-libelle">${titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`;
 
 export function Reglages() {
   const [stockage, setStockage] = useState(null);
@@ -65,10 +68,10 @@ export function Reglages() {
         <p>${s && s.derniere ? `Dernière sauvegarde : ${dateIso(s.derniere)}` : "Aucune sauvegarde pour l'instant. Tes données ne sont que sur cet iPhone."}</p>
         ${s && html`<p class="note-carte-interne">Taille : ${formaterOctets(s.taille)}${fichiers && fichiers.length > 1 ? ` · ${fichiers.length} fichiers` : ''}</p>`}
       </div>
-      <ul class="liste">
-        <li><button type="button" class="ligne-carte action" disabled=${!fichiers} onClick=${sauvegarde.exporterMaintenant}>${Icones.exporter()}Exporter</button></li>
-        <li><button type="button" class="ligne-carte action" onClick=${() => entree.current && entree.current.click()}>${Icones.importer()}Importer</button></li>
-        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${revenir}>Revenir à l'état d'avant l'import</button></li>`}
+      <ul class="liste avec-carres">
+        <li><button type="button" class="ligne-carte action" disabled=${!fichiers} onClick=${sauvegarde.exporterMaintenant}><${CarreIcone} icone="exporter" />Exporter</button></li>
+        <li><button type="button" class="ligne-carte action" onClick=${() => entree.current && entree.current.click()}><${CarreIcone} icone="importer" />Importer</button></li>
+        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${revenir}><${CarreIcone} icone="retour" />Revenir à l'état d'avant l'import</button></li>`}
       </ul>
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
@@ -78,17 +81,17 @@ export function Reglages() {
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
 
     <h2 id="titre-ma-saisie" class="libelle-section">Ma saisie</h2>
-    <ul class="liste carte carte-groupe" aria-labelledby="titre-ma-saisie">
+    <ul class="liste carte carte-groupe avec-carres" aria-labelledby="titre-ma-saisie">
       <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Le soir" />
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
       <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
     </ul>
 
     <h2 id="titre-moment-difficile" class="libelle-section">Moment difficile</h2>
-    <ul class="liste carte carte-groupe" aria-labelledby="titre-moment-difficile">
-      <${LigneLien} href="#/mon-plan" icone="monPlan" titre="Mon plan" />
-      <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
-      <${LigneLien} href="#/reglages/ressourcer" icone="positifs" titre="Me ressourcer" />
+    <ul class="liste carte carte-groupe avec-carres" aria-labelledby="titre-moment-difficile">
+      <${LigneLien} href="#/mon-plan" icone="monPlan" teinte="difficile" titre="Mon plan" />
+      <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" teinte="difficile" titre="Moment difficile" />
+      <${LigneLien} href="#/reglages/ressourcer" icone="energie" teinte="energie" titre="Me ressourcer" />
       <${LigneLien} href="#/reglages/aide-iphone" icone="aideIphone" titre="Aide iPhone" />
     </ul>
 

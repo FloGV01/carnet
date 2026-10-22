@@ -152,12 +152,11 @@ test('A3 : « 5 minutes » ne se coupe pas, « · Mouvement » ne commence pas u
   const puce = page.getByRole('dialog', { name: 'Moment difficile' }).getByRole('combobox', { name: 'Durée', exact: true });
   await expect(puce).toHaveValue('5');
   expect(await puce.evaluate((s) => s.selectedOptions[0].textContent)).toBe('5 minutes');
-  // Dans la carte de Bien-être, sous « Cohérence cardiaque », sur une ligne.
+  // Bien-être (2b, v7 tâche 9) : la même carte que Moment difficile, la durée sur sa puce, d'un tenant aussi.
   await aller(page, '#/bien-etre');
-  const phase = page.locator('.carte-respiration .duree-respiration');
-  await expect(phase).toHaveText('5 minutes');
-  expect(await phase.textContent()).toContain('5 minutes');
-  expect((await morceau(phase, '5 minutes')).rects).toHaveLength(1);
+  const puceBe = page.locator('main.bien-etre').getByRole('combobox', { name: 'Durée', exact: true });
+  await expect(puceBe).toHaveValue('5');
+  expect(await puceBe.evaluate((s) => s.selectedOptions[0].textContent)).toBe('5 minutes');
 
   // Quatre jours avec un contact et une marche : la section « Avec qui, comment c'était · Mouvement » s'affiche.
   await repo(page, async () => {

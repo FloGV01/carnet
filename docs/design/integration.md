@@ -72,3 +72,26 @@ Tous les points ci-dessous sont validés tels qu'intégrés.
   consultation, du toast au premier plan et du texte d'attente.
 - À faire sur l'iPhone (recette) : Dynamic Type aux grandes tailles, Dicter (le micro garde le focus),
   mode consultation, Pas à pas chronométré.
+
+## v7 : la piste 2b de Claude Design (22/10)
+
+Source : `docs/design/retour-claude-design-v2/` (rendus `rendus/2b-*.png`, `design_handoff_carnet_refonte/README.md`,
+`tokens.css` et `icons/`), d'après le brief `docs/design/prompt-claude-design-v2.md`. L'utilisateur a choisi la piste
+**2b · Cartes noires** le 20/10. Le plan v6.2 de la refonte a été absorbé par la v7 (version 7.0.0). Comme pour la J2.0,
+on reprend le rendu, jamais le code des maquettes de `references/` (React, styles en ligne, Google Fonts).
+
+- **Repris tel quel** : les couleurs du lot (clair gris froid, sombre noir profond, six rôles par couleur, rampe
+  sommeil), comparées une à une par un test ; les tailles, graisses, rayons, hauteurs et marges ; les 39 icônes, sans
+  leurs métadonnées ; la sélection commune (`-fill`, `-on`, 600 et coche) ; la barre d'onglets ; les 5 écrans dessinés.
+- **Écarts voulus par l'utilisateur** : la police système au lieu de Lexend (rien à télécharger) ; pas de rubriques
+  remplies repliées en pastilles ; glisser pour changer de jour, en plus de ‹ › ; « Humeur » devient « Émotion », avec
+  une roue en bulles à la place de la grille de 1 à 10 ; un onglet Bien-être à la place de l'Historique.
+- **Écrans non dessinés**, déduits du système : Bien-être et l'exercice, Historique, Soins, fiches, Export PSY, Vue
+  soignants (la page A4 reste claire, B3), Réglages et ses sous-écrans en listes groupées à carrés d'icônes, guide,
+  Diagnostic, bandeau, confirmations. Les couleurs des familles de la roue suivent la recette du lot.
+- **Écarts au lot**, pour garder la saisie du soir sans défilement à 390 × 797 et « J'ai fini » à 390 × 844 : choix de
+  44 au lieu de 48 dans les cartes d'Aujourd'hui, marges resserrées. « Effacer définitivement » reste rouge, seul de
+  son espèce. Le détail est dans `docs/decisions.md`, à l'entrée du 22/10.
+- **Vérification** : captures Playwright (WebKit, 390 × 844, clair et sombre) de tous les écrans, hors dépôt, comparées
+  aux rendus 2b ; un test e2e vérifie un contraste d'au moins 4,5:1 pour tout texte visible des écrans principaux, en
+  clair et en sombre, et l'absence de débordement à 390 px, en grand texte compris.

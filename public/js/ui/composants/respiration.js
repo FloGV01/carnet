@@ -22,11 +22,12 @@ import { doitEnregistrer } from '../../domain/seances.js';
 // créé hors d'un toucher).
 // `origine` (v7) : `bien-etre`, `moment-difficile` ou `ressourcer` ; sans origine, aucune séance n'est notée. `apres` : ce
 // qui s'affiche une fois une séance notée (dans Bien-être, « Noter mon émotion ») ; rien ne s'ouvre tout seul.
-// `dureeALaLigne` : dans une carte, plus étroite, la durée passe sous « Cohérence cardiaque », sans « · » (le point
-// finissait seul la première ligne à 390).
-// `reglable` (Moment difficile, 2b) : la durée et le rythme en deux puces sous « Cohérence cardiaque » (« 5 minutes ▾ »,
-// « 5 s · 5 s ▾ »), qui ouvrent le choix de l'iPhone. Un choix s'enregistre aussitôt, dans le même réglage que Réglages ›
-// Moment difficile (méta `respiration`). Pendant la respiration, elles restent à leur place (rien ne saute), inactives.
+// `dureeALaLigne` : dans une carte plus étroite (« Pour récupérer, je… »), la durée passe sous « Cohérence cardiaque »,
+// sans « · » (le point finissait seul la première ligne à 390).
+// `reglable` (Moment difficile et Bien-être, 2b) : la durée et le rythme en deux puces sous « Cohérence cardiaque »
+// (« 5 minutes ▾ », « 5 s · 5 s ▾ »), qui ouvrent le choix de l'iPhone. Un choix s'enregistre aussitôt, dans le même
+// réglage que Réglages › Moment difficile (méta `respiration`). Pendant la respiration, elles restent à leur place (rien
+// ne saute), inactives.
 export function Respiration({ demarrerTout = false, origine = null, apres = null, dureeALaLigne = false, reglable = false }) {
   const [reglages, setReglages] = useState(null);
   const [phase, setPhase] = useState(null);

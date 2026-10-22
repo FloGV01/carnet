@@ -481,18 +481,18 @@ const lignesPhase = (phase) => phase.evaluate((p) => {
   return { nom: Math.max(...lignes(p.firstChild).map((x) => x.bottom)), duree: duree.getBoundingClientRect().top, lignesDuree: lignes(duree).length };
 });
 
-test('dans une carte, la durée de la respiration passe sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
+test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme sur leurs puces ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
+  // Bien-être (tâche 9, finitions) : « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces, comme Moment
+  // difficile ; un choix se règle au même endroit (méta respiration).
   await aller(page, '#/bien-etre');
-  const phase = page.locator('.carte-respiration .phase-respiration');
-  await expect(phase).toHaveText('Cohérence cardiaque 5 minutes');
-  await expect(phase.locator('.duree-respiration')).toHaveText('5 minutes');
-  for (const taille of [null, 28]) {
-    if (taille) await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
-    const l = await lignesPhase(phase);
-    expect(l.duree).toBeGreaterThanOrEqual(l.nom - 1);
-    expect(l.lignesDuree).toBe(1);
-  }
-  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  const carteBe = page.locator('main.bien-etre .carte-respiration');
+  await expect(carteBe.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  await expect(carteBe.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
+  await expect(carteBe.getByRole('combobox', { name: 'Rythme', exact: true })).toHaveValue('5-5');
+  await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('2');
+  await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(2);
+  await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('5');
+  await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(5);
 
   // « Pour récupérer, je… » : pareil, une fois la respiration arrêtée.
   await page.evaluate(async () => {
@@ -509,8 +509,14 @@ test('dans une carte, la durée de la respiration passe sous « Cohérence cardi
   await carte.getByRole('button', { name: 'Arrêter' }).click();
   const phaseCarte = carte.locator('.phase-respiration');
   await expect(phaseCarte).toHaveText('Cohérence cardiaque 5 minutes');
-  const l = await lignesPhase(phaseCarte);
-  expect(l.duree).toBeGreaterThanOrEqual(l.nom - 1);
+  await expect(phaseCarte.locator('.duree-respiration')).toHaveText('5 minutes');
+  for (const taille of [null, 28]) {
+    if (taille) await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+    const l = await lignesPhase(phaseCarte);
+    expect(l.duree).toBeGreaterThanOrEqual(l.nom - 1);
+    expect(l.lignesDuree).toBe(1);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 
   // Moment difficile (2b, tâche 8) : « Cohérence cardiaque » seul, la durée sur sa puce.
   await bouton(emo, 'Fermer').click();

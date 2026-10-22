@@ -52,7 +52,7 @@ export function AjoutQuestion({ surAjouter }) {
 }
 
 export function BoutonConsultation({ href }) {
-  return html`<a class="pilule teintee teinte-trt btn-consultation" href=${href}>${Icones.bulle()}En consultation</a>`;
+  return html`<a class="pilule teintee teinte-trt btn-consultation" href=${href}><span class="carre-pilule" aria-hidden="true">${Icones.bulle({ trait: 2 })}</span>En consultation</a>`;
 }
 
 // « La dernière fois » (v6) : un repli fermé qui reprend, tels qu'écrits, le compte rendu et la prochaine étape du

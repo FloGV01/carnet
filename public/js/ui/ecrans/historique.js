@@ -27,6 +27,9 @@ import { options } from './aujourdhui.js';
 const SEGMENTS = [{ valeur: 'jours', libelle: 'Jours' }, { valeur: 'episodes', libelle: 'Épisodes' }, { valeur: 'symptomes', libelle: 'Symptômes' }];
 const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }];
 const HUMEURS = [{ valeur: 'bas', libelle: '1-4' }, { valeur: 'moyen', libelle: '5-6' }, { valeur: 'haut', libelle: '7-10' }];
+// L'icône de chaque rubrique d'une puce (2b) : la même que sa carte sur Aujourd'hui, à sa couleur.
+const ICONES_PUCE = { lieu: 'lieu', sommeil: 'sommeil', humeur: 'humeur', contact: 'contact', sport: 'sport', expl: 'explosions', trt: 'traitement' };
+const Puce = ({ p }) => html`<span class=${`puce teinte-${p.rubrique}`}>${ICONES_PUCE[p.rubrique] && Icones[ICONES_PUCE[p.rubrique]]({ trait: 2.2 })}${p.texte}</span>`;
 const AVANT_EXTRAIT = 18;
 const APRES_EXTRAIT = 28;
 
@@ -145,7 +148,7 @@ export function Historique() {
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
               ${emo.mots.length > 0 && html`<span class="hist-emotions"><span class="familles-jour" aria-hidden="true">${emo.familles.map((x) => html`<i class=${`emo-${x.cle}`}></i>`)}</span>
                 <span class="mots-jour">${emo.mots.join(', ')}${emo.plus ? '…' : ''}</span></span>`}
-              ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<span class=${`puce teinte-${p.rubrique}`}>${p.texte}</span>`)}</span>`}
+              ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<${Puce} p=${p} />`)}</span>`}
               ${q ? html`<${Extrait} ex=${trouves.get(j.date)} />` : note.length > 0 && html`<span class="hist-note">${note.join(' · ')}</span>`}
             </span>
             ${Icones.chevron({ trait: 2 })}

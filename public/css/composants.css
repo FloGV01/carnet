@@ -31,7 +31,6 @@
 .carte { background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; --fond-choix: var(--surface-2); }
 .carte-groupe { padding: 0; overflow: hidden; }
 .carte-entete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); margin-bottom: 8px; }
-.filet-tirets { border: 0; border-top: 1.5px dashed var(--line); margin: 10px 0; }
 .ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); min-height: var(--cible); }
 .liste { list-style: none; margin: 0; padding: 0; }
 .liste > li + li { border-top: 1px solid var(--line); }
@@ -83,8 +82,11 @@
   font-size: var(--t-sous); font-weight: 600; text-decoration: none;
 }
 .pilule svg { width: 18px; height: 18px; }
-.pilule.teintee { background: var(--c-tint); color: var(--c-text); }
-.pilule.teintee svg { color: var(--c); }
+/* Une pilule à carré (2b, « En consultation ») : neutre, l'icône dans un petit carré à la couleur de sa teinte, comme les
+   boutons de la bande du bas d'Aujourd'hui. */
+.pilule.teintee { padding-left: 8px; gap: 8px; }
+.carre-pilule { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.pilule .carre-pilule svg { width: 17px; height: 17px; }
 .actions-col { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 
 /* Interrupteur (role=switch) : éteint, rail --surface-2 et bouton --text-2 ; allumé, couleur action. */
@@ -123,6 +125,7 @@
   position: sticky; top: 0; z-index: 20; display: flex; justify-content: center; align-items: center; gap: 2px;
   min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0;
   background: var(--surface); color: var(--text); font-size: var(--t-sous);
+  box-shadow: inset 0 -1px 0 var(--line); /* un filet en bas, sans hauteur en plus : le soir tient toujours */
 }
 .bandeau { flex-wrap: wrap; }
 /* Sur l'iPhone, les trois ne tiennent pas sur une ligne : « Nouvelle version prête » en haut, sur une ligne basse, et
@@ -161,12 +164,7 @@
 .boite-pied .boite-action { font-weight: 600; }
 
 /* ---------- Rubriques ---------- */
-.rubrique { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sous); line-height: 20px; color: var(--text); font-weight: 400; }
-.rubrique-icone { flex: none; width: 20px; height: 20px; border-radius: var(--r-icone); background: var(--c-tint); display: flex; align-items: center; justify-content: center; }
-.rubrique-icone svg { width: 14px; height: 14px; color: var(--c); }
 .rubrique-sous { color: var(--text-2); font-size: var(--t-note); }
-.rubrique-dessous { flex-wrap: wrap; column-gap: 6px; row-gap: 0; }
-.rubrique-dessous .rubrique-sous { flex-basis: 100%; padding-left: 26px; line-height: 16px; }
 
 /* ---------- Champs ---------- */
 .champ { margin-top: 10px; }
@@ -246,7 +244,8 @@ textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 /* Grilles des parcours : alignées à gauche. */
 .pastilles.grille-choix .pastille { min-height: 52px; justify-content: flex-start; text-align: left; gap: 8px; padding: 8px 12px; }
 .pastilles.grille-choix.chiffres .pastille { justify-content: center; }
-.pastille-ajout { color: var(--action); background: none; border: 1px dashed var(--line); }
+/* « + Ajouter » à la suite des choix : une action (couleur action, 600), sans fond ni tirets (2b). */
+.pastille-ajout { color: var(--action); background: none; border: 0; font-weight: 600; }
 .ajout-pastille { grid-column: 1 / -1; display: flex; gap: var(--esp-2); }
 .ajout-pastille input { flex: 1; }
 
@@ -293,7 +292,8 @@ button.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; b
 button.effacer svg { width: 18px; height: 18px; }
 
 /* Replis */
-.repli { border-top: 1.5px dashed var(--line); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
+/* Un filet plein au-dessus (2b : pas de tirets). */
+.repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
 .repli-tete { width: 100%; display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible-grille); border: 0; background: none; padding: 0; text-align: left; color: var(--text); }
 .repli-fleche { display: inline-flex; color: var(--text-2); transition: transform var(--duree); }
 .repli-fleche svg { width: 16px; height: 16px; stroke-width: 2; }

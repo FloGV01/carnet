@@ -461,7 +461,7 @@ test('v7 : aperçu de l\'import, les séances ont leurs mots', () => {
 test('v7 : le texte de « Tout effacer » nomme tout ce que toutEffacer efface, séances de Bien-être comprises', () => {
   const NOMS = {
     journal: ['journées'], episodes: ['épisodes'], symptomes: ['symptômes'], traitements: ['fiches'], rdv: ['rendez-vous'],
-    humeurs: ['relevés d\'humeur du moment'], notes: ['notes'], seances: ['séances de Bien-être'], listes: ['Les listes'],
+    humeurs: ['relevés d\'émotion du moment'], notes: ['notes'], seances: ['séances de Bien-être'], listes: ['Les listes'],
     meta: ['Mon plan', 'ton traitement actuel', 'les réglages'], audios: ['mémos'],
   };
   assert.deepEqual(Object.keys(NOMS).sort(), [...STORES_DONNEES].sort());

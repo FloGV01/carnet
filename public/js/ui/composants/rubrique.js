@@ -1,14 +1,9 @@
 import { html } from '../lib.js';
 import { Icones } from '../icones.js';
 
-// Libellé de rubrique : petite icône sur sa teinte, puis le libellé (repère visuel, jamais une valeur).
-// `dessous` : la précision (« nuit dernière ») passe sur sa propre ligne.
-export function Rubrique({ teinte, icone, libelle, sous, dessous = false, id }) {
-  return html`<span class=${`rubrique teinte-${teinte}${dessous ? ' rubrique-dessous' : ''}`} id=${id || null}>
-    <span class="rubrique-icone">${Icones[icone]({ trait: 2 })}</span>
-    <span class="rubrique-libelle">${libelle}</span>${sous && html`<span class="rubrique-sous">${sous}</span>`}
-  </span>`;
-}
+// Carré d'icône d'une liste groupée 2b, comme les réglages de l'iPhone (Réglages, Le soir) : 28 px, rayon 7, neutre
+// (--surface-2) ou à la couleur de sa teinte (rubrique, parcours), l'icône dessus. Un repère, jamais une valeur.
+export const CarreIcone = ({ icone, teinte }) => html`<span class=${`carre-ligne${teinte ? ` teinte-${teinte}` : ''}`} aria-hidden="true">${Icones[icone]({ trait: 2 })}</span>`;
 
 // Tête d'une carte de rubrique (2b, Aujourd'hui) : un carré de 28 à la couleur de la rubrique, l'icône dessus, puis le
 // titre ; `sous` (« nuit dernière ») le suit sur la même ligne, en discret. La carte porte la teinte (.teinte-*).

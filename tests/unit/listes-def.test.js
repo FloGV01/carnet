@@ -5,7 +5,7 @@ import { LISTES, NOMS_LISTES, GROUPES_LISTES } from '../../public/js/domain/list
 // v6.1 · Réglages › Listes (P16) : l'index range les listes par écran. Aucune ne disparaît, aucune n'est
 // renommée : chaque liste est rangée une fois et une seule, sous l'écran où on la choisit.
 test('v6.1 · index des listes : six écrans dans l\'ordre, toutes les listes une seule fois', () => {
-  assert.deepEqual(GROUPES_LISTES.map((g) => g.ecran), ['Le soir', 'Humeur du moment', 'Épisode', 'Après coup', 'Symptôme', 'Soins']);
+  assert.deepEqual(GROUPES_LISTES.map((g) => g.ecran), ['Le soir', 'Émotion du moment', 'Épisode', 'Après coup', 'Symptôme', 'Soins']);
   const rangees = GROUPES_LISTES.flatMap((g) => g.listes);
   assert.equal(rangees.length, NOMS_LISTES.length, 'aucun doublon');
   assert.deepEqual([...rangees].sort(), [...NOMS_LISTES].sort(), 'aucune liste oubliée ni inventée');
@@ -19,8 +19,8 @@ test('v6.1 · index des listes : une liste qui sert à plusieurs écrans va sous
   assert.equal(ecranDe('dessous'), 'Épisode');
   assert.equal(ecranDe('professionnel'), 'Épisode', 'Professionnel : « En parler au rendez-vous » d\'un épisode, avant le rendez-vous et la Vue soignants');
   assert.equal(GROUPES_LISTES.find((g) => g.ecran === 'Épisode').listes.at(-1), 'professionnel', 'en dernier, au récapitulatif');
-  assert.equal(ecranDe('energie'), 'Humeur du moment');
-  assert.equal(ecranDe('activiteMoment'), 'Humeur du moment');
+  assert.equal(ecranDe('energie'), 'Émotion du moment', 'v7 : « Humeur du moment » s\'appelle « Émotion du moment »');
+  assert.equal(ecranDe('activiteMoment'), 'Émotion du moment');
   assert.equal(ecranDe('pese'), 'Le soir');
   assert.equal(ecranDe('typeExplosion'), 'Après coup');
   assert.equal(ecranDe('duree'), 'Symptôme');

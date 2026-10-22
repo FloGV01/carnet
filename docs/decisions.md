@@ -201,16 +201,68 @@ Ce qui se voit à l'écran et que le plan ne disait pas, ou disait autrement :
 
 Ces deux propositions attendent leurs maquettes, en clair et en sombre. L'apparence générale viendra de la même refonte visuelle.
 
-## v7 (en cours) : en attente de l'utilisateur
+## 2026-10-22 : v7.0.0, émotions du moment, Bien-être, refonte 2b
 
-L'entrée v7 complète vient avec la version 7.0.0 (tâche 9 du plan v7). Ce qui suit attend un choix de l'utilisateur.
+Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (piste 2b). Spec : `docs/superpowers/specs/2026-10-20-carnet-v7-emotions-bien-etre-design.md`. Plan : `docs/superpowers/plans/2026-10-20-carnet-v7.md`, en 9 tâches ; il absorbe le plan v6.2 de la refonte visuelle (`docs/superpowers/plans/2026-10-20-carnet-v6-2-refonte.md`), mis en pause le 20/10. Version 7.0.0. La base passe à `DB_VERSION` 5 (store `seances`, `MIGRATIONS[5]`, copie avant migration) et la sauvegarde au `FORMAT_VERSION` 5 (`docs/format-sauvegarde.md`). Les sauvegardes d'avant restent importables : les notes de 1 à 10 sont gardées, `emotion` vaut `null`.
 
-- **Pire cas du soir à 8 rubriques** (Humeur du soir et Explosions réaffichées, Contact et Sport séparés). La v4 l'exigeait sans défilement à 390 et 375 × 797. En cartes 2b, même resserrées, les 8 rubriques dépassent d'environ 270 px : aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Deux voies : accepter que ce cas défile (c'est l'état actuel, le test le vérifie), ou une mise en page sans cartes au-delà de 6 rubriques. Les 6 rubriques par défaut tiennent, elles.
-- **Aujourd'hui, écarts au lot 2b** pour garder P2 (Après coup sans défiler) et P3 (« J'ai fini » sans défiler) à 390 × 844, et le soir sans défilement à 390 × 797 après minuit ou avec le bandeau « Nouvelle version prête » : les choix des cartes font 44 de haut au lieu de 48, les cartes ont 8 de marge haute et basse, 4 entre la tête et les choix, et 6 entre deux blocs (4 avec le bandeau). À revoir sur l'iPhone.
+### Décisions de l'utilisateur (spec §2, 20/10)
 
-### Bien-être (tâche 7)
+- **Roue** : sa roue (image fournie), 6 familles (Colère, Dégoût, Tristesse, Joie, Surprise, Peur) avec leurs couleurs, plus Sérénité. Chaque bulle est un mot du 3ᵉ niveau.
+- **Émotion du moment** : la note de 1 à 10 disparaît. Un relevé = une émotion + l'énergie (Basse · Moyenne · Haute). La règle « Me ressourcer » sur l'énergie basse reste.
+- **Analyse** : les analyses fondées sur la note sont remplacées par des graphiques d'émotions. Les phrases calculées sur la note sont retirées (tendances, journées à 7 ou plus, sommeil et humeur, signal de ressemblance), avec leurs réglages. Les anciennes notes restent visibles pour les jours passés.
+- **Bien-être** : un onglet, avec la cohérence cardiaque et la sophrologie. L'Historique rejoint l'Analyse. Onglets : Aujourd'hui · Analyse · Bien-être · Soins · Réglages.
+- **Raccourci de crise** : le bouton « Moment difficile » d'Aujourd'hui reste, avec la cohérence cardiaque en tête.
+- **Bien-être dans l'Analyse** : une rangée de Mes jours et « Autour du Bien-être » dans Comprendre.
+- **Apparence** : piste 2b · Cartes noires, police système (pas de Lexend : rien à télécharger), pas de rubriques remplies repliées en pastilles, glisser pour changer de jour en plus de ‹ ›, couleurs de Claude Design telles quelles.
+- **API Claude** : seulement pendant le développement. Carnet reste sans réseau.
+- **Règle levée à sa demande** : la roue garde ses couleurs (Colère rouge, Joie vert…), pour la roue et les graphiques d'émotions seulement. Ailleurs, jamais de rouge ni de vert pour dire bien ou mal.
 
-Choix faits pendant la construction, à vérifier par l'utilisateur :
+### Appels du concepteur, à vérifier (spec §9)
+
+- Le 2ᵉ niveau de la roue est sauté : famille, puis mot.
+- Sérénité est une 7ᵉ famille, en turquoise, avec 8 mots (Calme, Apaisé, Détendu, Reposé, Tranquille, Serein, Posé, En sécurité).
+- « Aversion » ne compte qu'une bulle.
+- « Humeur » devient « Émotion » : le bouton de la bande du bas et l'écran « Émotion du moment ». Les relevés gardent leur nom technique (`humeurs`).
+- Un épisode garde sa liste d'émotions actuelle (« Ça ressemblait plutôt à… ») : la roue sert à l'émotion du moment.
+- Les anciennes notes de 1 à 10 restent affichées pour les jours qui en ont (« humeur 6 »), et ne servent plus aux graphiques d'émotions. Sur une période qui a des notes, Mes jours, En consultation et la Vue soignants gardent une rangée ou une ligne « Humeur (notes) ».
+- Les réglages « Signal de ressemblance » et « Tendances » disparaissent avec ces analyses.
+- Le Bien-être n'apparaît ni dans l'Export PSY, ni dans la Vue soignants.
+- Les exercices sont rédigés pour Carnet et relus par l'utilisateur (plus bas). La lecture à voix haute est éteinte au départ ; voix allumée, les étapes avancent seules ; l'écran reste allumé pendant un exercice.
+- La respiration de Moment difficile compte aussi comme une séance, avec son origine ; « Autour du Bien-être » ne la compte pas.
+- Une famille seule (sans mot) est un relevé valable (`roue:<famille>`).
+- L'onglet Bien-être a une icône de feuille.
+
+### Refonte 2b (plan v6.2)
+
+- Piste 2b, police système (`-apple-system`, aux tailles, graisses et interlignes du lot), couleurs du lot comparées une à une par un test, thème du système. Sélection commune à tous les choix : fond `-fill`, texte `-on`, 600 (700 pour un chiffre) et une coche, jamais la couleur seule. Cibles de 44 pt au moins, animations de 200 ms au plus, supprimées avec « Réduire les animations ».
+- **B1 · Icônes** : les 39 du lot, sans leurs métadonnées, au trait de 2, plus la feuille (Bien-être) et l'émotion. Pas d'icône dans les grilles de choix ; les icônes de lieu ne servent pas.
+- **B2 · Thème** : celui du système (`prefers-color-scheme`), sans réglage dans l'app.
+- **B3 · Vue soignants et PDF** : la page reste claire. Les familles d'émotions s'y distinguent aussi par un motif et par l'ordre de la roue : la page se lit imprimée en noir et blanc.
+- **B4 · Glissement** : sur Aujourd'hui et la page d'un jour, vers la droite la veille, vers la gauche le lendemain, jamais au-delà d'aujourd'hui ; au moins 60 px ou un geste rapide, avec |dx| > 1,5 × |dy| ; ignoré depuis un champ, une feuille, un parcours ou un élément qui défile de côté ; le défilement vertical reste celui d'iOS.
+- **B5 · Couleurs** : une couleur par rubrique du soir et par parcours (Émotion du moment en rose, Épisode, Symptôme, Moment difficile) ; l'énergie (orange) pour pesé, rechargé et énergie basse ; les explosions en brun sourd. L'action (liens, Terminer, + Épisode, Retour, Passer) est en encre neutre ; onglets, segments et période aussi.
+- **P5 et P6**, qui attendaient Claude Design depuis la v6.1, sont faits : la bande du bas avec « Émotion », le plus large (tâche 4), et les réponses près du pouce (tâches 3 et 8).
+
+### Choix faits pendant la construction
+
+- **Roue** (tâche 2) : vocabulaire figé dans `domain/roue.js`, identifiants écrits en dur (`roue:peur:sans-valeur`), hors du store `listes` : il ne se règle pas dans Réglages › Listes. Les teintes des familles viennent de la roue de l'utilisateur, ajustées pour AA, sur la recette du lot.
+- **Émotion du moment** (tâche 3) : 7 bulles rondes en grappe 4-3 (rosace 2-3-2 en grand texte), puis les mots de la famille. Chaque toucher enregistre : retoucher le mot ramène à la famille, retoucher la famille efface l'émotion. Après un changement de vue, les bulles ignorent les touchers 350 ms (un double toucher choisissait un mot jamais vu). Le mot choisi s'affiche à droite du titre « Émotion ». L'écran se ferme seul une fois l'émotion et l'énergie choisies.
+- **Aujourd'hui** (tâche 4) : le résumé sous le titre met les familles du jour en points de couleur ; « Ma journée » dit « Irrité · énergie moyenne » au point de la famille, un ancien relevé « humeur 6 » au point creux ; un épisode ou un symptôme a un petit carré, un relevé un rond.
+- **Analyse** (tâche 5) : « Tes émotions » (une barre par famille, le nombre de relevés, sans pourcentage), rangée « Émotions » de Mes jours (un point par relevé), Ta journée par familles, les mots les plus notés ; Comprendre mesure les familles (après une nuit, selon le lieu, le jour, le mois, autour des explosions, autour du Bien-être). Seuils : 5 relevés, 3 heures, affichés par « Pourquoi ? ».
+- **Exports** (tâche 6) : voir plus bas pour l'Export PSY. Vue soignants : « Émotions par famille (relevés) » en tête, barres empilées par semaine dans l'ordre de la roue, avec un motif par famille ; la page tient sur une page A4.
+- **Parcours** (tâche 8) : en-tête « Fermer », le nom derrière un carré à la couleur du parcours, repère d'étape en points (jamais une barre) ; en grand texte, le repère passe sous le nom. Le toast d'un parcours se pose en haut, sous l'en-tête, pour ne pas couvrir les réponses.
+- **Autres écrans** (tâche 9) :
+  - Réglages et Réglages › Le soir en listes groupées, comme les réglages de l'iPhone : un carré d'icône de 28 à gauche de chaque rangée, filets décalés après le carré. Les carrés sont neutres, sauf Mon plan et Moment difficile (couleur de Moment difficile), Me ressourcer (couleur énergie, icône soleil) et, dans Le soir, chaque champ à la couleur de sa rubrique ;
+  - Historique : « Semaine du… » en libellé de section (capitales), et des puces neutres où seule l'icône de la rubrique prend sa couleur, comme les pastilles du lot ;
+  - plus de tirets : les replis (« La dernière fois » dans Soins et En consultation, par exemple) ont un filet plein, « + Ajouter » est une action sans cadre ;
+  - « En consultation » : une pilule neutre avec un carré violet, comme les boutons de la bande du bas ; « Effet ressenti » d'une fiche de traitement a l'icône grise des autres champs (il prenait le rose d'Émotion du moment) ;
+  - Bien-être : la carte de respiration est celle de Moment difficile (voir Bien-être, plus bas) ;
+  - « Émotion du moment » partout où l'app nommait encore l'« humeur du moment » : Rappels (et le texte de la notification, qui renvoie au bouton « Émotion »), l'index des Listes, l'import d'une sauvegarde, « Tout effacer », « Effacer cette journée » ;
+  - « Effacer définitivement » reste le seul bouton rouge de l'app : une action sans retour, jamais une valeur (AA en clair et en sombre) ;
+  - le bandeau « Nouvelle version prête » a un filet en bas, sans hauteur en plus : le soir tient toujours sans défiler ;
+  - des espaces insécables dans les guillemets du guide d'installation et de Rappels : un guillemet ne commence ni ne finit plus seul une ligne ; le rapport du Diagnostic se coupe en grand texte au lieu de déborder.
+- **Contrôle global** (tâche 9) : un test parcourt les écrans principaux en clair et en sombre (37 écrans, données inventées) : tout texte visible a au moins 4,5:1 sur son fond, aucun tiret ; à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l'écran de côté.
+
+#### Bien-être (tâche 7)
 
 - **Onglets** : Aujourd'hui · Analyse · Bien-être · Soins · Réglages. L'Historique garde sa route et s'ouvre par sa porte en haut de l'Analyse ; il allume l'onglet Analyse et a un « Retour » vers elle.
 - **Couleur** : Bien-être prend celle de la cohérence cardiaque (le bleu de Moment difficile). Aucune couleur nouvelle.
@@ -219,11 +271,33 @@ Choix faits pendant la construction, à vérifier par l'utilisateur :
 - **Arrière-plan, écran verrouillé, page cachée** : l'exercice se met en pause (voix coupée, verrou d'écran rendu) et attend « Reprendre ». S'il a duré 60 s ou plus, la séance est notée dès la pause (l'app peut ne pas revenir) ; reprise et finie, c'est la même séance, dont la durée est mise à jour.
 - **Une séance** commence à l'heure de « Commencer », et sa durée est celle de l'exercice actif, pauses exclues. « Terminer » avant la dernière étape, ou « Fermer », compte comme un arrêt (gardé à partir de 60 s). Un exercice n'est mené au bout que si sa dernière étape est atteinte après la moitié de sa durée au moins, en temps actif : parcourir les textes pour les relire ne crée pas de séance (la règle des 60 s joue alors seule).
 - **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée. Seul le temps page visible compte : page cachée (écran verrouillé, autre app), le cercle s'arrête, le verrou d'écran est rendu et la séance est notée dès ce moment si elle a duré 60 s ; au retour, la respiration reprend là où elle en était, et c'est la même séance. Elle n'est menée au bout que si toute sa durée s'est écoulée page visible.
-- **Dans une carte** (Bien-être, « Pour récupérer, je… »), la durée de la respiration passe sous « Cohérence cardiaque », sans « · ». Moment difficile garde « Cohérence cardiaque · 5 minutes » sur une ligne jusqu'à son passage en 2b (tâche 8).
+- **Dans une carte**, la respiration a la forme du rendu 2b de Moment difficile (tâches 8 et 9) : dans Moment difficile et dans Bien-être, « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces (« 5 minutes ▾ », « 5 s · 5 s ▾ »), réglés au même endroit que Réglages › Moment difficile. Dans « Pour récupérer, je… », plus étroite, la durée passe sous « Cohérence cardiaque », sans « · ».
 - **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
 - **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
 
-#### Exercices à relire
+### Le format de l'Export PSY change (à signaler)
+
+Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur moyenne », ses consignes sont à mettre à jour :
+- la ligne d'un jour dit « émotions : irrité, calme » (en minuscules, chacune une fois, dans l'ordre des heures ; une famille seule s'écrit « colère ») ;
+- chaque relevé de la ligne « humeur du moment » porte son émotion (« 09:10 irrité (énergie basse) ») ;
+- un jour qui a d'anciennes notes garde « humeur 6 », et ses relevés chiffrés restent tels quels ;
+- dans COMPTEURS, « émotions : colère 2 · sérénité 2 », dans l'ordre de la roue, sans famille à zéro ; « humeur moyenne » ne reste que pour une semaine qui a des notes ;
+- la section « Repères de l'app » est retirée.
+
+### En attente de l'utilisateur
+
+- **Pire cas du soir à 8 rubriques** (Humeur du soir et Explosions réaffichées, Contact et Sport séparés). La v4 l'exigeait sans défilement à 390 et 375 × 797. En cartes 2b, même resserrées, les 8 rubriques dépassent d'environ 270 px : aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Deux voies : accepter que ce cas défile (c'est l'état actuel, le test le vérifie), ou une mise en page sans cartes au-delà de 6 rubriques. Les 6 rubriques par défaut tiennent, elles.
+- **Aujourd'hui, écarts au lot 2b** pour garder P2 (Après coup sans défiler) et P3 (« J'ai fini » sans défiler) à 390 × 844, et le soir sans défilement à 390 × 797 après minuit ou avec le bandeau « Nouvelle version prête » : les choix des cartes font 44 de haut au lieu de 48, les cartes ont 8 de marge haute et basse, 4 entre la tête et les choix, et 6 entre deux blocs (4 avec le bandeau). À revoir sur l'iPhone.
+- **La roue et les exercices** : l'utilisateur relit les mots de la roue (l'image était peu nette) et les textes des exercices (plus bas) avant la publication.
+
+### À essayer sur l'iPhone
+
+- Les couleurs franches sur fond noir, le soir, et celles de la roue en clair et en sombre.
+- La grappe de bulles sous le pouce, et le glissement d'un jour à l'autre à côté du défilement.
+- La lecture à voix haute (voix française du système), le verrou d'écran pendant un exercice et une respiration, la pause écran verrouillé.
+- Le grand texte d'iOS sur les nouveaux écrans (Émotion du moment, Bien-être, exercice).
+
+### Exercices à relire (titres et étapes)
 
 Rédigés pour Carnet selon la spec §6.2 : phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. La durée de chaque étape sert quand la voix est allumée : l'étape passe seule à la suivante. Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas.
 

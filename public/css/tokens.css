@@ -57,7 +57,8 @@
   --c-emo-peur: #9364ce; --c-emo-peur-fill: #b88af7; --c-emo-peur-on: #131019; --c-emo-peur-tint: #f2eaff; --c-emo-peur-tint-2: #e6d8ff; --c-emo-peur-text: #674196;
   --c-emo-serenite: #079390; --c-emo-serenite-fill: #46d6d1; --c-emo-serenite-on: #071514; --c-emo-serenite-tint: #d9f5f4; --c-emo-serenite-tint-2: #b6ece9; --c-emo-serenite-text: #046663;
 
-  /* « Tout effacer » : hors du lot 2b, gardé tel quel jusqu'aux Réglages 2b. */
+  /* « Effacer définitivement », dernier pas de « Tout effacer » : le seul bouton rouge de l'app, hors du lot 2b, gardé
+     (v7, tâche 9) parce qu'il signale une action sans retour, jamais une valeur. AA : 6,7:1 en clair, 8,3:1 en sombre. */
   --danger: #9E3B2F;
   --danger-texte: #FFFFFF;
 
