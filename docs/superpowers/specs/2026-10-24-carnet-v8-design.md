@@ -260,3 +260,28 @@ Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et pr
 - La forme de Mes nuits, selon le skill `dataviz` et le système 2b.
 - Le choix technique de la liste `endormissement` : store `listes` ou vocabulaire figé.
 - Le texte exact des définitions et des séances nouvelles, dans les règles du §4 et du §6.
+
+## 12. Précisions après relecture (appels du concepteur)
+
+1. **Le son sur les écrans de crise ne change pas.**
+   - Moment difficile et « Respirer » dans « Pour récupérer, je… » gardent le réglage de Réglages › Moment difficile : éteint au départ, avec les deux notes de la v7. Rien ne joue seul en pleine crise.
+   - Le réglage « Son : Aucun · Repères · Repères + souffle », « Repères + souffle » au départ, ne vaut que pour le lecteur de Bien-être : Programme et cohérence cardiaque de l'onglet.
+2. **Ce qui compte comme « Faite » dans le Programme.**
+   - Seule compte une séance **lancée depuis le Programme** et menée au bout. Son enregistrement porte `programme: '<id de la séance du programme>'` et `fin: true`.
+   - Une cohérence cardiaque lancée ailleurs ne compte pas : carte de l'onglet, Moment difficile, « Pour récupérer ».
+   - Dans le Programme, la cohérence cardiaque dure toujours 5 min.
+3. **Respiration et rétention.**
+   - Le disque et le souffle ne s'affichent que sur les étapes dont le texte donne un rythme. Leurs temps sont ceux du texte, par exemple 4 · 4 · 4 · 4 pour la respiration carrée.
+   - Pendant un temps « Retiens », le souffle se tait et le disque reste immobile. Les textes de la v7 ne changent pas : la respiration carrée dit déjà « si retenir te gêne, compte jusqu'à deux ».
+   - Les séances nouvelles n'imposent aucune rétention (§6).
+4. **Respiration abdominale reste.** Elle devient la séance principale de l'étape 1, à la place de « Premiers pas », et garde son texte. Le Programme compte toujours 17 séances : « Premiers pas » n'est pas écrite.
+5. **Placement des mots.** Une étape de la construction cherche la carte publiée du Mood Meter RULER (Yale) et la liste de How We Feel.
+   - Un mot français qui a un équivalent clair (Furieux et furious, Calme et calm…) prend sa zone et sa hauteur.
+   - Les autres gardent le tableau §9 de l'annexe.
+   - La correspondance retenue est notée dans `docs/decisions.md`.
+   - Sans source vérifiable, c'est le tableau §9.
+6. **Q5 : les trois détails passent dans leur carte.**
+   - Nuit, Sport et Contact : chacun s'ouvre depuis le lien « Détail › » de sa carte.
+   - Sport et Contact, côte à côte, ouvrent leur détail en pleine largeur sous la paire.
+   - La liste des replis ne garde que « Ce qui a pesé · ce qui a rechargé » et « Notes libres ».
+7. **Q27 sans livraison intermédiaire.** Les tests simulent les valeurs standard de l'iPhone en 390 × 844, soit 47 px en haut et 34 px en bas. Le Diagnostic affiche les vraies valeurs une fois la v8 installée.
