@@ -47,14 +47,18 @@ const NOMS_META = {
   monPlan: 'Mon plan', journee: 'les réglages du soir et des rappels', traitementActuel: 'ton traitement actuel',
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
   respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
-  ressourcer: 'les réglages de « Me ressourcer »',
+  ressourcer: 'les réglages de « Me ressourcer »', definitionsRoue: 'les définitions des émotions',
 };
+// Accord au féminin seulement si tout ce qui est nommé est féminin, comme pour la perte.
+const META_FEMININES = new Set(['definitionsRoue']);
 export function phraseMeta(cles) {
-  const noms = (cles || []).map((c) => NOMS_META[c]).filter(Boolean);
-  if (!noms.length) return null;
+  const nommees = (cles || []).filter((c) => NOMS_META[c]);
+  if (!nommees.length) return null;
+  const noms = nommees.map((c) => NOMS_META[c]);
   // « Les réglages de la respiration » seuls sont aussi un pluriel.
   const plusieurs = noms.length > 1 || noms[0].startsWith('les ');
-  const t = `${enumerer(noms)} ${plusieurs ? 'seront remplacés' : 'sera remplacé'} par ce que contient le fichier.`;
+  const participe = `remplacé${nommees.every((c) => META_FEMININES.has(c)) ? 'e' : ''}${plusieurs ? 's' : ''}`;
+  const t = `${enumerer(noms)} ${plusieurs ? 'seront' : 'sera'} ${participe} par ce que contient le fichier.`;
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 

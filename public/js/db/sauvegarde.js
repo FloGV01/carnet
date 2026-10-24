@@ -7,13 +7,13 @@ import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
 import { creerZip, lireZip } from './zip.js';
 import { normaliser, SCHEMAS, refsDuChamp } from '../domain/champs.js';
-import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 5;
+export const FORMAT_VERSION = 6;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
 export const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
@@ -21,8 +21,8 @@ const META_NON_EXPORTEES = new Set(['schema', 'installation', 'derniereEcriture'
 // Gardée telle quelle si le fichier (ou la copie) ne l'a pas : date de la mise à jour v4,
 // à partir de laquelle un compteur d'explosions vide vaut 0 (domain/explosions.js).
 const META_GARDEES_SI_ABSENTES = new Set(['explosionsDepuis']);
-// Les autres clés (Mon plan, Ma journée, traitement actuel, réglages…) sont celles de l'utilisateur :
-// le fichier les remplace toutes, et une clé absente du fichier est retirée.
+// Les autres clés (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions corrigées…)
+// sont celles de l'utilisateur : le fichier les remplace toutes, et une clé absente du fichier est retirée.
 const estMetaUtilisateur = (cle) => !META_NON_EXPORTEES.has(cle) && !META_GARDEES_SI_ABSENTES.has(cle);
 
 // Aperçu : clés de l'utilisateur présentes ici que l'import retirerait ou changerait.
@@ -122,9 +122,9 @@ function absentes(seed, items, horodatage) {
   const ids = new Set((Array.isArray(items) ? items : []).map((i) => i && i.id));
   return seedItems(seed, horodatage).filter((i) => !ids.has(i.id));
 }
-// Listes par défaut ajoutées depuis la première version (v4 puis v6) et absentes d'un ensemble.
+// Listes par défaut ajoutées depuis la première version (v4, v6 puis v8) et absentes d'un ensemble.
 export function listesManquantes(items, horodatage) {
-  return [...absentes(SEED_V2_AJOUTS, items, horodatage), ...absentes(SEED_V4_AJOUTS, items, horodatage)];
+  return [...absentes(SEED_V2_AJOUTS, items, horodatage), ...absentes(SEED_V4_AJOUTS, items, horodatage), ...absentes(SEED_V6_AJOUTS, items, horodatage)];
 }
 
 // Ajoute à une sauvegarde les listes par défaut d'une version qu'elle n'a pas. Les comptes annoncés
@@ -175,6 +175,15 @@ export const MISES_A_NIVEAU = {
     const counts = { ...(s.counts || {}), seances: 0 };
     if (Array.isArray(data.humeurs)) data.humeurs = data.humeurs.map((h) => (h && typeof h === 'object' && !Array.isArray(h) ? { emotion: null, ...h } : h));
     return { ...s, formatVersion: 5, counts, data };
+  },
+  // v5 -> v6 : la liste des sujets d'un rendez-vous, ajoutée si absente, comme le fait la migration 6 de la base.
+  // Les champs nouveaux (heuresSommeil, fin, programme) manquent et se lisent vides : aucune fiche n'est
+  // transformée. Une nuit ancienne garde son coucher, son lever et ses réveils, une séance v7 n'a pas de fin.
+  5(s) {
+    const data = { ...(s.data || {}) };
+    const counts = { ...(s.counts || {}) };
+    ajouterListes(SEED_V6_AJOUTS, data, counts, s.exportedAt);
+    return { ...s, formatVersion: 6, counts, data };
   },
 };
 export function mettreANiveauSauvegarde(s) {
@@ -351,7 +360,7 @@ export async function toutEffacer(repo) {
     const installation = await req(t.objectStore('meta').get('installation'));
     const depuis = await req(t.objectStore('meta').get('explosionsDepuis'));
     for (const s of [...STORES_DONNEES, 'snapshots']) t.objectStore(s).clear();
-    for (const it of [...seedItems(SEED_V1, h), ...seedItems(SEED_V2_AJOUTS, h), ...seedItems(SEED_V4_AJOUTS, h)]) t.objectStore('listes').put(it);
+    for (const it of [SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS].flatMap((seed) => seedItems(seed, h))) t.objectStore('listes').put(it);
     const meta = t.objectStore('meta');
     meta.put({ cle: 'schema', valeur: DB_VERSION });
     meta.put(installation || { cle: 'installation', valeur: h });

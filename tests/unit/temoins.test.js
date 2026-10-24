@@ -1,4 +1,4 @@
-// Sauvegardes témoins écrites par les versions publiées (formats 1 à 4, scripts/temoins.mjs) :
+// Sauvegardes témoins écrites par les versions publiées (formats 1 à 5, scripts/temoins.mjs) :
 // elles s'importent toujours au format courant, sans perte, et un export suivi d'un import reste stable.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +14,7 @@ import { analyserFichiers, remplacer, lireTout, exporter, listesManquantes, FORM
 import { normaliser, SCHEMAS } from '../../public/js/domain/champs.js';
 import { addDays } from '../../public/js/domain/dates.js';
 import { versContacts } from '../../public/js/domain/contacts.js';
-import { SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { controlerTemoin } from '../../scripts/temoins.mjs';
 
 const DOSSIER = join(RACINE, 'tests', 'fixtures', 'temoins');
@@ -24,13 +24,14 @@ const TEMOINS = [
   { fichier: 'format-3.json', format: 3, app: '5.0.0', memos: 0 },
   { fichier: 'format-3-memo.zip', format: 3, app: '5.0.0', memos: 2 },
   { fichier: 'format-4.json', format: 4, app: '6.1.0', memos: 0 },
+  { fichier: 'format-5.json', format: 5, app: '7.0.0', memos: 0 },
 ];
 // Le témoin JSON d'un format (le zip du format 3 vient après le JSON).
 const temoin = (format) => TEMOINS.find((t) => t.format === format);
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const STORES_COMPTES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'audios'];
-const STORES_FICHES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes'];
+const STORES_FICHES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances'];
 // Méta techniques, jamais reprises d'un fichier (db/sauvegarde.js).
 const META_TECHNIQUES = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde']);
 
@@ -72,10 +73,10 @@ test('les comptes sont justes : rien n\'est perdu, rien n\'est doublé', async (
     // Mis à niveau au format courant : les comptes annoncés suivent ce qui est ajouté.
     assert.equal(analyse.sauvegarde.formatVersion, FORMAT_VERSION, t.fichier);
     assert.equal(analyse.sauvegarde.counts.notes, brut.counts.notes ?? 0, t.fichier);
-    assert.equal(analyse.sauvegarde.counts.seances, 0, t.fichier);
+    assert.equal(analyse.sauvegarde.counts.seances, brut.counts.seances ?? 0, t.fichier);
     assert.equal(analyse.sauvegarde.counts.listes, analyse.sauvegarde.data.listes.length, t.fichier);
     assert.equal(analyse.resume.notes, brut.counts.notes ?? 0, t.fichier);
-    assert.equal(analyse.resume.seances, 0, t.fichier);
+    assert.equal(analyse.resume.seances, brut.counts.seances ?? 0, t.fichier);
     for (const s of STORES_COMPTES) assert.equal(tout[s].length, brut.counts[s] ?? 0, `${t.fichier} ${s}`);
     assert.equal(analyse.resume.journees, brut.counts.journal, t.fichier);
     assert.equal(analyse.resume.memos, t.memos, t.fichier);
@@ -86,6 +87,11 @@ test('les comptes sont justes : rien n\'est perdu, rien n\'est doublé', async (
     for (const it of seedItems(SEED_V4_AJOUTS, brut.exportedAt)) {
       if (t.format <= 3) assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v6)`);
       else assert.ok(brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v6) dans le fichier`);
+    }
+    // Les sujets d'un rendez-vous (v8) : aucun témoin ne les a, l'import les ajoute, datés du fichier.
+    for (const it of seedItems(SEED_V6_AJOUTS, brut.exportedAt)) {
+      assert.ok(!brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v8) absent du fichier`);
+      assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v8)`);
     }
     const inconnus = tout.listes.filter((i) => i.origine === 'import').length;
     assert.equal(tout.listes.length, brut.counts.listes + listesManquantes(brut.data.listes).length + inconnus, t.fichier);
@@ -158,10 +164,11 @@ test('les contacts v4 passent en une ligne, tels quels', async () => {
   }
 });
 
-test('la bascule de 4 h est respectée : un épisode à 02:30, une humeur et une note à 01:30 comptent pour la veille', async () => {
+test('la bascule de 4 h est respectée : un épisode à 02:30, une humeur, une note et une séance à 01:30 comptent pour la veille', async () => {
   for (const t of TEMOINS) {
     const { brut, repo } = await importer(t);
-    const cas = [['episodes', '02:30'], ...(t.format >= 2 ? [['humeurs', '01:30']] : []), ...(t.format >= 4 ? [['notes', '01:30']] : [])];
+    const cas = [['episodes', '02:30'], ...(t.format >= 2 ? [['humeurs', '01:30']] : []), ...(t.format >= 4 ? [['notes', '01:30']] : []),
+      ...(t.format >= 5 ? [['seances', '01:30']] : [])];
     for (const [store, heure] of cas) {
       const e = brut.data[store].find((x) => x.heure === heure);
       const veille = addDays(e.date, -1);
@@ -186,6 +193,41 @@ test('v7 : le témoin au format 4 garde ses notes de 1 à 10, ses relevés n\'on
   for (const j of brut.data.journal) assert.equal((await repo.journal.lire(j.date)).humeur, j.humeur, j.date);
   assert.deepEqual(await repo.seances.tous(), []);
   assert.deepEqual((await repo.notes.tous()).map((n) => n.texte), brut.data.notes.map((n) => n.texte));
+});
+
+// v8, point de vigilance 1 : une sauvegarde de la v7 passe au format 6 sans perte. Ses séances n'ont pas de fin
+// (le Programme n'en date aucune), ses nuits ont coucher et lever sans nombre d'heures (Mes nuits les calcule).
+test('v8 : le témoin au format 5 garde ses séances sans fin, ses nuits sans heures, ses émotions et ses notes', async () => {
+  const { brut, analyse, repo } = await importer(temoin(5));
+  assert.equal(analyse.sauvegarde.formatVersion, 6);
+  assert.deepEqual(analyse.erreurs, []);
+  assert.ok(brut.data.seances.length >= 3);
+  assert.ok(brut.data.seances.every((x) => !('fin' in x) && !('programme' in x)), 'la v7 ne connaissait ni fin ni programme');
+  for (const x of brut.data.seances) {
+    const lue = await repo.seances.lire(x.id);
+    for (const [champ, v] of Object.entries(x)) assert.deepEqual(lue[champ], v, `${x.id} ${champ}`);
+    assert.equal(lue.fin, null, `${x.id} : aucune séance v7 n'est « Faite »`);
+    assert.equal(lue.programme, null, x.id);
+  }
+  const nuits = brut.data.journal.filter((j) => j.heureCoucher && j.heureLever);
+  assert.ok(nuits.length >= 1);
+  for (const j of brut.data.journal) {
+    const lu = await repo.journal.lire(j.date);
+    assert.ok(!('heuresSommeil' in j), j.date);
+    assert.equal(lu.heuresSommeil, null, `${j.date} : aucun nombre d'heures inventé`);
+    assert.equal(lu.heureCoucher, j.heureCoucher, j.date);
+    assert.equal(lu.heureLever, j.heureLever, j.date);
+    assert.equal(lu.reveilsNocturnes, j.reveilsNocturnes, j.date);
+    assert.equal(lu.sommeilRessenti, j.sommeilRessenti, j.date);
+  }
+  for (const h of brut.data.humeurs) {
+    const lu = await repo.humeurs.lire(h.id);
+    assert.equal(lu.emotion, h.emotion, h.id);
+    assert.equal(lu.humeur, h.humeur, h.id);
+  }
+  assert.ok(brut.data.humeurs.some((h) => h.emotion && h.emotion.split(':').length === 2), 'une famille seule de la v7 reste valable');
+  assert.equal(await repo.meta.lire('definitionsRoue'), null, 'aucune définition corrigée dans une sauvegarde de la v7');
+  assert.equal(await repo.meta.lire('schema'), 6);
 });
 
 test('un export suivi d\'un import redonne les mêmes octets', async () => {
@@ -229,4 +271,13 @@ test('le script refuse un témoin incomplet', () => {
   assert.throws(() => controlerTemoin(sans4((s) => { for (const r of s.data.rdv) for (const q of r.questions || []) delete q.lien; })), /liée/);
   assert.throws(() => controlerTemoin(sans4((s) => { const j = s.data.meta.find((m) => m.cle === 'journee'); j.valeur.masques = ['explosions']; })), /journee/);
   assert.throws(() => controlerTemoin(sans4((s) => { s.data.meta = s.data.meta.filter((m) => m.cle !== 'ressourcer'); })), /réglages de la v6/);
+
+  const cinq = charger(temoin(5)).brut;
+  const sans5 = (modifier) => { const s = structuredClone(cinq); modifier(s); return enc.encode(JSON.stringify(s)); };
+  assert.throws(() => controlerTemoin(sans5((s) => { s.data.seances = []; s.counts.seances = 0; })), /seances : aucun enregistrement/);
+  assert.throws(() => controlerTemoin(sans5((s) => { s.data.seances = s.data.seances.filter((x) => x.heure !== '01:30'); })), /séance à 01:30/);
+  assert.throws(() => controlerTemoin(sans5((s) => { s.data.seances = s.data.seances.filter((x) => x.origine !== 'ressourcer'); })), /chaque origine/);
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) if (h.emotion && h.emotion.split(':').length === 2) h.emotion = 'roue:serenite:calme'; })), /famille seule/);
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) h.emotion = null; })), /humeurs\.emotion/);
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) if (!h.emotion) h.humeur = null; })), /1 à 10/);
 });

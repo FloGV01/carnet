@@ -240,7 +240,7 @@ test('v7 : une séance a pour clés id, date, heure et exercice ; durée en seco
   const { valeur, erreurs, avertissements } = normaliser('seances', brut);
   assert.deepEqual(erreurs, []);
   assert.deepEqual(avertissements, []);
-  assert.deepEqual(valeur, { id: 'se_1', date: '2026-10-20', heure: '09:05', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
+  assert.deepEqual(valeur, { id: 'se_1', date: '2026-10-20', heure: '09:05', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', fin: null, programme: null });
   assert.equal(estVide('seances', valeur), false);
   assert.deepEqual(referencesDe('seances', valeur), []);
   for (const origine of ['bien-etre', 'moment-difficile', 'ressourcer']) assert.equal(valider('seances', { ...brut, origine }).origine, origine);
@@ -261,4 +261,48 @@ test('v7 : une séance a pour clés id, date, heure et exercice ; durée en seco
   }
   assert.equal(normaliser('seances', { ...brut, compteur: 3 }).avertissements.length, 1, 'champ inconnu ignoré');
   assert.equal(estVide('seances', valider('seances', { id: 'se_1', date: '2026-10-20', heure: '09:05', exercice: 'coherence' })), true);
+});
+
+// ---- v8 ----
+
+test('v8 : heuresSommeil, un entier de 4 (« 4 h ou moins ») à 10 (« 10 h ou plus »), facultatif', () => {
+  const nuit = (heuresSommeil) => normaliser('journal', { date: '2026-10-24', heuresSommeil });
+  for (const h of [4, 5, 6, 7, 8, 9, 10]) {
+    assert.deepEqual(nuit(h).erreurs, [], String(h));
+    assert.equal(nuit(h).valeur.heuresSommeil, h);
+  }
+  for (const h of [3, 11, 0, -1, 6.5, '6', true, [6], { h: 6 }]) {
+    assert.ok(nuit(h).erreurs.some((e) => /^heuresSommeil : entier de 4 à 10 attendu$/.test(e)), JSON.stringify(h));
+  }
+  assert.throws(() => valider('journal', { date: '2026-10-24', heuresSommeil: 12 }), ErreurValidation);
+  assert.equal(nuit(null).valeur.heuresSommeil, null, 'un second toucher l\'efface');
+  assert.equal(nuit(undefined).valeur.heuresSommeil, null);
+  assert.equal(normaliser('journal', { date: '2026-10-24' }).valeur.heuresSommeil, null, 'une nuit ancienne, sans le champ, se lit vide');
+  // Seul, il garde le jour ; à côté, coucher, lever et réveils d'une nuit ancienne restent tels quels.
+  assert.equal(estVide('journal', valider('journal', { date: '2026-10-24', heuresSommeil: 7 })), false);
+  const ancienne = valider('journal', { date: '2026-10-24', sommeilRessenti: 'sommeil:mal', heureCoucher: '23:30', heureLever: '06:10', reveilsNocturnes: 2 });
+  assert.deepEqual([ancienne.heuresSommeil, ancienne.heureCoucher, ancienne.heureLever, ancienne.reveilsNocturnes], [null, '23:30', '06:10', 2]);
+  assert.deepEqual(referencesDe('journal', valider('journal', { date: '2026-10-24', heuresSommeil: 6 })), [], 'un nombre, pas une liste');
+});
+
+test('v8 : une séance gagne fin (vrai ou rien) et programme (l\'id d\'une séance du Programme, ou rien)', () => {
+  const brut = { id: 'se_1', date: '2026-10-24', heure: '09:05', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre' };
+  const seance = (extra) => normaliser('seances', { ...brut, ...extra });
+  const faite = seance({ fin: true, programme: ' respiration-abdominale ' });
+  assert.deepEqual(faite.erreurs, []);
+  assert.deepEqual(faite.avertissements, []);
+  assert.equal(faite.valeur.fin, true);
+  assert.equal(faite.valeur.programme, 'respiration-abdominale');
+  // false veut dire « pas menée au bout », comme l'absence : rien.
+  assert.equal(seance({ fin: false }).valeur.fin, null);
+  assert.deepEqual(seance({ fin: false }).erreurs, []);
+  assert.equal(seance({}).valeur.fin, null, 'une séance v7, sans le champ, n\'est pas « Faite »');
+  assert.equal(seance({}).valeur.programme, null, 'une séance v7 n\'est pas du Programme');
+  for (const fin of ['oui', 1, 0, [true], { fin: true }]) assert.ok(seance({ fin }).erreurs.some((e) => /^fin : vrai ou vide attendu$/.test(e)), JSON.stringify(fin));
+  for (const programme of [7, true, ['respiration-abdominale'], { id: 'x' }]) assert.ok(seance({ programme }).erreurs.some((e) => /^programme : texte attendu$/.test(e)), JSON.stringify(programme));
+  assert.equal(seance({ programme: '   ' }).valeur.programme, null);
+  assert.throws(() => valider('seances', { ...brut, fin: 'oui' }), ErreurValidation);
+  assert.deepEqual(referencesDe('seances', faite.valeur), []);
+  // Une cohérence lancée ailleurs que dans le Programme garde sa forme : fin sans programme est valide.
+  assert.deepEqual(seance({ exercice: 'coherence', origine: 'moment-difficile', fin: true }).erreurs, []);
 });

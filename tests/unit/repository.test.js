@@ -4,13 +4,13 @@ import { nouveauRepo } from '../aides/repo.js';
 import { ErreurValidation } from '../../public/js/domain/champs.js';
 import { versDateHeure } from '../../public/js/domain/dates.js';
 
-test('base neuve : 197 éléments de liste (v1, v4 et v6), aujourd\'hui suit le jour logique', async () => {
+test('base neuve : 204 éléments de liste (v1, v4, v6 et v8), aujourd\'hui suit le jour logique', async () => {
   const { repo, horloge } = nouveauRepo();
-  assert.equal((await repo.listes.items()).length, 197);
+  assert.equal((await repo.listes.items()).length, 204);
   assert.equal(repo.aujourdhui(), '2026-09-30');
   horloge.t = new Date(2026, 9, 1, 1, 30);
   assert.equal(repo.aujourdhui(), '2026-09-30');
-  assert.equal(await repo.meta.lire('schema'), 5);
+  assert.equal(await repo.meta.lire('schema'), 6);
 });
 
 test('journal : patch partiel, fusion, horodatage, marque d\'écriture', async () => {
@@ -402,4 +402,62 @@ test('v7 : séances, créer, modifier, supprimer, jour logique, aucune référen
   await assert.rejects(repo.seances.modifier(a.id, { exercice: null }), ErreurValidation, 'l\'exercice ne s\'efface pas');
   assert.equal((await repo.seances.lire(a.id)).exercice, 'coherence');
   assert.equal((await repo.seances.tous()).length, 3, 'rien n\'est écrit');
+});
+
+// ---- v8 ----
+
+test('v8 : la durée de la nuit se note, s\'efface d\'un second toucher, et ne touche pas au coucher ni au lever', async () => {
+  const { repo, changements } = nouveauRepo();
+  const j = await repo.journal.patch('2026-09-30', { heuresSommeil: 4 });
+  assert.equal(j.heuresSommeil, 4, '« 4 h ou moins »');
+  assert.equal((await repo.journal.patch('2026-09-30', { sommeilRessenti: 'sommeil:mal' })).heuresSommeil, 4, 'la qualité et la durée se notent à part');
+  assert.equal((await repo.journal.patch('2026-09-30', { heuresSommeil: 10 })).heuresSommeil, 10, '« 10 h ou plus »');
+  await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 11 }), ErreurValidation);
+  await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 7.5 }), ErreurValidation);
+  assert.equal((await repo.journal.lire('2026-09-30')).heuresSommeil, 10, 'rien n\'est écrit');
+  const efface = await repo.journal.patch('2026-09-30', { heuresSommeil: null });
+  assert.equal(efface.heuresSommeil, null);
+  assert.equal(efface.sommeilRessenti, 'sommeil:mal');
+  assert.equal(await repo.journal.patch('2026-09-30', { sommeilRessenti: null }), null, 'plus rien : le jour part');
+  // Une nuit ancienne garde coucher, lever et réveils quand on y note des heures.
+  await repo.journal.patch('2026-09-29', { heureCoucher: '23:30', heureLever: '07:00', reveilsNocturnes: 1 });
+  const ancienne = await repo.journal.patch('2026-09-29', { heuresSommeil: 7 });
+  assert.deepEqual([ancienne.heureCoucher, ancienne.heureLever, ancienne.reveilsNocturnes, ancienne.heuresSommeil], ['23:30', '07:00', 1, 7]);
+  assert.ok(changements.every((c) => c.store === 'journal'));
+});
+
+test('v8 : une séance du Programme menée au bout porte fin et programme ; une séance arrêtée ou lancée ailleurs, rien', async () => {
+  const { repo } = nouveauRepo();
+  const faite = await repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' });
+  assert.deepEqual([faite.fin, faite.programme], [true, 'respiration-abdominale']);
+  const arretee = await repo.seances.creer({ date: '2026-09-30', heure: '19:00', exercice: 'scan-corporel', dureeS: 90, origine: 'bien-etre', fin: false, programme: 'scan-corporel' });
+  assert.deepEqual([arretee.fin, arretee.programme], [null, 'scan-corporel'], 'false ne s\'écrit pas : rien');
+  const ailleurs = await repo.seances.creer({ date: '2026-09-30', heure: '20:00', exercice: 'coherence', dureeS: 300, origine: 'moment-difficile', fin: true });
+  assert.deepEqual([ailleurs.fin, ailleurs.programme], [true, null]);
+  await assert.rejects(repo.seances.creer({ date: '2026-09-30', heure: '21:00', exercice: 'coherence', dureeS: 60, origine: 'bien-etre', fin: 'oui' }), ErreurValidation);
+  await assert.rejects(repo.seances.creer({ date: '2026-09-30', heure: '21:00', exercice: 'coherence', dureeS: 60, origine: 'bien-etre', programme: 3 }), ErreurValidation);
+  assert.equal((await repo.seances.tous()).length, 3, 'rien n\'est écrit');
+});
+
+test('v8 : les définitions corrigées vivent dans meta.definitionsRoue et comptent comme une écriture', async () => {
+  const { repo } = nouveauRepo();
+  assert.equal(await repo.meta.lire('definitionsRoue'), null, 'aucune correction au départ : le texte de Carnet');
+  await repo.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
+  assert.deepEqual(await repo.meta.lire('definitionsRoue'), { 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
+  assert.ok(await repo.meta.lire('derniereEcriture'));
+  const v = await repo.meta.modifier('definitionsRoue', (d) => ({ ...d, 'roue:serenite:calme': 'Rien ne presse.' }));
+  assert.deepEqual(Object.keys(v), ['roue:colere:irrite', 'roue:serenite:calme']);
+});
+
+test('v8 : les sujets d\'un rendez-vous se règlent comme une liste (ajouter, renommer, réordonner, archiver)', async () => {
+  const { repo } = nouveauRepo();
+  const ids = (await repo.listes.items('sujetRdv')).map((i) => i.libelle);
+  assert.deepEqual(ids, ['Sommeil', 'Traitement', 'Explosions', 'Fatigue', 'Travail', 'Émotions', 'Autre chose']);
+  const ajout = await repo.listes.creer('sujetRdv', 'Démarches');
+  await repo.listes.renommer('sujetRdv:travail', 'Travail et trajets');
+  await repo.listes.archiver('sujetRdv:explosions');
+  await repo.listes.reordonner('sujetRdv', [ajout.id, 'sujetRdv:sommeil']);
+  const apres = await repo.listes.items('sujetRdv');
+  assert.deepEqual(apres.filter((i) => !i.archive).map((i) => i.libelle), ['Démarches', 'Sommeil', 'Traitement', 'Fatigue', 'Travail et trajets', 'Émotions', 'Autre chose']);
+  assert.ok(apres.find((i) => i.id === 'sujetRdv:explosions').archive);
 });

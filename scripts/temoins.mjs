@@ -1,4 +1,4 @@
-// Sauvegardes témoins aux formats 1 à 4 (tests/fixtures/temoins/), écrites par le code même des
+// Sauvegardes témoins aux formats 1 à 5 (tests/fixtures/temoins/), écrites par le code même des
 // versions publiées. Chaque tag est extrait avec git worktree dans un dossier temporaire hors du
 // dépôt, retiré à la fin même en cas d'erreur. Sa base (fake-indexeddb) est remplie de données
 // inventées par son creerRepository, puis exportée par son construireSauvegarde.
@@ -19,6 +19,7 @@ const VERSIONS = [
   { tag: 'v4.0.0', format: 2, json: 'format-2.json', exporteLe: '2026-10-05T19:30:00.000Z' },
   { tag: 'v5.0.0', format: 3, json: 'format-3.json', exporteLe: '2026-10-06T19:30:00.000Z', zip: 'format-3-memo.zip', zipLe: '2026-10-06T19:45:00.000Z' },
   { tag: 'v6.1.0', format: 4, json: 'format-4.json', exporteLe: '2026-10-19T19:30:00.000Z' },
+  { tag: 'v7.0.0', format: 5, json: 'format-5.json', exporteLe: '2026-10-23T19:30:00.000Z' },
 ];
 const dec = new TextDecoder();
 
@@ -48,7 +49,7 @@ function references(data, noms) {
   const voir = (v) => {
     if (typeof v === 'string') { const m = /^([A-Za-z]+):[\w-]+$/.exec(v); if (m && noms.has(m[1])) refs.add(v); } else if (v && typeof v === 'object') Object.values(v).forEach(voir);
   };
-  for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs']) (data[s] || []).forEach(voir);
+  for (const s of ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'seances']) (data[s] || []).forEach(voir);
   return refs;
 }
 
@@ -65,7 +66,8 @@ export function controlerTemoin(octets) {
   const exiger = (ok, quoi) => { if (!ok) manques.push(quoi); };
 
   // Chaque store, et chaque champ non nul au moins une fois.
-  const stores = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', ...(f >= 2 ? ['humeurs'] : []), ...(f >= 4 ? ['notes'] : []), ...(zip ? ['audios'] : [])];
+  const stores = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', ...(f >= 2 ? ['humeurs'] : []), ...(f >= 4 ? ['notes'] : []),
+    ...(f >= 5 ? ['seances'] : []), ...(zip ? ['audios'] : [])];
   for (const st of stores) {
     exiger((d[st] || []).length > 0, `${st} : aucun enregistrement`);
     for (const chemin of jamaisRemplis(d[st] || [], !['listes', 'meta'].includes(st))) manques.push(`${st}.${chemin} : jamais rempli`);
@@ -95,6 +97,18 @@ export function controlerTemoin(octets) {
     exiger((d.humeurs || []).some((h) => h.vers === true && Array.isArray(h.faisais) && h.faisais.length > 0), 'une humeur « vers » avec ce que je faisais');
     exiger((d.rdv || []).some((r) => (r.questions || []).some((q) => q.lien && (d.episodes || []).some((e) => e.id === q.lien.id))), 'une question liée à un épisode');
     exiger(['respiration', 'uneChoseALaFois', 'ressourcer'].every((cle) => (d.meta || []).some((m) => m.cle === cle)), 'les réglages de la v6 (respiration, une chose à la fois, me ressourcer)');
+  }
+  // Format 5 (v7) : émotions de la roue à côté des anciennes notes de 1 à 10, et séances de Bien-être. Une
+  // nuit y garde son coucher et son lever, sans nombre d'heures (point de vigilance 1 de la v8).
+  if (f >= 5) {
+    const emotion = (h, n) => typeof h.emotion === 'string' && h.emotion.split(':').length === n;
+    exiger((d.humeurs || []).some((h) => emotion(h, 3)), 'un relevé avec un mot de la roue');
+    exiger((d.humeurs || []).some((h) => emotion(h, 2)), 'un relevé avec une famille seule');
+    exiger((d.humeurs || []).some((h) => h.emotion === null && Number.isInteger(h.humeur)), 'un ancien relevé noté de 1 à 10, sans émotion');
+    exiger((d.seances || []).some((x) => x.heure === '01:30'), 'une séance à 01:30');
+    exiger(['bien-etre', 'moment-difficile', 'ressourcer'].every((o) => (d.seances || []).some((x) => x.origine === o)), 'une séance de chaque origine');
+    exiger((d.seances || []).some((x) => x.exercice !== 'coherence'), 'une séance d\'un exercice');
+    exiger((d.journal || []).some((j) => j.heureCoucher && j.heureLever), 'une nuit avec coucher et lever');
   }
   if (zip) {
     const noms = new Set(entrees.map((e) => e.nom));
@@ -126,6 +140,8 @@ async function remplir(repo, horloge, format) {
   const v4 = format >= 2;
   // Ce que la v6 ajoute (format 4) : notes, « vers », ce que je faisais, pesé et rechargé, question liée.
   const v6 = format >= 4;
+  // Ce que la v7 ajoute (format 5) : émotions de la roue (un mot, une famille seule) et séances de Bien-être.
+  const v7 = format >= 5;
 
   // Listes : un lieu renommé (l'ancien libellé reste en alias), un lieu créé par l'utilisateur,
   // un symptôme créé puis disparu de la base (son id devient inconnu).
@@ -225,6 +241,17 @@ async function remplir(repo, horloge, format) {
   a('2026-09-29T10:00:00.000Z');
   await repo.symptomes.creer({ date: '2026-09-29', symptome: disparu.id, intensite: 3, duree: 'duree:moins_une_heure' });
   await repo.tx(['listes'], 'readwrite', (t) => { t.objectStore('listes').delete(disparu.id); });
+  // v7 : un relevé avec un mot de la roue, un avec une famille seule, et des séances des trois origines.
+  if (v7) {
+    a('2026-09-29T12:05:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '14:00', emotion: 'roue:colere:irrite', energie: 'energie:haute', faisais: ['activiteMoment:travail'] });
+    a('2026-09-29T15:35:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '17:30', emotion: 'roue:serenite', energie: 'energie:moyenne' });
+    a('2026-09-29T16:10:00.000Z');
+    await repo.seances.creer({ date: '2026-09-29', heure: '18:00', exercice: 'respiration-carree', dureeS: 260, origine: 'bien-etre' });
+    a('2026-09-29T17:20:00.000Z');
+    await repo.seances.creer({ date: '2026-09-29', heure: '19:15', exercice: 'coherence', dureeS: 90, origine: 'ressourcer' });
+  }
   a('2026-09-29T19:50:00.000Z');
   await repo.journal.patch('2026-09-29', { lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien' });
   await repo.listes.archiver('lieu:clinique');
@@ -252,6 +279,11 @@ async function remplir(repo, horloge, format) {
     await repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: true });
     await repo.meta.ecrire('uneChoseALaFois', { rubriques: ['quandCaMonte', 'pourRecuperer'], siAlors: true });
     await repo.meta.ecrire('ressourcer', { energieBasse: true });
+  }
+  // v7 : une séance après minuit, qui compte pour la veille.
+  if (v7) {
+    a('2026-09-29T23:35:00.000Z');
+    await repo.seances.creer({ date: '2026-09-30', heure: '01:30', exercice: 'coherence', dureeS: 300, origine: 'moment-difficile' });
   }
   return { episode };
 }

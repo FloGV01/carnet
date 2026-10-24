@@ -111,7 +111,7 @@ const GROUPES = [
   ['Épisode', ['Déclencheur', 'Émotion', 'Ce qu\'il y avait dessous', 'Réaction', 'Professionnel']],
   ['Après coup', ['C\'était plutôt', 'Fragilités', 'Premiers signes', 'Ça ressemble à', 'Ce qui était trop', 'Besoins', 'Sur le moment', 'Plus tard']],
   ['Symptôme', ['Symptôme', 'Durée']],
-  ['Soins', ['Effet secondaire', 'Effet ressenti']],
+  ['Soins', ["Sujets d'un rendez-vous", 'Effet secondaire', 'Effet ressenti']],
 ];
 
 test('Listes : l\'index rangé par écran sous six intertitres, toutes les listes encore là, une fois chacune', async ({ page }) => {

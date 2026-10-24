@@ -39,11 +39,11 @@ Rien ne s'y saisit, rien de réel n'y entre : ni journal, ni épisode, ni mémo,
 2. **Claude**, une fois le déploiement de `dev` terminé et sur ta confirmation : vérifier les en-têtes de `dev--<site>.netlify.app` avec les commandes de l'étape 4 de la mise en place.
 3. **Toi, sur l'iPhone** : suivre `docs/installation-iphone.md` avec l'adresse `dev--<site>.netlify.app`, et nommer l'icône « Carnet TEST ». Attendre « Hors ligne : prêt » dans Réglages.
 4. **Essais**
-   - Les sauvegardes témoins sont dans `tests/fixtures/temoins/` (`format-1.json`, `format-2.json`, `format-3.json`, `format-3-memo.zip`). À envoyer sur l'iPhone par AirDrop ou iCloud Drive.
+   - Les sauvegardes témoins sont dans `tests/fixtures/temoins/` (`format-1.json` à `format-5.json`, et `format-3-memo.zip`). À envoyer sur l'iPhone par AirDrop ou iCloud Drive.
    - Dans Carnet TEST : Réglages, puis Sauvegarde, puis Importer, avec un témoin.
    - Puis Réglages, un appui long sur la version, puis « Vérifier mes données » : des nombres seulement, par table.
    - « Mémos sans fiche » et « Fiches illisibles » valent 0 pour un témoin.
-   - Les tables de données (`journal`, `episodes`, `symptomes`, `traitements`, `rdv`, `humeurs`, `notes`, `audios`) ont les nombres de `counts` dans l'en-tête du fichier. Un `format-1` n'a pas de `humeurs` : 0. Aucun témoin n'a de `notes` (elles datent du format 4) : 0.
+   - Les tables de données (`journal`, `episodes`, `symptomes`, `traitements`, `rdv`, `humeurs`, `notes`, `seances`, `audios`) ont les nombres de `counts` dans l'en-tête du fichier. Un `format-1` n'a pas de `humeurs` : 0. Les `notes` datent du format 4 et les `seances` du format 5 : 0 avant.
    - `listes` et `meta` peuvent être plus grandes que dans `counts` : l'import ajoute les listes par défaut absentes et garde les clés techniques de l'app. Ce n'est pas une perte.
 5. **Essai d'un changement de base**, quand une version qui change la base va arriver sur `dev` :
    - avant de la pousser, « Carnet TEST » est déjà installé avec la version précédente de `dev`, et un témoin y est importé (étape 4) ;

@@ -1,10 +1,10 @@
 // Schéma versionné de la base « carnet ». Une migration publiée est FIGÉE : elle ne lit
 // aucune constante vivante (empreintes dans tests/unit/migrations.lock.json).
 // Règles : uniquement des ajouts, jamais de suppression de store ou d'index portant des données.
-import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../domain/vocabulaire.js';
 import { DataError } from './erreurs.js';
 
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;
 export const STORES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'listes', 'meta', 'snapshots', 'audios', 'humeurs', 'notes', 'seances'];
 export const MAX_SNAPSHOTS = 3;
 
@@ -84,6 +84,16 @@ export const MIGRATIONS = {
   5(db, tx) {
     db.createObjectStore('seances', { keyPath: 'id' }).createIndex('date', 'date');
     tx.objectStore('meta').put({ cle: 'schema', valeur: 5 });
+  },
+  // v8 : la liste des sujets d'un rendez-vous (sans écraser un id existant). Aucun store nouveau, aucune fiche
+  // transformée : les champs nouveaux (heuresSommeil, fin, programme) se lisent vides. Synchrone, comme la 2.
+  6(db, tx, ctx) {
+    const listes = tx.objectStore('listes');
+    for (const item of seedItems(SEED_V6_AJOUTS, ctx.horodatage)) {
+      const r = listes.get(item.id);
+      r.onsuccess = () => { if (!r.result) listes.put(item); };
+    }
+    tx.objectStore('meta').put({ cle: 'schema', valeur: 6 });
   },
 };
 

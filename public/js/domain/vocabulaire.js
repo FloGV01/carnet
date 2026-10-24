@@ -1,6 +1,6 @@
 // Vocabulaire par défaut des listes, repris du tableau Numbers, SANS lissage.
 // SEED_V1 est FIGÉ une fois publié : tout ajout futur passe par une liste d'ajouts versionnée,
-// SEED_V2_AJOUTS puis SEED_V4_AJOUTS (empreintes vérifiées par tests/unit/migrations-figees.test.js).
+// SEED_V2_AJOUTS, SEED_V4_AJOUTS puis SEED_V6_AJOUTS (empreintes vérifiées par tests/unit/migrations-figees.test.js).
 // [slug, libellé, alias?, options?]  hc = horsClassement, ag = agreable, ex = exclusif
 export const SEED_V1 = Object.freeze({
   lieu: [['bureau', 'Bureau'], ['teletravail', 'Télétravail'], ['conge_repos', 'Congé / repos'],
@@ -83,6 +83,14 @@ export const SEED_V4_AJOUTS = Object.freeze({
     ['dehors', 'Dehors / nature'], ['stimmer', 'Stimmer'], ['musique', 'Musique'], ['sieste', 'Sieste / repos']],
   activiteMoment: [['travail', 'Travail'], ['trajet', 'Trajet'], ['courses', 'Courses / démarches'],
     ['maison', 'Chez moi'], ['monde', 'Avec du monde'], ['repos', 'Repos']],
+});
+
+// Ajouts de la v8 (DB_VERSION 6), FIGÉS une fois publiés comme SEED_V1. Versés par
+// MIGRATIONS[6] et par la mise à niveau des sauvegardes de format 5, sans écraser l'existant.
+// Les sujets d'un rendez-vous (spec v8 §7, Q22) : neutres, aucune question sur le fond.
+export const SEED_V6_AJOUTS = Object.freeze({
+  sujetRdv: [['sommeil', 'Sommeil'], ['traitement', 'Traitement'], ['explosions', 'Explosions'], ['fatigue', 'Fatigue'],
+    ['travail', 'Travail'], ['emotions', 'Émotions'], ['autre', 'Autre chose']],
 });
 
 export function seedItems(seed, horodatage) {

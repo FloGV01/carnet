@@ -18,13 +18,14 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
     const relu = await repo.audios.lire(a.id);
     const duJour = await repo.episodes.parJour('2026-09-30', '2026-09-30');
     await repo.fermer();
-    const db = await ouvrirBase({ nom: 'carnet-e2e', horodatage: 'x', version: 6, migrations: { ...MIGRATIONS, 6(d) { d.createObjectStore('essai', { keyPath: 'id' }); } } });
+    const db = await ouvrirBase({ nom: 'carnet-e2e', horodatage: 'x', version: 7, migrations: { ...MIGRATIONS, 7(d) { d.createObjectStore('essai', { keyPath: 'id' }); } } });
     const snaps = await new Promise((ok) => { const r = db.transaction('snapshots').objectStore('snapshots').getAll(); r.onsuccess = () => ok(r.result); });
     db.close();
     await new Promise((ok) => { const r = indexedDB.deleteDatabase('carnet-e2e'); r.onsuccess = ok; r.onerror = ok; r.onblocked = ok; });
 
-    // Vraies migrations 1 → 5 dans WebKit : données gardées, humeurs, listes v4 et v6 ajoutées une
-    // fois, détail de contact v4 transformé en ligne (v5), notes et champ Humeur masqué (v6), séances (v7).
+    // Vraies migrations 1 → 6 dans WebKit : données gardées, humeurs, listes v4 et v6 ajoutées une
+    // fois, détail de contact v4 transformé en ligne (v5), notes et champ Humeur masqué (v6), séances (v7),
+    // sujets d'un rendez-vous (v8).
     const v1 = await ouvrirBase({ nom: 'carnet-e2e-v1', horodatage: 'x', version: 1, migrations: { 1: MIGRATIONS[1] } });
     await new Promise((ok) => {
       const t = v1.transaction(['journal', 'meta'], 'readwrite');
@@ -35,7 +36,7 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
     v1.close();
     const v2 = creerRepository({ nom: 'carnet-e2e-v1' });
     const lu = await v2.journal.lire('2026-09-30');
-    const migre = { journal: lu.humeur, contacts: lu.contacts, ancien: 'contactAvec' in lu, listes: (await v2.listes.items()).length, humeurs: (await v2.humeurs.tous()).length, notes: (await v2.notes.tous()).length, seances: (await v2.seances.tous()).length, schema: await v2.meta.lire('schema'), journee: await v2.meta.lire('journee') };
+    const migre = { journal: lu.humeur, contacts: lu.contacts, ancien: 'contactAvec' in lu, listes: (await v2.listes.items()).length, sujets: (await v2.listes.items('sujetRdv')).length, humeurs: (await v2.humeurs.tous()).length, notes: (await v2.notes.tous()).length, seances: (await v2.seances.tous()).length, schema: await v2.meta.lire('schema'), journee: await v2.meta.lire('journee') };
     await v2.fermer();
     await new Promise((ok) => { const r = indexedDB.deleteDatabase('carnet-e2e-v1'); r.onsuccess = ok; r.onerror = ok; r.onblocked = ok; });
     return {
@@ -43,7 +44,7 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
       octets: Array.from(new Uint8Array(relu.data)), duJour: duJour.map((e) => e.id === ep.id), snap: snaps[0] && snaps[0].id, migre,
     };
   });
-  expect(res).toEqual({ humeur: 7, lieu: 'lieu:bureau', explosions: 0, octets: [1, 2, 3], duJour: [true], snap: 'avant-migration-v5',
-    migre: { journal: 4, contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], ancien: false, listes: 197, humeurs: 0, notes: 0, seances: 0, schema: 5,
+  expect(res).toEqual({ humeur: 7, lieu: 'lieu:bureau', explosions: 0, octets: [1, 2, 3], duJour: [true], snap: 'avant-migration-v6',
+    migre: { journal: 4, contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], ancien: false, listes: 204, sujets: 7, humeurs: 0, notes: 0, seances: 0, schema: 6,
       journee: { ordre: ['lieu', 'humeur'], masques: ['explosions', 'humeur'], heuresMoment: [] } } });
 });
