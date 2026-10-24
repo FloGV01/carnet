@@ -3,7 +3,8 @@
 // carte (ui/composants/carte-emotions.js) : deux touchers. La note de 1 à 10 n'est plus proposée, ni la famille seule
 // de la v7 ; les anciens relevés gardent les leurs. Le relevé est créé au premier toucher (date et heure réelles, ou
 // l'heure de « C'était vers… »). Une fois un mot choisi, sa définition s'affiche et l'écran se referme 1,5 s plus tard
-// (chaque toucher ou glissement sur la carte relance le délai), sauf si « Ce que je faisais » a été ouvert pendant la
+// (chaque toucher ou glissement sur la carte, ou une heure de « C'était vers… », relance le délai ; la liste des heures
+// ouverte le suspend ; supprimer un relevé du jour l'annule), sauf si « Ce que je faisais » a été ouvert pendant la
 // saisie ou si la règle « Me ressourcer » joue : au-dessus des réponses, « Pour récupérer, je… » (domain/ressourcer.js).
 // « Ce que je faisais » et « C'était vers… » sont repliés à chaque ouverture. Les réponses sont dans un panneau collé
 // en bas, près du pouce (2b).
@@ -77,8 +78,9 @@ export function Moment() {
   const [, rafraichir] = useReducer((n) => n + 1, 0);
   const idRef = useRef(null);
   const file = useRef(Promise.resolve());
-  // La fermeture automatique : son minuteur, et `armee` tant qu'elle attend (un doigt posé sur la carte la suspend,
-  // levé ou la carte qui glisse, il la relance pour 1,5 s).
+  // La fermeture automatique : son minuteur, et `armee` tant qu'elle attend. Un doigt posé sur la carte, ou la liste
+  // « C'était vers… » ouverte, la suspend ; le doigt levé, la carte qui glisse, une heure choisie ou la liste refermée
+  // la relancent pour 1,5 s.
   const fermeture = useRef({ minuteur: null, armee: false });
   const aujourdhui = repo.aujourdhui();
   const { donnees } = useDonnees(async () => {
@@ -145,12 +147,19 @@ export function Moment() {
   };
   const choisirMot = (id) => choisir('emotion')(id);
   const choisirEnergie = (id) => choisir('energie', releve.emotion != null)(id);
-  const basculerVers = () => setVersOuvert(!versOuvert);
+  // Ouvrir la liste des heures suspend la fermeture qui attend : l'écran ne se ferme pas sous une liste qu'on vient
+  // d'ouvrir. Une heure choisie, ou la liste refermée, la relance.
+  const basculerVers = () => {
+    setVersOuvert(!versOuvert);
+    if (versOuvert) geste.relancer(); else geste.suspendre();
+  };
   // Une heure de « vers » (ou « Maintenant ») : sans relevé encore, rien n'est écrit, l'heure reste à
   // l'écran et sera posée à la création ; avec un relevé, il change d'heure. La liste a pu s'ouvrir avant 4 h et
   // se toucher après : une heure qui n'est plus proposée est celle du jour d'avant, elle est ignorée (sinon elle
-  // tomberait sur le nouveau jour) et la liste, restée ouverte, se rafraîchit.
+  // tomberait sur le nouveau jour) et la liste, restée ouverte, se rafraîchit. Un mot déjà choisi : comme tout
+  // toucher, l'heure relance le délai de la fermeture.
   const choisirQuand = (h) => {
+    geste.relancer();
     const maintenant = repo.maintenant();
     if (h != null && !heuresVers(maintenant).includes(h)) { rafraichir(); return; }
     const quand = h == null ? null : versDateHeure(maintenant, h);
@@ -164,7 +173,10 @@ export function Moment() {
     setFaisaisOuvert(true);
     annuler();
   };
+  // Supprimer un relevé du jour annule la fermeture qui attend : l'écran ne se ferme pas sous ce geste, et
+  // « Relevé supprimé · Annuler » n'est pas remplacé par « Émotion du moment notée ». Un nouveau mot la réarme.
   const supprimer = async (h) => {
+    annuler();
     const sauve = await repo.humeurs.supprimer(h.id);
     if (h.id === idRef.current) { idRef.current = null; setReleve(NEUF); }
     afficherToast('Relevé supprimé', { libelle: 'Annuler', faire: () => repo.humeurs.restaurer(sauve) });

@@ -15,9 +15,10 @@ export function ajusterLignes(zone, lignes) {
 }
 
 // Champ de texte libre, non contrôlé (la dictée iOS n'est jamais réécrite pendant la saisie).
-// Enregistré 500 ms après la frappe, à la sortie du champ et quand l'app passe en arrière-plan.
-// Le brouillon est doublé dans localStorage jusqu'à confirmation de l'écriture.
-export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur, placeholder, surEnregistrer, cleBrouillon, lignes = 3, dicter = true }) {
+// Enregistré 500 ms après la frappe, à la sortie du champ et quand l'app passe en arrière-plan ; avec `aLaSortie`,
+// seulement à la sortie du champ et en arrière-plan (Réglages › Émotions : un champ vidé pour être réécrit ne retire
+// pas la correction pendant la frappe). Le brouillon est doublé dans localStorage jusqu'à confirmation de l'écriture.
+export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur, placeholder, surEnregistrer, cleBrouillon, lignes = 3, dicter = true, aLaSortie = false }) {
   const zone = useRef(null);
   const minuteur = useRef(null);
   const enCours = useRef(false);
@@ -38,7 +39,10 @@ export function ChampTexte({ id, etiquette, icone, facultatif, ariaLabel, valeur
       retirerBrouillon();
     } catch { /* le brouillon local reste : rien n'est perdu */ }
   };
-  const planifier = () => { clearTimeout(minuteur.current); minuteur.current = setTimeout(enregistrer, 500); };
+  const planifier = () => {
+    clearTimeout(minuteur.current);
+    if (!aLaSortie) minuteur.current = setTimeout(enregistrer, 500);
+  };
 
   useEffect(() => {
     const z = zone.current;

@@ -10,6 +10,8 @@
 // mots d'une même famille côte à côte. Elle se fait glisser dans les deux sens ; rien n'est grisé.
 // Une vue remplace l'autre au même endroit : pendant 350 ms, ses boutons ignorent les touchers (un second toucher
 // rapide tomberait sur un mot jamais vu), fondu ou non (« Réduire les animations ») ; ils sont alors aria-disabled.
+// Pour VoiceOver, chaque zone est un groupe nommé par sa légende (« Basse · plutôt agréable ») ; ouverte depuis une
+// tuile, la carte met le focus sur la zone touchée, sinon (« Toute la carte », « ‹ Énergie ») sur le titre de la vue.
 // surEnergie(id | null), surMot(id | null) : les choix ; surRetour() : retour aux tuiles ; surGeste.suspendre() et
 // surGeste.relancer() : un doigt posé sur la carte, puis levé ou la carte qui glisse (la fermeture attend).
 import { html, useEffect, useLayoutEffect, useRef, useState } from '../lib.js';
@@ -26,7 +28,6 @@ const ID_ENERGIE = Object.freeze({ haute: 'energie:haute', moyenne: 'energie:moy
 const COTE_TEXTE = { gauche: 'plutôt désagréable', droite: 'plutôt agréable' };
 const NOM_FAMILLE = new Map(FAMILLES.flatMap((f) => f.mots.map((m) => [m.id, f.libelle])));
 const ZONES = ENERGIES.flatMap((energie) => COTES.map((cote) => ({ energie, cote, cle: cleZone({ energie, cote }), mots: motsDeZone({ energie, cote }) })));
-const reduit = () => Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 // Ouvre la carte sur une zone : centrée si elle tient dans le cadre, sinon son haut. Sans zone (« Toute la carte »), au
 // milieu : de part et d'autre du centre, sur la bande Moyenne. Positions de mise en page (offset*), que le fondu
@@ -76,9 +77,11 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
     if (vue.nom === 'carte' && cadre.current) centrer(cadre.current, vue.centre);
   }, [vue]);
   useEffect(() => {
-    if (!aFocaliser.current || !titre.current) return;
+    if (!aFocaliser.current) return;
     aFocaliser.current = false;
-    titre.current.focus({ preventScroll: true });
+    const zone = vue.nom === 'carte' && vue.centre && cadre.current && cadre.current.querySelector(`[data-zone="${vue.centre}"]`);
+    const cible = zone || titre.current;
+    if (cible) cible.focus({ preventScroll: true });
   }, [vue]);
   // Un toucher, sauf pendant la garde.
   const sauf = (faire) => (e) => { if (!enGarde) faire(e); };
@@ -111,8 +114,9 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
     </div>`;
   }
 
-  // Appui long : la définition, sans choisir. Le clic qui suit l'appui est ignoré ; un doigt qui bouge (la carte
-  // glisse) l'annule. Un nouvel appui repart de zéro.
+  // Appui long : la définition, sans choisir. Le clic de pointeur qui suit l'appui est ignoré ; un doigt qui bouge (la
+  // carte glisse) l'annule. Un nouvel appui repart de zéro, et chaque clic efface la marque : un appui long levé hors de
+  // la bulle n'avale pas le clic suivant, ni un clic sans pointeur (clavier, aides techniques : e.detail vaut 0).
   const poser = (id) => (e) => {
     const a = appui.current;
     clearTimeout(a.minuteur);
@@ -124,8 +128,10 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
     if (Math.hypot(e.clientX - a.x, e.clientY - a.y) > TOLERANCE_PX) clearTimeout(a.minuteur);
   };
   const lever = () => clearTimeout(appui.current.minuteur);
-  const toucherMot = (id) => {
-    if (appui.current.long) { appui.current.long = false; return; }
+  const toucherMot = (e, id) => {
+    const apresAppuiLong = appui.current.long;
+    appui.current.long = false;
+    if (apresAppuiLong && e.detail !== 0) return;
     if (emotion === id) { setMontre(null); surMot(null); return; }
     setMontre(id);
     surMot(id);
@@ -142,15 +148,15 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
       onPointerDown=${() => surGeste.suspendre()} onPointerUp=${() => surGeste.relancer()} onTouchEnd=${() => surGeste.relancer()}
       onScroll=${() => surGeste.relancer()}>
       <div class="carte-roue">
-        ${ZONES.map((z) => html`<div class=${`zone-carte zone-${z.cote}`} data-zone=${z.cle}>
-          <p class="legende-zone" aria-hidden="true">${libelle(ID_ENERGIE[z.energie])} · ${COTE_TEXTE[z.cote]}</p>
+        ${ZONES.map((z) => html`<div class=${`zone-carte zone-${z.cote}`} data-zone=${z.cle} role="group" aria-labelledby=${`legende-${z.cle}`} tabindex="-1">
+          <p class="legende-zone" id=${`legende-${z.cle}`}>${libelle(ID_ENERGIE[z.energie])} · ${COTE_TEXTE[z.cote]}</p>
           <div class="bulles-zone">${z.mots.map((id) => {
             const choisi = emotion === id;
             const nom = libelleEmotion(id);
             return html`<button type="button" class=${`bulle bulle-carte emo-${familleDe(id)}${montre === id && !choisi ? ' montree' : ''}`}
               aria-pressed=${choisi ? 'true' : 'false'} aria-label=${`${nom}, famille ${NOM_FAMILLE.get(id)}`}
               onPointerDown=${poser(id)} onPointerMove=${bouger} onPointerUp=${lever} onPointerCancel=${lever} onPointerLeave=${lever}
-              onContextMenu=${(e) => e.preventDefault()} onClick=${sauf(() => toucherMot(id))}>${coche()}${libelleChoix(nom)}</button>`;
+              onContextMenu=${(e) => e.preventDefault()} onClick=${sauf((e) => toucherMot(e, id))}>${coche()}${libelleChoix(nom)}</button>`;
           })}</div>
         </div>`)}
       </div>

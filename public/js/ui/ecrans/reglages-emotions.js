@@ -1,7 +1,9 @@
 // Réglages › Émotions (v8, spec §4) : le sens des 79 mots de la roue, par famille, tel que la carte de l'Émotion du
 // moment l'affiche. Un toucher sur un mot ouvre le champ de sa définition ; le texte s'enregistre à la sortie du champ
-// (méta `definitionsRoue`, sauvegardée avec le reste). « Revenir au texte de Carnet » retire la correction ; un champ
-// vidé fait de même. Le texte de Carnet (domain/definitions-roue.js) ne change jamais.
+// seulement, ou si l'app passe en arrière-plan (méta `definitionsRoue`, sauvegardée avec le reste) : la frappe reste
+// dans le brouillon local, et rien ne bouge sous le doigt pendant qu'on réécrit (ChampTexte `aLaSortie`).
+// « Revenir au texte de Carnet » retire la correction ; un champ vidé fait de même. Le texte de Carnet
+// (domain/definitions-roue.js) ne change jamais.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
@@ -54,7 +56,7 @@ export function ReglagesEmotions() {
             ${ouvert === m.id
               ? html`<div class="champ-definition"><${ChampTexte} key=${`${m.id}-${tour}`} id=${idChamp(m.id)} etiquette=${m.libelle}
                   valeur=${definition(m.id, corrections)} cleBrouillon=${`carnet:brouillon:definition:${m.id}`}
-                  surEnregistrer=${(texte) => ecrire(m.id, texte)} lignes=${2} dicter=${false} /></div>`
+                  surEnregistrer=${(texte) => ecrire(m.id, texte)} lignes=${2} dicter=${false} aLaSortie=${true} /></div>`
               : html`<button type="button" class="ligne-carte bouton-definition" onClick=${() => ouvrir(m.id)}>
                   <span class="mot-definitions">${m.libelle}</span>${' '}<span class="texte-definitions">${definition(m.id, corrections)}</span>
                 </button>`}

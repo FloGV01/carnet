@@ -171,10 +171,10 @@ test('la carte paraît en fondu de 200 ms au plus ; avec « Réduire les animati
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
-test('accessibilité : après une tuile, le focus va au titre « Émotion » de la carte ; après « ‹ Énergie », au titre « Énergie »', async ({ page }) => {
+test('accessibilité : après une tuile, le focus va à la zone touchée de la carte (v8) ; après « ‹ Énergie », au titre « Énergie » ; après « Toute la carte », au titre « Émotion »', async ({ page }) => {
   const vue = await ouvrir(page);
   await tuile(vue, 'Moyenne', 'agréable').click();
-  await expect(vue.getByRole('heading', { name: 'Émotion', level: 2 })).toBeFocused();
+  await expect(carte(vue).getByRole('group', { name: 'Moyenne · plutôt agréable', exact: true })).toBeFocused();
   await retourEnergie(vue).click();
   await expect(vue.getByRole('heading', { name: 'Énergie', level: 2 })).toBeFocused();
   await vue.getByRole('button', { name: 'Toute la carte', exact: true }).click();

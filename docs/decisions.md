@@ -454,56 +454,62 @@ Spec : `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`. Plan : `docs/sup
 
 **Placement des mots** (spec §4 et §12.5), dans `domain/carte-roue.js` : une colonne de 1 (le plus désagréable) à 6 (le plus agréable) et un rang d'énergie de 1 à 6 par mot. Les rangs 5-6 font la bande Haute, 3-4 la Moyenne, 1-2 la Basse.
 - **Sources consultées le 24/10, en lecture seule** :
-  - la liste de How We Feel en quatre zones de 36 mots (un paquet de cartes « How We Feel » en ligne : High Unpleasant, Low Unpleasant, High Pleasant, Low Pleasant). L'ordre de chaque paquet, lu comme la grille 6 × 6 de sa zone, donne la hauteur et le côté : le coin d'abord (Enraged, Ecstatic, Serene…), le centre de la carte en dernier ;
+  - la liste de How We Feel en quatre zones de 36 mots (un paquet de cartes « How We Feel » en ligne, tenu par un utilisateur : High Unpleasant, Low Unpleasant, High Pleasant, Low Pleasant). Elle atteste le **quadrant** d'un mot : son côté, et la moitié haute ou basse. Elle ne donne pas sa place dans le quadrant : lire l'ordre du paquet comme la grille 6 × 6 de la zone reste une hypothèse ;
   - le Mood Meter RULER (Yale) : aucune carte complète lisible en texte (les grilles officielles sont des images). Une page de présentation (vhtc.org) confirme les zones et les coins (Enraged en haut à gauche, At ease en haut du vert, Serene en bas à droite) : elle sert de recoupement, sans placer de mot.
-- **Conversion** : la grille de 12 × 12 de How We Feel est ramenée aux 6 × 6 de Carnet par paires de cases.
-- **33 mots ont un équivalent clair** et prennent sa zone et sa hauteur (« annexe » : la place du tableau §9 de l'annexe `hwf-placement.md`) :
+- **Règle retenue** (spec §12.5 : « sans source vérifiable, c'est le tableau §9 ») :
+  - la colonne et le rang de chaque mot sont ceux du tableau §9 de l'annexe `hwf-placement.md` (« annexe ») ;
+  - un mot qui a un équivalent clair dans la liste de How We Feel garde le quadrant de cette liste. L'annexe le lui donne déjà pour 31 des 33 ;
+  - si l'annexe le met dans l'autre moitié, il prend le rang de son quadrant le plus proche de l'annexe : **Dégoût** (« disgusted », moitié basse) passe du rang 4 au rang 3, **Perplexe** (« confused », moitié haute) du rang 3 au rang 4. Tous deux restent dans la bande Moyenne ;
+  - la bande d'énergie, qui décide sous quelle tuile on trouve un mot, est donc celle de l'annexe pour les 79 mots.
+- **Relecture de la tâche 2** : une première version prenait aussi le rang et la colonne de l'ordre du paquet. Elle changeait de bande 10 mots par rapport à cette règle (Jaloux, Irrité, Fautif, Vulnérable, Espiègle, Optimiste, Curieux, Perplexe, Exclus, Calme). Écartée : la hauteur dans le quadrant n'est attestée par aucune source vérifiable, et l'utilisateur ne relit pas ces places (spec §2).
+- **Les 33 mots qui ont un équivalent clair** :
 
-| Mot | Famille | How We Feel | Carte (colonne, rang) | Annexe |
-|---|---|---|---|---|
-| Embarrassé | Colère | embarrassed | gauche, moyenne (2, 4) | 2, 4 (inchangé) |
-| Insécurisé | Colère | insecure | gauche, moyenne (2, 3) | 2, 3 (inchangé) |
-| Jaloux | Colère | jealous | gauche, haute (1, 5) | 2, 4 |
-| Furieux | Colère | furious | gauche, haute (1, 5) | 1, 6 |
-| Enragé | Colère | enraged | gauche, haute (1, 6) | 1, 6 (inchangé) |
-| Irrité | Colère | irritated | gauche, haute (3, 5) | 2, 4 |
-| Répugnant | Dégoût | repulsed | gauche, moyenne (1, 4) | 1, 4 (inchangé) |
-| Dégoût | Dégoût | disgusted | gauche, moyenne (1, 3) | 1, 4 |
-| Fautif | Tristesse | guilty | gauche, basse (1, 2) | 2, 3 |
-| Honteux | Tristesse | ashamed | gauche, moyenne (1, 3) | 1, 3 (inchangé) |
-| Impuissant | Tristesse | helpless | gauche, basse (3, 1) | 1, 2 |
-| Vulnérable | Tristesse | vulnerable | gauche, basse (1, 2) | 2, 3 |
-| Inspiré | Joie | inspired | droite, haute (6, 6) | 5, 5 |
-| Espiègle | Joie | playful | droite, moyenne (4, 4) | 5, 5 |
-| Optimiste | Joie | optimistic | droite, haute (6, 5) | 5, 4 |
-| Accompli | Joie | accomplished | droite, moyenne (6, 4) | 6, 4 (inchangé) |
-| Respecté | Joie | respected | droite, moyenne (5, 3) | 5, 3 (inchangé) |
-| Curieux | Joie | curious | droite, haute (4, 5) | 4, 4 |
-| Extasié | Joie | ecstatic | droite, haute (6, 6) | 6, 6 (inchangé) |
-| Confiant | Joie | confident | droite, moyenne (5, 4) | 5, 4 (inchangé) |
-| Énergique | Surprise | energized | droite, haute (4, 5) | 5, 6 |
-| Avide | Surprise | eager | droite, haute (4, 5) | 4, 5 (inchangé) |
-| Effrayé | Surprise | frightened | gauche, haute (1, 5) | 2, 5 |
-| Perplexe | Surprise | confused | gauche, haute (3, 5) | 3, 3 |
-| Choqué | Surprise | shocked | gauche, haute (2, 6) | 2, 5 |
-| Terrifié | Peur | terrified | gauche, haute (1, 6) | 1, 6 (inchangé) |
-| Préoccupé | Peur | worried | gauche, moyenne (2, 4) | 3, 4 |
-| Exclus | Peur | excluded | gauche, basse (2, 2) | 1, 3 |
-| Calme | Sérénité | calm | droite, moyenne (4, 3) | 5, 2 |
-| Détendu | Sérénité | relaxed | droite, basse (4, 2) | 5, 2 |
-| Tranquille | Sérénité | tranquil | droite, basse (4, 1) | 5, 1 |
-| Serein | Sérénité | serene | droite, basse (6, 1) | 6, 2 |
-| En sécurité | Sérénité | safe | droite, basse (5, 1) | 5, 2 |
+| Mot | Famille | How We Feel | Quadrant de la liste | Carte (colonne, rang) | Bande |
+|---|---|---|---|---|---|
+| Embarrassé | Colère | embarrassed | haut gauche | 2, 4 | Moyenne |
+| Insécurisé | Colère | insecure | bas gauche | 2, 3 | Moyenne |
+| Jaloux | Colère | jealous | haut gauche | 2, 4 | Moyenne |
+| Furieux | Colère | furious | haut gauche | 1, 6 | Haute |
+| Enragé | Colère | enraged | haut gauche | 1, 6 | Haute |
+| Irrité | Colère | irritated | haut gauche | 2, 4 | Moyenne |
+| Répugnant | Dégoût | repulsed | haut gauche | 1, 4 | Moyenne |
+| Dégoût | Dégoût | disgusted | bas gauche | 1, 3 (annexe : 1, 4) | Moyenne |
+| Fautif | Tristesse | guilty | bas gauche | 2, 3 | Moyenne |
+| Honteux | Tristesse | ashamed | bas gauche | 1, 3 | Moyenne |
+| Impuissant | Tristesse | helpless | bas gauche | 1, 2 | Basse |
+| Vulnérable | Tristesse | vulnerable | bas gauche | 2, 3 | Moyenne |
+| Inspiré | Joie | inspired | haut droite | 5, 5 | Haute |
+| Espiègle | Joie | playful | haut droite | 5, 5 | Haute |
+| Optimiste | Joie | optimistic | haut droite | 5, 4 | Moyenne |
+| Accompli | Joie | accomplished | haut droite | 6, 4 | Moyenne |
+| Respecté | Joie | respected | bas droite | 5, 3 | Moyenne |
+| Curieux | Joie | curious | haut droite | 4, 4 | Moyenne |
+| Extasié | Joie | ecstatic | haut droite | 6, 6 | Haute |
+| Confiant | Joie | confident | haut droite | 5, 4 | Moyenne |
+| Énergique | Surprise | energized | haut droite | 5, 6 | Haute |
+| Avide | Surprise | eager | haut droite | 4, 5 | Haute |
+| Effrayé | Surprise | frightened | haut gauche | 2, 5 | Haute |
+| Perplexe | Surprise | confused | haut gauche | 3, 4 (annexe : 3, 3) | Moyenne |
+| Choqué | Surprise | shocked | haut gauche | 2, 5 | Haute |
+| Terrifié | Peur | terrified | haut gauche | 1, 6 | Haute |
+| Préoccupé | Peur | worried | haut gauche | 3, 4 | Moyenne |
+| Exclus | Peur | excluded | bas gauche | 1, 3 | Moyenne |
+| Calme | Sérénité | calm | bas droite | 5, 2 | Basse |
+| Détendu | Sérénité | relaxed | bas droite | 5, 2 | Basse |
+| Tranquille | Sérénité | tranquil | bas droite | 5, 1 | Basse |
+| Serein | Sérénité | serene | bas droite | 6, 2 | Basse |
+| En sécurité | Sérénité | safe | bas droite | 5, 2 | Basse |
 
-- **Les 46 autres gardent le tableau §9 de l'annexe**, faute d'équivalent clair : Dévasté, Amer, Défiant, Provocateur, Hostile, Mécontent, Retiré, Suspect, Sceptique, Sarcastique, Jugé, Aversion, Révolté, Détestable, Hésitant, Ignoré, Replié, Minable, Vide, Abandonné, Isolé, Amorphe, Indifférent, Ouvert, Sensible, Aimant, Provocant, Courageux, Important, Amusé, Libéré, Abasourdi, Désillusionné, Consterné, Craintif, Accablé (« overwhelmed » ou « écrasé », le plus ambigu), Incapable, Inférieur, Sans valeur, Inadéquat, Insignifiant, Non respecté, Ridiculisé, Apaisé, Reposé, Posé.
-- **Conséquence visible** : Calme passe dans la bande Moyenne, comme « calm » chez How We Feel (en haut de la zone verte). Les zones comptent 12 et 9 mots (Haute), 21 et 12 (Moyenne), 20 et 5 (Basse), à gauche puis à droite.
+- **Les 46 autres n'ont pas d'équivalent clair** et gardent l'annexe telle quelle : Dévasté, Amer, Défiant, Provocateur, Hostile, Mécontent, Retiré, Suspect, Sceptique, Sarcastique, Jugé, Aversion, Révolté, Détestable, Hésitant, Ignoré, Replié, Minable, Vide, Abandonné, Isolé, Amorphe, Indifférent, Ouvert, Sensible, Aimant, Provocant, Courageux, Important, Amusé, Libéré, Abasourdi, Désillusionné, Consterné, Craintif, Accablé (« overwhelmed » ou « écrasé », le plus ambigu), Incapable, Inférieur, Sans valeur, Inadéquat, Insignifiant, Non respecté, Ridiculisé, Apaisé, Reposé, Posé.
+- **Les zones** comptent 9 et 8 mots (Haute), 27 et 12 (Moyenne), 17 et 6 (Basse), à gauche puis à droite : les comptes du §9.1 de l'annexe.
 
 **Choix faits pendant la construction**
 - **La carte** : six zones, celles des six tuiles (trois bandes, deux côtés), chacune large comme le panneau ; une tuile ouvre la carte sur sa zone entière. Dans une zone, les mots vont du plus haut au plus bas et du bord vers le centre, ceux d'une même famille côte à côte. Bulles rondes à la couleur de leur famille (`-tint-2` et `-text`, AA), d'un diamètre qui suit leur plus long mot (« Non respecté » sur deux lignes), 4 par ligne environ. Une petite légende (« Haute · plutôt désagréable ») en tête de chaque zone, en texte secondaire. « Toute la carte », un lien discret en texte secondaire au-dessus des tuiles, ouvre la carte au milieu : la bande Moyenne, de part et d'autre du centre.
-- **Les tuiles** : le nom de l'énergie vient de la liste Énergie (il se renomme dans Réglages › Listes) ; deux ou trois mots d'exemple de la zone, de familles différentes quand elle en a. Retoucher la tuile choisie efface l'énergie, comme tout choix ; l'autre tuile de la même énergie ne change que le côté, rien n'est écrit.
-- **La fermeture** : 1,5 s après un mot. Un autre mot, un appui long, un doigt posé ou un glissement sur la carte relance le délai ; « ‹ Énergie » l'annule. Une tuile touchée quand un mot est déjà choisi rouvre la carte, et l'écran se ferme 1,5 s plus tard. « Fermer » dit « Émotion du moment notée » (avec « Annuler ») dès qu'un relevé existe, l'énergie seule comprise.
+- **Les tuiles** : le nom de l'énergie vient de la liste Énergie (il se renomme dans Réglages › Listes) ; deux ou trois mots d'exemple de la zone, de familles différentes quand elle en a, et **vus dès l'ouverture de la carte** : les zones Moyenne et Basse, plus hautes que le cadre, s'ouvrent sur leur haut, leurs exemples sont donc pris parmi leurs premiers mots (Préoccupé et Jugé ; Vide et Dévasté), vérifié à 390 × 844. Retoucher la tuile choisie efface l'énergie, comme tout choix ; l'autre tuile de la même énergie ne change que le côté, rien n'est écrit.
+- **La fermeture** : 1,5 s après un mot. Un autre mot, un appui long, un doigt posé ou un glissement sur la carte relance le délai ; « ‹ Énergie » l'annule. Ouvrir « Maintenant ▾ » le suspend (l'écran ne se ferme pas sous la liste des heures) ; une heure choisie, ou la liste refermée, le relance. Supprimer un relevé du jour l'annule : l'écran reste, et « Relevé supprimé · Annuler » n'est pas remplacé par « Émotion du moment notée » ; un nouveau mot le réarme. Une tuile touchée quand un mot est déjà choisi rouvre la carte, et l'écran se ferme 1,5 s plus tard. « Fermer » dit « Émotion du moment notée » (avec « Annuler ») dès qu'un relevé existe, l'énergie seule comprise.
 - **« Ce que je faisais » ouvert une fois pendant la saisie** suffit : l'écran ne se ferme plus seul, même replié ensuite. Ce repli et « C'était vers… » sont repliés à chaque ouverture ; les anciennes clés de l'iPhone (`carnet:moment:faisais`, `carnet:moment:vers`) ne sont plus lues.
-- **Appui long** : 0,5 s ; la bulle montrée est cerclée à la couleur de sa famille, la définition s'affiche, rien n'est choisi. La garde de 350 ms vaut pour toute la vue (tuiles, carte, « ‹ Énergie », « Toute la carte »).
+- **Appui long** : 0,5 s ; la bulle montrée est cerclée à la couleur de sa famille, la définition s'affiche, rien n'est choisi. Seul le clic de pointeur qui suit l'appui est ignoré : un appui long levé hors de la bulle n'avale ni le clic suivant ni une activation au clavier. La garde de 350 ms vaut pour toute la vue (tuiles, carte, « ‹ Énergie », « Toute la carte »).
+- **VoiceOver** : chaque zone est un groupe nommé par sa légende (« Basse · plutôt agréable »). Ouverte depuis une tuile, la carte met le focus sur la zone touchée, et ses mots viennent juste après ; depuis « Toute la carte », sur le titre « Émotion ».
 - **La définition** s'affiche sous la carte : « Irrité : agacé par… », le mot à la couleur de sa famille. Les 79 textes sont dans `domain/definitions-roue.js` (figés) ; leur liste sera reprise ici pour relecture (tâche 9).
-- **Réglages › Émotions** : dans « Ma saisie », après Listes, carré neutre comme ses voisins. Une carte par famille ; un toucher ouvre le champ du mot (le champ de texte de l'app : il enregistre à la sortie, et aussi 500 ms après la frappe, comme partout). Un champ vidé, ou remis au texte de Carnet, retire la correction. « Revenir au texte de Carnet » suit chaque mot corrigé.
+- **Réglages › Émotions** : dans « Ma saisie », après Listes, carré neutre comme ses voisins. Une carte par famille ; un toucher ouvre le champ du mot (le champ de texte de l'app, avec `aLaSortie` : il n'enregistre qu'à la sortie du champ, ou si l'app passe en arrière-plan, et la frappe reste dans le brouillon local ; vider le champ pour le réécrire ne retire donc pas la correction, et « Revenir au texte de Carnet » ne disparaît pas sous le doigt). Un champ vidé, ou remis au texte de Carnet, retire la correction. « Revenir au texte de Carnet » suit chaque mot corrigé.
 - **La roue en familles de la v7** (`ui/composants/bulles.js`) est retirée avec ses styles.
