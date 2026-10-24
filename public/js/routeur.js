@@ -29,6 +29,8 @@ export const ROUTES = [
   { nom: 'reglages-journee', motif: '/reglages/journee' },
   { nom: 'reglages-moment-difficile', motif: '/reglages/moment-difficile' },
   { nom: 'reglages-ressourcer', motif: '/reglages/ressourcer' },
+  // Le sens des mots de la roue (v8, spec §4) : les définitions de la carte de l'Émotion du moment.
+  { nom: 'reglages-emotions', motif: '/reglages/emotions' },
   { nom: 'reglages-aide-iphone', motif: '/reglages/aide-iphone' },
   { nom: 'listes-index', motif: '/reglages/listes' },
   { nom: 'listes', motif: `/reglages/listes/${ID}`, params: ['liste'] },

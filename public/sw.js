@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '55b5ee582ff3';
+const VERSION = 'ab8c61fd0bbc';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -38,9 +38,11 @@ const FICHIERS = [
   "./js/db/sauvegarde.js",
   "./js/db/zip.js",
   "./js/domain/apres-coup.js",
+  "./js/domain/carte-roue.js",
   "./js/domain/champs.js",
   "./js/domain/contacts.js",
   "./js/domain/dates.js",
+  "./js/domain/definitions-roue.js",
   "./js/domain/exercices.js",
   "./js/domain/explosions.js",
   "./js/domain/historique.js",
@@ -78,7 +80,7 @@ const FICHIERS = [
   "./js/store.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
-  "./js/ui/composants/bulles.js",
+  "./js/ui/composants/carte-emotions.js",
   "./js/ui/composants/coche.js",
   "./js/ui/composants/confirmation.js",
   "./js/ui/composants/dicter.js",
@@ -132,6 +134,7 @@ const FICHIERS = [
   "./js/ui/ecrans/parcours-fiche.js",
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
+  "./js/ui/ecrans/reglages-emotions.js",
   "./js/ui/ecrans/reglages-moment-difficile.js",
   "./js/ui/ecrans/reglages-ressourcer.js",
   "./js/ui/ecrans/reglages.js",

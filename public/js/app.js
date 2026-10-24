@@ -21,6 +21,7 @@ import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
 import { MaJournee } from './ui/ecrans/ma-journee.js';
 import { ReglagesMomentDifficile } from './ui/ecrans/reglages-moment-difficile.js';
 import { ReglagesRessourcer } from './ui/ecrans/reglages-ressourcer.js';
+import { ReglagesEmotions } from './ui/ecrans/reglages-emotions.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
@@ -51,6 +52,7 @@ const ECRANS = {
   'reglages-journee': () => html`<${MaJournee} />`,
   'reglages-moment-difficile': () => html`<${ReglagesMomentDifficile} />`,
   'reglages-ressourcer': () => html`<${ReglagesRessourcer} />`,
+  'reglages-emotions': () => html`<${ReglagesEmotions} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   historique: () => html`<${Historique} />`,
   soins: () => html`<${Soins} />`,

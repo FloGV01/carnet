@@ -168,8 +168,14 @@ const sansCoche = (page) => page.evaluate(() => [...document.querySelectorAll('[
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
-  ['Émotion du moment', (p) => aller(p, '#/moment'), '.panneau-reponses'],
-  ['Émotion du moment, mots', async (p) => { await p.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Peur', exact: true }).click(); }, '.bulles-mots'],
+  ['Émotion du moment', (p) => aller(p, '#/moment'), '.tuiles-emotion'],
+  // v8 : la carte, ouverte par une tuile, un mot choisi et sa définition (« Ce que je faisais » ouvert d'abord : l'écran
+  // ne se ferme pas seul pendant le contrôle).
+  ['Émotion du moment, carte', async (p) => {
+    await p.getByRole('button', { name: /^Ce que je faisais/ }).click();
+    await p.getByRole('button', { name: 'Énergie moyenne, plutôt désagréable', exact: true }).click();
+    await p.getByRole('button', { name: 'Préoccupé, famille Peur', exact: true }).click();
+  }, '.mot-definition'],
   ['Épisode, étape 1', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/episode/nouveau'); }, '.titre-question'],
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
@@ -193,6 +199,7 @@ const ECRANS = (ids) => [
   ['Réglages', (p) => aller(p, '#/reglages'), '.reglages .a-propos'],
   ['Réglages › Le soir', (p) => aller(p, '#/reglages/journee'), '.ma-journee .avec-carres'],
   ['Réglages › Listes', (p) => aller(p, '#/reglages/listes'), '.listes .carte-groupe'],
+  ['Réglages › Émotions', (p) => aller(p, '#/reglages/emotions'), '.reglages-emotions .bouton-definition'],
   ['Réglages › une liste', (p) => aller(p, '#/reglages/listes/declencheur'), '.element-liste'],
   ['Réglages › Rappels', (p) => aller(p, '#/reglages/rappel'), '.heures-moment'],
   ['Réglages › Moment difficile', (p) => aller(p, '#/reglages/moment-difficile'), '.reglage-respiration'],
@@ -331,8 +338,9 @@ test('Réglages et Le soir : au texte par défaut et en grand texte (23 px), le 
       await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
       await stabiliser(page);
       const rangees = await margesTexte(page);
-      // Réglages : Sauvegarde (2), Ma saisie (3), Moment difficile (4) ; Le soir : 8 champs et pesé · rechargé.
-      expect(rangees.length, route).toBe(9);
+      // Réglages : Sauvegarde (2), Ma saisie (4, Émotions en v8), Moment difficile (4) ; Le soir : 8 champs et pesé ·
+      // rechargé.
+      expect(rangees.length, route).toBe(route === '#/reglages' ? 10 : 9);
       for (const x of rangees) {
         const ou = `${route} ${taille ? `${taille} px` : 'défaut'} : ${x.texte}`;
         expect(x.haut, ou).toBeGreaterThanOrEqual(8);

@@ -614,7 +614,6 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .point-releve-moment { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); margin-right: 10px; }
 .point-releve-moment.point-creux { background: none; border: 1.5px solid var(--text-2); }
 .texte-releve { flex: 1; min-width: 0; padding: 6px 0; line-height: 1.3; font-weight: 500; color: var(--text); }
-.segmente.energie button { min-height: 52px; }
 /* Analyse v4 : Avant tes explosions, Profil de ta journée */
 .profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
 .mots-utilisateur { margin-top: var(--esp-3); }
@@ -726,6 +725,18 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ressourcer-liste .respiration { padding-top: 0; }
 .reglages-ressourcer .ligne-interrupteur { padding-top: 12px; padding-bottom: 12px; }
 .reglages-ressourcer .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); line-height: 1.35; }
+/* Réglages › Émotions (v8) : une carte par famille, sous son nom et un point à sa couleur ; une rangée par mot, le mot
+   puis son sens. Touchée, la rangée devient le champ de la définition ; « Revenir au texte de Carnet » la suit. */
+.reglages-emotions { gap: 10px; }
+.famille-definitions { display: flex; flex-direction: column; gap: 6px; }
+.titre-famille-definitions { display: flex; align-items: center; gap: 8px; padding: 10px 0 0; }
+.point-famille { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); }
+.bouton-definition { flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 16px; min-height: 58px; }
+.mot-definitions { font-weight: 600; }
+.texte-definitions { font-size: var(--t-sous); line-height: 1.35; color: var(--text-2); text-wrap: pretty; }
+.champ-definition { padding: 10px 16px; }
+.champ-definition .etiquette { font-weight: 600; }
+.ligne-definition > .revenir-carnet { margin: -6px 16px 4px; font-size: var(--t-sous); font-weight: 600; }
 /* « J'ai fini pour ce soir » (v5) */
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .fini-soir .phrase-recap { margin-top: 0; }

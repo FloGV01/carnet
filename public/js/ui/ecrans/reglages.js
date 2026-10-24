@@ -1,6 +1,6 @@
-// Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes,
-// rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me ressourcer,
-// aide iPhone), puis à propos et la zone sensible (v6.1). v7 : la section « Analyse » (signal de ressemblance,
+// Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes, émotions (v8 : le
+// sens des mots de la roue), rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me
+// ressourcer, aide iPhone), puis à propos et la zone sensible (v6.1). v7 : la section « Analyse » (signal de ressemblance,
 // tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
@@ -85,6 +85,7 @@ export function Reglages() {
     <ul class="liste carte carte-groupe avec-carres" aria-labelledby="titre-ma-saisie">
       <${LigneLien} href="#/reglages/journee" icone="aujourdhui" titre="Le soir" />
       <${LigneLien} href="#/reglages/listes" icone="listes" titre="Listes" />
+      <${LigneLien} href="#/reglages/emotions" icone="emotion" titre="Émotions" />
       <${LigneLien} href="#/reglages/rappel" icone="rappel" titre="Rappels" />
     </ul>
 

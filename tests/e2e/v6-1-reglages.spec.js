@@ -2,9 +2,9 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { LISTES, NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 
-// v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Rappels) et « Moment
-// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 : la section
-// Analyse disparaît avec le signal de ressemblance et les tendances).
+// v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Émotions en v8, Rappels)
+// et « Moment difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 :
+// la section Analyse disparaît avec le signal de ressemblance et les tendances).
 // « Le soir » (ex-« Ma journée ») ne règle plus que les champs du soir ; les heures de l'humeur du moment passent
 // dans Rappels, dans la même méta. L'index des Listes est rangé par écran. Écran de 390 × 844, celui du projet.
 const nav = (page, nom) => page.getByRole('navigation').getByRole('link', { name: nom, exact: true });
@@ -26,7 +26,7 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
   const ordre = await page.locator('main.reglages').evaluate((m) => [...m.querySelectorAll('h2, a[href^="#/"]')].map((e) => e.textContent.trim()));
   expect(ordre).toEqual([
     'Sauvegarde',
-    'Ma saisie', 'Le soir', 'Listes', 'Rappels',
+    'Ma saisie', 'Le soir', 'Listes', 'Émotions', 'Rappels',
     'Moment difficile', 'Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone',
     'À propos', 'Zone sensible', 'Tout effacer',
   ]);
@@ -34,7 +34,7 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
   await expect(page.getByRole('switch')).toHaveCount(0);
   // Chaque groupe de liens porte le nom de son intertitre et mène où il faut.
   const liens = async (nom) => page.getByRole('list', { name: nom, exact: true }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href')));
-  expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/rappel']);
+  expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/emotions', '#/reglages/rappel']);
   expect(await liens('Moment difficile')).toEqual(['#/mon-plan', '#/reglages/moment-difficile', '#/reglages/ressourcer', '#/reglages/aide-iphone']);
   // La sauvegarde reste en tête : ses boutons avant le premier intertitre de liens.
   const exporter = await page.getByRole('button', { name: 'Exporter' }).boundingBox();

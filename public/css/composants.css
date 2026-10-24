@@ -430,67 +430,72 @@ button.effacer svg { width: 18px; height: 18px; }
 .bloc-reponse { display: flex; flex-direction: column; gap: 10px; }
 .tete-reponse { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); min-height: 24px; }
 .titre-reponse { font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.aide-reponse { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-align: right; }
-.panneau-reponses .segmente.energie button { min-height: var(--cible-bouton); font-size: var(--t-corps); }
-.retour-familles { min-height: var(--cible); margin: -10px 0 -10px -6px; padding: 0 6px 0 0; gap: 2px; }
-.retour-familles svg { width: 20px; height: 20px; }
-.titre-famille { display: inline-flex; align-items: center; gap: 8px; color: var(--c-text); }
-/* Le mot choisi, à droite du titre « Émotion » de la vue des familles (une bulle n'y garde que le nom de sa famille). */
-.mot-choisi { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font: 600 var(--t-sous)/1.3 var(--police); color: var(--c-text); text-align: right; }
-.point-famille { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); }
+.retour-energie { min-height: var(--cible); margin: -10px 0 -10px -6px; padding: 0 6px 0 0; gap: 2px; }
+.retour-energie svg { width: 20px; height: 20px; }
+/* « Toute la carte » : un lien discret, en texte secondaire. */
+.toute-la-carte { min-height: var(--cible); margin: -10px 0; padding: 0 0 0 6px; gap: 2px; font-size: var(--t-sous); color: var(--text-2); }
+.toute-la-carte svg { width: 16px; height: 16px; }
 
-/* Bulles de la roue des émotions (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue. Non
-   choisie : -tint-2 et texte -text ; choisie : -fill, -on, 600 et coche, comme tout choix. */
-.bulle {
-  border: 0; background: var(--c-tint-2); color: var(--c-text); font-weight: 500; text-align: center;
+/* Émotion du moment (v8, spec §4) : les six tuiles, sous « plutôt désagréable » et « plutôt agréable ». Une tuile
+   enregistre l'énergie : non choisie, --fond-choix ; choisie, la couleur du parcours (-fill, -on, 600 et coche).
+   Ses mots d'exemple ont la couleur de leur famille (.emo-*), qui ne vaut que pour la roue. */
+.tuiles-emotion { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ecart); }
+.cote-tuiles { padding: 0 4px; font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
+/* Le nom de l'énergie en haut, la coche devant lui une fois choisie ; les mots d'exemple dessous, sur toute la largeur. */
+.tuile-emotion {
+  min-height: 4.4rem; padding: 8px 12px; border: 0; border-radius: var(--r-moyen);
+  background: var(--fond-choix); color: var(--text); text-align: left; font-size: var(--t-corps); line-height: 1.2;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: center; row-gap: 3px;
   transition: background var(--duree), color var(--duree);
 }
+.tuile-emotion[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
+.tuile-emotion > .coche { grid-area: 1 / 1; align-self: center; margin-right: 4px; }
+.tuile-emotion > .coche svg { width: 15px; height: 15px; }
+.tuile-emotion > .libelle-choix { grid-area: 1 / 2; }
+.tuile-exemples { grid-area: 2 / 1 / 3 / 3; display: flex; flex-wrap: wrap; column-gap: 8px; font-size: var(--t-note); line-height: 1.3; font-weight: 500; }
+.exemple-tuile { color: var(--c-text); }
+.tuile-emotion[aria-pressed="true"] .exemple-tuile { color: inherit; }
+
+/* La carte : un cadre qui glisse dans les deux sens, de bord à bord du panneau, et dedans les six zones (trois bandes
+   d'énergie, deux côtés), chacune large comme le panneau : ouverte sur une zone, la carte la montre en entier. */
+.carte-cadre {
+  height: clamp(13rem, 44dvh, 26rem); margin: 0 calc(-1 * var(--marge)); overflow: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; animation: apparition-carte var(--duree-anim) ease-out;
+}
+@keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
+.carte-roue {
+  position: relative; display: grid; grid-template-columns: repeat(2, 100cqi); gap: 26px 28px; width: max-content;
+  padding: 10px var(--marge) 18px;
+}
+.zone-carte { display: flex; flex-direction: column; gap: 8px; }
+.legende-zone { padding: 0 2px; font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
+.zone-droite .legende-zone { text-align: right; }
+.bulles-zone { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; }
+/* À gauche, la carte part du bord gauche (le plus désagréable) ; à droite, du bord droit (le plus agréable). Une ligne
+   incomplète se range contre le centre. */
+.zone-gauche .bulles-zone { justify-content: flex-end; }
+.zone-droite .bulles-zone { flex-direction: row-reverse; justify-content: flex-end; }
+/* Une bulle ronde par mot, à la couleur de sa famille : non choisie, -tint-2 et texte -text ; choisie, -fill, -on,
+   600 et la coche au-dessus du mot. Son diamètre suit son plus long mot (« Non respecté » passe sur deux lignes) ; le
+   libellé garde la largeur de sa version en 600 (coche.js) : choisir ne pousse aucune voisine. La bulle choisie
+   grossit sans bouger ; celle dont un appui long montre le sens est cerclée. */
+.bulle {
+  border: 0; background: var(--c-tint-2); color: var(--c-text); font-weight: 500; text-align: center;
+  transition: background var(--duree), color var(--duree), transform var(--duree);
+}
 .bulle[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
-/* Une vue qui paraît (familles, mots d'une famille) : un fondu de 200 ms, rien avec « Réduire les animations ». */
-.bulles { animation: apparition-bulles var(--duree-anim) ease-out; }
-@keyframes apparition-bulles { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
-/* Les 7 familles, en grappe : des bulles rondes posées dans les creux de la rangée voisine (pas hexagonal, × 0,866).
-   Le diamètre suit la taille du texte (5rem), sans dépasser la largeur du panneau (100cqi : sa largeur utile). Le
-   nom suit la taille du texte jusqu'à ce que la bulle le contienne tout juste. 4 bulles puis 3 (4-3) tant que le nom
-   y tient à --t-sous ; sinon (grand texte, écran étroit), 2-3-2, une rosace de 3 bulles au plus par rangée. */
-.bulles-familles {
-  --pas: min(calc(5rem + var(--ecart)), calc(100cqi / 4));
-  --d: calc(var(--pas) - var(--ecart));
-  display: grid; justify-content: center;
-  grid-template-columns: repeat(8, calc(var(--pas) / 2));
-  grid-template-rows: calc(var(--pas) * .866) var(--d);
+.bulle-carte {
+  position: relative; flex: none; width: min-content; min-width: 4.6rem; aspect-ratio: 1; padding: 0 9px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-size: var(--t-petit); line-height: 1.15; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
 }
-.bulle-famille {
-  position: relative; grid-column-end: span 2; justify-self: center; align-self: start;
-  width: var(--d); height: var(--d); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; padding: 4px;
-  font-size: min(var(--t-sous), calc(var(--d) * .19)); line-height: 1.15;
-}
-.bulle-famille:nth-child(5) { grid-column-start: 2; }
-/* La coche d'une famille choisie se pose au-dessus du nom, sans le déplacer : il reste au milieu, où la bulle est
-   la plus large. */
-.bulle-famille > .coche { position: absolute; top: calc(50% - .575em - 20px); left: calc(50% - 8px); }
-/* Le nom tient à --t-sous dans une bulle de 4,64rem (--t-sous / 0,19). Quatre de ces bulles et leurs écarts
-   (18,6rem + 24 px, soit 20rem à 17 px) ne tiennent plus dans le panneau : rosace 2-3-2, 3 bulles au plus par rangée. */
-@container reponses (max-width: 20rem) {
-  .bulles-familles {
-    --pas: min(calc(5rem + var(--ecart)), calc(100cqi / 3));
-    grid-template-columns: repeat(6, calc(var(--pas) / 2));
-    grid-template-rows: calc(var(--pas) * .866) calc(var(--pas) * .866) var(--d);
-  }
-  .bulle-famille:nth-child(5) { grid-column-start: auto; }
-  .bulle-famille:nth-child(1), .bulle-famille:nth-child(6) { grid-column-start: 2; }
-  .bulle-famille:nth-child(3) { grid-column-start: 1; }
-}
-/* Les mots d'une famille : des bulles à la largeur de leur mot, centrées, sur plusieurs lignes. Choisir ne change
-   pas la largeur d'une bulle (coche.js) : les autres ne bougent pas. */
-.bulles-mots { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--ecart); }
-.bulle-mot {
-  --demi-coche: 10px; min-height: var(--cible); padding: 0 10px; border-radius: calc(var(--cible) / 2);
-  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  font-size: var(--t-sous); line-height: 1.2; white-space: nowrap;
-}
-.bulle-mot:not([aria-pressed="true"]) > .coche + * { margin-inline: var(--demi-coche); }
+.bulle-carte[aria-pressed="true"] { transform: scale(1.12); z-index: 1; }
+.bulle-carte.montree { box-shadow: 0 0 0 2px var(--c); }
+.bulle-carte .coche svg { width: 15px; height: 15px; }
+/* La définition, sous la carte : le mot choisi (ou montré) à la couleur de sa famille, puis son sens. */
+.definition-carte { min-height: calc(2 * 1.35em); font-size: var(--t-sous); line-height: 1.35; color: var(--text); text-wrap: pretty; }
+.mot-definition { font-weight: 600; color: var(--c-text); }
+.aide-definition { color: var(--text-2); }
 
 .ligne-date { padding: 0 var(--marge); flex: none; }
 .ligne-date .btn-lien { color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }

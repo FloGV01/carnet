@@ -10,6 +10,7 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
   assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
   assert.equal(lireRoute('#/reglages/ressourcer').nom, 'reglages-ressourcer');
+  assert.equal(lireRoute('#/reglages/emotions').nom, 'reglages-emotions');
   assert.equal(lireRoute('#/reglages/aide-iphone').nom, 'reglages-aide-iphone');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
@@ -42,6 +43,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
   assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
+  assert.equal(ongletDe('reglages-emotions'), 'reglages', 'v8 : le sens des mots se règle dans Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');

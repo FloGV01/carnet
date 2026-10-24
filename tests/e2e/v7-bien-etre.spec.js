@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
+import { tuile, mot } from '../aides/emotion.js';
 
 // v7 · Bien-être (spec §6) : l'onglet (respiration en tête, les exercices, la ligne fixe), un exercice une consigne par
 // écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran (factice), les
@@ -552,8 +553,8 @@ test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme
   });
   await aller(page, '#/moment');
   const emo = vue(page, 'Émotion du moment');
-  await emo.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Tristesse', exact: true }).click();
-  await emo.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Basse' }).click();
+  await tuile(emo, 'Basse').click();
+  await mot(emo, 'Vide', 'Tristesse').click();
   const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await carte.getByRole('button', { name: 'Arrêter' }).click();
@@ -620,8 +621,8 @@ test('la respiration crée une séance avec son origine : Bien-être (au bout, p
   });
   await aller(page, '#/moment');
   const emo = vue(page, 'Émotion du moment');
-  await emo.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Tristesse', exact: true }).click();
-  await emo.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Basse' }).click();
+  await tuile(emo, 'Basse').click();
+  await mot(emo, 'Vide', 'Tristesse').click();
   const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await expect(carte.locator('.phase-respiration')).toHaveText('Inspire');
