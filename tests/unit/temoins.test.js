@@ -280,4 +280,10 @@ test('le script refuse un témoin incomplet', () => {
   assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) if (h.emotion && h.emotion.split(':').length === 2) h.emotion = 'roue:serenite:calme'; })), /famille seule/);
   assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) h.emotion = null; })), /humeurs\.emotion/);
   assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) if (!h.emotion) h.humeur = null; })), /1 à 10/);
+  // Ces contrôles tombent seuls : le message ne nomme qu'eux, et aucun « jamais rempli » ne les masque.
+  const seul5 = (manque) => ({ message: `témoin au format 5 incomplet :\n- ${manque}` });
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const h of s.data.humeurs) if (h.emotion && h.emotion.split(':').length === 3) h.emotion = 'roue:colere'; })), seul5('un relevé avec un mot de la roue'));
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const x of s.data.seances) x.exercice = 'coherence'; })), seul5('une séance d\'un exercice'));
+  // Point de vigilance 1 de la v8 : le lever reste rempli, mais jamais sur la nuit qui a un coucher.
+  assert.throws(() => controlerTemoin(sans5((s) => { for (const j of s.data.journal) j.heureLever = j.heureCoucher ? null : '07:00'; })), seul5('une nuit avec coucher et lever'));
 });
