@@ -35,7 +35,8 @@ Sources de cette conception :
 | Fin d'exercice | Le message « Noter mon émotion » pendant 6 s. |
 | Programme | Il s'appelle **« Programme »**. Une séance faite affiche **une coche et « Faite le 12/10 »**. « Faite » veut dire **menée jusqu'au bout**. Les étapes ne montrent **que leur titre**. **Pas de marquage à la main.** |
 | Bien-être | L'onglet ne garde que **le Programme et la cohérence cardiaque**. Les exercices, les 8 actuels et les 9 nouveaux, se font **dans le Programme**. Moment difficile garde la cohérence cardiaque. |
-| Pistes retenues | Q5 (lien « Détail » dans la carte Sommeil), Q15 (« Mes nuits », aussi sur l'A4 des soignants), Q16 (temps d'endormissement), Q17 (énergie haute et hyperfocus avant la fatigue), Q18 (émotions selon l'activité), Q20 (Après coup quand la honte reste), Q22 (sujets pour un rendez-vous). |
+| Sommeil (25/10) | **Plus simple : le nombre d'heures et la qualité.** Coucher, lever et réveils ne se saisissent plus le soir ; Q16 (temps d'endormissement) est abandonné. Voir §7 bis. |
+| Pistes retenues | Q5 (le détail du sport et du contact dans leur carte), Q15 (« Mes nuits », aussi sur l'A4 des soignants), Q17 (énergie haute et hyperfocus avant la fatigue), Q18 (émotions selon l'activité), Q20 (Après coup quand la honte reste), Q22 (sujets pour un rendez-vous). |
 | Textes | Les 79 définitions et les 9 nouvelles séances sont **relus après la publication**, dans l'app. |
 | Livraison | **En une fois**, version 8.0.0. |
 | Hors champ | Le petit modèle IA local (« on verra après »). L'assistant IA reste prévu pour la V3. |
@@ -192,21 +193,17 @@ Le contenu est dans l'annexe `programme-sophro.md`, §2 à §6.
 
 ## 7. Pistes retenues
 
-- **Q5 · Lien « Détail › » dans la carte Sommeil**
-  - Le lien se trouve à droite de « nuit dernière ». Il ouvre coucher, lever, réveils et le temps d'endormissement (Q16) dans la carte.
-  - Même lien pour Sport et Contact.
-  - Le repli « Nuit en détail » quitte la liste des replis. Ses données ne bougent pas.
+- **Q5 · Le détail dans sa carte** (avec la décision du 25/10, le sommeil passe par le §7 bis)
+  - « Sport en détail » et « Contact en détail » s'ouvrent par un lien « Détail › » dans le titre de leur carte.
+  - Le repli « Nuit en détail » est masqué (§7 bis). Ses données ne bougent pas.
   - Le détail est fermé au départ et ne s'ouvre jamais seul. Le soir tient toujours sans défiler à 390 × 797.
 - **Q15 · « Mes nuits »**
   - Dans Comprendre › Rythmes, au-dessus de « Tes nuits selon le jour » : une ligne par nuit notée, sur 4 semaines.
-  - Une barre va du coucher au lever, avec des traits pour les réveils, une marque pour le temps d'endormissement et un motif neutre pour la qualité.
+  - Une barre de la longueur des heures dormies, avec le motif neutre de la qualité (§7 bis).
   - « Voir en tableau » complète le graphique.
   - **Aussi sur l'A4 de la Vue soignants**, qui doit tenir sur une page de 273 mm au plus. Dans le cas extrême, on réduit à 2 semaines.
   - Il n'y a ni phrase, ni indice de régularité, ni ligne pour une nuit non notée.
-- **Q16 · « Pour m'endormir »**
-  - Dans le détail de la nuit : « moins de 15 min · 15-30 min · 30-60 min · plus d'1 h ». Un toucher, facultatif.
-  - C'est un nouveau champ du journal (`endormissement`), avec une liste figée.
-  - On le retrouve dans Mes nuits et dans la ligne du jour de l'Export PSY. **Le format de l'Export PSY change.**
+- **Q16** : abandonné le 25/10, au profit du nombre d'heures (§7 bis).
 - **Q17 · Avant la fatigue** : dans Comprendre › Énergie, le graphique « Avant les jours à énergie basse » gagne deux facteurs, « Énergie haute notée » et « Hyperfocus » (le symptôme).
 - **Q18 · Émotions selon ce que je faisais**
   - Dans Comprendre, une barre par activité de « Ce que je faisais », découpée par familles d'émotions à leurs couleurs.
@@ -220,6 +217,29 @@ Le contenu est dans l'annexe `programme-sophro.md`, §2 à §6.
   - Un toucher ajoute une question « Parler de : sommeil », modifiable ensuite.
   - La liste se règle dans Réglages › Listes (nouvelle liste `sujetRdv`).
 
+## 7 bis. Sommeil : heures et qualité (décision du 25/10)
+
+**Saisie**
+- La carte Sommeil porte deux rangées :
+  - **Qualité** : Mal · Moyen · Bien, comme aujourd'hui ;
+  - **Durée** : « 4 h ou moins · 5 h · 6 h · 7 h · 8 h · 9 h · 10 h ou plus ». Un toucher, facultatif, et un second toucher l'efface.
+- Nouveau champ du journal : `heuresSommeil`, un entier de 4 à 10, où 4 veut dire « 4 h ou moins » et 10 « 10 h ou plus ». Il porte sur la nuit qui précède le jour, comme la qualité.
+- **Le soir doit toujours tenir sans défiler à 390 × 797.** Si la rangée Durée ne tient pas une fois la carte resserrée, elle s'ouvre par le lien « Durée › » de la carte (Q5), fermé au départ. Cet écart est alors noté dans `docs/decisions.md`.
+
+**Ce qui part de la saisie**
+- Coucher, lever et réveils ne sont plus proposés le soir.
+- Le repli « Nuit en détail » est **masqué**, comme l'humeur du soir en v6 : on peut le réafficher dans Réglages › Le soir.
+- **Les nuits déjà notées gardent toutes leurs données** et s'affichent comme avant dans l'Historique et sur la page d'un jour.
+
+**Lectures**
+- **Mes nuits (Q15)** : une barre par nuit notée, de la **longueur des heures dormies**, avec le motif neutre de la qualité.
+  - Pour une nuit ancienne, la durée se calcule à partir du coucher et du lever, avec la même règle que la durée médiane d'aujourd'hui.
+  - Une nuit sans durée n'a pas de barre.
+  - Rien sur l'heure du coucher ni sur la régularité.
+  - L'écran et l'A4 des soignants sont concernés.
+- **Durée médiane** (Analyse, Vue soignants) : elle vient de `heuresSommeil` quand il existe, sinon de coucher et lever. Coucher et lever médians ne s'affichent plus que pour les périodes qui en ont.
+- **Export PSY** : la ligne du jour donne « nuit Mal · 6 h ». Le nombre de réveils n'y paraît plus que pour les nuits anciennes qui en ont. **Le format de l'Export PSY change.**
+
 ## 8. Fiabilité et finitions (appels du concepteur)
 
 Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et protègent l'usage quotidien.
@@ -232,10 +252,10 @@ Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et pr
 
 ## 9. Données et versions
 
-- **`DB_VERSION` 6**, si les listes nouvelles (`sujetRdv`, `endormissement`) sont versées dans le store `listes`, comme les précédentes : `MIGRATIONS[6]`, figée. Sinon la base ne change pas, au choix du constructeur selon le modèle du code.
+- **`DB_VERSION` 6**, si la liste nouvelle `sujetRdv` est versées dans le store `listes`, comme les précédentes : `MIGRATIONS[6]`, figée. Sinon la base ne change pas, au choix du constructeur selon le modèle du code.
 - **`FORMAT_VERSION` 6** :
   - `seances.fin` ;
-  - `journal.endormissement` ;
+  - `journal.heuresSommeil` ;
   - les définitions corrigées dans `meta` ;
   - `MISES_A_NIVEAU[5]` ;
   - les sauvegardes témoins des formats 1 à 5 restent importables.
@@ -249,7 +269,7 @@ Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et pr
 - Le lecteur se ferme 6 s après la fin.
 - La séance qui vient suit la dernière faite. Après la dernière, on revient à la première.
 - Une séance arrêtée en route compte pour Mes jours, mais pas dans le Programme.
-- Q5 vaut aussi pour Sport et Contact. « Nuit en détail » quitte la liste des replis.
+- Q5 ne vaut plus que pour Sport et Contact. « Nuit en détail » est masqué (§7 bis).
 - Mes nuits passe de 4 à 2 semaines sur l'A4 si la page ne tient pas.
 - Les chantiers de fiabilité du §8 sont inclus.
 
@@ -258,7 +278,6 @@ Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et pr
 - La disposition exacte de la carte : taille des bulles, glissement, centrage.
 - Le timbre des bols et du souffle, dans les limites du §5 : doux, court, jamais surprenant.
 - La forme de Mes nuits, selon le skill `dataviz` et le système 2b.
-- Le choix technique de la liste `endormissement` : store `listes` ou vocabulaire figé.
 - Le texte exact des définitions et des séances nouvelles, dans les règles du §4 et du §6.
 
 ## 12. Précisions après relecture (appels du concepteur)
@@ -280,8 +299,8 @@ Ces chantiers se voient à peine. Ils sont inclus parce qu'ils sont petits et pr
    - Les autres gardent le tableau §9 de l'annexe.
    - La correspondance retenue est notée dans `docs/decisions.md`.
    - Sans source vérifiable, c'est le tableau §9.
-6. **Q5 : les trois détails passent dans leur carte.**
-   - Nuit, Sport et Contact : chacun s'ouvre depuis le lien « Détail › » de sa carte.
+6. **Q5 : les détails passent dans leur carte.**
+   - Sport et Contact : chacun s'ouvre depuis le lien « Détail › » de sa carte. Le sommeil suit le §7 bis.
    - Sport et Contact, côte à côte, ouvrent leur détail en pleine largeur sous la paire.
    - La liste des replis ne garde que « Ce qui a pesé · ce qui a rechargé » et « Notes libres ».
 7. **Q27 sans livraison intermédiaire.** Les tests simulent les valeurs standard de l'iPhone en 390 × 844, soit 47 px en haut et 34 px en bas. Le Diagnostic affiche les vraies valeurs une fois la v8 installée.
