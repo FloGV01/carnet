@@ -3,6 +3,7 @@
 import { SEUILS } from './seuils.js';
 import { moyenne, mediane } from './stats.js';
 import { addDays, jourEvenement } from '../domain/dates.js';
+import { HEURES_SOMMEIL } from '../domain/champs.js';
 
 // Première date connue, toutes sources confondues (jusqu'à aujourd'hui).
 export function premiereDate({ journal = [], episodes = [], symptomes = [], traitements = [] }, aujourdhui) {
@@ -21,10 +22,20 @@ const estHeure = (h) => typeof h === 'string' && /^\d{2}:\d{2}$/.test(h);
 
 // Un coucher avant 12:00 compte après minuit.
 export const coucherAjuste = (h) => { const m = enMinutes(h); return m < 720 ? m + 1440 : m; };
-export function dureeNuit(coucher, lever) {
+// Minutes du coucher au lever (« Nuit en détail ») : entre 2 h et 16 h, sinon null (une saisie incohérente).
+export function minutesCoucherLever(coucher, lever) {
   if (!estHeure(coucher) || !estHeure(lever)) return null;
   const d = enMinutes(lever) + 1440 - coucherAjuste(coucher);
   return d >= SEUILS.horaires.dureeMin && d <= SEUILS.horaires.dureeMax ? d : null;
+}
+// Durée d'une nuit (v8), en heures : le nombre d'heures noté le soir (4 pour « 4 h ou moins », 10 pour « 10 h ou plus »),
+// sinon, pour une nuit ancienne, le temps du coucher au lever avec la même règle (2 h à 16 h) ; null sans durée.
+export function dureeNuit(entree) {
+  if (!entree) return null;
+  const h = entree.heuresSommeil;
+  if (Number.isInteger(h) && h >= HEURES_SOMMEIL.min && h <= HEURES_SOMMEIL.max) return h;
+  const m = minutesCoucherLever(entree.heureCoucher, entree.heureLever);
+  return m == null ? null : m / 60;
 }
 
 export function bornesFenetre(fenetre, aujourdhui, premier) {
@@ -93,7 +104,8 @@ export function indicateurs({ journal, episodes, symptomes }, du, au) {
   const reveils = val('reveilsNocturnes');
   const couchers = jours.map((j) => j.heureCoucher).filter(estHeure);
   const levers = jours.map((j) => j.heureLever).filter(estHeure);
-  const durees = jours.map((j) => dureeNuit(j.heureCoucher, j.heureLever)).filter((d) => d != null);
+  // Durée médiane (v8) : en minutes, des heures notées le soir, ou du coucher et du lever d'une nuit ancienne.
+  const durees = jours.map(dureeNuit).filter((d) => d != null).map((h) => Math.round(h * 60));
   const lieux = val('lieu');
   const parLieu = {};
   for (const l of lieux) parLieu[l] = (parLieu[l] || 0) + 1;

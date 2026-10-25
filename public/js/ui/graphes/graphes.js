@@ -12,6 +12,7 @@ import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
+import { texteHeuresSommeil } from '../../domain/champs.js';
 
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
 // `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
@@ -73,7 +74,9 @@ export function detailColonne(pas, c, lib) {
   }
   if (pas === 'jour') {
     const e = c.entree || {};
-    if (c.nuit) m.push(`nuit ${lib(c.nuit).toLowerCase()}`);
+    // La nuit (v8) : sa qualité et ses heures, « nuit moyen · 6 h », comme la phrase du jour.
+    const nuit = [c.nuit && lib(c.nuit).toLowerCase(), texteHeuresSommeil(e.heuresSommeil)].filter(Boolean);
+    if (nuit.length) m.push(`nuit ${nuit.join(' · ')}`);
     if (e.reveilsNocturnes != null) m.push(e.reveilsNocturnes === 5 ? '5 réveils ou plus' : pluriel(e.reveilsNocturnes, 'réveil', 'réveils'));
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));

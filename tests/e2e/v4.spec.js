@@ -108,14 +108,14 @@ test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas »
 test('Réglages › Le soir : afficher le compteur et l\'humeur du soir, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
   await page.evaluate(() => { location.hash = '#/reglages/journee'; });
   await page.getByRole('switch', { name: 'Afficher Explosions (compteur du soir)' }).click();
-  // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici.
+  // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici (« Nuit en détail », masqué depuis la v8, le reste).
   await page.getByRole('switch', { name: 'Afficher Humeur' }).click();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
   await expect(page.getByRole('button', { name: 'Monter Humeur' })).toBeFocused();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
   await expect(page.getByRole('button', { name: 'Monter Humeur' })).toHaveAttribute('aria-disabled', 'true');
   await expect.poll(async () => { const j = await repo(page, () => window.__carnet.repo.meta.lire('journee')); return [j.masques, j.ordre.slice(0, 3)]; })
-    .toEqual([[], ['humeur', 'lieu', 'sommeil']]);
+    .toEqual([['nuit'], ['humeur', 'lieu', 'sommeil']]);
   await page.evaluate(() => { location.hash = '#/aujourdhui'; });
   await expect(groupe(page, 'Explosions')).toHaveCount(1);
   const groupes = await page.locator('.ecran.aujourdhui [role="group"]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));

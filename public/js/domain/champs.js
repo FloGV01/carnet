@@ -36,6 +36,13 @@ export const ORIGINES_SEANCE = Object.freeze(['bien-etre', 'moment-difficile', '
 
 // Durée de la nuit (v8) : un nombre d'heures entier, de « 4 h ou moins » à « 10 h ou plus » (spec v8 §7 bis).
 export const HEURES_SOMMEIL = Object.freeze({ min: 4, max: 10 });
+// « 4 h ou moins », « 6 h », « 10 h ou plus » ; null pour une valeur hors de la liste.
+export function texteHeuresSommeil(h) {
+  if (!Number.isInteger(h) || h < HEURES_SOMMEIL.min || h > HEURES_SOMMEIL.max) return null;
+  if (h === HEURES_SOMMEIL.min) return `${h} h ou moins`;
+  if (h === HEURES_SOMMEIL.max) return `${h} h ou plus`;
+  return `${h} h`;
+}
 
 // cles : champs techniques. saisis : champs que l'utilisateur renseigne.
 // heuresSommeil (v8) : la durée de la nuit qui précède le jour, comme sommeilRessenti ; 4 veut dire

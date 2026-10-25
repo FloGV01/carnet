@@ -41,7 +41,8 @@ test('un jour passé noté le soir garde son champ Humeur ; Réglages › Le soi
   await expect(groupe(page, 'Humeur')).toHaveCount(0);
   await aller(page, '#/reglages/journee');
   await page.getByRole('switch', { name: 'Afficher Humeur' }).click();
-  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions']);
+  // « Nuit en détail » (v8) reste masqué.
+  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions', 'nuit']);
   await aller(page, '#/aujourdhui');
   await toucher(page, 'Humeur', '7');
   await expect.poll(async () => (await entreeDuJour(page))?.humeur).toBe(7);

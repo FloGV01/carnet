@@ -9,7 +9,7 @@ import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { energieBasseParJour } from './energie-jour.js';
 import { famillesParJour, famillesParColonnes } from './emotions.js';
 import { ordreDeListe, clesDeColonnes, colonneDe } from './colonnes.js';
-import { bornesFenetre, dureeNuit, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
+import { bornesFenetre, minutesCoucherLever, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
 import { mediane } from './stats.js';
 import { SEUILS } from './seuils.js';
 
@@ -230,7 +230,7 @@ const heureExacte = (m) => (m == null ? null : versHeure(m));
 
 // Une colonne par soir de coucher, du lundi (0) au dimanche. La nuit notée le jour D (celle qui précède D)
 // est celle du soir D−1 ; la période porte sur D. Une nuit compte si le coucher et le lever sont notés et
-// que dureeNuit n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis minuit
+// que minutesCoucherLever n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis minuit
 // du jour du coucher (un coucher avant 12:00 compte après minuit, donc au-delà de 1440 ; le lever est le
 // lendemain, + 1440) ; heureCoucher et heureLever : les mêmes, en heure exacte, pour le tableau. n === 0 :
 // aucune nuit, tout est null et il n'y a rien à tracer ; à tester avant `fragile` (aussi vrai à n = 0, même
@@ -239,7 +239,7 @@ export function nuitsParSoir(journal, periode) {
   const ici = dans(periode);
   const soirs = Array.from({ length: 7 }, () => []);
   for (const j of journal || []) {
-    if (!j || !ici(j.date) || dureeNuit(j.heureCoucher, j.heureLever) == null) continue;
+    if (!j || !ici(j.date) || minutesCoucherLever(j.heureCoucher, j.heureLever) == null) continue;
     soirs[jourSemaine(addDays(j.date, -1))].push(j);
   }
   return selonSeuil(soirs.map((nuits, cle) => {

@@ -12,6 +12,7 @@ import { relevesAEmotion, parFamille, texteFamilles } from '../analyse/emotions.
 import { resumeContacts } from '../domain/contacts.js';
 import { libelleEmotion } from '../domain/roue.js';
 import { resumeEmotions } from '../domain/releves.js';
+import { texteHeuresSommeil } from '../domain/champs.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
 const couper = (t) => {
@@ -49,8 +50,10 @@ function releveMoment(h, lib) {
 function ligneJour(j, lib, moments = []) {
   const m = [formaterJourCourt(j.date)];
   if (j.lieu) m.push(lib(j.lieu));
-  if (j.sommeilRessenti || j.reveilsNocturnes != null) {
-    let nuit = `nuit ${j.sommeilRessenti ? lib(j.sommeilRessenti) : '·'}`;
+  // v8 : la nuit en qualité et en heures, « nuit Mal · 6 h » ; les réveils ne restent que pour une nuit ancienne qui en a.
+  const heures = texteHeuresSommeil(j.heuresSommeil);
+  if (j.sommeilRessenti || heures || j.reveilsNocturnes != null) {
+    let nuit = `nuit ${[j.sommeilRessenti && lib(j.sommeilRessenti), heures].filter(Boolean).join(' · ') || '·'}`;
     if (j.reveilsNocturnes != null) nuit += ` (${j.reveilsNocturnes === 5 ? '5 réveils ou plus' : `${j.reveilsNocturnes} réveil${j.reveilsNocturnes > 1 ? 's' : ''}`})`;
     m.push(nuit);
   }

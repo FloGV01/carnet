@@ -160,6 +160,8 @@ function DetailsBarres({ f, items, carte }) {
 const jours = (n) => `${n} jour${n > 1 ? 's' : ''}`;
 
 // Tous les chiffres : les anciennes tuiles de l'humeur (moyenne, journées à 7 ou plus, à 4 ou moins) sont retirées (v7).
+// v8 : la durée de nuit vient aussi des heures notées le soir ; Réveils, Coucher et Lever, qui ne se notent plus le soir, ne
+// gardent leur tuile que pour une période qui en a.
 function Tuiles({ f, carte }) {
   const lib = (id) => carte.get(id) || id;
   const r = f.nuits.reveils;
@@ -167,9 +169,9 @@ function Tuiles({ f, carte }) {
     <${Tuile} rubrique="expl" titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />
     <${Tuile} rubrique="sommeil" titre=${`Nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'}
       detail=${f.nuits.n ? `${lib('sommeil:moyen')} ${f.nuits.moyen} · ${lib('sommeil:bien')} ${f.nuits.bien}` : ''} />
-    <${Tuile} rubrique="sommeil" titre="Réveils" valeur=${r.n ? moyenneReveils(r) : '·'} detail=${r.n ? 'moyenne' : ''} fragile=${r.n > 0 && r.fragile} />
-    <${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />
-    <${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />
+    ${r.n > 0 && html`<${Tuile} rubrique="sommeil" titre="Réveils" valeur=${moyenneReveils(r)} detail="moyenne" fragile=${r.fragile} />`}
+    ${f.nuits.nCoucher > 0 && html`<${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />`}
+    ${f.nuits.nLever > 0 && html`<${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />`}
     <${Tuile} rubrique="sommeil" titre="Durée de nuit" valeur=${f.nuits.duree ? duree(f.nuits.duree) : '·'} detail=${f.nuits.duree ? 'médiane' : ''} />
     <${Tuile} rubrique="contact" titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} detail=${detailJours(f.contactDetail.avec, lib)} />
     ${f.contactDetail.effet.jours > 0 && html`<${Tuile} rubrique="contact" titre="Comment c'était" valeur=${jours(f.contactDetail.effet.jours)} detail=${detailJours(f.contactDetail.effet, lib)} />`}
@@ -187,7 +189,7 @@ const detailJours = (d, lib) => d.par.slice(0, 3).map((x) => `${lib(x.id)} ${x.n
 
 function Chiffres({ f, nEmotions }) {
   const lignes = [
-    ['Émotions du moment', nEmotions], ['Explosions', f.explosions.n], ['Nuits', f.nuits.n], ['Réveils', f.nuits.reveils.n],
+    ['Émotions du moment', nEmotions], ['Explosions', f.explosions.n], ['Nuits', f.nuits.n], ['Durée de nuit', f.nuits.nDuree], ['Réveils', f.nuits.reveils.n],
     ['Coucher', f.nuits.nCoucher], ['Lever', f.nuits.nLever], ['Contact humain', f.contact.n], ['Lieu', f.lieux.n],
     ['Sport / mouvement', f.sport.n], ['Traitement pris', f.traitement.n], ['Intensité des épisodes', f.episodes.nIntensite],
   ];

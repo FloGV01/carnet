@@ -145,7 +145,48 @@ test('migration 3 → 4 : Humeur masquée seulement si des champs masqués sont 
   for (const { avant, apres } of cas) {
     const fabrique = new IDBFactory();
     await baseV3(fabrique, (t) => { if (avant) t.objectStore('meta').put(avant); });
+    const db = await ouvrirBase({ fabrique, horodatage: H, version: 4, migrations: JUSQUA_V4 });
+    assert.deepEqual(await lireMeta(db, 'journee'), apres, JSON.stringify(avant));
+    db.close();
+  }
+});
+
+// v8 : une base de la v5 (version 3) passe en une fois à la version 6 : les migrations 4 et 6 réécrivent toutes deux la
+// méta journee, et aucune n'efface l'ajout de l'autre (la 6 relit la méta après l'écriture de la 4).
+test('migration 3 → 6 d\'un coup : Humeur puis « Nuit en détail » rejoignent les champs masqués, aucun ajout perdu', async () => {
+  const cas = [
+    [{ ordre: ['lieu', 'humeur'], masques: ['explosions'], heuresMoment: [9] }, { ordre: ['lieu', 'humeur'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [9] }],
+    [{ masques: [] }, { masques: ['humeur', 'nuit'] }],
+    [{ masques: ['humeur', 'nuit'] }, { masques: ['humeur', 'nuit'] }],
+    [{ heuresMoment: [9] }, { heuresMoment: [9] }],
+  ];
+  for (const [avant, apres] of cas) {
+    const fabrique = new IDBFactory();
+    await baseV3(fabrique, (t) => t.objectStore('meta').put({ cle: 'journee', valeur: avant }));
     const db = await ouvrirBase({ fabrique, horodatage: H });
+    assert.equal(db.version, 6);
+    assert.deepEqual((await lireMeta(db, 'journee')).valeur, apres, JSON.stringify(avant));
+    db.close();
+  }
+});
+
+// v8 : « Nuit en détail » est masqué par défaut (spec v8 §7 bis), comme l'Humeur du soir en v6 : la migration 6 l'ajoute
+// aux champs masqués déjà réglés, une seule fois ; sans réglage, la valeur par défaut le masque à la lecture.
+test('migration 5 → 6 : « Nuit en détail » masqué seulement si des champs masqués sont réglés, jamais en double', async () => {
+  const cas = [
+    { avant: { cle: 'journee', valeur: { ordre: ['sommeil', 'lieu'], masques: ['explosions', 'humeur'], heuresMoment: [18] } },
+      apres: { cle: 'journee', valeur: { ordre: ['sommeil', 'lieu'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [18] } } },
+    { avant: { cle: 'journee', valeur: { masques: ['nuit', 'humeur'] } }, apres: { cle: 'journee', valeur: { masques: ['nuit', 'humeur'] } } },
+    { avant: { cle: 'journee', valeur: { masques: [] } }, apres: { cle: 'journee', valeur: { masques: ['nuit'] } } },
+    { avant: { cle: 'journee', valeur: { heuresMoment: [9] } }, apres: { cle: 'journee', valeur: { heuresMoment: [9] } } },
+    { avant: { cle: 'journee', valeur: null }, apres: { cle: 'journee', valeur: null } },
+    { avant: null, apres: undefined },
+  ];
+  for (const { avant, apres } of cas) {
+    const fabrique = new IDBFactory();
+    await baseV5(fabrique, (t) => { if (avant) t.objectStore('meta').put(avant); });
+    const db = await ouvrirBase({ fabrique, horodatage: H });
+    assert.equal(db.version, 6);
     assert.deepEqual(await lireMeta(db, 'journee'), apres, JSON.stringify(avant));
     db.close();
   }
@@ -295,7 +336,10 @@ test('migration 5 → 6 : base remplie, aucune fiche perdue, sujets ajoutés une
   const nouveau = listes.find((i) => i.id === 'sujetRdv:sommeil');
   assert.equal(nouveau.libelle, 'Sommeil');
   assert.equal(nouveau.createdAt, '2026-10-25T08:00:00.000Z');
-  assert.deepEqual((await lireTout(db, 'meta')).filter((m) => m.cle !== 'schema'), metaAvant.filter((m) => m.cle !== 'schema'), 'réglages intacts');
+  // Réglages intacts, sauf « Nuit en détail » qui rejoint les champs masqués du soir (v8).
+  const metaVoulue = metaAvant.filter((m) => m.cle !== 'schema').map((m) => (m.cle === 'journee' ? { ...m, valeur: { ...m.valeur, masques: [...m.valeur.masques, 'nuit'] } } : m));
+  assert.deepEqual((await lireTout(db, 'meta')).filter((m) => m.cle !== 'schema'), metaVoulue, 'réglages intacts');
+  assert.deepEqual((await lireMeta(db, 'journee')).valeur, { ordre: ['lieu', 'sommeil'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [12, 18] });
   assert.equal((await lireMeta(db, 'schema')).valeur, 6);
 
   const snaps = await lireTout(db, 'snapshots');

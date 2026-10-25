@@ -622,7 +622,7 @@ test('nuitsParSoir : la nuit notée le jour D va au soir D−1, du lundi au dima
   assert.deepEqual(g.colonnes.map((c) => c.n), [3, 0, 0, 0, 0, 2, 3]);
 });
 
-test('nuitsParSoir : une nuit compte si le coucher et le lever sont notés et que dureeNuit n\'est pas nul', () => {
+test('nuitsParSoir : une nuit compte si le coucher et le lever sont notés et que minutesCoucherLever n\'est pas nul', () => {
   const journal = [
     ...nuitsDe(LUNDIS), ...nuitsDe(MARDIS),
     // Des mardis qui ne comptent pas.

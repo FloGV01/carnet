@@ -31,6 +31,7 @@
 
   Une sauvegarde en formatVersion 5 passe au format 6 à l'import :
   - liste `sujetRdv` ajoutée si absente, `counts.listes` augmenté d'autant, comme la migration 6 de la base ;
+  - `'nuit'` (le repli « Nuit en détail », masqué par défaut en v8) ajouté aux champs masqués de `journee`, s'ils sont réglés et ne l'ont pas déjà, comme la migration 6 de la base ;
   - aucune fiche transformée : `heuresSommeil`, `fin` et `programme` se lisent `null`. Une nuit ancienne garde son coucher, son lever et ses réveils, une séance de la v7 n'est pas « Faite ».
 - **formatVersion 5 (v7)** :
   - champ `emotion` dans les humeurs du moment : un identifiant de la roue des émotions (`domain/roue.js`), `roue:<famille>` pour une famille seule ou `roue:<famille>:<mot>`, ou `null`. Un id inconnu rend le relevé illisible. `humeur` (note de 1 à 10) reste pour les anciens relevés et vaut `null` dans les nouveaux ;
@@ -71,3 +72,4 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
    - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes, une copie prise avant la v7 n'a pas de séances : elles restent alors telles quelles.
    - Les listes par défaut absentes de la copie (v4, v6, v8) sont ajoutées.
    - Dans une copie prise avant la v6, `'humeur'` rejoint les champs masqués de `journee`, comme à l'import d'un fichier au format 3. Une copie de la v6 garde le choix qu'elle contient.
+   - Dans une copie prise avant la v8, `'nuit'` rejoint de même les champs masqués de `journee`, comme à l'import d'un fichier au format 5. Une copie de la v8 garde le choix qu'elle contient.

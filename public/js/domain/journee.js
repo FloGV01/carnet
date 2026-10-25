@@ -12,10 +12,16 @@ export const HEURE_MAX = 23;
 // dans l'ordre : sa clé n'est acceptée que dans les masques.
 export const MASQUE_PESE_RECHARGE = 'peseRecharge';
 export const NOM_PESE_RECHARGE = 'Ce qui a pesé · ce qui a rechargé';
-const MASQUABLES = new Set([...CHAMPS_JOURNEE, MASQUE_PESE_RECHARGE]);
-// Masqués par défaut : le compteur du soir (les épisodes « Explosion » font foi) et, depuis la v6,
-// l'Humeur du soir (l'humeur du jour est la moyenne des humeurs du moment). Réaffichables.
-export const JOURNEE_DEFAUT = Object.freeze({ ordre: CHAMPS_JOURNEE, masques: ['explosions', 'humeur'], heuresMoment: [] });
+// Le repli « Nuit en détail » (coucher, lever, réveils) se masque de même depuis la v8 : le soir note la nuit en heures
+// et en qualité (spec v8 §7 bis).
+export const MASQUE_NUIT = 'nuit';
+export const NOM_NUIT = 'Nuit en détail';
+const MASQUABLES = new Set([...CHAMPS_JOURNEE, MASQUE_PESE_RECHARGE, MASQUE_NUIT]);
+// Masqués par défaut : le compteur du soir (les épisodes « Explosion » font foi), depuis la v6
+// l'Humeur du soir (l'humeur du jour est la moyenne des humeurs du moment), et depuis la v8 « Nuit
+// en détail ». Réaffichables. La migration 6 de la base et la mise à niveau du format 5 ajoutent
+// « nuit » aux masques déjà réglés, comme la v6 l'a fait pour l'humeur.
+export const JOURNEE_DEFAUT = Object.freeze({ ordre: CHAMPS_JOURNEE, masques: ['explosions', 'humeur', MASQUE_NUIT], heuresMoment: [] });
 
 export function normaliserJournee(brut) {
   const b = brut && typeof brut === 'object' ? brut : {};
@@ -29,9 +35,10 @@ export function normaliserJournee(brut) {
 
 export const champsVisibles = (j) => j.ordre.filter((c) => !j.masques.includes(c));
 
-// Champs du journal portés par chaque champ du soir (détails compris).
+// Champs du journal portés par chaque champ du soir (détails compris). La durée de la nuit (v8) est dans la carte
+// Sommeil ; coucher, lever et réveils sont au repli « Nuit en détail ».
 const DONNEES_CHAMP = {
-  lieu: ['lieu'], sommeil: ['sommeilRessenti'], humeur: ['humeur'], contact: ['contactHumain', 'contacts'],
+  lieu: ['lieu'], sommeil: ['sommeilRessenti', 'heuresSommeil'], humeur: ['humeur'], contact: ['contactHumain', 'contacts'],
   sport: ['sportMouvement', 'activites'], explosions: ['explosions'], traitement: ['traitementPris'], positifs: ['pointsPositifs'],
 };
 export const champRenseigne = (champ, entree) => Boolean(entree) && DONNEES_CHAMP[champ].some((k) => entree[k] != null);
@@ -42,6 +49,11 @@ export const champsAffiches = (j, entree) => j.ordre.filter((c) => !j.masques.in
 
 // Repli « pesé · rechargé » : comme un champ, masqué il reste affiché tant qu'il porte une valeur ce jour-là.
 export const repliAffiche = (j, entree) => !j.masques.includes(MASQUE_PESE_RECHARGE) || Boolean(entree && (entree.pese != null || entree.recharge != null));
+
+// Repli « Nuit en détail » (v8) : affiché avec la carte Sommeil quand il n'est pas masqué ; masqué, ou la carte Sommeil
+// masquée, il reste affiché un jour où la nuit a un coucher, un lever ou des réveils (les nuits déjà notées).
+export const nuitRenseignee = (entree) => Boolean(entree) && ['heureCoucher', 'heureLever', 'reveilsNocturnes'].some((k) => entree[k] != null);
+export const repliNuitAffiche = (j, entree) => (!j.masques.includes(MASQUE_NUIT) && champsAffiches(j, entree).includes('sommeil')) || nuitRenseignee(entree);
 
 // Déplace un champ d'un cran (sens : -1 vers le haut, +1 vers le bas).
 export function deplacerChamp(j, champ, sens) {

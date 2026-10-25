@@ -2,7 +2,8 @@ import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, entreeDuJour, viderBase, aller } from '../aides/saisie.js';
 import { vueMoment, tuile, mot, retourEnergie, NOTEE } from '../aides/emotion.js';
 
-// v6 : saisie du soir. « Ce qui a pesé · ce qui a rechargé » : un repli sous « Nuit en détail ».
+// v6 : saisie du soir. « Ce qui a pesé · ce qui a rechargé » : un repli sous « Nuit en détail » (masqué par défaut depuis la
+// v8, comme « Sport en détail » et « Contact en détail », passés dans leur carte).
 const repo = (page, f, arg) => page.evaluate(f, arg);
 const TITRE = 'Ce qui a pesé · ce qui a rechargé';
 // Une journée sans plus aucune valeur n'a plus d'entrée : le champ vaut alors null.
@@ -16,8 +17,8 @@ test.beforeEach(async ({ page }) => {
 
 const repli = (page) => page.getByRole('button', { name: new RegExp(`^${TITRE}`) });
 
-test('ce qui a pesé, ce qui a rechargé : replié après « Nuit en détail », un toucher enregistre, un second efface', async ({ page }) => {
-  await expect(page.locator('.replis .repli-titre')).toHaveText(['Nuit en détail', TITRE, 'Sport en détail', 'Contact en détail', 'Notes libres']);
+test('ce qui a pesé, ce qui a rechargé : replié en tête de la liste (v8), un toucher enregistre, un second efface', async ({ page }) => {
+  await expect(page.locator('.replis .repli-titre')).toHaveText([TITRE, 'Notes libres']);
   await expect(repli(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(groupe(page, 'Ce qui a pesé')).toHaveCount(0);
 
@@ -67,11 +68,11 @@ test('masqué dans Réglages › Le soir, le repli reste affiché un jour où il
   await expect(page.getByRole('button', { name: /^(Monter|Descendre) Ce qui a pesé/ })).toHaveCount(0);
   await interrupteur.click();
   await expect(interrupteur).toHaveAttribute('aria-checked', 'false');
-  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions', 'humeur', 'peseRecharge']);
+  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions', 'humeur', 'nuit', 'peseRecharge']);
   expect((await repo(page, () => window.__carnet.repo.meta.lire('journee'))).ordre).not.toContain('peseRecharge');
 
   await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('button', { name: /Nuit en détail/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Notes libres/ })).toBeVisible();
   await expect(repli(page)).toHaveCount(0);
   await aller(page, '#/jour/2026-10-13');
   await expect(repli(page).locator('.repli-resume')).toHaveText('pesé : bruit');
@@ -81,7 +82,7 @@ test('masqué dans Réglages › Le soir, le repli reste affiché un jour où il
 
   await aller(page, '#/reglages/journee');
   await page.getByRole('switch', { name: `Afficher ${TITRE}` }).click();
-  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions', 'humeur']);
+  await expect.poll(async () => (await repo(page, () => window.__carnet.repo.meta.lire('journee'))).masques).toEqual(['explosions', 'humeur', 'nuit']);
   await aller(page, '#/aujourdhui');
   await expect(repli(page)).toHaveCount(1);
 });

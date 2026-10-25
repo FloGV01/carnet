@@ -115,7 +115,7 @@ test('l\'id inconnu est recréé comme élément archivé, et la fiche le garde'
 // Chaque champ du fichier se retrouve à l'identique. Seuls écarts admis, ceux qui sont documentés
 // (docs/format-sauvegarde.md) : les contacts du format 2 passent en une ligne, les champs apparus
 // depuis sont ajoutés vides, la méta technique `schema` n'est pas reprise, et le champ Humeur
-// rejoint les champs masqués de Ma journée.
+// et le repli « Nuit en détail » (v8) rejoignent les champs masqués du soir.
 test('le contenu de chaque fiche survit à l\'import', async () => {
   for (const t of TEMOINS) {
     const { brut, repo } = await importer(t);
@@ -133,14 +133,17 @@ test('le contenu de chaque fiche survit à l\'import', async () => {
       }
     }
 
+    // Les champs masqués gagnent Humeur (format 3 et avant) et « Nuit en détail » (format 5 et avant, v8).
     const metaVoulue = brut.data.meta.filter((m) => !META_TECHNIQUES.has(m.cle)).map((m) => {
       const masques = m.cle === 'journee' && m.valeur.masques;
-      return masques && !masques.includes('humeur') ? { ...m, valeur: { ...m.valeur, masques: [...masques, 'humeur'] } } : m;
+      if (!masques) return m;
+      const ajouts = ['humeur', 'nuit'].filter((c) => !masques.includes(c));
+      return ajouts.length ? { ...m, valeur: { ...m.valeur, masques: [...masques, ...ajouts] } } : m;
     });
     const metaLue = tout.meta.filter((m) => !META_TECHNIQUES.has(m.cle));
     const parCle = (l) => [...l].sort((a, b) => a.cle.localeCompare(b.cle));
     assert.deepEqual(parCle(metaLue), parCle(metaVoulue), `${t.fichier} meta`);
-    if (t.format >= 2) assert.deepEqual(metaLue.find((m) => m.cle === 'journee').valeur.masques, ['explosions', 'traitement', 'humeur'], t.fichier);
+    if (t.format >= 2) assert.deepEqual(metaLue.find((m) => m.cle === 'journee').valeur.masques, ['explosions', 'traitement', 'humeur', 'nuit'], t.fichier);
 
     // Mémos : chaque champ de la fiche du mémo, et le son tel qu'il est dans le zip.
     const entrees = t.fichier.endsWith('.zip') ? new Map(lireZip(charger(t).octets).map((e) => [e.nom, e.donnees])) : new Map();

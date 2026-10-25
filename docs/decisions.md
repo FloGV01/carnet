@@ -702,3 +702,24 @@ Choisir un mot qui compte pour toi, et une chose qui va avec. Posture : assis.
 13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
 14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
 15. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+### Sommeil en heures, détails dans les cartes (tâche 5)
+
+**Écart à la spec §7 bis : la Durée s'ouvre par « Durée › »** (prévu par la spec et le plan quand le soir ne tient plus). Mesuré dans WebKit à 390 × 797, la rangée Durée (4 + 44 px au moins) ne tient pas :
+- avec le bandeau « Nouvelle version prête », la carte des points positifs n'a que 5,6 px de marge au-dessus de la bande du bas ;
+- à 390 × 844, « J'ai fini pour ce soir » en a 6,6 avec le bandeau (P3), et la ligne Après coup 11,3 sans lui (P2).
+
+Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Sommeil garde donc Mal · Moyen · Bien, et la Durée s'ouvre par le lien « Durée › » de sa tête, fermé au départ, à chaque ouverture de l'écran et à chaque changement de jour. Il ne s'ouvre jamais seul, même quand une durée est notée. La durée se note en 2 touchers au lieu d'un.
+
+**Choix faits pendant la construction**
+- **Le lien « Durée › »** dit la durée notée (« 6 h › », « 4 h ou moins › »). VoiceOver lit « Durée de la nuit : 6 h ». Ouverte, la rangée reste ouverte après un choix, pour qu'une erreur se corrige tout de suite (comme les rubriques du lot 2b). Elle se referme par le lien.
+- **Les sept durées** sont sur deux rangées pleine largeur : 4 h ou moins à 7 h, puis 8 h à 10 h ou plus. Sept choix sur une rangée feraient 43 px de large. « ou moins » et « ou plus » passent en petit sous le nombre, en couleur Sommeil, comme la qualité.
+- **« Détail › » et « Durée › »** sont en couleur action, 13/600, au bout de la première ligne du titre de la carte. Le titre passe dessous au besoin : « Contact / humain » et « Sport / mouvement » restent sur deux lignes, comme en v7. Le lien ne prend aucune hauteur, et sa cible fait 44 px de haut en débordant sur les marges de la carte.
+- **Le détail du Sport et du Contact** est une carte de rubrique (« Sport en détail », « Contact en détail », à leur couleur) en pleine largeur sous la paire, ou sous la carte quand Contact et Sport ne se suivent pas. Les deux peuvent être ouverts ensemble, dans l'ordre de la paire. Leurs replis quittent la liste, qui garde « Ce qui a pesé · ce qui a rechargé », « Notes libres » et, pour une nuit déjà notée, « Nuit en détail ». Les résumés de ces deux replis (« Marche 30 à 60 min ») ne sont plus affichés sur le soir. Ils restent dans l'Historique, la page d'un jour et l'Export PSY.
+- **« Nuit en détail » masqué par défaut** : il se réaffiche dans Réglages › Le soir (« Nuit en détail · coucher, lever, réveils », sous les champs). Comme l'Humeur du soir en v6, le masque s'ajoute aux champs masqués déjà réglés par la migration 6 de la base, la mise à niveau du format 5 et « Revenir » vers une copie d'avant la v8. Sans réglage, la valeur par défaut s'applique à la lecture. **La migration 6, figée à la tâche 1, est donc modifiée** (empreinte du verrou mise à jour) : elle n'a jamais été publiée (la v8 n'est pas en ligne, et le site n'a pas de déploiement de branche). Elle relit la méta avant de l'écrire, pour qu'une base de la v5 (version 3), migrée d'un coup, garde aussi l'Humeur masquée par la migration 4 (vérifié dans WebKit et dans les tests unitaires). Une nuit qui a un coucher, un lever ou des réveils garde son repli, masqué ou non, carte Sommeil masquée comprise.
+- **La durée de la nuit se lit partout où se lit la qualité** : « nuit moyen · 6 h » dans le résumé du jour, les puces de l'Historique et le détail d'un jour de Mes jours ; « nuit Mal · 6 h » dans l'Export PSY.
+- **`dureeNuit(entree)`** (`analyse/fenetres.js`) rend la durée en heures : celle notée le soir, sinon celle du coucher au lever d'une nuit ancienne (de 2 à 16 h, comme avant), sinon rien. La durée médiane (Analyse, Vue soignants) en vient. L'ancien calcul en minutes s'appelle `minutesCoucherLever` (« Tes nuits selon le jour » le garde).
+- **Analyse › Tous les chiffres** : Réveils, Coucher et Lever n'ont leur tuile que pour une période qui en a. « Durée de nuit » reste, et le tableau des chiffres gagne sa ligne.
+- **Vue soignants** : la ligne s'appelle « Durée de nuit (médiane) » tant qu'aucune colonne n'a de coucher ni de lever médians. Sinon elle reste « Coucher · lever · durée (médianes) », et une colonne sans coucher ni lever n'y donne que sa durée. La page garde le même nombre de lignes.
+
+**Le format de l'Export PSY change (v8, à signaler)** : la nuit dit ses heures, « nuit Mal · 6 h » (« nuit 6 h » sans la qualité, « 4 h ou moins », « 10 h ou plus »). Les réveils (« nuit Mal (2 réveils) ») et « coucher 23:10 lever 06:40 » ne restent que pour les nuits anciennes qui en ont.

@@ -367,6 +367,8 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 
 // ---------- Replis en liste groupée ----------
 
+// v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
+// reste là pour une nuit déjà notée.
 test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré à la couleur de la rubrique, le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
@@ -375,7 +377,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
-    await expect(page.locator('.replis .repli-titre')).toHaveText(['Nuit en détail', 'Ce qui a pesé · ce qui a rechargé', 'Sport en détail', 'Contact en détail', 'Notes libres']);
+    await expect(page.locator('.replis .repli-titre')).toHaveText(['Nuit en détail', 'Ce qui a pesé · ce qui a rechargé', 'Notes libres']);
     const m = await page.locator('.replis').evaluate((g) => {
       const carte = g.getBoundingClientRect();
       return {
@@ -401,7 +403,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
     const quoi = (i) => `${schema} · rangée ${i + 1}`;
     expect(m.fond).toBe(rgb(t.surface));
     expect(m.rayon).toBe('14px');
-    const couleurs = ['sommeil', 'energie', 'sport', 'contact'];
+    const couleurs = ['sommeil', 'energie'];
     m.rangees.forEach((r, i) => {
       expect(r.hauteur, quoi(i)).toBeGreaterThanOrEqual(58);
       expect(r.taille, quoi(i)).toBe(28);
@@ -415,7 +417,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
       } else expect(r.carre, `${quoi(i)} : Notes libres, neutre`).toBe(rgb(t['surface-2']));
     });
     // Résumés : sous le libellé, en 14 px --text-2, une ligne coupée par une ellipse ; AA sur la carte.
-    for (const i of [0, 1, 2]) {
+    for (const i of [0, 1]) {
       const r = m.rangees[i].resume;
       expect(r, quoi(i)).toMatchObject({ dessous: true, gauche: true, taille: 14, ellipse: 'ellipsis', couleur: rgb(t['text-2']) });
       expect(contraste(r.couleur, m.fond)).toBeGreaterThanOrEqual(4.5);

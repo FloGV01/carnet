@@ -161,7 +161,10 @@ test('Dicter place le curseur dans le champ et affiche l\'aide', async ({ page }
   await expect.poll(async () => (await entreeDuJour(page))?.pointsPositifs).toBe('dicté au clavier');
 });
 
-test('nuit en détail : heures effaçables, réveils, résumé du repli', async ({ page }) => {
+// v8 : « Nuit en détail » est masqué par défaut (spec §7 bis) ; réaffiché dans Réglages › Le soir, il reste le même.
+test('nuit en détail, réaffiché : heures effaçables, réveils, résumé du repli', async ({ page }) => {
+  await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', { masques: ['explosions', 'humeur'] }));
+  await page.reload();
   await page.getByRole('button', { name: /Nuit en détail/ }).click();
   await page.locator('#coucher').fill('23:40');
   await page.locator('#lever').fill('07:10');

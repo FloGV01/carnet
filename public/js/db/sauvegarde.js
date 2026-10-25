@@ -138,11 +138,14 @@ function ajouterListes(seed, data, counts, horodatage) {
 }
 
 // Méta de Ma journée : le champ Humeur du soir rejoint les champs masqués, s'ils sont réglés.
-function masquerHumeur(m) {
+// Un champ rejoint les champs masqués déjà réglés de la méta journee (sinon la valeur par défaut s'applique à la lecture).
+const masquer = (champ) => (m) => {
   const masques = m && m.cle === 'journee' && m.valeur && m.valeur.masques;
-  if (!Array.isArray(masques) || masques.includes('humeur')) return m;
-  return { ...m, valeur: { ...m.valeur, masques: [...masques, 'humeur'] } };
-}
+  if (!Array.isArray(masques) || masques.includes(champ)) return m;
+  return { ...m, valeur: { ...m.valeur, masques: [...masques, champ] } };
+};
+const masquerHumeur = masquer('humeur');
+const masquerNuit = masquer('nuit');
 
 // Mises à niveau successives d'une sauvegarde ancienne (v1 -> v2 -> …). Pures.
 export const MISES_A_NIVEAU = {
@@ -176,13 +179,15 @@ export const MISES_A_NIVEAU = {
     if (Array.isArray(data.humeurs)) data.humeurs = data.humeurs.map((h) => (h && typeof h === 'object' && !Array.isArray(h) ? { emotion: null, ...h } : h));
     return { ...s, formatVersion: 5, counts, data };
   },
-  // v5 -> v6 : la liste des sujets d'un rendez-vous, ajoutée si absente, comme le fait la migration 6 de la base.
-  // Les champs nouveaux (heuresSommeil, fin, programme) manquent et se lisent vides : aucune fiche n'est
-  // transformée. Une nuit ancienne garde son coucher, son lever et ses réveils, une séance v7 n'a pas de fin.
+  // v5 -> v6 : la liste des sujets d'un rendez-vous, ajoutée si absente, et le repli « Nuit en détail » qui rejoint
+  // les champs masqués déjà réglés, comme le fait la migration 6 de la base. Les champs nouveaux (heuresSommeil, fin,
+  // programme) manquent et se lisent vides : aucune fiche n'est transformée. Une nuit ancienne garde son coucher, son
+  // lever et ses réveils, une séance v7 n'a pas de fin.
   5(s) {
     const data = { ...(s.data || {}) };
     const counts = { ...(s.counts || {}) };
     ajouterListes(SEED_V6_AJOUTS, data, counts, s.exportedAt);
+    if (Array.isArray(data.meta)) data.meta = data.meta.map(masquerNuit);
     return { ...s, formatVersion: 6, counts, data };
   },
 };
@@ -332,9 +337,11 @@ export async function revenirAvantImport(repo) {
     for (const it of listesManquantes(copie.data.listes, h)) t.objectStore('listes').put(it);
     // Une copie de la v3 et d'avant n'a pas forcément de méta : on ne touche alors à rien. Dans
     // une copie prise avant la v6 (base en version 3 ou moins), le champ Humeur du soir rejoint
-    // les champs masqués, comme le fait la migration 4.
+    // les champs masqués, comme le fait la migration 4 ; dans une copie prise avant la v8 (base en
+    // version 5 ou moins), le repli « Nuit en détail » aussi, comme le fait la migration 6.
     if (Array.isArray(copie.data.meta)) {
-      const meta = (copie.schemaVersion ?? 0) < 4 ? copie.data.meta.map(masquerHumeur) : copie.data.meta;
+      let meta = (copie.schemaVersion ?? 0) < 4 ? copie.data.meta.map(masquerHumeur) : copie.data.meta;
+      if ((copie.schemaVersion ?? 0) < 6) meta = meta.map(masquerNuit);
       remplacerMeta(t.objectStore('meta'), actuel.meta, meta);
     }
     // Les mémos dont la fiche n'existe plus après le retour sont retirés.

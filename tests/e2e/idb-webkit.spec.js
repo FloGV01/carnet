@@ -25,7 +25,7 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
 
     // Vraies migrations 1 → 6 dans WebKit : données gardées, humeurs, listes v4 et v6 ajoutées une
     // fois, détail de contact v4 transformé en ligne (v5), notes et champ Humeur masqué (v6), séances (v7),
-    // sujets d'un rendez-vous (v8).
+    // sujets d'un rendez-vous et « Nuit en détail » masqué (v8).
     const v1 = await ouvrirBase({ nom: 'carnet-e2e-v1', horodatage: 'x', version: 1, migrations: { 1: MIGRATIONS[1] } });
     await new Promise((ok) => {
       const t = v1.transaction(['journal', 'meta'], 'readwrite');
@@ -46,5 +46,5 @@ test('écritures concurrentes, mémo, migration fictive : WebKit tient les invar
   });
   expect(res).toEqual({ humeur: 7, lieu: 'lieu:bureau', explosions: 0, octets: [1, 2, 3], duJour: [true], snap: 'avant-migration-v6',
     migre: { journal: 4, contacts: [{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], ancien: false, listes: 204, sujets: 7, humeurs: 0, notes: 0, seances: 0, schema: 6,
-      journee: { ordre: ['lieu', 'humeur'], masques: ['explosions', 'humeur'], heuresMoment: [] } } });
+      journee: { ordre: ['lieu', 'humeur'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [] } } });
 });

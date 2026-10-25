@@ -86,14 +86,31 @@ export const MIGRATIONS = {
     tx.objectStore('meta').put({ cle: 'schema', valeur: 5 });
   },
   // v8 : la liste des sujets d'un rendez-vous (sans écraser un id existant). Aucun store nouveau, aucune fiche
-  // transformée : les champs nouveaux (heuresSommeil, fin, programme) se lisent vides. Synchrone, comme la 2.
+  // transformée : les champs nouveaux (heuresSommeil, fin, programme) se lisent vides. Le repli « Nuit en détail »
+  // est masqué seulement si des champs masqués sont déjà réglés (sinon la valeur par défaut s'applique à la
+  // lecture), comme l'Humeur du soir à la migration 4 : seule la méta journee peut être réécrite. Synchrone, comme la 2.
+  // La méta est lue deux fois : dans une même mise à niveau (base en version 3), la migration 4 n'écrit la sienne qu'au
+  // retour de sa lecture, et les retours arrivent dans l'ordre des requêtes. La seconde lecture part donc après cette
+  // écriture et la voit : l'Humeur ajoutée par la 4 n'est pas effacée.
   6(db, tx, ctx) {
     const listes = tx.objectStore('listes');
     for (const item of seedItems(SEED_V6_AJOUTS, ctx.horodatage)) {
       const r = listes.get(item.id);
       r.onsuccess = () => { if (!r.result) listes.put(item); };
     }
-    tx.objectStore('meta').put({ cle: 'schema', valeur: 6 });
+    const meta = tx.objectStore('meta');
+    const attente = meta.get('journee');
+    attente.onsuccess = () => {
+      const lu = meta.get('journee');
+      lu.onsuccess = () => {
+        const journee = lu.result;
+        const masques = journee && journee.valeur && journee.valeur.masques;
+        if (Array.isArray(masques) && !masques.includes('nuit')) {
+          meta.put({ ...journee, valeur: { ...journee.valeur, masques: [...masques, 'nuit'] } });
+        }
+      };
+    };
+    meta.put({ cle: 'schema', valeur: 6 });
   },
 };
 

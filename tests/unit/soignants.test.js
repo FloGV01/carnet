@@ -351,3 +351,24 @@ test('v7 : une valeur « colère 3 · joie 4 » passe à la ligne entre deux fam
   assert.ok(morceaux.length >= 4 * 2, 'plusieurs lignes par colonne');
   assert.ok(Math.max(...morceaux.map((o) => o.y)) < yNotes - 2);
 });
+
+// v8 (spec §7 bis) : la durée médiane vient des heures notées le soir, sinon du coucher et du lever des nuits anciennes ; coucher
+// et lever médians ne se disent que si une colonne en a. La ligne reste unique : la page ne grandit pas.
+test('v8 : « Durée de nuit (médiane) » des heures notées ; coucher et lever seulement pour une période qui en a', () => {
+  const NOM_DUREE = 'Durée de nuit (médiane)';
+  const NOM_HORAIRES = 'Coucher · lever · durée (médianes)';
+  const heures = ['2026-10-12', '2026-10-13', '2026-10-14'].map((date, i) => ({ date, sommeilRessenti: 'sommeil:moyen', heuresSommeil: [6, 8, 7][i] }));
+  const seules = casV6({ journal: heures });
+  assert.ok(nomsIndicateurs(seules).includes(NOM_DUREE));
+  assert.ok(!nomsIndicateurs(seules).includes(NOM_HORAIRES), 'aucun coucher ni lever : ni l\'un ni l\'autre');
+  assert.deepEqual(seules.indicateurs.find((l) => l.nom === NOM_DUREE).valeurs, ['7 h 00', '7 h 00', '7 h 00']);
+  // Des nuits anciennes (coucher et lever) en août : elles ont leur ligne, et la durée mêle les deux sources.
+  const anciennes = ['2026-08-01', '2026-08-02', '2026-08-03'].map((date) => ({ date, heureCoucher: '23:00', heureLever: '07:00' }));
+  const melange = casV6({ journal: [...anciennes, ...heures] });
+  assert.ok(!nomsIndicateurs(melange).includes(NOM_DUREE));
+  // Les colonnes sans coucher ni lever ne donnent que leur durée ; « depuis le début » : médiane de 8, 8, 8, 6, 8 et 7 h.
+  assert.deepEqual(melange.indicateurs.find((l) => l.nom === NOM_HORAIRES).valeurs, ['7 h 00', '7 h 00', '23:00 · 07:00 · 8 h 00']);
+  // Rien de noté : « · ».
+  assert.deepEqual(casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] }).indicateurs.find((l) => l.nom === NOM_DUREE).valeurs, ['·', '·', '·']);
+  assert.equal(nomsIndicateurs(seules).length, nomsIndicateurs(melange).length, 'autant de lignes');
+});

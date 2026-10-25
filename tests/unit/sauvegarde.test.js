@@ -238,12 +238,13 @@ test('v6 : une sauvegarde au format 3 se met à niveau (listes v6, notes vides, 
   assert.deepEqual(a.sauvegarde.data.notes, []);
   assert.equal(a.sauvegarde.counts.notes, 0);
   assert.equal(a.resume.notes, 0);
-  assert.deepEqual(a.valides.meta, [{ cle: 'journee', valeur: { ordre: ['humeur', 'lieu'], masques: ['explosions', 'humeur'], heuresMoment: [] } }]);
+  // v8 : « Nuit en détail » rejoint aussi les champs masqués (mise à niveau du format 5).
+  assert.deepEqual(a.valides.meta, [{ cle: 'journee', valeur: { ordre: ['humeur', 'lieu'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [] } }]);
 
   // Champ Humeur : ajouté seulement à des champs masqués déjà réglés, jamais en double.
   const journee = (valeur) => analyserFichiers(json({ ...v3, data: { ...v3.data, meta: [{ cle: 'journee', valeur }] } })).valides.meta[0].valeur;
-  assert.deepEqual(journee({ masques: ['humeur', 'explosions'] }), { masques: ['humeur', 'explosions'] });
-  assert.deepEqual(journee({ masques: [] }), { masques: ['humeur'] });
+  assert.deepEqual(journee({ masques: ['humeur', 'explosions'] }), { masques: ['humeur', 'explosions', 'nuit'] });
+  assert.deepEqual(journee({ masques: [] }), { masques: ['humeur', 'nuit'] });
   assert.deepEqual(journee({ ordre: ['lieu'] }), { ordre: ['lieu'] });
   assert.equal(journee(null), null);
 
@@ -314,11 +315,25 @@ test('v6 : « Revenir » vers une copie d\'avant la v6 masque le champ Humeur, u
   await repo.meta.ecrire('journee', { masques: [] });
   await poserCopie(repo, copie('2026-09-30T17:00:00.000Z', 3));
   await revenirAvantImport(repo);
-  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur'])[0].valeur, 'copie de la v5 : comme la migration');
+  // v8 : une copie d'avant la v8 masque aussi « Nuit en détail », comme la migration 6.
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur', 'nuit'])[0].valeur, 'copie de la v5 : comme les migrations');
   // En v6, l'utilisateur a pu réafficher Humeur : ce choix n'est pas défait.
   await poserCopie(repo, copie('2026-09-30T18:00:00.000Z', 4));
   await revenirAvantImport(repo);
-  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions'])[0].valeur);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'nuit'])[0].valeur);
+});
+
+test('v8 : « Revenir » vers une copie d\'avant la v8 masque « Nuit en détail », une copie de la v8 garde le choix fait', async () => {
+  const { repo } = nouveauRepo();
+  const journee = (masques) => ({ ordre: ['lieu', 'sommeil'], masques, heuresMoment: [] });
+  const copie = (date, schemaVersion) => ({ id: `avant-import-${date}`, type: 'avant-import', date, schemaVersion, data: { journal: [], listes: [], meta: [{ cle: 'journee', valeur: journee(['explosions', 'humeur']) }] } });
+  await poserCopie(repo, copie('2026-10-20T17:00:00.000Z', 5));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur', 'nuit']), 'copie de la v7 : comme la migration 6');
+  // En v8, l'utilisateur a pu réafficher « Nuit en détail » : ce choix n'est pas défait.
+  await poserCopie(repo, copie('2026-10-26T18:00:00.000Z', 6));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur']));
 });
 
 test('v6 : aperçu de l\'import, les notes et les nouveaux réglages ont leurs mots', () => {
@@ -543,7 +558,13 @@ test('v8 : une sauvegarde au format 5 passe au format 6 : sujets ajoutés sans �
   assert.deepEqual(a.valides.journal.map((j) => [j.date, j.heuresSommeil, j.heureCoucher, j.heureLever, j.reveilsNocturnes]),
     [['2026-10-22', null, '23:40', '06:10', 3], ['2026-10-23', null, null, null, null]], 'aucun nombre d\'heures inventé');
   assert.equal(a.valides.humeurs[0].emotion, 'roue:colere', 'une famille seule de la v7 reste valable');
-  assert.deepEqual(a.valides.meta, v5.data.meta);
+  assert.deepEqual(a.valides.meta, v5.data.meta, 'sans réglage du soir, rien n\'est écrit : la valeur par défaut masque « Nuit en détail »');
+  // Des champs masqués déjà réglés gagnent « Nuit en détail », une fois (comme la migration 6) ; sans masques, rien.
+  const journee = (valeur) => analyserFichiers(json({ ...v5, counts: { ...v5.counts, meta: 1 }, data: { ...v5.data, meta: [{ cle: 'journee', valeur }] } })).valides.meta[0].valeur;
+  assert.deepEqual(journee({ ordre: ['lieu'], masques: ['explosions', 'humeur'], heuresMoment: [18] }), { ordre: ['lieu'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [18] });
+  assert.deepEqual(journee({ masques: ['nuit', 'explosions'] }), { masques: ['nuit', 'explosions'] });
+  assert.deepEqual(journee({ masques: [] }), { masques: ['nuit'] });
+  assert.deepEqual(journee({ heuresMoment: [9] }), { heuresMoment: [9] });
   const { repo } = nouveauRepo();
   await remplacer(repo, a);
   assert.equal((await repo.journal.lire('2026-10-22')).heureLever, '06:10');

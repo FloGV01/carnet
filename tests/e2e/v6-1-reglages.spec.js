@@ -50,8 +50,8 @@ test('Le soir : les seuls champs du soir, sans les heures ; un changement garde 
   await expect(page).toHaveURL(/#\/reglages\/journee$/);
   await expect(page.getByRole('heading', { name: 'Le soir', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toHaveCount(0);
-  // Huit champs et le repli « pesé · rechargé » ; ni heures, ni lien vers Rappels.
-  await expect(page.getByRole('switch')).toHaveCount(9);
+  // Huit champs, les replis « Nuit en détail » (v8) et « pesé · rechargé » ; ni heures, ni lien vers Rappels.
+  await expect(page.getByRole('switch')).toHaveCount(10);
   await expect(heures(page)).toHaveCount(0);
   await expect(page.locator('main.ma-journee')).not.toContainText('Humeur du moment');
   await expect(page.locator('main.ma-journee a')).toHaveCount(0);

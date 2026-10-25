@@ -366,8 +366,23 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .tete-rubrique { display: flex; align-items: center; gap: 10px; min-height: 28px; min-width: 0; }
 .carre-rubrique { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
 .carre-rubrique svg { width: 17px; height: 17px; }
-.titre-rubrique { min-width: 0; font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.tete-rubrique .rubrique-sous { flex: none; font-size: var(--t-note); color: var(--text-2); }
+/* Le titre et « nuit dernière » dans un même bloc de texte, où le lien d'un détail (v8) flotte à droite de la première
+   ligne : le titre passe dessous au besoin (« Contact / humain » dans une demi-carte), sans hauteur de plus. */
+.tete-textes { --h-ligne: var(--l-bloc); flex: 1 1 auto; min-width: 0; font: 600 var(--t-bloc)/var(--h-ligne) var(--police); color: var(--text); }
+.titre-rubrique { color: var(--text); }
+.tete-rubrique .rubrique-sous { margin-left: 10px; font-size: var(--t-note); font-weight: 400; line-height: 1; color: var(--text-2); white-space: nowrap; }
+/* « Détail › », « Durée › » (v8, Q5) : couleur action, 13/600, sur la première ligne du titre, assez court pour que
+   « Contact » et « Sport / » tiennent à sa gauche dans une demi-carte. Sa cible fait 44 de haut : des marges intérieures
+   que des marges négatives rendent, sans hauteur pour la ligne ; elle déborde sur les marges de la carte. Le chevron
+   tourne quand le détail est ouvert. */
+.lien-rubrique {
+  --marge-cible: max(0px, calc((var(--cible) + 1px - var(--h-ligne)) / 2));
+  float: right; display: inline-flex; align-items: center; gap: 1px;
+  padding: var(--marge-cible) 10px var(--marge-cible) 8px; margin: calc(-1 * var(--marge-cible)) -10px calc(-1 * var(--marge-cible)) -2px;
+  border: 0; background: none; color: var(--action); font-family: var(--police); font-size: var(--t-note); font-weight: 600; line-height: var(--h-ligne); white-space: nowrap;
+}
+.lien-rubrique svg { width: 12px; height: 12px; flex: none; transition: transform var(--duree); }
+.lien-rubrique[aria-expanded="true"] svg { transform: rotate(90deg); }
 .carte-champ .segmente button, .carte-champ .pastille { min-height: var(--cible); font-size: var(--t-corps); }
 /* « Congé / repos » passe sur deux lignes : elles tiennent dans les 44 du choix. */
 .carte-champ .pastille { padding-top: 2px; padding-bottom: 2px; }
@@ -378,7 +393,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .aujourdhui .deux-colonnes { display: flex; flex-wrap: wrap; gap: 6px 8px; }
 .deux-colonnes > .carte-champ { flex: 1 1 8.4em; min-width: 0; }
 .deux-colonnes .carte-champ > .segmente { margin-top: auto; }
-.deux-colonnes .titre-rubrique { font-size: var(--t-sous); line-height: 1.15; }
+.deux-colonnes .tete-textes { --h-ligne: calc(var(--t-sous) * 1.15); font-size: var(--t-sous); }
 /* Très grand texte (mesuré dans WebKit, à 390 et 375 de large) : quand une carte n'a plus 13,5 em, Lieu passe sur deux
    colonnes, et les segments (Mal · Moyen · Bien, Oui · Partiel · Non) resserrent leurs marges et passent à la ligne
    plutôt que de déborder : rien ne sort de sa carte, le choix fait et sa coche compris. */
@@ -388,6 +403,16 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   .aujourdhui .carte-champ .segmente button { min-width: min-content; padding: 0 6px; }
 }
 .aujourdhui .segmente button { min-width: 0; }
+
+/* La durée de la nuit (v8), sous Mal · Moyen · Bien quand « Durée › » est ouvert : 4 h ou moins à 7 h, puis 8 h à 10 h ou
+   plus, chaque rangée sur toute la largeur ; « ou moins » et « ou plus » en petit sous le nombre. */
+.detail-duree { margin-top: 2px; }
+.pastilles.heures-sommeil { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.heures-sommeil .pastille { grid-column: span 3; }
+.heures-sommeil .pastille:nth-child(n+5) { grid-column: span 4; }
+.heures-sommeil .pastille small { line-height: 1.1; }
+/* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. */
+.carte-detail { gap: 6px; padding-bottom: 12px; }
 
 /* Mémo vocal (neutre) et « J'ai fini pour ce soir » (couleur action, sans fond) sur une ligne. */
 .aujourdhui .memo-vocal { margin-top: -2px; }
@@ -480,6 +505,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .avec-carres .ligne-champ-reglage { padding-left: 12px; gap: 12px; }
 /* Un libellé coupé sur plusieurs lignes (grand texte) garde 8 px jusqu'aux filets ; sur une ligne, la rangée garde 52. */
 .avec-carres .ligne-champ-reglage .ligne-libelle { padding-block: 8px; }
+/* « Nuit en détail » (v8) : ce qu'il contient, en secondaire sous son nom. */
+.ligne-champ-reglage .ligne-sous { display: block; font-size: var(--t-note); color: var(--text-2); }
 .avec-carres .ligne-champ-reglage .ordre { margin-left: -6px; }
 /* Sur le bord, comme les titres de section et les cartes (v6.1). */
 .aide-carte { font-size: var(--t-note); color: var(--text-2); margin: 0; }

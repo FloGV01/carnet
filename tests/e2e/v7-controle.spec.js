@@ -312,7 +312,9 @@ test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neu
     await expect(page.locator('.ma-journee .avec-carres')).toBeVisible();
     const soir = await carres(page, '.ma-journee .avec-carres');
     const couleurs = { Lieu: 'lieu', Sommeil: 'sommeil', Humeur: 'humeur', 'Contact humain': 'contact', 'Sport / mouvement': 'sport',
-      'Explosions (compteur du soir)': 'explosions', 'Traitement pris': 'traitement', 'Mes points positifs': 'positifs', 'Ce qui a pesé · ce qui a rechargé': 'energie' };
+      'Explosions (compteur du soir)': 'explosions', 'Traitement pris': 'traitement', 'Mes points positifs': 'positifs',
+      // v8 : « Nuit en détail », masqué par défaut, avec ce qu'il contient en secondaire.
+      'Nuit en détailcoucher, lever, réveils': 'sommeil', 'Ce qui a pesé · ce qui a rechargé': 'energie' };
     expect(soir.map((x) => x.texte)).toEqual(Object.keys(couleurs));
     for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[`c-${couleurs[x.texte]}`]));
   }
@@ -347,9 +349,9 @@ test('Réglages et Le soir : au texte par défaut et en grand texte (23 px), le 
       await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
       await stabiliser(page);
       const rangees = await margesTexte(page);
-      // Réglages : Sauvegarde (2), Ma saisie (4, Émotions en v8), Moment difficile (4) ; Le soir : 8 champs et pesé ·
-      // rechargé.
-      expect(rangees.length, route).toBe(route === '#/reglages' ? 10 : 9);
+      // Réglages : Sauvegarde (2), Ma saisie (4, Émotions en v8), Moment difficile (4) ; Le soir : 8 champs, « Nuit en
+      // détail » (v8) et pesé · rechargé.
+      expect(rangees.length, route).toBe(10);
       for (const x of rangees) {
         const ou = `${route} ${taille ? `${taille} px` : 'défaut'} : ${x.texte}`;
         expect(x.haut, ou).toBeGreaterThanOrEqual(8);

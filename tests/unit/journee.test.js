@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche,
+  CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche, repliNuitAffiche, nuitRenseignee, MASQUE_NUIT,
 } from '../../public/js/domain/journee.js';
+import { texteHeuresSommeil } from '../../public/js/domain/champs.js';
 
 test('le masque peseRecharge survit à normaliserJournee, hors de l\'ordre des champs', () => {
   const j = normaliserJournee({ ordre: ['humeur', 'lieu'], masques: ['explosions', 'peseRecharge'], heuresMoment: [] });
@@ -51,8 +52,8 @@ test('repliAffiche : masqué mais portant des valeurs ce jour-là, il reste affi
   assert.equal(repliAffiche(masque, { pese: ['pese:bruit'], recharge: ['recharge:calme'] }), true);
 });
 
-test('v6 : le champ Humeur du soir est masqué par défaut, avec le compteur d\'explosions', () => {
-  assert.deepEqual(JOURNEE_DEFAUT.masques, ['explosions', 'humeur']);
+test('v6 : le champ Humeur du soir est masqué par défaut, avec le compteur d\'explosions (et, depuis la v8, « Nuit en détail »)', () => {
+  assert.deepEqual(JOURNEE_DEFAUT.masques, ['explosions', 'humeur', 'nuit']);
   const j = normaliserJournee(null);
   assert.ok(!champsVisibles(j).includes('humeur'));
   assert.ok(!champsAffiches(j, { date: '2026-10-14', lieu: 'lieu:bureau' }).includes('humeur'));
@@ -62,4 +63,49 @@ test('v6 : un jour passé noté le soir garde son champ Humeur', () => {
   const j = normaliserJournee(null);
   assert.ok(champsAffiches(j, { date: '2026-09-30', humeur: 6 }).includes('humeur'));
   assert.ok(!champsAffiches(j, { date: '2026-09-30', humeur: null }).includes('humeur'));
+});
+
+// ---------- v8 : « Nuit en détail » masqué par défaut, la durée de la nuit dans la carte Sommeil (spec §7 bis) ----------
+
+test('v8 : « Nuit en détail » est masqué par défaut, réaffichable, hors de l\'ordre des champs', () => {
+  assert.equal(MASQUE_NUIT, 'nuit');
+  const defaut = normaliserJournee(undefined);
+  assert.ok(defaut.masques.includes('nuit'));
+  assert.ok(!defaut.ordre.includes('nuit'));
+  assert.deepEqual(champsVisibles(defaut), CHAMPS_JOURNEE.filter((c) => !['explosions', 'humeur'].includes(c)), 'aucun champ en moins');
+  assert.equal(repliNuitAffiche(defaut, { date: '2026-10-25' }), false);
+  assert.equal(repliNuitAffiche(defaut, null), false);
+  // Réaffiché dans Réglages › Le soir : le masque part, et il le reste.
+  const reaffiche = normaliserJournee({ masques: ['explosions', 'humeur'] });
+  assert.deepEqual(reaffiche.masques, ['explosions', 'humeur']);
+  assert.equal(repliNuitAffiche(reaffiche, { date: '2026-10-25' }), true);
+  assert.deepEqual(normaliserJournee({ masques: ['nuit', 'nuit', 'peseRecharge'] }).masques, ['nuit', 'peseRecharge']);
+});
+
+test('v8 : une nuit déjà notée (coucher, lever ou réveils) garde son repli, masqué ou non, carte Sommeil masquée comprise', () => {
+  const defaut = normaliserJournee(null);
+  for (const nuit of [{ heureCoucher: '23:40' }, { heureLever: '07:10' }, { reveilsNocturnes: 0 }, { reveilsNocturnes: 2, heureCoucher: '23:00', heureLever: '06:30' }]) {
+    assert.equal(nuitRenseignee(nuit), true, JSON.stringify(nuit));
+    assert.equal(repliNuitAffiche(defaut, nuit), true, JSON.stringify(nuit));
+    assert.equal(repliNuitAffiche(normaliserJournee({ masques: ['sommeil', 'nuit'] }), nuit), true, `Sommeil masqué : ${JSON.stringify(nuit)}`);
+  }
+  // Les heures et la qualité ne sont pas « Nuit en détail ».
+  assert.equal(nuitRenseignee({ heuresSommeil: 6, sommeilRessenti: 'sommeil:mal', heureCoucher: null }), false);
+  assert.equal(repliNuitAffiche(defaut, { heuresSommeil: 6 }), false);
+  // Réaffiché mais la carte Sommeil masquée : le repli suit la carte, sauf une nuit notée.
+  const sansSommeil = normaliserJournee({ masques: ['sommeil'] });
+  assert.equal(repliNuitAffiche(sansSommeil, {}), false);
+  assert.equal(repliNuitAffiche(sansSommeil, { heureLever: '07:00' }), true);
+});
+
+test('v8 : la durée de la nuit tient la carte Sommeil affichée, même masquée', () => {
+  const masque = normaliserJournee({ masques: ['sommeil'] });
+  assert.ok(!champsAffiches(masque, {}).includes('sommeil'));
+  assert.ok(champsAffiches(masque, { heuresSommeil: 7 }).includes('sommeil'));
+  assert.ok(champsAffiches(masque, { sommeilRessenti: 'sommeil:bien' }).includes('sommeil'));
+});
+
+test('v8 : les libellés de la durée, de « 4 h ou moins » à « 10 h ou plus », rien hors bornes', () => {
+  assert.deepEqual([4, 5, 6, 7, 8, 9, 10].map(texteHeuresSommeil), ['4 h ou moins', '5 h', '6 h', '7 h', '8 h', '9 h', '10 h ou plus']);
+  for (const h of [3, 11, 6.5, '6', null, undefined]) assert.equal(texteHeuresSommeil(h), null, String(h));
 });

@@ -26,13 +26,21 @@ function lignesIndicateurs(colonnes, lib) {
   const v = (f, fn) => fn(f);
   const sur = (n, unite = 'j') => (n ? ` (sur ${n} ${unite})` : '');
   const avecNotes = colonnes.some((c) => c.f.humeur.n > 0);
+  // Durée de nuit (v8) : la médiane des heures notées le soir, ou du coucher et du lever des nuits anciennes. Coucher et
+  // lever médians ne se disent que pour une période qui en a (une colonne qui n'en a pas ne donne que sa durée) ; la ligne
+  // reste unique.
+  const aHoraires = (f) => Boolean(f.nuits.coucher || f.nuits.lever);
+  const dureeSeule = (f) => (f.nuits.duree ? duree(f.nuits.duree) : '·');
+  const ligneNuits = colonnes.some((c) => aHoraires(c.f))
+    ? ['Coucher · lever · durée (médianes)', (f) => (aHoraires(f) ? `${f.nuits.coucher || '·'} · ${f.nuits.lever || '·'} · ${duree(f.nuits.duree)}` : dureeSeule(f))]
+    : ['Durée de nuit (médiane)', dureeSeule];
   const emotions = { nom: NOM_EMOTIONS, valeurs: colonnes.map((c) => texteFamilles(c.emotions) || '·'), multiligne: true };
   const defs = [
     ...(avecNotes ? [[NOM_NOTES, (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${nombre(f.humeur.minReleve)}-${nombre(f.humeur.maxReleve)}, sur ${f.humeur.n} j)` : '·')]] : []),
     ['Explosions (jours avec)', (f) => (f.explosions.n ? `${f.explosions.total} (${f.explosions.jours})` : '·')],
     [`Nuits ${lib('sommeil:mal')}`, (f) => (f.nuits.n ? `${f.nuits.mal}${sur(f.nuits.n, 'nuits')}` : '·')],
     ['Réveils nocturnes (moyenne)', (f) => (f.nuits.reveils.n ? `${moyenneReveils(f.nuits.reveils)}${sur(f.nuits.reveils.n)}` : '·')],
-    ['Coucher · lever · durée (médianes)', (f) => (f.nuits.coucher || f.nuits.lever ? `${f.nuits.coucher || '·'} · ${f.nuits.lever || '·'} · ${duree(f.nuits.duree)}` : '·')],
+    ligneNuits,
     ['Contact humain', (f) => (f.contact.n ? `${f.contact.oui} j${sur(f.contact.n)}` : '·')],
     ['Bureau · télétravail', (f) => (f.lieux.n ? `${f.lieux.bureau} · ${f.lieux.teletravail}${sur(f.lieux.n)}` : '·')],
     ['Sport / mouvement', (f) => (f.sport.n ? `${f.sport.oui} j${sur(f.sport.n)}` : '·')],
