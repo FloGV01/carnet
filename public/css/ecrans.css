@@ -723,7 +723,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Le lecteur de Bien-être (v8, spec §5) : plein écran. Avant : la durée et la posture, la description, l'anneau et son
    bouton lecture, les réglages du son. Pendant : la consigne en grand en haut, l'anneau du temps de tout l'exercice au
    milieu avec la pause au centre, « il reste 6:40 » dessous ; en bas, près du pouce, Précédent et Suivant, puis
-   « Terminer » en lien discret. */
+   « Terminer » en lien discret. L'écran de lecture prend toute la hauteur : en pause, les réglages viennent dessous (on
+   les atteint en défilant), et « Reprendre » est à la place exacte de « Pause ». */
 .lecteur { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--marge) 16px; }
 .lecteur-plein { min-height: 100%; padding-top: 6px; }
 .lecteur-duree { margin-top: -6px; font-size: var(--t-sous); color: var(--text-2); }

@@ -337,8 +337,8 @@ Inspirer, retenir, expirer, retenir : quatre temps chacun.
 4. Retiens l'air en comptant jusqu'à quatre. *(9 s)*
 5. Expire par la bouche en comptant jusqu'à quatre. *(9 s)*
 6. Garde les poumons vides en comptant jusqu'à quatre. *(9 s)*
-7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(52 s)*
-8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(52 s)*
+7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(48 s)*
+8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(48 s)*
 9. Laisse ta respiration redevenir libre. *(15 s)*
 
 Les étapes 3 à 6 durent 9 s : voix allumée, la consigne se dit en 2 à 2,5 s, puis il faut environ 4 s pour compter jusqu'à quatre avant que l'étape suivante soit lue.
@@ -513,3 +513,12 @@ Spec : `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`. Plan : `docs/sup
 - **La définition** s'affiche sous la carte : « Irrité : agacé par… », le mot à la couleur de sa famille. Les 79 textes sont dans `domain/definitions-roue.js` (figés) ; leur liste sera reprise ici pour relecture (tâche 9).
 - **Réglages › Émotions** : dans « Ma saisie », après Listes, carré neutre comme ses voisins. Une carte par famille ; un toucher ouvre le champ du mot (le champ de texte de l'app, avec `aLaSortie` : il n'enregistre qu'à la sortie du champ, ou si l'app passe en arrière-plan, et la frappe reste dans le brouillon local ; vider le champ pour le réécrire ne retire donc pas la correction, et « Revenir au texte de Carnet » ne disparaît pas sous le doigt). Un champ vidé, ou remis au texte de Carnet, retire la correction. « Revenir au texte de Carnet » suit chaque mot corrigé.
 - **La roue en familles de la v7** (`ui/composants/bulles.js`) est retirée avec ses styles.
+
+### Lecteur de Bien-être (tâche 3)
+
+**Relecture de la tâche 3**
+- **Une étape rythmée dure un nombre entier de cycles.** Les deux étapes rythmées de la respiration carrée passent de 52 à 48 s, soit trois cycles de 16 s ; leurs textes ne changent pas, et l'exercice dure 2:52 au lieu de 3:00. À 52 s, la première finissait sur une inspiration et la seconde repartait d'une inspiration : 8 s d'« Inspire » d'affilée.
+- **Deux étapes rythmées au même rythme gardent le même cycle** : après une pause au milieu de la première (la reprise repart d'une inspiration), la seconde continue le cycle au lieu de repartir, et le souffle reste calé sur l'horloge audio d'une étape à l'autre.
+- **En pause, l'écran garde la mise en page de la lecture** : « Reprendre » est à la place exacte de « Pause », et un second toucher au même endroit reprend. Les réglages du lecteur viennent sous l'écran de lecture : on les atteint en défilant.
+- **La fin n'affiche que « Fin de l'exercice. »**, sans anneau : menée au bout ou non, rien ne dit ce qui a été fait.
+- **Les textes de la cohérence cardiaque suivent les mots affichés**, pas le disque, qui ne bouge pas avec « Réduire les animations » : « Respire au rythme des mots, sans forcer. » et « Inspirer sur « Inspire », expirer sur « Expire ». ».

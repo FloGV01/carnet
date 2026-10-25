@@ -91,8 +91,9 @@ export const texteFin = (minutes) => `${minutes}\u00a0minutes de respiration.`;
 export const texteRythme = (rythme) => rythme.split('-').map((n) => `${n}\u00a0s`).join(' · ');
 
 // La cohérence cardiaque dans le lecteur de Bien-être (v8, spec §5) : une seule étape, rythmée, de la durée réglée. Son
-// identifiant est celui des séances de respiration (`coherence`).
-export const TEXTE_COHERENCE = 'Respire au rythme du disque, sans forcer.';
+// identifiant est celui des séances de respiration (`coherence`). Ses textes s'appuient sur les mots affichés
+// (« Inspire », « Expire »), et non sur le disque : avec « Réduire les animations », il ne grandit ni ne rétrécit.
+export const TEXTE_COHERENCE = 'Respire au rythme des mots, sans forcer.';
 export function seanceCoherence(reglages) {
   const r = normaliserRespiration(reglages);
   return {
@@ -100,7 +101,7 @@ export function seanceCoherence(reglages) {
     titre: NOM_RESPIRATION,
     dureeMin: r.duree,
     posture: 'assis',
-    description: 'Inspirer quand le disque grandit, expirer quand il rétrécit.',
+    description: 'Inspirer sur « Inspire », expirer sur « Expire ».',
     etapes: [{ texte: TEXTE_COHERENCE, dureeS: r.duree * 60, souffle: souffleDeRythme(r.rythme) }],
   };
 }

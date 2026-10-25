@@ -7,18 +7,22 @@
 //   « Terminer » en lien discret. Les étapes avancent seules, voix allumée ou non ; « Suivant » ne sert qu'à sauter une
 //   étape. Aucun repère « 3 sur 8 ».
 // - Une étape rythmée (`souffle`, quatre temps) : un disque grandit à l'inspiration et rétrécit à l'expiration, sous
-//   « Inspire », « Retiens », « Expire » ; pendant « Retiens », il reste immobile et le souffle sonore se tait.
-// - La fin (au bout, ou « Terminer ») : trois bols, « Fin de l'exercice. » dit par la voix si elle est allumée ; le lecteur
-//   se ferme seul 6 s plus tard et revient à l'écran d'origine, où le message « Noter mon émotion » reste 6 s. Rien ne
-//   s'ouvre seul, aucune félicitation.
+//   « Inspire », « Retiens », « Expire » ; pendant « Retiens », il reste immobile et le souffle sonore se tait. Deux étapes
+//   rythmées qui se suivent au même rythme gardent le même cycle : jamais deux inspirations de suite, même après une
+//   pause au milieu de la première.
+// - La fin (au bout, ou « Terminer ») : trois bols, « Fin de l'exercice. » dit par la voix si elle est allumée, et rien
+//   d'autre à l'écran (ni anneau ni temps : rien ne dit ce qui a été fait ou non) ; le lecteur se ferme seul 6 s plus
+//   tard et revient à l'écran d'origine, où le message « Noter mon émotion » reste 6 s. Rien ne s'ouvre seul, aucune
+//   félicitation.
 // - Pause, page cachée (écran verrouillé, autre app) ou quittée : la voix et les sons se coupent, le verrou d'écran est
 //   rendu ; « Reprendre » repart de l'étape, le souffle d'un début de cycle. Le verrou d'écran est gardé pendant la séance.
 // - Réglages du lecteur, gardés sur cet appareil (localStorage) : « Son : Aucun · Repères · Repères + souffle » (Repères
 //   + souffle au départ), « Jouer même en mode silencieux » (éteint : session audio « ambient », le son se tait en
 //   silencieux et se mêle à la musique ; allumé : « playback », la musique se met en pause), et la lecture à voix haute
-//   (v7, éteinte au départ ; sans voix française, l'interrupteur n'apparaît pas). Ils se règlent avant de commencer et en
-//   pause, dans une carte sous l'anneau. Ils ne valent que pour ce lecteur : Moment difficile et « Respirer » gardent
-//   leur réglage (Réglages › Moment difficile, spec §12.1).
+//   (v7, éteinte au départ ; sans voix française, l'interrupteur n'apparaît pas). Ils se règlent avant de commencer, dans
+//   une carte sous l'anneau, et en pause, dans la même carte sous l'écran de lecture (en défilant) : l'écran de pause a
+//   la mise en page de la lecture, « Reprendre » est à la place exacte de « Pause ». Ils ne valent que pour ce lecteur :
+//   Moment difficile et « Respirer » gardent leur réglage (Réglages › Moment difficile, spec §12.1).
 // - Séance (ui/seance.js), d'origine `bien-etre` : menée au bout, ou arrêtée après 60 s, une seule par lecture. La durée
 //   est celle du temps actif, pauses exclues ; menée au bout, la dernière étape atteinte après la moitié de la durée.
 // Le son ne naît que dans un toucher (« Commencer », « Reprendre », « Terminer », ou le bouton lecture d'une carte, par
@@ -34,7 +38,7 @@ import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { garderEcran, useSeance } from '../seance.js';
 import { dureeEtPosture, dureeExerciceS, exerciceMeneAuBout } from '../../domain/exercices.js';
-import { motPhase, phaseSouffle, phasesEntre } from '../../domain/respiration.js';
+import { TEMPS_SOUFFLE, motPhase, phaseSouffle, phasesEntre } from '../../domain/respiration.js';
 import { pourAffichage } from '../../domain/typographie.js';
 
 export const CLE_VOIX = 'carnet:exercice:voix';
@@ -109,6 +113,9 @@ function amorcerVoix() {
   } catch { /* pas de voix */ }
 }
 
+// Deux souffles aux mêmes quatre temps.
+const memeSouffle = (a, b) => Boolean(a && b) && TEMPS_SOUFFLE.every((k) => a[k] === b[k]);
+
 // « 6:40 » : le temps qui reste, jamais négatif.
 const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
@@ -132,7 +139,8 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   // l'étape a commencé.
   const temps = useRef({ cumul: 0, depuis: null, debutEtape: 0 });
   // Le souffle de l'étape : l'origine de ses cycles en temps de l'étape (0 au début de l'étape, l'instant de la reprise
-  // après une pause), jusqu'où le souffle sonore est programmé, et la clé du disque (une origine nouvelle le relance).
+  // après une pause ; avant le début de l'étape quand le cycle vient de l'étape précédente), jusqu'où le souffle sonore
+  // est programmé, et la clé du disque (une origine nouvelle le relance).
   const souffle = useRef({ origine: 0, programme: 0, cle: 0 });
   const verrou = useRef(null);
   const parle = useRef(false);
@@ -147,8 +155,7 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   const ecoule = () => temps.current.cumul + (temps.current.depuis == null ? 0 : performance.now() - temps.current.depuis);
   const dansEtape = () => ecoule() - temps.current.debutEtape;
   const arreterTemps = () => { temps.current.cumul = ecoule(); temps.current.depuis = null; };
-  // Le temps qui reste à tout l'exercice : la fin de l'étape, puis les étapes suivantes. À la fin, le temps est arrêté :
-  // l'anneau n'est plein que si la lecture est allée au bout (« Terminer » avant le bout le laisse où il en était).
+  // Le temps qui reste à tout l'exercice : la fin de l'étape, puis les étapes suivantes.
   const resteMs = () => {
     if (etat === 'avant') return totalMs;
     const apres = etapes.slice(place + 1).reduce((n, x) => n + (x.dureeS || 0) * 1000, 0);
@@ -183,6 +190,8 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   const rendreVerrou = () => { if (verrou.current) { verrou.current.release().catch(() => {}); verrou.current = null; } };
   // Un verrou obtenu après la pause ou la fin est rendu tout de suite.
   const tenir = (v) => { if (v && courant.current.etat !== 'en-cours') { v.release().catch(() => {}); return; } if (v) verrou.current = v; };
+  // L'étape n et la suivante sont rythmées au même rythme : le cycle passe de l'une à l'autre sans repartir.
+  const cycleContinue = (n) => n + 1 < etapes.length && memeSouffle(etapes[n].souffle, etapes[n + 1].souffle);
   // `derniereAtteinte` : la lecture est sur la dernière étape ; elle n'est menée au bout qu'après assez de temps actif.
   const noter = (derniereAtteinte) => {
     const dureeS = ecoule() / 1000;
@@ -196,32 +205,43 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
     if (avecBol) (debut ? sons.bolDebut : sons.bolEtape)();
     if (l) dire(etapes[n].texte, !avecBol ? 0 : debut ? VOIX_APRES_BOL_DEBUT_MS : VOIX_APRES_BOL_MS);
   };
-  // Le souffle sonore de l'étape rythmée, programmé jusqu'à un peu plus loin que maintenant, sans dépasser l'étape. Une
-  // phase commencée depuis la dernière programmation (le début de l'étape, vu au tic suivant) part tout de suite, pour
-  // le temps qui lui reste.
+  // Le souffle sonore de l'étape rythmée, programmé jusqu'à un peu plus loin que maintenant, sans dépasser l'étape (sauf
+  // quand l'étape suivante continue le cycle : la programmation passe sur elle, et une phase qui déborde va jusqu'au
+  // bout). Une phase commencée depuis la dernière programmation (le début de l'étape, vu au tic suivant) part tout de
+  // suite, pour le temps qui lui reste.
   const programmerSouffle = () => {
     const { place: n, son: s, etat: e } = courant.current;
     const rythme = etapes[n].souffle;
     if (!rythme || s !== 'souffle' || e !== 'en-cours') return;
     const t = dansEtape();
     const finEtape = etapes[n].dureeS * 1000;
+    const finSon = cycleContinue(n) ? Infinity : finEtape;
     const { origine: o, programme: de } = souffle.current;
-    const a = Math.min(t + AVANCE_MS, finEtape);
+    const a = Math.min(t + AVANCE_MS, finSon);
     if (a <= de) return;
     for (const p of phasesEntre(de - o, a - o, rythme)) {
       const debut = p.debutMs + o;
-      const fin = Math.min(debut + p.dureeMs, finEtape);
+      const fin = Math.min(debut + p.dureeMs, finSon);
       sons.souffle({ phase: p.phase, dureeS: (fin - Math.max(debut, t)) / 1000, dansS: Math.max(0, debut - t) / 1000 });
     }
     souffle.current.programme = a;
   };
 
-  // `auto` : l'étape a fini son temps ; l'étape suivante commence à l'instant exact où elle a fini.
+  // `auto` : l'étape a fini son temps ; l'étape suivante commence à l'instant exact où elle a fini. Au même rythme, le
+  // cycle continue (le disque ne repart pas, la phase en cours n'est pas coupée) ; sinon, ou sautée d'un toucher,
+  // l'étape repart d'une inspiration.
   const aller = (n, auto = false) => {
     const t = temps.current;
-    t.debutEtape = auto ? t.debutEtape + etapes[courant.current.place].dureeS * 1000 : ecoule();
-    souffle.current = { origine: 0, programme: 0, cle: souffle.current.cle + 1 };
-    sons.couperSouffle();
+    const avant = courant.current.place;
+    const finAvant = etapes[avant].dureeS * 1000;
+    t.debutEtape = auto ? t.debutEtape + finAvant : ecoule();
+    if (auto && n === avant + 1 && cycleContinue(avant)) {
+      const { origine, programme, cle } = souffle.current;
+      souffle.current = { origine: origine - finAvant, programme: programme - finAvant, cle };
+    } else {
+      souffle.current = { origine: 0, programme: 0, cle: souffle.current.cle + 1 };
+      sons.couperSouffle();
+    }
     courant.current.place = n;
     setPlace(n);
     if (courant.current.etat === 'en-cours') annoncer(n);
@@ -346,7 +366,7 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   }, []);
 
   // Les réglages du lecteur, avant de commencer et en pause : la voix (si l'iPhone a une voix française), le son, le mode
-  // silencieux.
+  // silencieux. En pause, ils viennent après l'écran de lecture, qui garde toute la hauteur : rien ne bouge sous le pouce.
   const reglages = html`<ul class="liste carte carte-groupe reglages-lecteur" aria-label="Réglages du lecteur">
     ${voix && html`<li>
       <div class="ligne-interrupteur">
@@ -401,7 +421,6 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   } else if (etat === 'fin') {
     corps = html`<div class="lecteur lecteur-plein">
       <p class="lecteur-consigne">${FIN}</p>
-      <div class="lecteur-centre">${anneau}</div>
     </div>`;
   } else {
     corps = html`<div class="lecteur lecteur-plein">
@@ -413,8 +432,8 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
         ${anneau}
         <p class="lecteur-reste">${etat === 'pause' ? 'En pause · ' : ''}il reste ${minuteur(resteMs())}</p>
       </div>
-      ${etat === 'pause' && reglages}
-    </div>`;
+    </div>
+    ${etat === 'pause' && html`<div class="lecteur reglages-pause">${reglages}</div>`}`;
     pied = html`<div class="actions-lecteur">
       ${etapes.length > 1 && html`<button type="button" class="btn" disabled=${place === 0} onClick=${() => aller(place - 1)}>${Icones.retour({ trait: 2 })}Précédent</button>
         <button type="button" class="btn" disabled=${derniere} onClick=${() => aller(place + 1)}>Suivant${Icones.chevron({ trait: 2 })}</button>`}

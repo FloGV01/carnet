@@ -81,6 +81,15 @@ test('la cohérence cardiaque en séance du lecteur : une étape rythmée, de la
   for (const t of [TEXTE_COHERENCE, seanceCoherence().description]) assert.deepEqual(trouverInterdits(t), [], t);
 });
 
+test('les textes de la cohérence cardiaque restent vrais avec « Réduire les animations » : ils suivent les mots affichés, pas le disque', () => {
+  // Avec ce réglage, le disque ne grandit ni ne rétrécit (ecrans.css) : les textes ne parlent que des mots de la phase.
+  const { description } = seanceCoherence();
+  assert.equal(TEXTE_COHERENCE, 'Respire au rythme des mots, sans forcer.');
+  assert.equal(description, 'Inspirer sur « Inspire », expirer sur « Expire ».');
+  for (const t of [TEXTE_COHERENCE, description]) assert.doesNotMatch(t, /disque|grandi|rétréci|cercle|bouge/i, t);
+  assert.ok(description.includes(`« ${motPhase('inspire')} »`) && description.includes(`« ${motPhase('expire')} »`), description);
+});
+
 test('exercices : une posture chacun, et « 3 min · assis ou allongé »', () => {
   for (const x of EXERCICES) assert.ok(typeof x.posture === 'string' && x.posture.length > 0 && !/\n/.test(x.posture), x.id);
   assert.equal(dureeEtPosture(exerciceDe('respiration-abdominale')), '3 min · assis ou allongé');
@@ -99,6 +108,22 @@ test('étapes rythmées : seulement celles dont le texte donne un rythme (respir
     assert.ok(souffleValide(s));
     assert.ok(Object.isFrozen(s));
   }
+  assert.deepEqual(exerciceDe('respiration-carree').etapes.map((e) => e.dureeS), [15, 10, 9, 9, 9, 9, 48, 48, 15]);
   // Les autres étapes n'ont pas de clé `souffle` (le lecteur n'y montre pas le disque).
   for (const x of EXERCICES) for (const e of x.etapes) if (!e.souffle) assert.ok(!('souffle' in e), e.texte);
+});
+
+test('une étape rythmée dure un nombre entier de cycles : elle finit poumons vides, et la suivante commence par « Inspire »', () => {
+  for (const x of EXERCICES) {
+    for (const e of x.etapes.filter((y) => y.souffle)) {
+      assert.equal((e.dureeS * 1000) % cycleSouffleMs(e.souffle), 0, `${x.id} : ${e.texte} (${e.dureeS} s)`);
+      // Juste avant la fin, la dernière phase est celle qui suit l'expiration (ou l'expiration, sans rétention) ; jamais
+      // une inspiration, que l'étape suivante répéterait.
+      const derniere = phaseSouffle(e.dureeS * 1000 - 1, e.souffle).phase;
+      assert.ok(['retiens-vide', 'expire'].includes(derniere), `${x.id} : ${e.texte} finit sur ${derniere}`);
+      assert.equal(phaseSouffle(e.dureeS * 1000, e.souffle).phase, 'inspire');
+    }
+  }
+  // Le défaut épinglé : 52 s de respiration carrée (3 cycles et 4 s) finissaient sur une inspiration.
+  assert.equal(phaseSouffle(52000 - 1, CARRE).phase, 'inspire');
 });

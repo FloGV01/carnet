@@ -8,9 +8,11 @@ import {
 
 // v8 · Le lecteur de Bien-être (spec §5, §12.1 et §12.3) : un faux contexte Web Audio (aides/audio.js) et une synthèse
 // vocale factice. La lecture, les étapes qui avancent seules, un bol à chaque changement, le souffle sur une étape rythmée
-// et rien pendant « Retiens » ; la fin, puis la fermeture et le message ; « Son : Aucun » et « Repères » ; le mode
-// silencieux ; la cohérence cardiaque lancée d'un toucher ; le point de vigilance 4 (une respiration de crise reste
-// muette par défaut ; une lecture interrompue coupe voix et sons et rend le verrou d'écran, une seule séance).
+// et rien pendant « Retiens », jamais deux inspirations de suite d'une étape rythmée à l'autre (même après une pause) ;
+// « Reprendre » à la place de « Pause » ; la fin (« Fin de l'exercice. » seul), puis la fermeture et le message ; « Son :
+// Aucun » et « Repères » ; le mode silencieux ; la cohérence cardiaque lancée d'un toucher ; le point de vigilance 4 (une
+// respiration de crise reste muette par défaut ; une lecture interrompue coupe voix et sons et rend le verrou d'écran,
+// une seule séance).
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
 test.beforeEach(async ({ page }) => {
@@ -35,8 +37,16 @@ const motSouffle = (v) => v.locator('.mot-souffle');
 const disque = (v) => v.locator('.disque-souffle');
 // La part de l'anneau remplie, de 0 à 1.
 const anneau = (v) => v.locator('.anneau-plein').evaluate((c) => 1 - Number(c.getAttribute('stroke-dashoffset')) / Number(c.getAttribute('stroke-dasharray')));
+// L'écran de fin : « Fin de l'exercice. » seul, ni anneau ni temps (rien ne dit ce qui a été fait ou non).
+const finSeule = async (v) => {
+  await expect(consigne(v)).toHaveText('Fin de l\'exercice.');
+  await expect(v.locator('.lecteur-anneau')).toHaveCount(0);
+  await expect(v.locator('.anneau-plein, .anneau-temps')).toHaveCount(0);
+  await expect(reste(v)).toHaveCount(0);
+};
 
-// Respiration carrée : 15, 10, 9, 9, 9, 9, 52 (rythmée), 52 (rythmée), 15 s ; 3 min en tout.
+// Respiration carrée : 15, 10, 9, 9, 9, 9, 48 (rythmée), 48 (rythmée), 15 s ; 2:52 en tout (3 min annoncées). Les deux
+// étapes rythmées font trois cycles de 16 s chacune : 61 à 109 s, puis 109 à 157 s.
 const CARREE = [
   'Installe-toi, le dos droit sans être raide. Les épaules restent basses.', 'Vide doucement l\'air de tes poumons.',
   'Inspire par le nez en comptant jusqu\'à quatre.', 'Retiens l\'air en comptant jusqu\'à quatre.',
@@ -94,7 +104,7 @@ test('lecture : bol de début, les étapes avancent seules voix éteinte, un bol
   expect((await bols(page))[0].f).toBe(BOLS.debut);
   expect(await audio(page)).toMatchObject({ contextes: 1, etat: 'running', session: 'ambient' });
   await expect(consigne(v)).toHaveText(texte(CARREE[0]));
-  await expect(reste(v)).toHaveText(/^il reste (3:00|2:59)$/);
+  await expect(reste(v)).toHaveText(/^il reste (2:52|2:51)$/);
   await expect(bouton(v, 'Pause')).toBeVisible();
   await expect(bouton(v, 'Précédent')).toBeDisabled();
   await expect(v.getByRole('button', { name: 'Terminer', exact: true })).toBeVisible();
@@ -109,9 +119,9 @@ test('lecture : bol de début, les étapes avancent seules voix éteinte, un bol
   await expect.poll(async () => (await bols(page)).map((x) => x.f)).toEqual([BOLS.debut, BOLS.etape]);
   await page.clock.runFor(10000);
   await expect(consigne(v)).toHaveText(texte(CARREE[2]));
-  // Le temps de tout l'exercice : 25,3 s faites sur 180.
-  await expect(reste(v)).toHaveText('il reste 2:35');
-  expect(await anneau(v)).toBeCloseTo(25.3 / 180, 1);
+  // Le temps de tout l'exercice : 25,3 s faites sur 172.
+  await expect(reste(v)).toHaveText('il reste 2:27');
+  expect(await anneau(v)).toBeCloseTo(25.3 / 172, 1);
 
   // L'étape rythmée (à 61 s) : le disque et « Inspire », « Retiens », « Expire », « Retiens », quatre temps de 4 s.
   await page.clock.runFor(36000);
@@ -129,29 +139,117 @@ test('lecture : bol de début, les étapes avancent seules voix éteinte, un bol
   await page.clock.runFor(4000);
   await expect(motSouffle(v)).toHaveText('Retiens');
   await expect(disque(v)).toHaveClass(/phase-retiens-vide/);
-  // Le reste de l'étape, jusqu'à la suivante (113 s), rythmée aussi.
-  await page.clock.runFor(40000);
+  // Au passage à l'étape suivante (109 s), rythmée aussi : l'expiration (101 à 105 s), « Retiens » poumons vides (105 à
+  // 109 s), puis « Inspire » ; jamais deux inspirations de suite.
+  await page.clock.runFor(29000);
+  await expect(consigne(v)).toHaveText(texte(CARREE[6]));
+  await expect(motSouffle(v)).toHaveText('Expire');
+  await page.clock.runFor(4000);
+  await expect(consigne(v)).toHaveText(texte(CARREE[6]));
+  await expect(motSouffle(v)).toHaveText('Retiens');
+  await expect(disque(v)).toHaveClass(/phase-retiens-vide/);
+  await page.clock.runFor(3000);
   await expect(consigne(v)).toHaveText(texte(CARREE[7]));
+  await expect(motSouffle(v)).toHaveText('Inspire');
+  await expect(disque(v)).toHaveClass(/phase-inspire/);
+  // La fin de l'étape (157 s) : la dernière, sans rythme.
+  await page.clock.runFor(48000);
+  await expect(consigne(v)).toHaveText(texte(CARREE[8]));
+  await expect(disque(v)).toHaveCount(0);
 
-  // Le souffle de l'étape : une inspiration ou une expiration toutes les 4 s de « Retiens » près, de 4 s chacune, calées
-  // sur l'horloge audio ; rien pendant « Retiens », et aucun bol dans l'étape.
+  // Le souffle des deux étapes : une inspiration ou une expiration toutes les 8 s, sans rupture au passage d'une étape à
+  // l'autre (une inspiration, une expiration, et ainsi de suite), de 4 s chacune, calées sur l'horloge audio ; rien
+  // pendant « Retiens », et aucun bol dans une étape (seulement à son début).
   const tous = await souffles(page);
   const debut = tous[1].t - 8;
-  const etape = tous.filter((s) => s.t < debut + 51.9);
-  expect(etape.map((s) => Math.round(s.t - debut))).toEqual([0, 8, 16, 24, 32, 40, 48]);
-  expect(etape[0].t - debut).toBeGreaterThanOrEqual(0);
-  expect(etape[0].t - debut).toBeLessThan(0.3);
-  for (const [i, s] of etape.slice(1).entries()) {
+  expect(tous.map((s) => Math.round(s.t - debut))).toEqual(Array.from({ length: 12 }, (_, i) => 8 * i));
+  expect(tous[0].t - debut).toBeGreaterThanOrEqual(0);
+  expect(tous[0].t - debut).toBeLessThan(0.3);
+  for (const [i, s] of tous.slice(1).entries()) {
     expect(Math.abs(s.t - debut - 8 * (i + 1))).toBeLessThan(0.05);
     expect(s.fin - s.t).toBeGreaterThan(3.9);
     expect(s.fin - s.t).toBeLessThan(4.1);
   }
-  const bolsEtape = (await bols(page)).filter((b) => b.t > debut + 0.5 && b.t < debut + 51.5);
-  expect(bolsEtape).toEqual([]);
-  // L'étape suivante repart d'une inspiration, à son début.
-  const suivante = tous.filter((s) => s.t >= debut + 51.9);
-  expect(suivante.length).toBeGreaterThanOrEqual(1);
-  expect(suivante[0].t - (debut + 52)).toBeLessThan(0.3);
+  const bolsDans = (de, a) => bols(page).then((l) => l.filter((b) => b.t > debut + de && b.t < debut + a));
+  expect(await bolsDans(0.5, 47.5)).toEqual([]);
+  expect(await bolsDans(47.5, 48.5)).toHaveLength(1);
+  expect(await bolsDans(48.5, 95.5)).toEqual([]);
+});
+
+test('une pause au milieu d\'une étape rythmée : reprise d\'une inspiration, puis l\'étape suivante au même rythme continue le cycle, sans deux inspirations de suite', async ({ page }) => {
+  test.setTimeout(60000);
+  await espionnerAudio(page);
+  const v = await ouvrir(page, 'Respiration carrée');
+  await bouton(v, 'Commencer').click();
+  // 70 s : 9 s dans la première étape rythmée (61 s), pendant une expiration.
+  await page.clock.runFor(70000);
+  await expect(consigne(v)).toHaveText(texte(CARREE[6]));
+  await expect(motSouffle(v)).toHaveText('Expire');
+  await bouton(v, 'Pause').click();
+  const avant = (await souffles(page)).length;
+  await bouton(v, 'Reprendre').click();
+  // La reprise repart d'une inspiration. Il reste 39 s à l'étape : deux cycles et 7 s ; elle finit pendant « Retiens »
+  // poumons pleins, et l'étape suivante garde le cycle : « Retiens », puis « Expire », puis « Retiens », puis « Inspire ».
+  await expect(motSouffle(v)).toHaveText('Inspire');
+  await page.clock.runFor(37000);
+  await expect(consigne(v)).toHaveText(texte(CARREE[6]));
+  const vus = [];
+  for (let i = 0; i < 12; i++) {
+    await page.clock.runFor(1000);
+    vus.push([await consigne(v).textContent(), await motSouffle(v).textContent(), await disque(v).getAttribute('class')]);
+  }
+  const suivante = vus.filter(([c]) => texte(CARREE[7]).test(c));
+  expect(suivante.length).toBeGreaterThanOrEqual(10);
+  // Le disque ne repart pas au début de l'étape : il était poumons pleins, il le reste, puis il rétrécit.
+  expect(suivante[0][1]).toBe('Retiens');
+  expect(suivante[0][2]).toMatch(/phase-retiens-plein/);
+  const mots = suivante.map(([, m]) => m).filter((m, i, l) => i === 0 || m !== l[i - 1]);
+  expect(mots).toEqual(['Retiens', 'Expire', 'Retiens', 'Inspire']);
+  // Le souffle sonore aussi : depuis la reprise, une inspiration ou une expiration toutes les 8 s, d'une étape à l'autre.
+  const apres = (await souffles(page)).slice(avant);
+  const zero = apres[1].t - 8;
+  expect(apres.map((s) => Math.round(s.t - zero))).toEqual([0, 8, 16, 24, 32, 40, 48]);
+  for (const [i, s] of apres.slice(1).entries()) expect(Math.abs(s.t - zero - 8 * (i + 1))).toBeLessThan(0.05);
+});
+
+test('en pause, « Reprendre » est à la place exacte de « Pause » (étape simple ou rythmée, texte par défaut ou grand) : un second toucher au même endroit reprend', async ({ page }) => {
+  test.setTimeout(60000);
+  for (const taille of [null, 23]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+    for (const [titre, avance, rythmee] of [['Pause d\'une minute', 2000, false], ['Respiration carrée', 61500, true]]) {
+      const cas = `${titre}, ${taille || 17} px`;
+      const v = await ouvrir(page, titre);
+      await bouton(v, 'Commencer').click();
+      await page.clock.runFor(avance);
+      await expect(disque(v)).toHaveCount(rythmee ? 1 : 0);
+      const p = await bouton(v, 'Pause').boundingBox();
+      const [x, y] = [p.x + p.width / 2, p.y + p.height / 2];
+      await page.touchscreen.tap(x, y);
+      await expect(bouton(v, 'Reprendre')).toBeVisible();
+      await expect(reste(v)).toHaveText(/^En pause · il reste/);
+      const r = await bouton(v, 'Reprendre').boundingBox();
+      for (const k of ['x', 'y', 'width', 'height']) expect(Math.abs(r[k] - p[k]), `${cas} : ${k}`).toBeLessThanOrEqual(1);
+      // Les réglages sont sous l'écran de lecture, sous le pli : on les atteint en défilant.
+      const pied = await v.locator('.parcours-pied').boundingBox();
+      const reglages = v.getByRole('list', { name: 'Réglages du lecteur' });
+      expect((await reglages.boundingBox()).y, cas).toBeGreaterThanOrEqual(pied.y);
+      // Un second toucher au même endroit reprend la lecture.
+      await page.touchscreen.tap(x, y);
+      await expect(bouton(v, 'Pause')).toBeVisible();
+      await expect(reste(v)).toHaveText(/^il reste/);
+      expect(Math.abs((await bouton(v, 'Pause').boundingBox()).y - p.y), cas).toBeLessThanOrEqual(1);
+      // En pause encore, les réglages se règlent en défilant, puis « Reprendre ».
+      await bouton(v, 'Pause').click();
+      const son = reglages.getByRole('combobox', { name: 'Son', exact: true });
+      await son.scrollIntoViewIfNeeded();
+      const b = await son.boundingBox();
+      expect(b.y + b.height, cas).toBeLessThanOrEqual(pied.y);
+      await bouton(v, 'Reprendre').click();
+      await expect(bouton(v, 'Pause')).toBeVisible();
+      await bouton(v, 'Fermer').click();
+    }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
 test('Précédent et Suivant sautent une étape (bol, voix) ; Suivant ne va pas plus loin que la dernière ; Terminer finit', async ({ page }) => {
@@ -182,9 +280,8 @@ test('Précédent et Suivant sautent une étape (bol, voix) ; Suivant ne va pas 
   await expect(consigne(v)).toHaveText(texte(PAUSE[5]));
   await expect(bouton(v, 'Suivant')).toBeDisabled();
   await v.getByRole('button', { name: 'Terminer', exact: true }).click();
-  await expect(consigne(v)).toHaveText('Fin de l\'exercice.');
-  // Terminée avant le bout, l'anneau reste où il en était : il n'est pas plein.
-  expect(await anneau(v)).toBeLessThan(0.95);
+  // Terminée avant le bout : « Fin de l'exercice. » seul, aucun anneau à moitié rempli.
+  await finSeule(v);
   // Parcourir les textes ne fait pas une séance.
   await page.clock.runFor(2000);
   expect(await seances(page)).toEqual([]);
@@ -199,10 +296,10 @@ test('la fin : trois bols, « Fin de l\'exercice. » dit après eux, une séance
   await bouton(v, 'Commencer').click();
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
   await page.clock.runFor(60300);
-  await expect(consigne(v)).toHaveText('Fin de l\'exercice.');
+  // Menée au bout, la fin est la même que terminée avant : « Fin de l'exercice. » seul.
+  await finSeule(v);
   await expect(bouton(v, 'Pause')).toHaveCount(0);
   await expect(v.getByRole('button', { name: 'Terminer', exact: true })).toHaveCount(0);
-  expect(await anneau(v)).toBe(1);
   // Trois bols de fin, à 1,2 s d'écart.
   const fin = (await bols(page)).slice(-3);
   expect(fin.map((x) => x.f)).toEqual(BOLS.fin);
@@ -246,7 +343,7 @@ test('« Terminer » touché en pause : le toucher relance le son endormi, les t
   await page.clock.runFor(1500);
   expect(await audio(page)).toMatchObject({ etat: 'suspended', session: 'auto' });
   await v.getByRole('button', { name: 'Terminer', exact: true }).click();
-  await expect(consigne(v)).toHaveText('Fin de l\'exercice.');
+  await finSeule(v);
   await expect.poll(async () => (await bols(page)).map((x) => x.f)).toEqual([BOLS.debut, ...BOLS.fin]);
   expect(await audio(page)).toMatchObject({ contextes: 1, session: 'ambient' });
   // Le lecteur se ferme, et le son se rendort.
@@ -276,7 +373,7 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   await expect(bouton(v, 'Pause')).toBeVisible();
   await expect(bouton(v, 'Commencer')).toHaveCount(0);
   await expect(motSouffle(v)).toHaveText('Inspire');
-  await expect(consigne(v)).toHaveText(texte('Respire au rythme du disque, sans forcer.'));
+  await expect(consigne(v)).toHaveText(texte('Respire au rythme des mots, sans forcer.'));
   await expect(reste(v)).toHaveText(/^il reste (2:00|1:59)$/);
   // Une seule étape : ni Précédent ni Suivant.
   await expect(bouton(v, 'Précédent')).toHaveCount(0);
@@ -288,7 +385,7 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   // La voix, débloquée dans le toucher de la carte, dit la consigne après le bol.
   expect(await parole(page)).toMatchObject({ dits: [], amorces: 1 });
   await page.clock.runFor(4300);
-  expect((await parole(page)).dits).toEqual(['Respire au rythme du disque, sans forcer.']);
+  expect((await parole(page)).dits).toEqual(['Respire au rythme des mots, sans forcer.']);
   await expect(motSouffle(v)).toHaveText('Expire');
   await expect(disque(v)).toHaveClass(/duree-souffle-6/);
   await page.clock.runFor(116000);
@@ -313,6 +410,7 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   await aller(page, '#/bien-etre/coherence');
   await expect(bouton(vue(page, 'Cohérence cardiaque'), 'Commencer')).toBeVisible();
   await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-duree')).toHaveText(/^2\smin · assis$/);
+  await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-description')).toHaveText(texte('Inspirer sur « Inspire », expirer sur « Expire ».'));
   const avant = await audio(page);
   await page.clock.runFor(3000);
   expect((await audio(page)).souffles).toHaveLength(avant.souffles.length);
@@ -508,6 +606,8 @@ test('le disque : il respire sur la durée de chaque temps ; avec « Réduire le
   await page.clock.runFor(61500);
   const etat = () => disque(v).evaluate((d) => { const c = getComputedStyle(d); return { animation: c.animationName, forme: c.transform, cercle: c.boxShadow !== 'none' }; });
   await expect(disque(v)).toHaveClass(/phase-inspire/);
+  // Les mots, eux, disent la phase : les textes de la cohérence cardiaque s'appuient sur eux, pas sur le disque.
+  await expect(motSouffle(v)).toHaveText('Inspire');
   const plein = await etat();
   expect(plein).toMatchObject({ animation: 'none', cercle: true });
   await page.clock.runFor(4000);
@@ -515,5 +615,6 @@ test('le disque : il respire sur la durée de chaque temps ; avec « Réduire le
   expect(await etat()).toEqual(plein);
   await page.clock.runFor(4000);
   await expect(disque(v)).toHaveClass(/phase-expire/);
+  await expect(motSouffle(v)).toHaveText('Expire');
   expect(await etat()).toEqual({ ...plein, cercle: false });
 });

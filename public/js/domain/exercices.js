@@ -5,7 +5,9 @@
 // figés : une séance les garde (store `seances`). Pur.
 // v8 (spec §5 et §12.3) : `posture` (« 8 min · assis ou allongé ») et, sur une étape dont le texte donne un rythme, son
 // `souffle` en quatre temps ({ inspi, retiens1, expi, retiens2 }, en secondes, ceux du texte) : le lecteur y montre le
-// disque et y joue le souffle. Les textes de la v7 ne changent pas.
+// disque et y joue le souffle. Une étape rythmée dure un nombre entier de cycles : elle finit poumons vides, après
+// l'expiration, et la suivante commence par « Inspire » (jamais deux inspirations de suite). Les textes de la v7 ne
+// changent pas ; les deux étapes rythmées de la respiration carrée passent de 52 à 48 s (trois cycles de 16 s).
 
 const e = (texte, dureeS, souffle) => Object.freeze(souffle ? { texte, dureeS, souffle: Object.freeze(souffle) } : { texte, dureeS });
 
@@ -43,8 +45,8 @@ export const EXERCICES = Object.freeze([
       e('Retiens l\'air en comptant jusqu\'à quatre.', 9),
       e('Expire par la bouche en comptant jusqu\'à quatre.', 9),
       e('Garde les poumons vides en comptant jusqu\'à quatre.', 9),
-      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 52, CARRE),
-      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 52, CARRE),
+      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 48, CARRE),
+      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 48, CARRE),
       e('Laisse ta respiration redevenir libre.', 15),
     ],
   },
