@@ -79,7 +79,10 @@ test('l\'écran Bien-être (v8) : le Programme en tête, la cohérence cardiaque
   await expect(respiration.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
   await expect(ecran.getByRole('list', { name: 'Exercices' })).toHaveCount(0);
   await expect(ecran.locator('.ligne-exercice')).toHaveCount(0);
-  // Dans l'ordre : le Programme, la respiration, la ligne fixe, qui est la dernière chose de l'écran.
+  // Dans l'ordre : le Programme, la respiration, la ligne fixe, qui est la dernière chose de l'écran. Les deux cartes ont
+  // un titre de niveau 2, que le rotor « Titres » de VoiceOver trouve ; celui du Programme reste dans le lien.
+  await expect(ecran.getByRole('heading', { level: 2 })).toHaveText(['Programme', 'Cohérence cardiaque']);
+  await expect(programme.getByRole('link').getByRole('heading', { name: 'Programme', level: 2 })).toBeVisible();
   const [p, r, f] = await Promise.all([programme.boundingBox(), respiration.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
   expect(p.y + p.height).toBeLessThanOrEqual(r.y);
   expect(r.y + r.height).toBeLessThanOrEqual(f.y);

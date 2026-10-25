@@ -24,9 +24,10 @@
 //   la mise en page de la lecture, « Reprendre » est à la place exacte de « Pause ». Ils ne valent que pour ce lecteur :
 //   Moment difficile et « Respirer » gardent leur réglage (Réglages › Moment difficile, spec §12.1).
 // - Séance (ui/seance.js), d'origine `bien-etre` : menée au bout, ou arrêtée après 60 s, une seule par lecture. La durée
-//   est celle du temps actif, pauses exclues ; menée au bout, la dernière étape atteinte après la moitié de la durée, elle
-//   porte `fin: true`. Lancée depuis le Programme (v8, spec §12.2), elle porte aussi `programme` : l'identifiant de la
-//   séance du Programme ; menée au bout, elle y porte alors « Faite le 12/10 ». Arrêtée en route, rien.
+//   est celle du temps actif, pauses exclues ; menée au bout, la dernière étape atteinte après la moitié de la durée (une
+//   séance d'une seule étape, la cohérence cardiaque : tout son temps écoulé), elle porte `fin: true`. Lancée depuis le
+//   Programme (v8, spec §12.2), elle porte aussi `programme` : l'identifiant de la séance du Programme ; menée au bout,
+//   elle y porte alors « Faite le 12/10 ». Arrêtée en route, rien.
 // Le son ne naît que dans un toucher (« Commencer », « Reprendre », « Terminer », ou le bouton lecture d'une carte, par
 // lancerLecture) ; la voix est débloquée de même, par une parole muette (Safari ne parle qu'après un geste).
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
@@ -199,7 +200,8 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
   const tenir = (v) => { if (v && courant.current.etat !== 'en-cours') { v.release().catch(() => {}); return; } if (v) verrou.current = v; };
   // L'étape n et la suivante sont rythmées au même rythme : le cycle passe de l'une à l'autre sans repartir.
   const cycleContinue = (n) => n + 1 < etapes.length && memeSouffle(etapes[n].souffle, etapes[n + 1].souffle);
-  // `derniereAtteinte` : la lecture est sur la dernière étape ; elle n'est menée au bout qu'après assez de temps actif.
+  // `derniereAtteinte` : la lecture est sur la dernière étape ; elle n'est menée au bout qu'après assez de temps actif
+  // (domain/exercices.js : la moitié, ou tout le temps d'une séance d'une seule étape).
   const noter = (derniereAtteinte) => {
     const dureeS = ecoule() / 1000;
     return suivi.noter({ dureeS, terminee: exerciceMeneAuBout(seance, { derniereAtteinte, dureeS }) });

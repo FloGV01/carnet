@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { EXERCICES, BLOCS, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT } from '../../public/js/domain/exercices.js';
 import { doitEnregistrer, nouvelleSeance, dureeSeance, SEANCE_MIN_S } from '../../public/js/domain/seances.js';
 import { normaliser } from '../../public/js/domain/champs.js';
+import { seanceCoherence } from '../../public/js/domain/respiration.js';
+import { seanceProgramme } from '../../public/js/domain/programme.js';
 import { trouverInterdits, normaliser as sansAccents } from '../aides/mots-interdits.js';
 import { RACINE, lire } from '../aides/fichiers.js';
 
@@ -169,6 +171,32 @@ test('exerciceMeneAuBout : la dernière étape atteinte après la moitié de la 
   const seance = (ex, derniereAtteinte, dureeS) => doitEnregistrer({ dureeS, terminee: exerciceMeneAuBout(ex, { derniereAtteinte, dureeS }) });
   assert.deepEqual([seance(pause, true, 5), seance(pause, true, 35), seance(pause, false, 35), seance(scan, true, 50), seance(scan, false, 61)],
     [false, true, false, false, true]);
+});
+
+test('exerciceMeneAuBout : une séance d\'une seule étape (la cohérence cardiaque) n\'est menée au bout qu\'au bout de tout son temps', () => {
+  // Sur sa dernière étape dès le début : « Terminer » après la moitié du temps est un arrêt en route, qui ne date rien
+  // dans le Programme (spec §6 et §12.2), comme dans Moment difficile.
+  const programme = seanceProgramme('coherence', { duree: 2, rythme: '4-6' });
+  assert.equal(programme.etapes.length, 1);
+  assert.equal(dureeExerciceS(programme), 300);
+  for (const dureeS of [0, 150, 151, 299.9]) {
+    assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS }), false, `${dureeS} s sur 300`);
+  }
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 300 }), true);
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 300.2 }), true);
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: false, dureeS: 300 }), false);
+  // La carte de Bien-être, de 2 min : « Terminer » à 61 s, gardée (60 s au moins) mais pas menée au bout ; à 59 s, rien.
+  const carte = seanceCoherence({ duree: 2, rythme: '5-5' });
+  assert.equal(dureeExerciceS(carte), 120);
+  assert.equal(exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 61 }), false);
+  assert.equal(doitEnregistrer({ dureeS: 59, terminee: exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 59 }) }), false);
+  assert.equal(exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 120 }), true);
+  // Arrêtée à 151 s, elle reste une séance (règle des 60 s), sans `fin`.
+  assert.equal(doitEnregistrer({ dureeS: 151, terminee: exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 151 }) }), true);
+  // Les séances de plusieurs étapes gardent la règle de la moitié (annexe programme-sophro.md, §6.8).
+  for (const ex of EXERCICES) assert.ok(ex.etapes.length > 1, ex.id);
+  const abdo = exerciceDe('respiration-abdominale');
+  assert.equal(exerciceMeneAuBout(abdo, { derniereAtteinte: true, dureeS: dureeExerciceS(abdo) / 2 }), true);
 });
 
 test('doitEnregistrer : une séance menée au bout, ou arrêtée après 60 s au moins', () => {

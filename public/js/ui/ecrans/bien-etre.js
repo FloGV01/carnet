@@ -44,8 +44,9 @@ function CarteCoherence() {
 }
 
 // La carte Programme : un lien vers l'écran Programme (son titre, la séance qui vient et sa durée) et, à droite, le bouton
-// lecture, qui lance cette séance d'un toucher ; le lecteur revient ensuite à Bien-être. Tant que les séances ne sont pas
-// lues, la séance qui vient n'est pas affichée et le bouton attend.
+// lecture, qui lance cette séance d'un toucher ; le lecteur revient ensuite à Bien-être. Le titre est un titre de niveau
+// 2, comme celui de la carte de la cohérence : le rotor « Titres » de VoiceOver passe par les deux. Tant que les séances
+// ne sont pas lues, la séance qui vient n'est pas affichée et le bouton attend.
 function CarteProgramme() {
   const { donnees } = useDonnees(() => repo.seances.tous());
   const id = donnees ? suivante(donnees) : null;
@@ -53,7 +54,7 @@ function CarteProgramme() {
   const lancer = () => { if (id) lancerLecture(versHash('seance-programme', { id }), { retour: '#/bien-etre' }); };
   return html`<section class="carte carte-programme teinte-bien-etre" aria-labelledby="titre-programme">
     <a class="lien-programme" href=${versHash('programme')}>
-      <span class="titre-coherence titre-programme"><span class="carre-carte" aria-hidden="true">${Icones.bienEtre()}</span><span id="titre-programme">Programme</span>${Icones.chevron({ trait: 2 })}</span>
+      <h2 class="titre-coherence titre-programme"><span class="carre-carte" aria-hidden="true">${Icones.bienEtre()}</span><span id="titre-programme">Programme</span>${Icones.chevron({ trait: 2 })}</h2>
       ${s && html`<span class="seance-qui-vient">
         <span class="exercice-titre">${s.titre}</span>
         <span class="exercice-description">${pourAffichage(dureeEtPosture(s))}</span>

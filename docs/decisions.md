@@ -551,6 +551,10 @@ Spec : `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`. Plan : `docs/sup
 - **Les textes de l'annexe, retouchés** pour les règles de l'app : « Garde l'attention sur… » devient « Continue de remarquer tes pieds. » et « remarque ta respiration » ; « Pense à… » devient « Cherche… » et « Imagine… » ; « Tu n'as pas besoin de les nommer » devient « Pas besoin de les nommer » ; « Tu vas passer par cinq zones » devient « Cinq zones du corps, l'une après l'autre ». « Tu peux t'arrêter à tout moment. » est ajouté à chaque séance nouvelle (à la fin du bloc « Arriver », sinon dans la première étape), comme le demande la spec §6 : la première étape de Faire le point avec mon corps passe de 10 à 15 s pour le dire.
 - **Le son dans « Les sons »** (question 11 de l'annexe, non tranchée) : le bol d'étape, comme ailleurs ; « Son : Aucun » le coupe.
 
+**Relecture de la tâche 4**
+- **Une séance d'une seule étape n'est menée au bout qu'au bout de tout son temps.** La cohérence cardiaque est sur sa dernière étape dès le début : avec la règle de la moitié, « Terminer » à 2:31 sur 5:00 la disait menée au bout, et le Programme affichait « Faite le 15/10 ». Elle ne l'est plus qu'une fois ses 5 min écoulées, comme dans Moment difficile ; arrêtée en route après 60 s, elle reste une séance pour Mes jours, sans `fin`. Les séances de plusieurs étapes gardent la règle de la moitié (annexe `programme-sophro.md`, §6.8). La carte de la cohérence de Bien-être suit la même règle, comme en v7.
+- **Le titre « Programme » de la carte de Bien-être est un titre de niveau 2**, comme celui de la carte de la cohérence, et reste dans le lien : le rotor « Titres » de VoiceOver passe par les deux cartes. L'apparence ne change pas.
+
 **Séances nouvelles à relire** (titres et étapes, avec la durée de chaque étape ; spec §2 : relues après la publication). Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas. Les blocs communs y sont recopiés.
 
 #### Les sons (5 min, `les-sons`)

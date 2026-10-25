@@ -359,6 +359,11 @@ export const dureeExerciceS = (ex) => (ex ? ex.etapes.reduce((s, x) => s + (x.du
 
 // Un exercice est mené au bout quand sa dernière étape est atteinte après la moitié de sa durée au moins, en temps actif
 // (pauses exclues) : parcourir les textes, pour les relire, ne fait pas une séance. Sinon, la règle des 60 s joue.
+// Une séance d'une seule étape (la cohérence cardiaque) est sur sa dernière étape dès le début : elle n'est menée au bout
+// qu'au bout de tout son temps, comme dans Moment difficile ; « Terminer » avant la fin est un arrêt en route.
 export const PART_MENEE_AU_BOUT = 0.5;
-export const exerciceMeneAuBout = (ex, { derniereAtteinte, dureeS } = {}) => Boolean(ex) && derniereAtteinte === true
-  && Number.isFinite(dureeS) && dureeS >= dureeExerciceS(ex) * PART_MENEE_AU_BOUT;
+export const exerciceMeneAuBout = (ex, { derniereAtteinte, dureeS } = {}) => {
+  if (!ex || derniereAtteinte !== true || !Number.isFinite(dureeS)) return false;
+  const total = dureeExerciceS(ex);
+  return dureeS >= (ex.etapes.length > 1 ? total * PART_MENEE_AU_BOUT : total);
+};

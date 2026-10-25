@@ -300,3 +300,29 @@ test('une cohérence cardiaque lancée depuis sa carte ou Moment difficile ne ma
   // Le réglage de Moment difficile n'a pas bougé.
   expect(await page.evaluate(() => window.__carnet.repo.meta.lire('respiration'))).toEqual({ duree: 2, rythme: '4-6', son: false });
 });
+
+test('la cohérence cardiaque du Programme arrêtée en route (« Terminer » à 2:31 sur 5:00) : une séance sans `fin`, aucune « Faite le », la séance qui vient ne bouge pas', async ({ page }) => {
+  // Une séance d'une seule étape est sur sa dernière étape dès le début : passé la moitié du temps, « Terminer » reste un
+  // arrêt en route (spec §6 et §12.2), comme dans Moment difficile.
+  await aller(page, '#/bien-etre/programme');
+  await rangee(page, 'Cohérence cardiaque').click();
+  const v = vue(page, 'Cohérence cardiaque');
+  await bouton(v, 'Commencer').click();
+  await page.clock.runFor(151000);
+  await expect(v.locator('.lecteur-reste')).toHaveText(/^il reste 2:(28|29|30)$/);
+  await bouton(v, 'Terminer').click();
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
+  // Plus de 60 s : la séance est gardée pour Mes jours, avec son `programme`, mais sans `fin`.
+  await expect.poll(() => seances(page)).toHaveLength(1);
+  const s = (await seances(page))[0];
+  expect(s).toMatchObject({ exercice: 'coherence', origine: 'bien-etre', programme: 'coherence' });
+  expect(s.fin).toBeNull();
+  environ(s.dureeS, 151);
+  await page.clock.runFor(6200);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
+  await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(0);
+  await expect(ecranProgramme(page)).not.toContainText('Faite');
+  await aller(page, '#/bien-etre');
+  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
+  expect(await seances(page)).toHaveLength(1);
+});
