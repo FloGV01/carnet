@@ -125,6 +125,13 @@ test('v7 · Bien-être : /bien-etre et /bien-etre/exercice/ID allument l\'onglet
   assert.equal(ongletDe('moment'), 'aujourdhui', 'l\'Émotion du moment, ouverte depuis Bien-être, reste un parcours d\'Aujourd\'hui');
 });
 
+test('v8 · la cohérence cardiaque de Bien-être dans le lecteur : /bien-etre/coherence, onglet Bien-être', () => {
+  assert.deepEqual(lireRoute('#/bien-etre/coherence'), { nom: 'coherence', params: {}, chemin: '/bien-etre/coherence' });
+  assert.equal(versHash('coherence'), '#/bien-etre/coherence');
+  assert.equal(ongletDe('coherence'), 'bien-etre');
+  assert.equal(lireRoute('#/bien-etre/coherence/5').inconnue, true);
+});
+
 test('v7 · la barre d\'onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages, chacun avec une route et son onglet', async () => {
   const { ONGLETS_V1 } = await import('../../public/js/ui/composants/barre-onglets.js');
   assert.deepEqual(ONGLETS_V1.map((o) => o.libelle), ['Aujourd\'hui', 'Analyse', 'Bien-être', 'Soins', 'Réglages']);

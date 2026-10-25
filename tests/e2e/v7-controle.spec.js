@@ -186,7 +186,13 @@ const ECRANS = (ids) => [
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
   ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .exercices'],
-  ['Exercice', (p) => aller(p, '#/bien-etre/exercice/pause-une-minute'), '.exercice-avant'],
+  // v8 : le lecteur, avant de commencer, sur une étape rythmée (le disque et « Inspire »), puis en pause (ses réglages).
+  ['Exercice', (p) => aller(p, '#/bien-etre/exercice/respiration-carree'), '.lecteur-avant .reglages-lecteur'],
+  ['Exercice, étape rythmée', async (p) => {
+    await p.getByRole('button', { name: 'Commencer', exact: true }).click();
+    for (let i = 0; i < 6; i += 1) await p.getByRole('button', { name: 'Suivant', exact: true }).click();
+  }, '.mot-souffle'],
+  ['Exercice en pause', (p) => p.getByRole('button', { name: 'Pause', exact: true }).click(), '.lecteur-plein .reglages-lecteur'],
   ['Soins, Rendez-vous', async (p) => { await aller(p, '#/soins'); await p.getByRole('button', { name: 'Soins : Rendez-vous', exact: true }).click(); }, '.carte-prochain'],
   ['Soins, Notes', (p) => p.getByRole('button', { name: 'Soins : Notes', exact: true }).click(), '.notes-en-vrac'],
   ['Soins, Traitement', (p) => p.getByRole('button', { name: 'Soins : Traitement', exact: true }).click(), '.tableau-traitement'],

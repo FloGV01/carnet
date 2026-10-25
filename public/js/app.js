@@ -37,7 +37,7 @@ import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
-import { BienEtre } from './ui/ecrans/bien-etre.js';
+import { BienEtre, Coherence } from './ui/ecrans/bien-etre.js';
 import { Exercice } from './ui/ecrans/exercice.js';
 
 const ECRANS = {
@@ -73,6 +73,7 @@ const ECRANS = {
   soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
   'bien-etre': () => html`<${BienEtre} />`,
+  coherence: () => html`<${Coherence} />`,
   exercice: (p) => html`<${Exercice} key=${p.id} id=${p.id} />`,
 };
 

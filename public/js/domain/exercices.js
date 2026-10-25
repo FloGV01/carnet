@@ -1,16 +1,23 @@
 // Exercices de Bien-être (v7, spec §6.2) : rédigés pour Carnet, relus par l'utilisateur (titres et étapes repris dans
-// docs/decisions.md). Une consigne par écran ; chaque étape a sa durée, en secondes : voix allumée, l'étape passe seule à
-// la suivante à la fin de cette durée ; voix éteinte, le minuteur ne fait qu'indiquer le temps. La somme des durées est
-// proche de la durée annoncée (dureeMin). Règles d'écriture : phrases courtes, tutoiement, ton neutre, aucune promesse
-// d'effet ni conseil de santé. Les identifiants sont figés : une séance les garde (store `seances`). Pur.
+// docs/decisions.md). Une consigne par écran ; chaque étape a sa durée, en secondes : l'étape passe seule à la suivante à
+// la fin de cette durée (v8 : voix allumée ou non). La somme des durées est proche de la durée annoncée (dureeMin). Règles
+// d'écriture : phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. Les identifiants sont
+// figés : une séance les garde (store `seances`). Pur.
+// v8 (spec §5 et §12.3) : `posture` (« 8 min · assis ou allongé ») et, sur une étape dont le texte donne un rythme, son
+// `souffle` en quatre temps ({ inspi, retiens1, expi, retiens2 }, en secondes, ceux du texte) : le lecteur y montre le
+// disque et y joue le souffle. Les textes de la v7 ne changent pas.
 
-const e = (texte, dureeS) => Object.freeze({ texte, dureeS });
+const e = (texte, dureeS, souffle) => Object.freeze(souffle ? { texte, dureeS, souffle: Object.freeze(souffle) } : { texte, dureeS });
+
+// Quatre temps de quatre secondes (respiration carrée).
+const CARRE = { inspi: 4, retiens1: 4, expi: 4, retiens2: 4 };
 
 export const EXERCICES = Object.freeze([
   {
     id: 'respiration-abdominale',
     titre: 'Respiration abdominale',
     dureeMin: 3,
+    posture: 'assis ou allongé',
     description: 'Respirer avec le ventre, une main posée dessus.',
     etapes: [
       e('Installe-toi assis ou allongé. Ferme les yeux si tu veux.', 15),
@@ -27,6 +34,7 @@ export const EXERCICES = Object.freeze([
     id: 'respiration-carree',
     titre: 'Respiration carrée',
     dureeMin: 3,
+    posture: 'assis',
     description: 'Inspirer, retenir, expirer, retenir : quatre temps chacun.',
     etapes: [
       e('Installe-toi, le dos droit sans être raide. Les épaules restent basses.', 15),
@@ -35,8 +43,8 @@ export const EXERCICES = Object.freeze([
       e('Retiens l\'air en comptant jusqu\'à quatre.', 9),
       e('Expire par la bouche en comptant jusqu\'à quatre.', 9),
       e('Garde les poumons vides en comptant jusqu\'à quatre.', 9),
-      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 52),
-      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 52),
+      e('Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu\'à deux.', 52, CARRE),
+      e('Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre.', 52, CARRE),
       e('Laisse ta respiration redevenir libre.', 15),
     ],
   },
@@ -44,6 +52,7 @@ export const EXERCICES = Object.freeze([
     id: 'epaules',
     titre: 'Relaxation dynamique des épaules',
     dureeMin: 5,
+    posture: 'debout ou assis',
     description: 'Hausser puis relâcher les épaules, avec la respiration.',
     etapes: [
       e('Mets-toi debout ou assis, les pieds à plat, les bras le long du corps.', 20),
@@ -67,6 +76,7 @@ export const EXERCICES = Object.freeze([
     id: 'tension-detente',
     titre: 'Tension et détente',
     dureeMin: 8,
+    posture: 'assis ou allongé',
     description: 'Serrer un groupe de muscles, puis le relâcher, des pieds au visage.',
     etapes: [
       e('Installe-toi assis ou allongé. Ferme les yeux si tu veux.', 20),
@@ -94,6 +104,7 @@ export const EXERCICES = Object.freeze([
     id: 'scan-corporel',
     titre: 'Scan corporel',
     dureeMin: 10,
+    posture: 'allongé ou assis',
     description: 'Passer d\'une partie du corps à l\'autre, sans rien changer.',
     etapes: [
       e('Installe-toi allongé ou assis. Ferme les yeux si tu veux.', 30),
@@ -116,6 +127,7 @@ export const EXERCICES = Object.freeze([
     id: 'lieu-ressource',
     titre: 'Lieu ressource',
     dureeMin: 8,
+    posture: 'assis ou allongé',
     description: 'Imaginer un lieu, réel ou inventé, et le parcourir par les sens.',
     etapes: [
       e('Installe-toi confortablement. Ferme les yeux si tu veux.', 20),
@@ -135,6 +147,7 @@ export const EXERCICES = Object.freeze([
     id: 'ancrage-54321',
     titre: 'Ancrage 5-4-3-2-1',
     dureeMin: 3,
+    posture: 'là où tu es',
     description: 'Nommer ce que tu perçois autour de toi, un sens après l\'autre.',
     etapes: [
       e('Garde les yeux ouverts. Regarde autour de toi.', 10),
@@ -151,6 +164,7 @@ export const EXERCICES = Object.freeze([
     id: 'pause-une-minute',
     titre: 'Pause d\'une minute',
     dureeMin: 1,
+    posture: 'là où tu es',
     description: 'Un arrêt bref, là où tu es.',
     etapes: [
       e('Arrête ce que tu fais. Pose ce que tu as dans les mains.', 10),
@@ -164,6 +178,9 @@ export const EXERCICES = Object.freeze([
 ].map((x) => Object.freeze({ ...x, etapes: Object.freeze(x.etapes) })));
 
 export const exerciceDe = (id) => EXERCICES.find((x) => x.id === id) || null;
+
+// « 3 min · assis ou allongé » : la durée annoncée et la posture.
+export const dureeEtPosture = (ex) => [`${ex.dureeMin}\u00a0min`, ex.posture].filter(Boolean).join(' · ');
 
 // La durée d'un exercice, en secondes : la somme de ses étapes (une étape sans durée compte pour rien).
 export const dureeExerciceS = (ex) => (ex ? ex.etapes.reduce((s, x) => s + (x.dureeS || 0), 0) : 0);

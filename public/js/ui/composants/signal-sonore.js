@@ -7,6 +7,8 @@
 // n'est jamais fermé : il se met en veille à la fin de l'exercice et se relance au toucher suivant.
 // Web Audio suit la session audio « ambiante » d'iOS : le son se tait en mode silencieux et se mêle à la
 // musique. Quand Safari propose `navigator.audioSession`, elle est réglée sur « ambient » pendant l'exercice.
+// v8 : le même contexte sert aux sons du lecteur de Bien-être (sons.js). Le lecteur peut demander la session « playback »
+// (« Jouer même en mode silencieux », qui met la musique en pause) ; les écrans de crise gardent « ambient » (spec §12.1).
 const FREQUENCE = { inspire: 440, expire: 330, fini: 330 };
 const DUREE_NOTE_S = 0.7;
 // Le temps de laisser finir la dernière note avant de mettre le contexte en veille.
@@ -30,10 +32,10 @@ function reglerSession(type) {
 }
 
 // À appeler dans le toucher qui lance la respiration. Idempotent : crée le contexte la première fois,
-// le relance ensuite (il dort après chaque exercice).
-export function preparerSon() {
+// le relance ensuite (il dort après chaque exercice). `session` : 'ambient' (par défaut) ou 'playback'.
+export function preparerSon({ session = 'ambient' } = {}) {
   annulerVeille();
-  reglerSession('ambient');
+  reglerSession(session === 'playback' ? 'playback' : 'ambient');
   try {
     if (!contexte || contexte.state === 'closed') {
       const Contexte = window.AudioContext || window.webkitAudioContext;
@@ -80,6 +82,17 @@ export function sonner(phase) {
 // Au retour au premier plan pendant un exercice avec le signal.
 export function relancerSon() {
   if (contexte) reprendre(contexte);
+}
+
+// Le contexte préparé, pour les sons du lecteur (sons.js) : `jouer(c)` tout de suite s'il tourne ; s'il dort encore (une
+// reprise en cours), une seule fois à la reprise, et seulement si elle vient vite. Sans contexte, rien.
+export function quandSonPret(jouerSon) {
+  const c = contexte;
+  if (!c || c.state === 'closed') return;
+  annulerVeille();
+  if (c.state === 'running') { jouerSon(c); return; }
+  const instant = performance.now();
+  reprendre(c).then(() => { if (c.state === 'running' && performance.now() - instant < NOTE_PERIMEE_MS) jouerSon(c); });
 }
 
 // Fin ou arrêt de l'exercice : le contexte dort après la dernière note, et la session audio est rendue à

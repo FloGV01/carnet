@@ -1,5 +1,6 @@
 // Respiration guidée (v6) : durée, rythme et signal sonore, réglés dans Réglages › Moment difficile
-// (méta `respiration`). Pur : la phase se déduit du temps écoulé, rien n'est compté ni enregistré.
+// (méta `respiration`). Pur : la phase se déduit du temps écoulé, rien n'est compté ni enregistré. v8 : le souffle à
+// quatre temps du lecteur de Bien-être, et la cohérence cardiaque en séance du lecteur.
 export const DUREES = [2, 5, 10];
 export const RYTHMES = ['5-5', '4-6'];
 export const RESPIRATION_DEFAUT = Object.freeze({ duree: 5, rythme: '5-5', son: false });
@@ -28,6 +29,59 @@ export function phaseRespiration(ecouleMs, rythme = RESPIRATION_DEFAUT.rythme, d
   return ecouleMs % CYCLE_MS < inspiration ? 'inspire' : 'expire';
 }
 
+// Le souffle du lecteur de Bien-être (v8, spec §5 et §12.3) : quatre temps en secondes entières, { inspi, retiens1, expi,
+// retiens2 } (inspirer, retenir poumons pleins, expirer, retenir poumons vides). Un temps de 0 n'existe pas. Le cycle se
+// répète depuis son origine ; la phase d'un instant se lit sur le temps écoulé depuis cette origine.
+export const TEMPS_SOUFFLE = ['inspi', 'retiens1', 'expi', 'retiens2'];
+const PHASES_SOUFFLE = { inspi: 'inspire', retiens1: 'retiens-plein', expi: 'expire', retiens2: 'retiens-vide' };
+// Le plus long temps accepté : l'animation du disque a une classe par durée, de 1 à 12 s (ecrans.css).
+export const TEMPS_MAX_S = 12;
+
+// Un souffle valide : quatre entiers de 0 à 12, une inspiration et une expiration d'au moins 1 s.
+export function souffleValide(s) {
+  if (!s || typeof s !== 'object') return false;
+  if (!TEMPS_SOUFFLE.every((k) => Number.isInteger(s[k]) && s[k] >= 0 && s[k] <= TEMPS_MAX_S)) return false;
+  return s.inspi >= 1 && s.expi >= 1;
+}
+export const cycleSouffleMs = (s) => TEMPS_SOUFFLE.reduce((n, k) => n + s[k], 0) * 1000;
+
+// La phase à `ms` du début du cycle : { phase, debutMs, dureeMs }, debutMs compté depuis l'origine (et non depuis le début
+// du cycle en cours). phase : 'inspire', 'retiens-plein', 'expire' ou 'retiens-vide'.
+export function phaseSouffle(ms, s) {
+  const cycle = cycleSouffleMs(s);
+  const t = Math.max(0, ms);
+  const base = Math.floor(t / cycle) * cycle;
+  let debut = base;
+  for (const k of TEMPS_SOUFFLE) {
+    const duree = s[k] * 1000;
+    if (duree > 0 && t < debut + duree) return { phase: PHASES_SOUFFLE[k], debutMs: debut, dureeMs: duree };
+    debut += duree;
+  }
+  return { phase: PHASES_SOUFFLE.inspi, debutMs: base + cycle, dureeMs: s.inspi * 1000 };
+}
+
+// Les phases qui commencent dans [deMs, aMs[, dans l'ordre : le lecteur programme le souffle sonore un peu en avance, calé
+// sur l'horloge audio.
+export function phasesEntre(deMs, aMs, s) {
+  const r = [];
+  let p = phaseSouffle(deMs, s);
+  if (p.debutMs < deMs) p = phaseSouffle(p.debutMs + p.dureeMs, s);
+  while (p.debutMs < aMs) {
+    r.push(p);
+    p = phaseSouffle(p.debutMs + p.dureeMs, s);
+  }
+  return r;
+}
+
+// Le mot de la phase, sous lequel le disque grandit ou rétrécit.
+export const motPhase = (phase) => (phase === 'inspire' ? 'Inspire' : phase === 'expire' ? 'Expire' : 'Retiens');
+
+// Le souffle d'un rythme de la cohérence cardiaque (sans rétention).
+export const souffleDeRythme = (rythme) => {
+  const [inspi, expi] = (RYTHMES.includes(rythme) ? rythme : RESPIRATION_DEFAUT.rythme).split('-').map(Number);
+  return { inspi, retiens1: 0, expi, retiens2: 0 };
+};
+
 // « 5 minutes » ne se coupe pas : une espace insécable entre le nombre et l'unité (v6.1).
 export const NOM_RESPIRATION = 'Cohérence cardiaque';
 export const texteDuree = (minutes) => `${minutes}\u00a0minutes`;
@@ -35,3 +89,18 @@ export const texteAvant = (minutes) => `${NOM_RESPIRATION} · ${texteDuree(minut
 export const texteFin = (minutes) => `${minutes}\u00a0minutes de respiration.`;
 // Le rythme en clair, sur la puce de Moment difficile (2b) : « 5 s · 5 s » (inspirer, expirer).
 export const texteRythme = (rythme) => rythme.split('-').map((n) => `${n}\u00a0s`).join(' · ');
+
+// La cohérence cardiaque dans le lecteur de Bien-être (v8, spec §5) : une seule étape, rythmée, de la durée réglée. Son
+// identifiant est celui des séances de respiration (`coherence`).
+export const TEXTE_COHERENCE = 'Respire au rythme du disque, sans forcer.';
+export function seanceCoherence(reglages) {
+  const r = normaliserRespiration(reglages);
+  return {
+    id: 'coherence',
+    titre: NOM_RESPIRATION,
+    dureeMin: r.duree,
+    posture: 'assis',
+    description: 'Inspirer quand le disque grandit, expirer quand il rétrécit.',
+    etapes: [{ texte: TEXTE_COHERENCE, dureeS: r.duree * 60, souffle: souffleDeRythme(r.rythme) }],
+  };
+}

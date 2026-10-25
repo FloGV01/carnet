@@ -639,11 +639,12 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .duree-respiration { display: block; }
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
-/* Moment difficile et Bien-être (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
-   « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours. */
-.moment-difficile .respiration, .bien-etre .respiration { gap: 12px; }
-.moment-difficile .phase-respiration, .bien-etre .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
-.moment-difficile .respiration .btn, .bien-etre .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
+/* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
+   « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours.
+   Les puces servent aussi à la carte de la cohérence cardiaque de Bien-être (v8). */
+.moment-difficile .respiration { gap: 12px; }
+.moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
+.moment-difficile .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
 .puces-respiration { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .puce-reglage { position: relative; display: inline-flex; align-items: center; }
 .puce-reglage select {
@@ -682,7 +683,18 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
-/* Dans une carte (Moment difficile, Bien-être), la respiration prend la couleur du parcours, comme dans le rendu 2b :
+/* La carte de la cohérence cardiaque (v8), compacte, à la couleur de Bien-être : en tête, un carré de 28 avec l'icône et
+   le titre (17/600) ; dessous, la durée et le rythme en puces ; à droite, le bouton lecture rond, qui la lance. */
+.carte-coherence {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; row-gap: 12px;
+  padding: 14px 14px 16px 16px;
+}
+.carte-coherence > .bouton-lecture { grid-column: 2; grid-row: 1 / span 2; }
+.carte-coherence .puces-respiration { justify-content: flex-start; }
+.titre-coherence { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
+.carre-carte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-carte svg { width: 17px; height: 17px; }
+/* Dans une carte (Moment difficile), la respiration prend la couleur du parcours, comme dans le rendu 2b :
    un cercle de 152 en -tint-2, cerclé de 2 px à la couleur, et dedans le disque qui respire, en -tint ; « Commencer » en
    -fill / -on. Sans mouvement, le disque reste figé et, à l'inspiration, se remplit de la couleur. */
 .carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--c-tint-2); border: 2px solid var(--c); }
@@ -698,25 +710,66 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .exercice-description { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-wrap: pretty; }
 .ligne-exercice > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); }
 .ligne-fixe { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-align: center; padding: 2px 0 8px; }
-.noter-emotion { display: inline-flex; align-items: center; justify-content: center; }
-/* Un exercice (v7) : la consigne en grand, le minuteur discret dessous, les boutons en bas, près du pouce ; l'interrupteur
-   de la lecture à voix haute à droite de « Fermer ». */
-.exercice { padding: 0 var(--marge) 16px; }
-.exercice-avant, .exercice-fin { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.exercice-intro { font: 600 1.235rem/1.4 var(--police); color: var(--text); text-wrap: pretty; }
-.exercice-etape { display: flex; flex-direction: column; gap: 16px; padding-top: 6px; }
-.exercice-texte { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }
-.minuteur-etape { font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
-.actions-exercice { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 4px 6px; }
-.actions-exercice .btn { min-height: 56px; font-size: 1.059rem; }
-.actions-exercice .large, .terminer-exercice { grid-column: 1 / -1; }
-/* « Commencer » et « Reprendre » à la couleur du parcours, comme « Commencer » de la respiration en 2b (-fill, -on). */
-.actions-exercice .btn-teinte { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
-.terminer-exercice { justify-content: center; }
-.voix-exercice { display: flex; align-items: center; gap: 8px; }
-/* L'interrupteur fait 31 de haut : sa zone de toucher est portée à 45 (cible de 44 pt). */
-.voix-exercice .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
-.voix-libelle { font-size: var(--t-sous); color: var(--text-2); text-align: right; line-height: 1.2; }
+/* Le bouton lecture rond (v8) : -fill et -on de la teinte, comme « Commencer » en 2b ; 64 dans une carte, 84 au centre de
+   l'anneau avant de commencer. */
+.bouton-lecture {
+  position: relative; flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--c-fill); color: var(--c-on); display: grid; place-items: center;
+}
+.bouton-lecture svg { width: 28px; height: 28px; stroke-width: 2.2; }
+.bouton-lecture.grand { width: 84px; height: 84px; }
+.bouton-lecture.grand svg { width: 34px; height: 34px; }
+.bouton-lecture[disabled] { opacity: .45; cursor: default; }
+/* Le lecteur de Bien-être (v8, spec §5) : plein écran. Avant : la durée et la posture, la description, l'anneau et son
+   bouton lecture, les réglages du son. Pendant : la consigne en grand en haut, l'anneau du temps de tout l'exercice au
+   milieu avec la pause au centre, « il reste 6:40 » dessous ; en bas, près du pouce, Précédent et Suivant, puis
+   « Terminer » en lien discret. */
+.lecteur { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--marge) 16px; }
+.lecteur-plein { min-height: 100%; padding-top: 6px; }
+.lecteur-duree { margin-top: -6px; font-size: var(--t-sous); color: var(--text-2); }
+.lecteur-description { font-size: var(--t-corps); line-height: 1.4; color: var(--text); text-wrap: pretty; }
+.lecteur-consigne { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }
+.lecteur-centre { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 10px 0; }
+.lecteur-avant .lecteur-centre { padding: 14px 0 18px; }
+.mot-souffle { font: 600 1.35rem/1.3 var(--police); color: var(--text); text-align: center; }
+.lecteur-reste { font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
+/* L'anneau : la piste en --line (un filet), le temps passé à la couleur (accent, 3:1 sur le fond) ; dedans, le disque du souffle
+   (-tint-2, cerclé de 2 px à la couleur, comme le cercle de la respiration en 2b) et le bouton. */
+.lecteur-anneau { position: relative; width: min(232px, 60vw); aspect-ratio: 1; display: grid; place-items: center; }
+.lecteur-anneau > * { grid-area: 1 / 1; }
+.lecteur-anneau > .bouton-lecture { z-index: 1; }
+.anneau-temps { width: 100%; height: 100%; }
+.anneau-piste { fill: none; stroke: var(--line); stroke-width: 5; }
+.anneau-plein { fill: none; stroke: var(--c); stroke-width: 5; stroke-linecap: round; }
+/* Le disque grandit à l'inspiration et rétrécit à l'expiration, sur la durée du temps (une classe par durée, de 1 à
+   12 s) ; il reste immobile pendant « Retiens », et en pause. Avec « Réduire les animations », il ne bouge pas : poumons
+   pleins (inspiration, « Retiens » qui la suit), il est cerclé de la couleur. */
+.disque-souffle {
+  width: 84%; height: 84%; border-radius: 50%; background: var(--c-tint-2); border: 2px solid var(--c); transform: scale(.55);
+  animation-timing-function: ease-in-out; animation-fill-mode: both;
+}
+.disque-souffle.phase-inspire { transform: scale(1); animation-name: souffle-inspire; }
+.disque-souffle.phase-retiens-plein { transform: scale(1); }
+.disque-souffle.phase-expire { transform: scale(.55); animation-name: souffle-expire; }
+.disque-souffle.en-pause { animation-play-state: paused; }
+@keyframes souffle-inspire { from { transform: scale(.55); } to { transform: scale(1); } }
+@keyframes souffle-expire { from { transform: scale(1); } to { transform: scale(.55); } }
+.duree-souffle-1 { animation-duration: 1s; } .duree-souffle-2 { animation-duration: 2s; } .duree-souffle-3 { animation-duration: 3s; }
+.duree-souffle-4 { animation-duration: 4s; } .duree-souffle-5 { animation-duration: 5s; } .duree-souffle-6 { animation-duration: 6s; }
+.duree-souffle-7 { animation-duration: 7s; } .duree-souffle-8 { animation-duration: 8s; } .duree-souffle-9 { animation-duration: 9s; }
+.duree-souffle-10 { animation-duration: 10s; } .duree-souffle-11 { animation-duration: 11s; } .duree-souffle-12 { animation-duration: 12s; }
+@media (prefers-reduced-motion: reduce) {
+  .disque-souffle[class] { transform: scale(.8); }
+  .disque-souffle.phase-inspire, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c); }
+}
+.reglages-lecteur { margin-top: 4px; }
+/* Un interrupteur fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans sa rangée de 52. */
+.reglages-lecteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
+/* « Son » : sa puce à droite (« Repères + souffle ▾ »), un menu de l'iPhone comme la durée et le rythme. */
+.reglage-son { padding-top: 6px; padding-bottom: 6px; }
+.actions-lecteur { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 4px 0; }
+.actions-lecteur .btn { min-height: 56px; font-size: 1.059rem; }
+.terminer-lecteur { grid-column: 1 / -1; justify-self: center; padding: 0 16px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
    de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }
