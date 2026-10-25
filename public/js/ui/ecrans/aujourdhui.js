@@ -40,6 +40,8 @@ const HEURES = Array.from({ length: HEURES_SOMMEIL.max - HEURES_SOMMEIL.min + 1 
   const texte = texteHeuresSommeil(h);
   return { valeur: h, libelle: texte.replace(/ (ou \w+)$/, ' ($1)'), aria: texte };
 });
+// Les textes que prend « Durée › » : ouvert, il garde la largeur du plus long.
+const TEXTES_LIEN_DUREE = ['Durée', ...HEURES.map((h) => h.aria)];
 
 // actuel : la valeur choisie, ou les valeurs d'un choix multiple. Un élément archivé encore choisi
 // reste proposé (en dernier) pour pouvoir être vu et retiré.
@@ -275,15 +277,16 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   // Une rubrique du soir (2b) : une carte, en tête le carré à sa couleur et son titre, puis ses choix.
   const carteChamp = (cle, teinte, tete, ...contenu) => html`<div key=${cle} class=${`champ-jour carte-champ teinte-${teinte}`}>${tete}${contenu}</div>`;
   // Le lien d'une carte vers son détail (v8, Q5).
-  const lien = (cle, nom, texte) => ({ texte, nom, ouvert: ouverts.includes(cle), controle: `detail-${cle}`, surToucher: basculerDetail(cle) });
+  const lien = (cle, nom, texte, reserve) => ({ texte, nom, ouvert: ouverts.includes(cle), controle: `detail-${cle}`, surToucher: basculerDetail(cle), reserve });
   const heures = texteHeuresSommeil(entree.heuresSommeil);
   const CHAMPS = {
     lieu: () => carteChamp('lieu', 'lieu', html`<${TeteRubrique} icone="lieu" libelle="Lieu" />`,
       html`<${Pastilles} etiquette="Lieu" options=${options(items, 'lieu', entree.lieu)} valeur=${entree.lieu} surChoix=${ecrire('lieu')} colonnes=${3} teinte="lieu" />`),
     // Sommeil (v8, spec §7 bis) : la qualité, puis la durée de la nuit. Le soir ne tiendrait plus sans défiler avec les deux
-    // rangées (docs/decisions.md) : la Durée s'ouvre par « Durée › », qui dit la durée notée (« 6 h › »).
+    // rangées (docs/decisions.md) : la Durée s'ouvre par « Durée › », qui dit la durée notée (« 6 h › ») et, ouvert, garde
+    // la largeur de la plus longue (en grand texte, noter une durée ne fait pas passer le titre à la ligne).
     sommeil: () => carteChamp('sommeil', 'sommeil', html`<${TeteRubrique} icone="sommeil" libelle="Sommeil" sous="nuit dernière"
-        lien=${lien('duree', heures ? `Durée de la nuit : ${heures}` : 'Durée de la nuit', heures || 'Durée')} />`,
+        lien=${lien('duree', heures ? `Durée de la nuit : ${heures}` : 'Durée de la nuit', heures || 'Durée', TEXTES_LIEN_DUREE)} />`,
       html`<${Segmente} etiquette="Sommeil" options=${options(items, 'sommeil', entree.sommeilRessenti)} valeur=${entree.sommeilRessenti} surChoix=${ecrire('sommeilRessenti')} teinte="sommeil" />`,
       ouverts.includes('duree') && html`<div class="detail-duree" id="detail-duree">
         <${Pastilles} etiquette="Durée de la nuit" options=${HEURES} valeur=${entree.heuresSommeil ?? null} surChoix=${ecrire('heuresSommeil')} classe="heures-sommeil" teinte="sommeil" />

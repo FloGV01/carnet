@@ -9,13 +9,15 @@ export const CarreIcone = ({ icone, teinte }) => html`<span class=${`carre-ligne
 // titre ; `sous` (« nuit dernière ») le suit sur la même ligne, en discret. La carte porte la teinte (.teinte-*).
 // `lien` (v8, Q5) : « Détail › » ou « Durée › », en couleur action, au bout de la première ligne du titre ; il ouvre un
 // détail de la carte sans lui prendre de hauteur (le titre passe dessous au besoin, sa cible de 44 déborde sur les
-// marges). { texte, nom (lu par VoiceOver), ouvert, controle (id du détail), surToucher }.
+// marges). { texte, nom (lu par VoiceOver), ouvert, controle (id du détail), surToucher, reserve }. `reserve` : les textes
+// que le lien peut prendre pendant que son détail est ouvert (« Durée », « 6 h », « 4 h ou moins »…) ; ouvert, il garde la
+// largeur du plus long, pour qu'un choix dans le détail ne fasse pas passer le titre à la ligne (ecrans.css).
 export function TeteRubrique({ icone, libelle, sous, lien }) {
   return html`<span class="tete-rubrique">
     <span class="carre-rubrique" aria-hidden="true">${Icones[icone]({ trait: 2 })}</span>
     <span class="tete-textes">${lien && html`<button type="button" class="lien-rubrique" aria-label=${lien.nom}
       aria-expanded=${lien.ouvert ? 'true' : 'false'} aria-controls=${lien.ouvert ? lien.controle : null} onClick=${lien.surToucher}>
-      <span class="lien-rubrique-texte">${lien.texte}</span>${Icones.chevron({ trait: 2.2 })}</button>`}<span class="titre-rubrique">${libelle}</span>${sous && html`<span class="rubrique-sous">${sous}</span>`}</span>
+      <span class="lien-rubrique-texte" data-reserve=${lien.ouvert && lien.reserve ? lien.reserve.join('\n') : null}>${lien.texte}</span>${Icones.chevron({ trait: 2.2 })}</button>`}<span class="titre-rubrique">${libelle}</span>${sous && html`<span class="rubrique-sous">${sous}</span>`}</span>
   </span>`;
 }
 

@@ -23,6 +23,37 @@ const lienDuree = (page) => page.getByRole('button', { name: /^Durée de la nuit
 const lienDetail = (page, nom) => page.getByRole('button', { name: `${nom} en détail`, exact: true });
 const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, nom) });
 const boite = (loc) => loc.evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, l: r.width, h: r.height, bas: r.bottom, droite: r.right }; });
+const taillePolice = (page, px) => page.evaluate((t) => { for (const e of [document.documentElement, document.body]) e.style.fontSize = t ? `${t}px` : ''; }, px);
+
+// La cible qu'on touche vraiment (relecture de la tâche 5) : la boîte d'un lien mesurait 44, mais le titre passé dessous
+// (« mouvement ») et les choix de la carte (« Bien ») en prenaient une part. Chaque point de sa boîte (44 × 44 au moins,
+// autour de son texte) doit tomber dans le lien (elementFromPoint), et aucun autre bouton ni champ ne la chevauche.
+const cibleReelle = (lien) => lien.evaluate((b) => {
+  b.scrollIntoView({ block: 'center' });
+  const r = b.getBoundingClientRect();
+  const texte = b.querySelector('.lien-rubrique-texte').getBoundingClientRect();
+  let ailleurs = 0;
+  for (let y = Math.ceil(r.top) + 0.5; y < r.bottom; y += 1) for (let x = Math.ceil(r.left) + 0.5; x < r.right; x += 1) if (!b.contains(document.elementFromPoint(x, y))) ailleurs += 1;
+  const chevauches = [...document.querySelectorAll('main button, main input, main textarea')].filter((e) => !b.contains(e) && !e.contains(b)).filter((e) => {
+    const o = e.getBoundingClientRect();
+    return o.width > 0 && o.left < r.right && o.right > r.left && o.top < r.bottom && o.bottom > r.top;
+  }).map((e) => e.getAttribute('aria-label') || e.textContent.trim());
+  return { l: r.width, h: r.height, autourDuTexte: r.left <= texte.left && r.right >= texte.right && r.top <= texte.top && r.bottom >= texte.bottom, ailleurs, chevauches };
+});
+const cibleEntiere = async (lien, quoi) => {
+  const c = await cibleReelle(lien);
+  expect(c.l, `${quoi} : largeur de la cible`).toBeGreaterThanOrEqual(44);
+  expect(c.h, `${quoi} : hauteur de la cible`).toBeGreaterThanOrEqual(44);
+  expect([c.autourDuTexte, c.ailleurs, c.chevauches], `${quoi} : toute la cible répond, sans rien recouvrir`).toEqual([true, 0, []]);
+};
+// Les points d'un choix qui tomberaient dans un lien : aucun (le choix garde toute sa surface).
+const pointsPrisParUnLien = (loc) => loc.evaluate((e) => {
+  e.scrollIntoView({ block: 'center' });
+  const r = e.getBoundingClientRect();
+  let n = 0;
+  for (let y = Math.ceil(r.top) + 0.5; y < r.bottom; y += 1) for (let x = Math.ceil(r.left) + 0.5; x < r.right; x += 1) if (document.elementFromPoint(x, y)?.closest('.lien-rubrique')) n += 1;
+  return n;
+});
 
 // La marge de chaque élément au-dessus de la bande du bas (positive : il est au-dessus), et le défilement de la page.
 const margesSurLaBande = (page, selecteurs) => page.evaluate((liste) => {
@@ -145,10 +176,99 @@ test('la Durée est fermée à chaque ouverture et à chaque changement de jour,
   await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
 });
 
+// La mise en page de la carte Sommeil, Durée ouverte : chaque choix, la carte et sa tête, en coordonnées de la page.
+const planSommeil = (page) => page.locator('#detail-duree').evaluate((zone) => {
+  const carte = zone.closest('.carte-champ');
+  const r = (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top + window.scrollY, b.width, b.height].map((v) => Math.round(v * 10) / 10); };
+  return { carte: r(carte), tete: r(carte.querySelector('.tete-rubrique')), choix: [...zone.querySelectorAll('button')].map(r) };
+});
+
+test('Durée : un choix ne change pas la mise en page (choix, tête, carte), « 4 h ou moins » puis « 10 h ou plus », en clair et en sombre, à 390 et 375, au texte par défaut et en grand texte', async ({ page }) => {
+  const lien = lienDuree(page);
+  const duree = groupe(page, 'Durée de la nuit');
+  await lien.click();
+  // « ou moins » et « ou plus » : en petit, en gris secondaire et en 400, à la couleur du choix une fois choisi ; la coche
+  // devant le nombre seul, qui passe en 600.
+  const precision = (nom) => duree.getByRole('button', { name: nom, exact: true }).evaluate((b) => {
+    const [petit, nombre, coche] = [b.querySelector('small'), b.querySelector('.libelle-choix'), b.querySelector('.coche')];
+    const [c, n] = [coche.getBoundingClientRect(), nombre.getBoundingClientRect()];
+    return { couleur: getComputedStyle(petit).color, graisse: getComputedStyle(petit).fontWeight, nombre: getComputedStyle(nombre).fontWeight,
+      coche: c.width > 0 ? Math.abs((c.top + c.bottom) / 2 - (n.top + n.bottom) / 2) < 3 && c.right <= n.left : null };
+  });
+  for (const [schema, largeur, px] of [['light', 390, null], ['dark', 390, null], ['light', 375, null], ['dark', 375, null], ['light', 390, 21], ['light', 390, 23], ['light', 375, 21], ['light', 375, 23]]) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.setViewportSize({ width: largeur, height: 844 });
+    await taillePolice(page, px);
+    const quoi = `${schema} · ${largeur} · ${px ? `${px} px` : 'texte par défaut'}`;
+    const t = schema === 'light' ? clair : sombre;
+    await expect(lien).toHaveText('Durée');
+    const avant = await planSommeil(page);
+    for (const nom of ['4 h ou moins', '10 h ou plus']) {
+      // (la couleur d'un choix suit une transition : on attend sa fin)
+      if (!px) await expect.poll(() => precision(nom), `${quoi} · ${nom}`).toEqual({ couleur: rgb(t['text-2']), graisse: '400', nombre: '400', coche: null });
+      await duree.getByRole('button', { name: nom, exact: true }).click();
+      await expect(lien).toHaveText(nom);
+      expect(await planSommeil(page), `${quoi} · ${nom} choisi`).toEqual(avant);
+      if (!px) await expect.poll(() => precision(nom), `${quoi} · ${nom} choisi`).toEqual({ couleur: rgb(t['c-sommeil-on']), graisse: '400', nombre: '600', coche: true });
+    }
+    await duree.getByRole('button', { name: '10 h ou plus', exact: true }).click();
+    await expect(lien).toHaveText('Durée');
+    expect(await planSommeil(page), `${quoi} · effacé`).toEqual(avant);
+  }
+});
+
+test('Durée en grand texte (21 à 28 px, 390 et 375), ouverte et notée : rien ne déborde, chaque choix d\'une rangée a la même largeur, les colonnes s\'alignent ; en très grand texte, deux colonnes égales ; les liens gardent toute leur cible', async ({ page }) => {
+  await toucher(page, 'Sommeil', 'Moyen');
+  await lienDuree(page).click();
+  // Le choix le plus large pour sa place, fait : sa coche compte.
+  await groupe(page, 'Durée de la nuit').getByRole('button', { name: '4 h ou moins' }).click();
+  await expect(lienDuree(page)).toHaveText('4 h ou moins');
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    for (const px of [21, 23, 24, 26, 28]) {
+      await taillePolice(page, px);
+      const quoi = `${largeur} · ${px} px`;
+      const g = await page.locator('#detail-duree').evaluate((zone) => {
+        const carte = zone.closest('.carte-champ').getBoundingClientRect();
+        const debords = [];
+        const rangees = [];
+        for (const b of zone.querySelectorAll('button')) {
+          const r = b.getBoundingClientRect();
+          const nom = b.getAttribute('aria-label');
+          if (b.scrollWidth > b.clientWidth || b.scrollHeight > b.clientHeight) debords.push(nom);
+          if (r.left < carte.left - 0.5 || r.right > carte.right + 0.5) debords.push(`${nom} hors de la carte`);
+          for (const k of b.querySelectorAll('.coche, .libelle-choix, small')) {
+            const q = k.getBoundingClientRect();
+            if (q.width > 0 && (q.left < r.left || q.right > r.right || q.top < r.top || q.bottom > r.bottom)) debords.push(`${nom} : ${k.textContent || 'coche'} hors du choix`);
+          }
+          const rangee = rangees.find((x) => Math.abs(x.haut - r.top) < 1);
+          if (rangee) rangee.choix.push([r.left, r.right]); else rangees.push({ haut: r.top, choix: [[r.left, r.right]] });
+        }
+        return { debords, rangees: rangees.map((x) => x.choix) };
+      });
+      expect(g.debords, quoi).toEqual([]);
+      const proches = (valeurs, q) => { for (const v of valeurs) expect(Math.abs(v - valeurs[0]), q).toBeLessThanOrEqual(0.5); };
+      const tailles = g.rangees.map((x) => x.length);
+      if (px === 21) expect(tailles, `${quoi} : 4 puis 3`).toEqual([4, 3]);
+      if (px === 28) expect(tailles, `${quoi} : deux colonnes`).toEqual([2, 2, 2, 1]);
+      expect([[4, 3], [2, 2, 2, 1]], quoi).toContainEqual(tailles);
+      for (const rangee of g.rangees) proches(rangee.map(([l, d]) => d - l), `${quoi} : même largeur dans une rangée`);
+      proches(g.rangees.map((x) => x[0][0]), `${quoi} : bords gauches alignés`);
+      proches(g.rangees.filter((x) => x.length === tailles[0]).map((x) => x.at(-1)[1]), `${quoi} : bords droits alignés`);
+      if (tailles.length === 4) {
+        proches(g.rangees.flat().map(([l, d]) => d - l), `${quoi} : deux colonnes égales`);
+        proches(g.rangees.map((x) => x[0][1]), `${quoi} : première colonne alignée`);
+      }
+      for (const lien of [lienDuree(page), lienDetail(page, 'Contact'), lienDetail(page, 'Sport')]) await cibleEntiere(lien, `${quoi} · ${await lien.getAttribute('aria-label')}`);
+    }
+  }
+});
+
 // ---------- Les liens des cartes : 2b, AA, cibles ----------
 
-test('« Durée › » et « Détail › » : sur la première ligne du titre, en couleur action 13/600, AA, cibles de 44, sans hauteur pour la carte', async ({ page }) => {
+test('« Durée › » et « Détail › » : sur la première ligne du titre, en couleur action 13/600, AA, des cibles de 44 qu\'on touche en entier, sans hauteur pour la carte ni surface prise aux choix', async ({ page }) => {
   await soir(page);
+  await toucher(page, 'Sommeil', 'Bien');
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     for (const [lien, carte, titre] of [[lienDuree(page), 'Sommeil', 'Sommeil'], [lienDetail(page, 'Contact'), 'Contact humain', 'Contact humain'], [lienDetail(page, 'Sport'), 'Sport / mouvement', 'Sport / mouvement']]) {
@@ -156,13 +276,12 @@ test('« Durée › » et « Détail › » : sur la première ligne du titre, e
       const m = await lien.evaluate((b) => {
         const c = b.closest('.carte-champ');
         const s = getComputedStyle(b);
-        const r = b.getBoundingClientRect();
         const texte = b.querySelector('.lien-rubrique-texte').getBoundingClientRect();
         const plage = document.createRange();
         plage.selectNodeContents(c.querySelector('.titre-rubrique'));
         const ligne1 = [...plage.getClientRects()].filter((x) => x.width > 0)[0];
         return {
-          couleur: s.color, fond: getComputedStyle(c).backgroundColor, taille: Math.round(Number.parseFloat(s.fontSize)), graisse: s.fontWeight, cible: [r.width, r.height],
+          couleur: s.color, fond: getComputedStyle(c).backgroundColor, taille: Math.round(Number.parseFloat(s.fontSize)), graisse: s.fontWeight,
           dansLaTete: Boolean(b.closest('.tete-rubrique')), premiereLigne: Math.abs((texte.top + texte.bottom) / 2 - (ligne1.top + ligne1.bottom) / 2) < 3,
           aDroite: texte.right <= c.getBoundingClientRect().right - 8 && texte.left > ligne1.right, debord: b.scrollWidth > b.clientWidth,
         };
@@ -170,12 +289,20 @@ test('« Durée › » et « Détail › » : sur la première ligne du titre, e
       expect(m.couleur, quoi).toBe(rgb(t.action));
       expect(contraste(m.couleur, m.fond), quoi).toBeGreaterThanOrEqual(4.5);
       expect([m.taille, m.graisse], quoi).toEqual([13, '600']);
-      expect(m.cible[0], quoi).toBeGreaterThanOrEqual(44);
-      expect(m.cible[1], quoi).toBeGreaterThanOrEqual(44);
       expect([m.dansLaTete, m.premiereLigne, m.aDroite, m.debord], quoi).toEqual([true, true, true, false]);
+      await cibleEntiere(lien, quoi);
       await expect(carteDe(page, carte).locator('.titre-rubrique')).toHaveText(titre);
     }
   }
+  // « Sommeil : Bien » (choisi), Mal et Moyen, et les Oui / Non de Contact et Sport gardent toute leur surface.
+  const choixSousLesLiens = () => [...['Mal', 'Moyen', 'Bien'].map((n) => groupe(page, 'Sommeil').getByRole('button', { name: n })),
+    ...['Contact humain', 'Sport / mouvement'].flatMap((g) => ['Oui', 'Non'].map((n) => groupe(page, g).getByRole('button', { name: n })))];
+  for (const choix of choixSousLesLiens()) expect(await pointsPrisParUnLien(choix), await choix.getAttribute('aria-label') || await choix.textContent()).toBe(0);
+  // La Durée ouverte (le lien garde alors la largeur de « 4 h ou moins ») : pareil, et la rangée des durées aussi.
+  await lienDuree(page).click();
+  await cibleEntiere(lienDuree(page), 'Durée ouverte');
+  for (const choix of [...choixSousLesLiens(), ...await groupe(page, 'Durée de la nuit').getByRole('button').all()]) expect(await pointsPrisParUnLien(choix)).toBe(0);
+  await lienDuree(page).click();
   // Contact et Sport restent côte à côte, de même hauteur, aussi hautes qu'en v7 (titre sur deux lignes).
   const [contact, sport] = await Promise.all([boite(carteDe(page, 'Contact humain')), boite(carteDe(page, 'Sport / mouvement'))]);
   expect(Math.abs(contact.y - sport.y)).toBeLessThanOrEqual(0.5);

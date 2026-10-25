@@ -372,14 +372,28 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .titre-rubrique { color: var(--text); }
 .tete-rubrique .rubrique-sous { margin-left: 10px; font-size: var(--t-note); font-weight: 400; line-height: 1; color: var(--text-2); white-space: nowrap; }
 /* « Détail › », « Durée › » (v8, Q5) : couleur action, 13/600, sur la première ligne du titre, assez court pour que
-   « Contact » et « Sport / » tiennent à sa gauche dans une demi-carte. Sa cible fait 44 de haut : des marges intérieures
-   que des marges négatives rendent, sans hauteur pour la ligne ; elle déborde sur les marges de la carte. Le chevron
-   tourne quand le détail est ouvert. */
+   « Contact » et « Sport / » tiennent à sa gauche dans une demi-carte. Sa cible fait 44 de haut au moins : des marges
+   intérieures que des marges négatives rendent, sans hauteur pour la ligne ; elle déborde sur les marges de la carte,
+   6 px plus haut que bas, pour que son bas reste au-dessus des choix de la carte (Mal · Moyen · Bien commence 4 px sous
+   une cible centrée). Au-dessus, la marge de la carte et l'écart entre cartes lui laissent la place, sans toucher les
+   choix de la carte du dessus. Elle passe devant le titre : la 2e ligne d'un titre (« mouvement »), peinte après un
+   flottant, ne lui prend pas le toucher (mesuré par elementFromPoint, v8-sommeil). Le chevron tourne quand le détail
+   est ouvert. */
 .lien-rubrique {
   --marge-cible: max(0px, calc((var(--cible) + 1px - var(--h-ligne)) / 2));
-  float: right; display: inline-flex; align-items: center; gap: 1px;
-  padding: var(--marge-cible) 10px var(--marge-cible) 8px; margin: calc(-1 * var(--marge-cible)) -10px calc(-1 * var(--marge-cible)) -2px;
+  --marge-haut: calc(var(--marge-cible) + 6px); --marge-bas: max(0px, calc(var(--marge-cible) - 6px));
+  position: relative; z-index: 1; float: right; display: inline-flex; align-items: center; gap: 1px;
+  padding: var(--marge-haut) 10px var(--marge-bas) 8px; margin: calc(-1 * var(--marge-haut)) -10px calc(-1 * var(--marge-bas)) -2px;
   border: 0; background: none; color: var(--action); font-family: var(--police); font-size: var(--t-note); font-weight: 600; line-height: var(--h-ligne); white-space: nowrap;
+}
+/* Un lien dont le texte change pendant que son détail est ouvert (« Durée › » dit la durée notée) garde alors la largeur
+   du plus long de ses textes, par une copie sans hauteur, invisible et muette (data-reserve, une ligne par texte) : noter
+   une durée ne fait pas passer le titre à la ligne en grand texte, la carte ne grandit pas sous le doigt. Fermé, il n'a
+   que sa largeur. Le texte se cale contre le chevron. */
+.lien-rubrique-texte[data-reserve] { display: inline-grid; justify-items: end; }
+.lien-rubrique-texte[data-reserve]::after {
+  content: attr(data-reserve); content: attr(data-reserve) / "";
+  height: 0; overflow: clip; visibility: hidden; white-space: pre;
 }
 .lien-rubrique svg { width: 12px; height: 12px; flex: none; transition: transform var(--duree); }
 .lien-rubrique[aria-expanded="true"] svg { transform: rotate(90deg); }
@@ -399,18 +413,26 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    plutôt que de déborder : rien ne sort de sa carte, le choix fait et sa coche compris. */
 @container carte (max-width: 13.5em) {
   .carte-champ .pastilles:not(.chiffres) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* La durée de la nuit aussi (v8) : deux colonnes égales, sans les places de sa grille de 12. */
+  .carte-champ .heures-sommeil .pastille, .carte-champ .heures-sommeil .pastille:nth-child(n+5) { grid-column: auto; }
   .carte-champ .segmente { flex-wrap: wrap; }
   .aujourdhui .carte-champ .segmente button { min-width: min-content; padding: 0 6px; }
 }
 .aujourdhui .segmente button { min-width: 0; }
 
 /* La durée de la nuit (v8), sous Mal · Moyen · Bien quand « Durée › » est ouvert : 4 h ou moins à 7 h, puis 8 h à 10 h ou
-   plus, chaque rangée sur toute la largeur ; « ou moins » et « ou plus » en petit sous le nombre. */
+   plus, chaque rangée sur toute la largeur ; « ou moins » et « ou plus » en petit sous le nombre, en gris secondaire, à
+   la couleur du choix une fois choisi. Un toucher ne change pas la mise en page, à toutes les tailles de texte : la
+   coche se met devant le nombre seul (le nombre passe en 600), et la précision garde toute la largeur du choix et sa
+   graisse, choisi ou non. Avec la coche devant les deux lignes, « ou moins » passait à la ligne (« 4 h / ou / moins »)
+   et la rangée grandissait de 6 px au toucher ; en 600, il y passait en grand texte (23 px). */
 .detail-duree { margin-top: 2px; }
 .pastilles.heures-sommeil { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-.heures-sommeil .pastille { grid-column: span 3; }
+.heures-sommeil .pastille { grid-column: span 3; flex-wrap: wrap; align-content: center; row-gap: 1px; }
 .heures-sommeil .pastille:nth-child(n+5) { grid-column: span 4; }
-.heures-sommeil .pastille small { line-height: 1.1; }
+.heures-sommeil .texte-pastille { display: contents; }
+.heures-sommeil .pastille small { flex: 1 0 100%; line-height: 1.1; }
+.heures-sommeil .pastille[aria-pressed="true"] small { font-weight: 400; }
 /* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. */
 .carte-detail { gap: 6px; padding-bottom: 12px; }
 
