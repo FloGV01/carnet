@@ -105,7 +105,7 @@ test('Mes nuits sous son seuil : sans nuit qui a sa durée, « Pas encore assez 
   expect(await nuits.locator('svg[role="img"] text').allTextContents()).toEqual(expect.arrayContaining(['lun 12/10', 'Mal', 'mar 13/10', '7 h']));
 });
 
-test('Mes nuits, en clair et en sombre : chaque texte a au moins 4,5:1 sur la carte ; rien ne sort de l\'écran', async ({ page }) => {
+test('Mes nuits, en clair et en sombre : chaque texte a au moins 4,5:1 sur la carte, le contour de la barre « Mal » 2:1 ; rien ne sort de l\'écran', async ({ page }) => {
   await verserNuits(page);
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
@@ -115,6 +115,16 @@ test('Mes nuits, en clair et en sombre : chaque texte a au moins 4,5:1 sur la ca
     const fond = await nuits.evaluate((e) => getComputedStyle(e).backgroundColor);
     const couleurs = await nuits.locator('svg text').evaluateAll((ts) => ts.map((t) => [t.textContent, getComputedStyle(t).fill]));
     for (const [texte, couleur] of couleurs) expect(contraste(couleur, fond), `${schema} : « ${texte} »`).toBeGreaterThanOrEqual(4.5);
+    // Le pas « Mal » de la rampe est trop clair sur la carte (1,5:1 en clair, 1,8:1 en sombre) : ses deux barres et sa case
+    // de légende ont un contour d'au moins 2:1 (skill dataviz), les autres pas.
+    const contours = await nuits.locator('rect.g-sommeil-1').evaluateAll((rs) => rs.map((r) => { const s = getComputedStyle(r); return [s.stroke, parseFloat(s.strokeWidth)]; }));
+    expect(contours, schema).toHaveLength(3);
+    for (const [trait, epaisseur] of contours) {
+      expect(trait, schema).not.toBe('none');
+      expect(epaisseur, schema).toBeGreaterThanOrEqual(1);
+      expect(contraste(trait, fond), `${schema} : contour de la barre « Mal »`).toBeGreaterThanOrEqual(2);
+    }
+    expect(await nuits.locator('rect.g-sommeil-2, rect.g-sommeil-3').evaluateAll((rs) => rs.map((r) => getComputedStyle(r).stroke)), schema).toEqual(['none', 'none', 'none', 'none']);
     const debord = await nuits.evaluate((f) => {
       const c = f.getBoundingClientRect();
       return [...f.querySelectorAll('svg text, svg rect')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < c.left - 0.5 || r.right > c.right + 0.5; }).map((e) => e.textContent);

@@ -17,10 +17,10 @@ import { texteHeuresSommeil } from '../../domain/champs.js';
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
 // `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
 // Sans `rubrique` (v7 : Mes jours, Ta journée, les graphiques d'émotions), le titre n'a pas de point de couleur : les
-// rangées et les familles portent les leurs.
-export function Cadre({ titre, rubrique = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
+// rangées et les familles portent les leurs. `classe` : une classe propre au graphique, sur la figure (Mes nuits).
+export function Cadre({ titre, rubrique = null, classe = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
   const [voirTableau, setVoirTableau] = useState(false);
-  return html`<figure class=${rubrique ? `graphe teinte-${rubrique}` : 'graphe'}>
+  return html`<figure class=${['graphe', rubrique && `teinte-${rubrique}`, classe].filter(Boolean).join(' ')}>
     <figcaption>
       <span class="graphe-tete"><span class="graphe-titre">${rubrique && html`<span class="point-rubrique" aria-hidden="true"></span>`}${titre}</span>
         ${droite && html`<span class="graphe-droite">${droite}</span>`}</span>

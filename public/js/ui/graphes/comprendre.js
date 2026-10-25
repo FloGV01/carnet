@@ -258,7 +258,8 @@ export function GrapheFamilles({ graphe, entete = '', lignes, periode, carte, me
 
 // nuits : mesNuits (analyse/comprendre.js), au moins une avec sa durée. Une ligne par nuit notée ; le texte de chaque
 // ligne dit la qualité et la durée, la teinte et la longueur de la barre les montrent. Rien d'autre : ni phrase, ni
-// moyenne, ni régularité.
+// moyenne, ni régularité. La barre « Mal », le pas clair de la rampe, a un contour au pas suivant (g-mes-nuits, dans
+// ecrans.css) : sa longueur se lit, en clair comme en sombre, sans toucher aux jetons 2b.
 export function GrapheMesNuits({ nuits, periode, carte }) {
   const lib = (id) => carte.get(id) || id;
   const g = geometrieMesNuits(nuits);
@@ -269,7 +270,7 @@ export function GrapheMesNuits({ nuits, periode, carte }) {
     <${LegendeNuits} lib=${lib} />
     ${g.lignes.some((l) => l.barre && l.barre.classe === 'creuse') && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre-creuse" x="1" y="3" width="10" height="6" rx="2" /></svg>qualité non notée</span>`}
   </p>`;
-  return html`<${Cadre} titre=${G.mesNuits.titre} rubrique=${G.mesNuits.rubrique} droite=${`${SEUILS.comprendre.nuitsSemaines} dernières semaines`}
+  return html`<${Cadre} titre=${G.mesNuits.titre} rubrique=${G.mesNuits.rubrique} classe="g-mes-nuits" droite=${`${SEUILS.comprendre.nuitsSemaines} dernières semaines`}
     tableau=${tableau} legende=${legende} dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria('mesNuits', periode, lib)} pied=${PIED}>
     ${g.filets.map((f) => html`<line class="g-filet" x1=${f.x} x2=${f.x} y1=${f.y1} y2=${f.y2} />`)}
     ${g.graduations.map((t) => html`<text class="g-axe" x=${t.x} y=${t.y} text-anchor="middle">${t.texte}</text>`)}

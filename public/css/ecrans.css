@@ -260,6 +260,9 @@
 .g-sommeil-1 { fill: var(--chart-sommeil-1); background: var(--chart-sommeil-1); }
 .g-sommeil-2 { fill: var(--chart-sommeil-2); background: var(--chart-sommeil-2); }
 .g-sommeil-3 { fill: var(--chart-sommeil-3); background: var(--chart-sommeil-3); }
+/* Mes nuits (v8) : le pas « Mal » n'a que 1,5:1 sur la carte en clair (1,8:1 en sombre). Un contour au pas « Moyen »
+   (2,9:1 et 3,8:1) dessine sa barre et sa case de légende, sans toucher aux jetons 2b. */
+.g-mes-nuits rect.g-sommeil-1 { stroke: var(--chart-sommeil-2); stroke-width: 1; }
 .legende-graphe { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); }
 .legende-graphe svg { width: 12px; height: 12px; flex: none; }
 .tableau-lignes { border-collapse: collapse; width: 100%; font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
