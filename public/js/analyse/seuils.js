@@ -19,8 +19,8 @@ export const SEUILS = Object.freeze({
   // v6 · Comprendre (spec §2) : un graphique aligné à partir de 3 événements (jours d'explosion, jours à
   // énergie basse, retours au bureau) ; « peu de valeurs » sous 3 ; un graphique en colonnes à partir de 2
   // colonnes d'au moins 3 valeurs ; une activité à partir de 3 relevés avec énergie ; un élément pesé ou
-  // rechargé à partir de 3 jours notés sur la période.
-  comprendre: { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3 },
+  // rechargé à partir de 3 jours notés sur la période. v8 · Mes nuits (Q15) : les nuits des 4 dernières semaines.
+  comprendre: { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3, nuitsSemaines: 4 },
   // v7 · Émotions du moment (spec §5, §6.4) : une vue d'émotions (Ta journée, colonnes de Comprendre, après une nuit,
   // autour des explosions) apparaît à partir de 5 relevés à émotion pris en compte. Autour d'un instant : 3 heures
   // avant, 3 heures après.

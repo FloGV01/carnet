@@ -79,7 +79,7 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
 
   await bouton(page, 'Comprendre', 'Énergie').click();
   await expect(page).toHaveURL(/#\/comprendre\/energie$/);
-  for (const titre of ['Ce qui a pesé, ce qui a rechargé', 'Avant mes jours à énergie basse', 'Selon ce que tu faisais']) {
+  for (const titre of ['Ce qui a pesé, ce qui a rechargé', 'Avant mes jours à énergie basse', 'Selon ce que tu faisais', 'Émotions selon ce que je faisais']) {
     await pasAssez(page, titre);
   }
 
@@ -87,7 +87,7 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
   await expect(groupe(page, 'Mesure').getByRole('button')).toHaveText(['Émotions', 'Nuits Mal', 'Explosions', 'Énergie basse']);
   await expect(bouton(page, 'Mesure', 'Émotions')).toHaveAttribute('aria-pressed', 'true');
-  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Tes nuits selon le jour', 'Après une nuit', 'Selon le mois']) {
+  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Mes nuits', 'Tes nuits selon le jour', 'Après une nuit', 'Selon le mois']) {
     await pasAssez(page, titre);
   }
 
@@ -249,8 +249,9 @@ test('180 jours inventés : « Voir en tableau », le toucher d\'une barre et se
     await expect(page.locator('figure.graphe').first()).toBeVisible();
     phrases.push(...await page.locator('figure.graphe [role="group"], figure.graphe svg[role="img"]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))));
   }
-  // Explosions : Avant (Autour de tes explosions n'a pas d'heure d'explosion ici) ; Énergie : 3 ; Rythmes : 5, et Après une nuit.
-  expect(phrases).toHaveLength(1 + 3 + 6);
+  // Explosions : Avant (Autour de tes explosions n'a pas d'heure d'explosion ici) ; Énergie : 3, et (v8) Émotions selon ce que
+  // je faisais ; Rythmes : 5, Après une nuit, et (v8) Mes nuits (le coucher et le lever de chaque nuit lui donnent sa durée).
+  expect(phrases).toHaveLength(1 + 4 + 7);
   for (const p of phrases) {
     expect(p).toMatch(/« Voir en tableau »\.$/);
     expect(p).not.toMatch(/\d|%/);

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CLES_FAMILLES, comptesVides, nombreDeReleves, relevesAEmotion, parFamille, emotionsParJour, famillesParJour, famillesParHeure,
-  famillesParColonnes, apresNuit, autourDe, autourDuBienEtre,
+  famillesParColonnes, apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite, selonSeuilEmotions,
 } from '../../public/js/analyse/emotions.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import { analyze } from '../../public/js/analyse/index.js';
@@ -288,4 +288,51 @@ test('invariance Paris / UTC : mêmes résultats quel que soit le fuseau du syst
   } finally {
     if (avant === undefined) delete process.env.TZ; else process.env.TZ = avant;
   }
+});
+
+// ---------- v8 · Q18 : émotions selon ce que je faisais ----------
+
+const TRAVAIL = 'activiteMoment:travail';
+const TRAJET = 'activiteMoment:trajet';
+const MONDE = 'activiteMoment:monde';
+
+test('emotionsParActivite (v8) : par activité, les relevés de chaque famille ; un relevé de deux activités compte pour chacune', () => {
+  const humeurs = [
+    releve('2026-10-12', '09:00', 'roue:colere:irrite', { faisais: [TRAVAIL] }),
+    releve('2026-10-12', '10:00', 'roue:colere', { faisais: [TRAVAIL, TRAJET] }), // une famille seule (v7) compte aussi
+    releve('2026-10-12', '18:00', 'roue:serenite:calme', { faisais: [TRAJET, TRAJET], vers: true }), // « vers » compris, une fois
+    releve('2026-10-13', '12:00', 'roue:joie:amuse', { faisais: [MONDE] }),
+    releve('2026-10-13', '13:00', 'roue:joie:amuse', { faisais: [] }), // sans activité : nulle part
+    releve('2026-10-13', '14:00', 'roue:joie:amuse'),
+    { id: 'n', date: '2026-10-13', heure: '15:00', humeur: 6, emotion: null, faisais: [TRAVAIL] }, // ancienne note : pas d'émotion
+    { id: 'e', date: '2026-10-13', heure: '16:00', energie: 'energie:basse', faisais: [TRAVAIL] }, // énergie seule
+  ];
+  const periode = { du: '2026-10-01', au: '2026-10-31' };
+  const items = [{ id: MONDE, liste: 'activiteMoment', ordre: 10 }, { id: TRAVAIL, liste: 'activiteMoment', ordre: 20 }, { id: TRAJET, liste: 'activiteMoment', ordre: 30 }];
+  const r = emotionsParActivite(humeurs, periode, items);
+  assert.deepEqual(Object.keys(r), [MONDE, TRAVAIL, TRAJET], 'dans l\'ordre de la liste');
+  assert.deepEqual(r, {
+    [MONDE]: compte({ joie: 1 }),
+    [TRAVAIL]: compte({ colere: 2 }),
+    [TRAJET]: compte({ colere: 1, serenite: 1 }),
+  });
+  assert.ok(Object.values(r).every((c) => Object.keys(c).join() === CLES_FAMILLES.join()), 'toutes les familles, dans l\'ordre de la roue');
+  // Sans liste : par identifiant. Le seuil compte les relevés, pas les activités : 4 relevés, pas 5.
+  assert.deepEqual(Object.keys(emotionsParActivite(humeurs, periode)), [MONDE, TRAJET, TRAVAIL]);
+  assert.equal(relevesAvecActivite(humeurs, periode).length, 4);
+  assert.equal(selonSeuilEmotions(relevesAvecActivite(humeurs, periode).length), 'insuffisant');
+  assert.deepEqual(emotionsParActivite([], periode), {});
+});
+
+test('emotionsParActivite (v8) : le jour logique fait foi (bascule de 4 h) ; seule la période compte', () => {
+  const humeurs = [
+    releve('2026-10-01', '03:59', 'roue:peur:craintif', { faisais: [TRAVAIL] }), // le 30/09 : avant la période
+    releve('2026-10-01', '04:00', 'roue:peur:craintif', { faisais: [TRAVAIL] }),
+    releve('2026-10-02', '01:00', 'roue:tristesse:vide', { faisais: [TRAVAIL], vers: true }), // encore le 01/10
+    releve('2026-10-02', '04:00', 'roue:joie:amuse', { faisais: [TRAVAIL] }), // le 02/10 : après la période
+  ];
+  const periode = { du: '2026-10-01', au: '2026-10-01' };
+  assert.deepEqual(emotionsParActivite(humeurs, periode), { [TRAVAIL]: compte({ peur: 1, tristesse: 1 }) });
+  assert.deepEqual(relevesAvecActivite(humeurs, periode).map((x) => [x.date, x.famille, x.faisais]),
+    [['2026-10-01', 'peur', [TRAVAIL]], ['2026-10-01', 'tristesse', [TRAVAIL]]]);
 });

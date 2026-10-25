@@ -2,6 +2,7 @@
 // « neutre » (vue soignants). Factuelles, jamais causales, jamais évaluatives.
 // v7 : les phrases calculées sur la note de 1 à 10 (bonnes journées, sommeil et humeur, tendances) sont retirées.
 import { SEUILS } from './seuils.js';
+import { texteHeuresSommeil } from '../domain/champs.js';
 
 export const PAS_ASSEZ = 'Pas encore assez de données pour le dire.';
 const E = SEUILS.emotions;
@@ -29,6 +30,8 @@ export const REGLES_COMPRENDRE = {
   mois: regleColonnes('mois'),
   nuits: `La règle : au moins ${C.minColonnes} soirs de la semaine qui ont chacun au moins ${C.minValeurs} nuits avec l'heure du coucher et du lever (« Nuit en détail »).`,
   activites: `La règle : une activité de « Ce que je faisais » apparaît à partir de ${C.minActivite} relevés avec une énergie.`,
+  // v8 · Mes nuits (Q15) : une barre dès qu'une nuit a sa durée.
+  mesNuits: `La règle : au moins une nuit notée avec sa durée sur les ${C.nuitsSemaines} dernières semaines.`,
   peseRecharge: 'La règle : au moins un élément de « Ce qui a pesé » ou de « Ce qui a rechargé », noté sur la période.',
   // v7 · émotions du moment
   emotions: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période.`,
@@ -36,6 +39,8 @@ export const REGLES_COMPRENDRE = {
   apresNuit: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, des jours où la nuit est notée.`,
   autourExplosions: `La règle : ${AU_MOINS_EMOTIONS} notées dans les ${E.heuresAutour} heures avant ou après une explosion dont l'heure est notée, sur la période.`,
   autourBienEtre: `La règle : ${AU_MOINS_EMOTIONS} notées dans les ${E.heuresAutour} heures avant ou après une séance lancée depuis Bien-être, sur la période.`,
+  // v8 · Q18
+  emotionsActivites: `La règle : ${AU_MOINS_EMOTIONS} notées sur la période, avec « Ce que je faisais ».`,
 };
 export const PIED_EXPLOSIONS = 'Ce sont tes notes, rassemblées : pas des causes.';
 
@@ -56,6 +61,13 @@ export function duree(min) {
   const m = Math.round(min);
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
 }
+
+// La durée d'une nuit (v8, Mes nuits) : « 4 h ou moins », « 6 h », « 10 h ou plus » pour les heures notées le soir ;
+// « 7 h 30 » pour une nuit ancienne, comptée du coucher au lever (« 11 h » pour une heure ronde) ; null sans durée.
+export const texteHeuresNuit = (h) => (h == null ? null : texteHeuresSommeil(h) || (Number.isInteger(h) ? `${h} h` : duree(h * 60)));
+// Une nuit de Mes nuits (analyse/comprendre.js) : « Mal · 6 h », « Bien », « 7 h 30 » ; la qualité d'abord, comme
+// l'Export PSY. `lib` : le libellé d'un identifiant.
+export const texteNuit = (n, lib) => [n.qualite && lib(n.qualite), texteHeuresNuit(n.heures)].filter(Boolean).join(' · ');
 
 const NOMS_SOURCE = {
   declencheur: 'épisodes', dessous: 'épisodes', emotion: 'épisodes', reaction: 'épisodes', symptome: 'symptômes', effetSecondaire: 'mentions',

@@ -359,6 +359,32 @@ export function geometrieNuits(colonnes, d = DIM_NUITS) {
   return { traits, marques, graduations, etiquettes, filets: graduations.map((g) => ({ x1: d.gauche, x2: d.largeur, y: g.y })) };
 }
 
+// Mes nuits (v8, Q15 et §7 bis) : une ligne par nuit notée, dans l'ordre des jours. Le jour à gauche ; une barre longue
+// comme les heures dormies, à la teinte de sa qualité (la rampe du sommeil, comme Mes jours ; creuse sans qualité) ; le
+// texte de la nuit à droite (« Mal · 6 h »), qui dit aussi la qualité d'une nuit sans durée, laquelle n'a pas de barre.
+// Une seule échelle, de 0 à 12 h, gradué toutes les 4 h en haut ; plus loin seulement si une nuit ancienne a duré
+// davantage. Ni ligne pour une nuit non notée, ni rien sur l'heure du coucher ou la régularité.
+export const DIM_MES_NUITS = { largeur: 326, barreX: 58, texteL: 104, ecart: 10, haut: 18, ligneH: 16, barreH: 8 };
+export const AXE_MES_NUITS = { min: 12, pas: 4 };
+
+export function geometrieMesNuits(nuits, d = DIM_MES_NUITS) {
+  const { min, pas } = AXE_MES_NUITS;
+  const plusLongue = Math.max(0, ...nuits.map((n) => n.heures ?? 0));
+  const max = Math.max(min, Math.ceil(plusLongue / pas) * pas);
+  const L = d.largeur - d.barreX - d.texteL - d.ecart;
+  const x = (h) => r1(d.barreX + (Math.max(0, h) / max) * L);
+  const lignes = nuits.map((n, i) => {
+    const y = d.haut + i * d.ligneH;
+    const barre = n.heures == null ? null
+      : { x: d.barreX, y: r1(y + (d.ligneH - d.barreH) / 2), l: r1(Math.max(2, x(n.heures) - d.barreX)), h: d.barreH, classe: CLASSE_NUIT[n.qualite] || 'creuse' };
+    return { date: n.date, y: r1(y + d.ligneH / 2), barre };
+  });
+  const bas = r1(d.haut + nuits.length * d.ligneH);
+  const graduations = [];
+  for (let h = 0; h <= max; h += pas) graduations.push({ heures: h, x: x(h), y: 8, texte: `${h} h` });
+  return { lignes, graduations, filets: graduations.map((g) => ({ x: g.x, y1: d.haut - 4, y2: bas })), texteX: d.largeur, hauteur: r1(bas + 2), max };
+}
+
 // Barres horizontales empilées (spec §2.4) : des groupes (titrés ou non), une ligne par élément : son nom et
 // son compte au-dessus, puis une barre longue comme son nombre (de relevés, de jours), sur une échelle
 // commune à tous les groupes, découpée en parts dans l'ordre reçu. Une part nulle ne dessine rien.

@@ -411,8 +411,8 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(libelleAutres({ oui: 0, n: 0, peu: true }), null);
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
-  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge',
-    'apresNuit', 'autourExplosions', 'autourBienEtre']);
+  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'mesNuits', 'nuits', 'activites',
+    'peseRecharge', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
     for (const mesure of ['emotions', 'nuitMal', 'explosion', 'energieBasse']) {
@@ -423,12 +423,18 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
         assert.match(p, /« Voir en tableau »\.$/);
         phrases.add(p);
       }
+      // v8 · Mes nuits a sa propre fenêtre, quelle que soit la période choisie.
+      if (graphe === 'mesNuits') {
+        assert.equal(p3, pt);
+        assert.match(pt, /^Mes nuits, sur les quatre dernières semaines : /);
+        continue;
+      }
       assert.match(p3, /sur les trois derniers mois/);
       assert.match(pt, /sur tout ce que tu as noté/);
     }
   }
-  // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas.
-  assert.equal(phrases.size, 2 * (10 + 3 * 4));
+  // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas ; Mes nuits ne dit pas la période.
+  assert.equal(phrases.size, 2 * (11 + 3 * 4) + 1);
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -460,7 +466,10 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
   for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
-  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  // v8 · Mes nuits : sa fenêtre vient de SEUILS.comprendre ; Q18 nomme la liste « Ce que je faisais ».
+  assert.match(R.mesNuits, new RegExp(`les ${S.nuitsSemaines} dernières semaines`));
+  assert.match(R.emotionsActivites, /« Ce que je faisais »/);
   for (const g of ['autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`), g);
   // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit.
   assert.match(R.autourBienEtre, /séance lancée depuis Bien-être/);
@@ -471,6 +480,37 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   assert.doesNotMatch(bloc, /\d/);
   // Pas de libellé de liste modifiable (« basse ») dans une règle : il peut être renommé dans Réglages › Listes.
   assert.doesNotMatch(R.energieAvant, /«/);
+});
+
+test('v8 · Comprendre, Mes nuits : une ligne par nuit notée, une barre longue comme ses heures à la teinte de sa qualité, aucune sans durée', async () => {
+  const { geometrieMesNuits, DIM_MES_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
+  const nuits = [
+    { date: '2026-10-01', heures: 6, qualite: 'sommeil:mal' },
+    { date: '2026-10-02', heures: 12, qualite: 'sommeil:moyen' },
+    { date: '2026-10-03', heures: null, qualite: 'sommeil:bien' },
+    { date: '2026-10-05', heures: 4, qualite: null },
+  ];
+  const g = geometrieMesNuits(nuits);
+  assert.equal(g.lignes.length, 4, 'une ligne par nuit notée, rien pour le 04');
+  assert.deepEqual(g.lignes.map((l) => l.date), nuits.map((n) => n.date));
+  assert.deepEqual(g.lignes.map((l) => l.barre && l.barre.classe), ['sommeil-1', 'sommeil-2', null, 'creuse']);
+  // L'axe va de 0 à 12 h : 12 h remplit la piste, 6 h la moitié, 4 h le tiers ; toutes les barres partent de 0 h.
+  assert.equal(g.max, 12);
+  assert.deepEqual(g.graduations.map((t) => t.texte), ['0 h', '4 h', '8 h', '12 h']);
+  const piste = g.lignes[1].barre.l;
+  assert.equal(r1(g.lignes[0].barre.l), r1(piste / 2));
+  assert.equal(r1(g.lignes[3].barre.l), r1(piste / 3));
+  assert.ok(g.lignes.every((l) => !l.barre || l.barre.x === d.barreX));
+  assert.equal(g.graduations[0].x, d.barreX);
+  assert.ok(g.lignes.every((l, i) => i === 0 || l.y > g.lignes[i - 1].y), 'de haut en bas, dans l\'ordre des jours');
+  // Le texte, à droite, ne chevauche pas la piste.
+  assert.ok(d.barreX + piste <= g.texteX - d.texteL);
+  assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
+  // Une nuit ancienne de 14 h : l'axe va jusqu'à 16 h, et rien ne sort du cadre.
+  const longue = geometrieMesNuits([...nuits, { date: '2026-10-06', heures: 14, qualite: null }]);
+  assert.equal(longue.max, 16);
+  assert.deepEqual(longue.graduations.map((t) => t.texte), ['0 h', '4 h', '8 h', '12 h', '16 h']);
+  assert.deepEqual(horsCadre(longue, d.largeur, longue.hauteur), []);
 });
 
 // ---------- v6 · repères de traitement (spec §3) ----------

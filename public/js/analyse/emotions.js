@@ -1,13 +1,14 @@
 // Émotions du moment (v7, spec §5 et §6.4) : les relevés qui portent une émotion de la roue (domain/roue.js), comptés
 // par famille. Par jour, par heure, par colonne (jour de la semaine, mois, lieu), après une nuit, et autour d'instants
-// (les explosions ; les séances lancées depuis Bien-être). Des comptes de relevés, dans l'ordre fixe des familles :
-// jamais une famille additionnée à une autre en score, ni un pourcentage, ni une famille « meilleure » qu'une autre.
+// (les explosions ; les séances lancées depuis Bien-être), et (v8, Q18) selon ce que je faisais. Des comptes de relevés,
+// dans l'ordre fixe des familles : jamais une famille additionnée à une autre en score, ni un pourcentage, ni une famille
+// « meilleure » qu'une autre.
 // Les anciennes notes de 1 à 10 n'entrent pas ici (humeur-jour.js). Un relevé se rattache à son jour logique par
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
 import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
 import { minusculeInitiale } from '../domain/phrase.js';
-import { clesDeColonnes, colonneDe } from './colonnes.js';
+import { clesDeColonnes, colonneDe, ordreDeListe } from './colonnes.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.emotions;
@@ -143,4 +144,35 @@ export function autourDuBienEtre(seances, humeurs, periode) {
   const instants = (seances || []).filter((x) => x && x.origine === 'bien-etre' && estDateValide(x.date) && estHeureValide(x.heure)
     && (() => { const j = jourEvenement(x.date, x.heure); return j >= periode.du && j <= periode.au; })());
   return autourDe(instants, humeurs);
+}
+
+// ---------- Émotions selon ce que je faisais (v8, Q18) ----------
+
+// Les relevés de la période qui portent une émotion et au moins une activité de « Ce que je faisais » : { date (le jour
+// logique), famille, faisais (sans doublon) }. Leur nombre fait le seuil commun des vues d'émotions (5 relevés).
+export function relevesAvecActivite(humeurs, periode) {
+  const res = [];
+  for (const h of humeurs || []) {
+    if (!h || !estDateValide(h.date) || !estEmotion(h.emotion) || !Array.isArray(h.faisais) || !h.faisais.length) continue;
+    const date = jourEvenement(h.date, h.heure);
+    if (date < periode.du || date > periode.au) continue;
+    res.push({ date, famille: familleDe(h.emotion), faisais: [...new Set(h.faisais.filter(Boolean))] });
+  }
+  return res;
+}
+
+// Pour chaque activité notée, le nombre de relevés de chaque famille : { [idActivite]: { colere: 2, …, serenite: 0 } },
+// les activités dans l'ordre de leur liste (`items`, Réglages › Listes), celles qui n'ont aucun relevé absentes. Comme
+// l'énergie selon ce que je faisais (comprendre.js), un relevé de deux activités compte pour chacune ; « vers » compris.
+// Des comptes de relevés, jamais une part.
+export function emotionsParActivite(humeurs, periode, items = []) {
+  const par = new Map();
+  for (const r of relevesAvecActivite(humeurs, periode)) {
+    for (const id of r.faisais) {
+      if (!par.has(id)) par.set(id, comptesVides());
+      par.get(id)[r.famille] += 1;
+    }
+  }
+  const ordre = ordreDeListe(items);
+  return Object.fromEntries([...par].sort(([a], [b]) => ordre(a, b)));
 }

@@ -1,4 +1,4 @@
-// Dessine les opérations de la page A4 (mm) sur un canvas de 1654 × 2339 px (200 ppp).
+// Dessine les opérations de la page A4 (mm) sur un canvas de 1654 × 2339 px (200 ppp). v8 : les barres de « Nuit par nuit ».
 // Toujours en thème clair : la page doit rester lisible imprimée en noir et blanc.
 import { A4 } from '../../export/page-a4.js';
 import { DIM_MES_JOURS_PDF, TAILLE_REPERE, geometrieMesJours } from './geometrie.js';
@@ -7,6 +7,8 @@ export const TAILLE_PX = { largeur: 1654, hauteur: 2339 };
 const PT = 0.3528;
 const COULEURS = { texte: '#1F1D1A', secondaire: '#6B665E', filet: '#E4DFD8', trait: '#8C857B', accent: '#3B4A6B', fond: '#FFFFFF', sommeil: ['#A9B5CF', '#6D7FA6', '#3B4A6B'] };
 const POLICE = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
+// La rampe du sommeil imprimée (Mal, Moyen, Bien) : la frise et « Nuit par nuit » (v8).
+export const COULEURS_SOMMEIL = COULEURS.sommeil;
 
 // Émotions (v7) : la couleur de chaque famille de la roue (tokens.css, --c-emo-<famille> en clair), et un motif blanc par
 // famille, pour que les barres empilées se lisent aussi imprimées en noir et blanc : l'ordre est fixe (celui de la roue,
@@ -144,6 +146,15 @@ export function dessinerPage(canvas, { ops }) {
     } else if (op.type === 'emotion') {
       // Une case de la légende des émotions, à la couleur et au motif de sa famille.
       caseEmotion(ctx, op.famille, op.x * k, op.y * k, op.l * k, op.h * k, k);
+    } else if (op.type === 'nuit') {
+      // Nuit par nuit (v8) : une barre à la teinte de sa qualité (1 à 3, la rampe de la frise), creuse sans qualité.
+      if (op.qualite) {
+        ctx.fillStyle = COULEURS.sommeil[op.qualite - 1];
+        ctx.fillRect(op.x * k, op.y * k, op.l * k, op.h * k);
+      } else {
+        ctx.strokeStyle = COULEURS.trait; ctx.lineWidth = 1.5;
+        ctx.strokeRect(op.x * k, op.y * k, op.l * k, op.h * k);
+      }
     }
   }
   return canvas;

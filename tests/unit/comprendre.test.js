@@ -1,12 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { addDays, jourSemaine, plageJours } from '../../public/js/domain/dates.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import {
   periodeComprendre, facteursParJour, aligne, elementsFrequents,
   explosionsAvant, explosionsApres, energieAvant, retoursBureau,
-  MESURES, parColonnes, nuitsParSoir, energieParActivite, peseRecharge,
+  MESURES, parColonnes, nuitsParSoir, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
 } from '../../public/js/analyse/comprendre.js';
+import { texteNuit, texteHeuresNuit } from '../../public/js/analyse/textes.js';
+import { analyserFichiers, remplacer } from '../../public/js/db/sauvegarde.js';
+import { RACINE } from '../aides/fichiers.js';
+import { nouveauRepo } from '../aides/repo.js';
 
 // Données inventées (aucune donnée réelle).
 const AUJ = '2026-10-15';
@@ -25,7 +31,7 @@ const barres = (b) => b.barres.map((x) => `${x.oui}/${x.n}`);
 const barre = (b, decalage) => b.barres.find((x) => x.decalage === decalage);
 
 test('seuils de Comprendre : dans seuils.js, valeurs de la spec (§9)', () => {
-  assert.deepEqual(SEUILS.comprendre, { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3 });
+  assert.deepEqual(SEUILS.comprendre, { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3, nuitsSemaines: 4 });
 });
 
 // ---------- Période ----------
@@ -284,7 +290,7 @@ test('autres jours, énergie basse : énergie notée sans « basse », sans excl
   // (énergie non notée).
   assert.equal(barre(nuit, 0).n, 4);
   assert.deepEqual(nuit.autres, { oui: 1, n: 2, part: 0.5, peu: true });
-  assert.deepEqual(g.blocs.map((b) => b.cle), ['nuitMal', 'contactCouteux', 'bureau', 'explosion']);
+  assert.deepEqual(g.blocs.map((b) => b.cle), ['nuitMal', 'contactCouteux', 'bureau', 'explosion', 'energieHaute', 'hyperfocus']);
   assert.deepEqual(barre(nuit, -1).dates, ['2026-09-04'], 'la nuit Mal du 03 est la veille du 04');
 });
 
@@ -349,14 +355,14 @@ test('graphique aligné : pesé et rechargé lus indépendamment, dans l\'ordre 
   ];
   const jours = facteursParJour({ journal, humeurs, episodes: [] });
   const g = energieAvant(jours, tout('2026-09-15', '2026-09-02'), items);
-  assert.deepEqual(g.blocs.map((b) => b.cle), ['nuitMal', 'contactCouteux', 'bureau', 'explosion', 'pese:trajets', 'pese:bruit', 'recharge:calme']);
-  assert.deepEqual(g.blocs.slice(4).map((b) => b.liste), ['pese', 'pese', 'recharge']);
+  assert.deepEqual(g.blocs.map((b) => b.cle), ['nuitMal', 'contactCouteux', 'bureau', 'explosion', 'energieHaute', 'hyperfocus', 'pese:trajets', 'pese:bruit', 'recharge:calme']);
+  assert.deepEqual(g.blocs.slice(6).map((b) => b.liste), ['pese', 'pese', 'recharge']);
   // Le jour même : le 06 n'a rien de pesé (inconnu pour Bruit), le 02 rien de rechargé (inconnu pour Calme).
   assert.deepEqual(barre(bloc(g, 'pese:bruit'), 0), { decalage: 0, oui: 1, n: 2, part: 0.5, peu: true, dates: ['2026-09-02'] });
   assert.deepEqual(barre(bloc(g, 'recharge:calme'), 0), { decalage: 0, oui: 1, n: 2, part: 0.5, peu: true, dates: ['2026-09-10'] });
   assert.deepEqual(bloc(g, 'pese:bruit').autres, { oui: 2, n: 2, part: 1, peu: true });
   // Sans liste fournie : les éléments restent, rangés par identifiant.
-  assert.deepEqual(energieAvant(jours, tout('2026-09-15', '2026-09-02')).blocs.slice(4).map((b) => b.cle), ['pese:bruit', 'pese:trajets', 'recharge:calme']);
+  assert.deepEqual(energieAvant(jours, tout('2026-09-15', '2026-09-02')).blocs.slice(6).map((b) => b.cle), ['pese:bruit', 'pese:trajets', 'recharge:calme']);
 });
 
 test('graphique aligné : avant les explosions, les éléments pesés ; après, les éléments rechargés', () => {
@@ -771,4 +777,133 @@ test('peseRecharge : les deux listes sont lues séparément ; rien de noté, pas
     { statut: 'ok', pese: [], recharge: [{ id: 'recharge:calme', n: 1, libelle: '1 jour' }] });
   assert.deepEqual(peseRecharge([soir('2026-09-01'), soir('2026-09-02', { pese: [], recharge: [] })], periode), { statut: 'insuffisant', pese: [], recharge: [] });
   assert.deepEqual(peseRecharge([], periode), { statut: 'insuffisant', pese: [], recharge: [] });
+});
+
+// ---------- v8 · Q17 : l'énergie haute et l'hyperfocus avant les jours à énergie basse ----------
+
+const HYPERFOCUS = 'symptome:hyperfocus';
+const symptome = (date, id = HYPERFOCUS) => ({ id: `s-${date}-${id}`, date, symptome: id, intensite: 5 });
+
+test('facteursParJour (v8) : énergie haute comme la basse (« vers » et bascule de 4 h compris), oui / non / inconnue', () => {
+  const humeurs = [
+    releve('2026-09-01', '09:00', { energie: 'energie:haute' }), releve('2026-09-01', '17:00', { energie: 'energie:basse' }),
+    releve('2026-09-02', '09:00', { energie: 'energie:moyenne' }), releve('2026-09-02', '14:00', { energie: 'energie:basse', vers: true }),
+    releve('2026-09-04', '01:00', { energie: 'energie:haute' }), // à 01:00 le 04 : encore le 03
+    releve('2026-09-05', '14:00', { energie: 'energie:haute', vers: true }),
+    releve('2026-09-06', '10:00', { emotion: 'roue:surprise' }), // émotion seule : pas un relevé d'énergie
+  ];
+  const jours = facteursParJour({ journal: [soir('2026-09-07')], humeurs, episodes: [] });
+  const haute = (d) => jours.get(d).energieHaute;
+  assert.deepEqual(['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-05', '2026-09-06', '2026-09-07'].map(haute), [true, false, true, true, null, null]);
+  assert.equal(jours.has('2026-09-04'), false, 'rien ne reste sur le 04');
+  // Un jour peut avoir une énergie haute et une énergie basse : chacune est lue à part.
+  assert.equal(jours.get('2026-09-01').energieBasse, true);
+});
+
+test('facteursParJour (v8) : hyperfocus oui avec la fiche (même seule), non un soir noté ou avec une autre fiche, jamais « non » sur des relevés seuls', () => {
+  const symptomes = [
+    symptome('2026-09-01'), symptome('2026-09-01', 'symptome:crise_angoisse'),
+    symptome('2026-09-02', 'symptome:crise_angoisse'),
+    symptome('2026-09-05'), // un jour qui n'a que la fiche : il entre dans les jours
+  ];
+  const humeurs = [releve('2026-09-04', '10:00', { energie: 'energie:basse' })];
+  const jours = facteursParJour({ journal: [soir('2026-09-01'), soir('2026-09-03')], humeurs, episodes: [], symptomes });
+  const hyper = (d) => jours.get(d).hyperfocus;
+  assert.equal(hyper('2026-09-01'), true);
+  assert.equal(hyper('2026-09-02'), false, 'une autre fiche ce jour-là');
+  assert.equal(hyper('2026-09-03'), false, 'un soir noté sans fiche');
+  assert.equal(hyper('2026-09-04'), null, 'un jour de relevés seuls reste inconnu');
+  assert.equal(hyper('2026-09-05'), true);
+  // Le jour ajouté pour sa fiche n'a rien d'autre de connu.
+  const j5 = jours.get('2026-09-05');
+  assert.deepEqual([j5.nuitMal, j5.energieBasse, j5.energieHaute, j5.explosion, j5.bureau, j5.contactCouteux], [null, null, null, null, null, null]);
+  // Sans fiche du tout (comme avant la v8) : rien ne change pour les autres facteurs.
+  assert.equal(facteursParJour({ journal: [soir('2026-09-01')], humeurs, episodes: [] }).get('2026-09-01').hyperfocus, false);
+});
+
+test('graphique aligné (v8) : une énergie haute deux jours avant et un hyperfocus la veille des jours bas se lisent à leur décalage', () => {
+  // Jours bas : 10, 15, 20 ; énergie haute les 08, 13, 18 ; hyperfocus les 09, 14, 19 (énergie moyenne). Autres jours
+  // (énergie notée sans « basse ») : ces six-là, et les 22 à 25 (énergie moyenne), dont un hyperfocus le 23.
+  const bas = ['2026-09-10', '2026-09-15', '2026-09-20'];
+  const humeurs = [
+    ...bas.map((d) => releve(d, '10:00', { energie: 'energie:basse' })),
+    ...bas.map((d) => releve(addDays(d, -2), '10:00', { energie: 'energie:haute' })),
+    ...bas.map((d) => releve(addDays(d, -1), '10:00', { energie: 'energie:moyenne' })),
+    ...plageJours('2026-09-22', '2026-09-25').map((d) => releve(d, '10:00', { energie: 'energie:moyenne' })),
+  ];
+  const journal = plageJours('2026-09-05', '2026-09-25').map((d) => soir(d));
+  const symptomes = [...bas.map((d) => symptome(addDays(d, -1))), symptome('2026-09-23')];
+  const jours = facteursParJour({ journal, humeurs, episodes: [], symptomes });
+  const g = energieAvant(jours, tout('2026-09-25', '2026-09-05'));
+  assert.equal(g.statut, 'ok');
+  const haute = bloc(g, 'energieHaute');
+  assert.deepEqual(barres(haute), ['0/0', '3/3', '0/3', '0/3']);
+  assert.deepEqual(barre(haute, -2).dates, bas, 'les jours repères dont l\'avant-veille a une énergie haute');
+  assert.deepEqual(haute.autres, { oui: 3, n: 10, part: 0.3, peu: false });
+  const hyper = bloc(g, 'hyperfocus');
+  assert.deepEqual(barres(hyper), ['0/3', '0/3', '3/3', '0/3']);
+  assert.deepEqual(barre(hyper, -1).dates, bas);
+  assert.deepEqual(hyper.autres, { oui: 4, n: 10, part: 0.4, peu: false });
+});
+
+// ---------- v8 · Q15 : Mes nuits ----------
+
+test('periodeMesNuits : les 4 dernières semaines, aujourd\'hui compris ; 2 sur demande', () => {
+  assert.deepEqual(periodeMesNuits('2026-10-28'), { du: '2026-10-01', au: '2026-10-28' });
+  assert.deepEqual(periodeMesNuits('2026-10-28', 2), { du: '2026-10-15', au: '2026-10-28' });
+  assert.equal(plageJours(periodeMesNuits(AUJ).du, AUJ).length, 7 * SEUILS.comprendre.nuitsSemaines);
+});
+
+test('mesNuits : les nuits notées de la période, dans l\'ordre des jours ; les heures du soir, sinon du coucher au lever ; ni nuit vide, ni valeur hors bornes', () => {
+  const journal = [
+    soir('2026-10-07', { heuresSommeil: 6, heureCoucher: '22:00', heureLever: '08:00' }), // les heures du soir d'abord
+    soir('2026-09-30', { sommeilRessenti: MAL, heuresSommeil: 6 }), // avant la période
+    soir('2026-10-01', { sommeilRessenti: MAL, heuresSommeil: 4 }),
+    soir('2026-10-02', { heuresSommeil: 10 }),
+    soir('2026-10-03', { sommeilRessenti: BIEN }), // la qualité seule : une ligne, sans durée
+    soir('2026-10-04', { sommeilRessenti: 'sommeil:moyen', heureCoucher: '23:30', heureLever: '07:10' }), // une nuit d'avant la v8
+    soir('2026-10-05', { heureCoucher: '23:30', heureLever: '00:30' }), // une heure : hors de la règle des 2 à 16 h
+    soir('2026-10-06', { lieu: 'lieu:bureau', reveilsNocturnes: 2 }), // rien sur la nuit qui compte
+    soir('2026-10-08', { heuresSommeil: 12 }), soir('2026-10-09', { heuresSommeil: 6.5 }), // hors de la liste
+    soir('2026-10-10', { sommeilRessenti: 'sommeil:inconnu', heuresSommeil: 7 }),
+    soir('2026-10-29', { heuresSommeil: 8 }), // après aujourd'hui
+  ];
+  assert.deepEqual(mesNuits(journal, periodeMesNuits('2026-10-28')), [
+    { date: '2026-10-01', heures: 4, qualite: MAL },
+    { date: '2026-10-02', heures: 10, qualite: null },
+    { date: '2026-10-03', heures: null, qualite: BIEN },
+    { date: '2026-10-04', heures: 460 / 60, qualite: 'sommeil:moyen' },
+    { date: '2026-10-07', heures: 6, qualite: null },
+    { date: '2026-10-10', heures: 7, qualite: null },
+  ]);
+  assert.deepEqual(mesNuits([], periodeMesNuits(AUJ)), []);
+  assert.deepEqual(mesNuits(null, periodeMesNuits(AUJ)), []);
+});
+
+test('mesNuits : le texte d\'une nuit, la qualité d\'abord, les heures comme le soir, une nuit ancienne en heures et minutes', () => {
+  const lib = (id) => ({ [MAL]: 'Mal', [BIEN]: 'Bien' }[id] || id);
+  assert.equal(texteNuit({ heures: 6, qualite: MAL }, lib), 'Mal · 6 h');
+  assert.equal(texteNuit({ heures: 4, qualite: null }, lib), '4 h ou moins');
+  assert.equal(texteNuit({ heures: 10, qualite: BIEN }, lib), 'Bien · 10 h ou plus');
+  assert.equal(texteNuit({ heures: null, qualite: BIEN }, lib), 'Bien');
+  assert.equal(texteNuit({ heures: 460 / 60, qualite: null }, lib), '7 h 40');
+  assert.equal(texteNuit({ heures: 13, qualite: null }, lib), '13 h', 'une nuit ancienne à l\'heure ronde, comme les heures du soir');
+  assert.equal(texteNuit({ heures: 3.5, qualite: MAL }, lib), 'Mal · 3 h 30');
+  assert.equal(texteHeuresNuit(null), null);
+});
+
+test('vigilance 1 · une sauvegarde v7 (format 5) importée : Mes nuits compte les heures du coucher au lever, garde la qualité seule', async () => {
+  const fichier = 'format-5.json';
+  const octets = new Uint8Array(readFileSync(join(RACINE, 'tests', 'fixtures', 'temoins', fichier)));
+  const { repo } = nouveauRepo();
+  await remplacer(repo, analyserFichiers([{ nom: fichier, octets }]));
+  const journal = await repo.journal.tous();
+  assert.ok(journal.every((j) => j.heuresSommeil == null), 'aucune heure notée en v7');
+  const nuits = mesNuits(journal, periodeMesNuits('2026-10-20'));
+  assert.deepEqual(nuits, [
+    { date: '2026-09-26', heures: 460 / 60, qualite: 'sommeil:moyen' },
+    { date: '2026-09-28', heures: null, qualite: MAL },
+    { date: '2026-09-29', heures: null, qualite: BIEN },
+  ]);
+  assert.equal(texteNuit(nuits[0], (id) => id.slice(8)), 'moyen · 7 h 40');
 });

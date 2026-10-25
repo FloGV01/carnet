@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { modeleSoignants, NOM_EMOTIONS, NOM_NOTES } from '../../public/js/export/soignants.js';
-import { mettreEnPage, A4, couperLignes, couperListe } from '../../public/js/export/page-a4.js';
+import { mettreEnPage, A4, couperLignes, couperListe, NUIT_PAR_NUIT } from '../../public/js/export/page-a4.js';
 import { FAMILLES } from '../../public/js/domain/roue.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
 import { analyze } from '../../public/js/analyse/index.js';
@@ -22,8 +22,10 @@ const SEPT = (date) => date >= '2026-09-01' && date <= '2026-09-30';
 // jours : 200 pour que l'évolution passe par mois (au-delà de 26 semaines d'historique).
 // emotions (v7) : parJour relevés à émotion par jour, des 7 familles, tous les jours (6 : des comptes à 3 chiffres « depuis
 // le début » ; 40 : à 4 chiffres, ce qui arrive après quelques années).
-function donnees({ extreme = false, energie = false, trou = false, jours = 180, emotions = false, parJour = 6 } = {}) {
-  const journal = generer({ jours, seed: 7, scenario: 'bureau', debut: '2026-04-03' }).map((j) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée' }));
+// nuits (v8) : le nombre d'heures de chaque nuit, de 4 à 10 h.
+function donnees({ extreme = false, energie = false, trou = false, jours = 180, emotions = false, parJour = 6, nuits = false } = {}) {
+  const journal = generer({ jours, seed: 7, scenario: 'bureau', debut: '2026-04-03' })
+    .map((j, i) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée', ...(nuits ? { heuresSommeil: 4 + (i % 7) } : {}) }));
   const aujourdhui = journal[journal.length - 1].date;
   const long = (n) => 'Une question vraiment longue sur le sommeil et les effets du matin '.repeat(4).slice(0, n);
   const episodes = Array.from({ length: 30 }, (_, i) => ({ id: `e${i}`, date: journal[100 + i].date, heure: '12:00', emotion: 'emotion:sentiment_injustice',
@@ -371,4 +373,102 @@ test('v8 : « Durée de nuit (médiane) » des heures notées ; coucher et lever
   // Rien de noté : « · ».
   assert.deepEqual(casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] }).indicateurs.find((l) => l.nom === NOM_DUREE).valeurs, ['·', '·', '·']);
   assert.equal(nomsIndicateurs(seules).length, nomsIndicateurs(melange).length, 'autant de lignes');
+});
+
+// ---------- v8 : Nuit par nuit (Q15) ----------
+
+const sectionNuits = (page) => page.ops.find((o) => o.type === 'texte' && /^NUIT PAR NUIT/.test(o.texte));
+const barresNuits = (page) => page.ops.filter((o) => o.type === 'nuit');
+
+test('v8 · Nuit par nuit : le modèle porte les nuits des 4 puis des 2 dernières semaines, chacune avec son jour, ses heures, sa qualité, son texte', () => {
+  const m = cas({ nuits: true });
+  assert.deepEqual(m.nuits.map((n) => [n.semaines, n.nuits.length]), [[4, 28], [2, 14]]);
+  const derniere = m.nuits[0].nuits.at(-1);
+  assert.match(derniere.jour, /^\S+ \d{2}\/\d{2}$/);
+  assert.ok(Number.isInteger(derniere.heures) && derniere.heures >= 4 && derniere.heures <= 10);
+  assert.ok([1, 2, 3].includes(derniere.qualite));
+  assert.match(derniere.texte, /^(Mal|Moyen|Bien) · \d+ h( ou (moins|plus))?$/);
+  // Sans durée sur la période (nuits notées en qualité seulement) : pas de section, rien d'écrit.
+  const sans = cas();
+  assert.deepEqual(sans.nuits, []);
+  const page = mettreEnPage(sans);
+  assert.equal(page.nuitsSemaines, 0);
+  assert.equal(sectionNuits(page), undefined);
+  assert.equal(barresNuits(page).length, 0);
+});
+
+test('v8 · Nuit par nuit sur la page : 4 semaines quand la page tient, une barre par nuit qui a sa durée, dans la page et dans sa colonne', () => {
+  for (const emotions of [false, true]) {
+    const m = cas({ nuits: true, emotions });
+    const page = mettreEnPage(m);
+    assert.ok(page.hauteur <= A4.hauteurMax, `hauteur ${page.hauteur.toFixed(1)} mm`);
+    assert.equal(page.nuitsSemaines, 4);
+    assert.equal(sectionNuits(page).texte, 'NUIT PAR NUIT (4 SEMAINES)');
+    const barres = barresNuits(page);
+    assert.equal(barres.length, 28);
+    assert.ok(barres.every((b) => b.x >= A4.marge && b.x + b.l <= A4.largeur - A4.marge && b.l > 0 && b.l <= NUIT_PAR_NUIT.barreL));
+    // Une échelle commune : 10 h est la plus longue, 4 h en fait les deux cinquièmes.
+    const l = (h) => barres[m.nuits[0].nuits.findIndex((n) => n.heures === h)].l;
+    assert.ok(Math.abs(l(4) / l(10) - 0.4) < 1e-9);
+    // Les textes des nuits suivent leur jour, sur la même ligne.
+    const textes = page.ops.filter((o) => o.type === 'texte');
+    for (const n of m.nuits[0].nuits) assert.ok(textes.some((t) => t.texte === n.texte), n.texte);
+    // Entre l'évolution et « Ce qui revient le plus ».
+    const y = (re) => textes.find((t) => re.test(t.texte)).y;
+    assert.ok(y(/^ÉVOLUTION/) < sectionNuits(page).y && sectionNuits(page).y < y(/^CE QUI REVIENT/));
+    assert.ok(barres.every((b) => b.y > sectionNuits(page).y && b.y < y(/^CE QUI REVIENT/)));
+  }
+});
+
+test('v8 · Nuit par nuit : 2 semaines si la page dépasse 273 mm, aucune si elle dépasse encore ; le reste de la page ne change pas', () => {
+  const m = cas({ nuits: true, emotions: true });
+  // Trois questions de plus : 4 semaines ne tiennent plus, 2 semaines si.
+  const plus = { ...m, rdv: { ...m.rdv, questions: [...m.rdv.questions, 'question a', 'question b', 'question c'] } };
+  const deux = mettreEnPage(plus);
+  assert.equal(deux.nuitsSemaines, 2);
+  assert.equal(sectionNuits(deux).texte, 'NUIT PAR NUIT (2 SEMAINES)');
+  assert.equal(barresNuits(deux).length, 14);
+  assert.ok(deux.hauteur <= A4.hauteurMax, `hauteur ${deux.hauteur.toFixed(1)} mm`);
+  // Le cas extrême : même 2 semaines ne tiennent pas ; la page reste unique, sans la section, et identique à une page
+  // sans nuit.
+  for (const parJour of [0, 6, 40]) {
+    const ex = cas({ nuits: true, extreme: true, emotions: parJour > 0, parJour });
+    assert.equal(ex.nuits.length, 2);
+    const page = mettreEnPage(ex);
+    assert.ok(page.hauteur <= A4.hauteurMax, `hauteur ${page.hauteur.toFixed(1)} mm`);
+    assert.equal(page.nuitsSemaines, 0);
+    assert.equal(JSON.stringify(page.ops), JSON.stringify(mettreEnPage({ ...ex, nuits: [] }).ops));
+  }
+  // Avec la section, la page d'avant la section ne bouge pas d'un trait.
+  const avec = mettreEnPage(m);
+  const sans = mettreEnPage({ ...m, nuits: [] });
+  const i = avec.ops.indexOf(sectionNuits(avec));
+  assert.ok(i > 0);
+  assert.equal(JSON.stringify(avec.ops.slice(0, i)), JSON.stringify(sans.ops.slice(0, i)));
+});
+
+test('vigilance 1 · Nuit par nuit : une nuit d\'avant la v8 (coucher et lever) a sa durée, une nuit sans durée garde sa qualité, sans barre', () => {
+  const journal = [
+    { date: '2026-10-05', sommeilRessenti: 'sommeil:moyen', heureCoucher: '23:30', heureLever: '07:10' },
+    { date: '2026-10-06', sommeilRessenti: 'sommeil:mal' },
+    { date: '2026-10-07', heureCoucher: '22:30', heureLever: '06:30' },
+  ];
+  const m = casV6({ journal });
+  assert.deepEqual(m.nuits[0].nuits.map((n) => [n.jour, n.qualite, n.texte]),
+    [['lun 05/10', 2, 'Moyen · 7 h 40'], ['mar 06/10', 1, 'Mal'], ['mer 07/10', null, '8 h']]);
+  const page = mettreEnPage(m);
+  const barres = barresNuits(page);
+  assert.deepEqual(barres.map((b) => b.qualite), [2, null], 'une barre par nuit qui a sa durée, creuse sans qualité');
+  assert.ok(page.ops.some((o) => o.type === 'texte' && o.texte === 'Mal'));
+  // Le 14/10, aujourd'hui : les 2 dernières semaines commencent le 01/10, et les trois nuits y sont.
+  assert.equal(m.nuits[1].nuits.length, 3);
+});
+
+test('v8 · Nuit par nuit : aucun mot interdit, rien sur la régularité ni l\'heure du coucher, aucun pourcentage', () => {
+  const page = mettreEnPage(cas({ nuits: true, emotions: true }));
+  const textes = page.ops.filter((o) => o.type === 'texte').map((o) => o.texte);
+  const section = textes.slice(textes.findIndex((t) => /^NUIT PAR NUIT/.test(t)), textes.findIndex((t) => /^CE QUI REVIENT/.test(t)));
+  assert.ok(section.length > 28);
+  assert.deepEqual(trouverInterdits(section.join('\n')), []);
+  assert.doesNotMatch(section.join(' '), /%|régul|coucher|moyenne|médiane/i);
 });
