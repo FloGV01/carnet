@@ -38,7 +38,7 @@ import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
 import { BienEtre, Coherence } from './ui/ecrans/bien-etre.js';
-import { Exercice } from './ui/ecrans/exercice.js';
+import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -74,7 +74,8 @@ const ECRANS = {
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
   'bien-etre': () => html`<${BienEtre} />`,
   coherence: () => html`<${Coherence} />`,
-  exercice: (p) => html`<${Exercice} key=${p.id} id=${p.id} />`,
+  programme: () => html`<${Programme} />`,
+  'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
 };
 
 function useEtatApp() {

@@ -3,14 +3,15 @@ import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { tuile, mot } from '../aides/emotion.js';
 import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
-// v7 · Bien-être (spec §6) : l'onglet (la cohérence cardiaque en tête, les exercices, la ligne fixe), un exercice une
+// v7 · Bien-être (spec §6) : l'onglet (v8 : le Programme, la cohérence cardiaque, la ligne fixe), un exercice une
 // consigne par écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran
 // (factice), les séances (menées au bout ou arrêtées après 60 s, une seule, avec leur origine), le repère de Mes jours,
 // et aucun compteur.
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
 // Le lecteur (v8) remplace l'écran d'un exercice : les tests du lecteur lui-même sont dans v8-lecteur.spec.js ; ici, ce
-// qui reste de la v7 (l'onglet, les séances et leur règle, la voix, l'interruption, Mes jours, Comprendre).
+// qui reste de la v7 (l'onglet, les séances et leur règle, la voix, l'interruption, Mes jours, Comprendre). Les exercices
+// s'ouvrent depuis l'écran Programme (v8, tâche 4 ; v8-programme.spec.js), et y reviennent.
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 20, 30) });
   await installerParole(page);
@@ -22,8 +23,8 @@ const nav = (page) => page.getByRole('navigation', { name: 'Navigation principal
 const vue = (page, titre) => page.getByRole('dialog', { name: titre });
 const bouton = (zone, nom) => zone.getByRole('button', { name: nom, exact: true });
 const ouvrirExercice = async (page, titre) => {
-  await aller(page, '#/bien-etre');
-  await page.getByRole('list', { name: 'Exercices' }).getByRole('link', { name: new RegExp(`^${titre}`) }).click();
+  await aller(page, '#/bien-etre/programme');
+  await page.locator('main.programme').getByRole('link', { name: new RegExp(`^${titre}`) }).click();
   const v = vue(page, titre);
   await expect(bouton(v, 'Commencer')).toBeVisible();
   return v;
@@ -55,54 +56,48 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
   await expect(page).toHaveURL(/#\/analyse$/);
 
-  // Un exercice est plein écran, sans onglets ; il allume Bien-être quand on en sort.
+  // Un exercice (v8 : ouvert depuis le Programme) est plein écran, sans onglets ; il revient au Programme, qui allume
+  // Bien-être.
   await ouvrirExercice(page, 'Scan corporel');
   await expect(nav(page)).toHaveCount(0);
   await bouton(page, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(nav(page).getByRole('link', { name: 'Bien-être' })).toHaveAttribute('aria-current', 'page');
-  // Un exercice inconnu ramène à Bien-être.
-  await aller(page, '#/bien-etre/exercice/inconnu');
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  // Une séance inconnue ramène au Programme.
+  await aller(page, '#/bien-etre/programme/inconnu');
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 });
 
-test('l\'écran Bien-être : la cohérence cardiaque en tête, les 8 exercices (titre, durée, description), la ligne fixe en bas ; aucun compteur', async ({ page }) => {
+test('l\'écran Bien-être (v8) : le Programme en tête, la cohérence cardiaque, la ligne fixe en bas ; plus de liste d\'exercices ; aucun compteur', async ({ page }) => {
   await aller(page, '#/bien-etre');
   const ecran = page.locator('main.bien-etre');
+  const programme = ecran.getByRole('region', { name: 'Programme' });
+  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
   // v8 : la carte compacte de la cohérence cardiaque, sa durée, son rythme et son bouton lecture.
   const respiration = ecran.getByRole('region', { name: 'Cohérence cardiaque' });
   await expect(respiration.getByRole('button', { name: 'Commencer la cohérence cardiaque' })).toBeVisible();
   await expect(respiration.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
-  const liste = ecran.getByRole('list', { name: 'Exercices' });
-  await expect(liste.getByRole('link')).toHaveCount(8);
-  await expect(liste.locator('.exercice-titre')).toHaveText([
-    'Respiration abdominale', 'Respiration carrée', 'Relaxation dynamique des épaules', 'Tension et détente', 'Scan corporel',
-    'Lieu ressource', 'Ancrage 5-4-3-2-1', 'Pause d\'une minute',
-  ]);
-  await expect(liste.locator('.exercice-description').first()).toHaveText('3 min · Respirer avec le ventre, une main posée dessus.');
-  await expect(liste.locator('.exercice-description').nth(4)).toHaveText(/^10\smin · /);
-  await expect(liste.getByRole('link').first()).toHaveAttribute('href', '#/bien-etre/exercice/respiration-abdominale');
-  // Dans l'ordre : la respiration, la liste, la ligne fixe, qui est la dernière chose de l'écran.
-  const [r, l, f] = await Promise.all([respiration.boundingBox(), liste.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
-  expect(r.y + r.height).toBeLessThanOrEqual(l.y);
-  expect(l.y + l.height).toBeLessThanOrEqual(f.y);
+  await expect(ecran.getByRole('list', { name: 'Exercices' })).toHaveCount(0);
+  await expect(ecran.locator('.ligne-exercice')).toHaveCount(0);
+  // Dans l'ordre : le Programme, la respiration, la ligne fixe, qui est la dernière chose de l'écran.
+  const [p, r, f] = await Promise.all([programme.boundingBox(), respiration.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
+  expect(p.y + p.height).toBeLessThanOrEqual(r.y);
+  expect(r.y + r.height).toBeLessThanOrEqual(f.y);
   await expect(ecran.locator(':scope > *').last()).toHaveText('Tu peux t\'arrêter à tout moment.');
-  // Les cibles font 44 au moins.
-  for (const b of await liste.getByRole('link').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
-  // Rien ne compte les séances : l'écran est le même avant et après six séances de toutes origines.
+  // Rien ne compte les séances : l'écran est le même avant et après six séances de toutes origines, hors du Programme.
   const avant = await ecran.innerText();
   await page.evaluate(async () => {
     const rp = window.__carnet.repo;
     for (const [date, origine] of [['2026-10-15', 'bien-etre'], ['2026-10-15', 'bien-etre'], ['2026-10-14', 'moment-difficile'], ['2026-10-13', 'ressourcer'], ['2026-10-12', 'bien-etre'], ['2026-10-11', 'bien-etre']]) {
-      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine });
+      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine, fin: true });
     }
   });
   await page.reload();
   await appPrete(page);
   await aller(page, '#/bien-etre');
-  await expect(ecran.getByRole('list', { name: 'Exercices' }).getByRole('link')).toHaveCount(8);
+  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
   expect(await ecran.innerText()).toBe(avant);
-  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d+\s*\/\s*\d+/i);
+  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d+\s*\/\s*\d+|%/i);
 });
 
 test('un exercice complet, voix éteinte (v8) : une consigne par écran, les étapes avancent seules ; verrou d\'écran ; une séance', async ({ page }) => {
@@ -137,9 +132,9 @@ test('un exercice complet, voix éteinte (v8) : une consigne par écran, les ét
   expect(s).toMatchObject({ date: '2026-10-15', heure: '20:30', exercice: 'pause-une-minute', origine: 'bien-etre' });
   environ(s.dureeS, 60);
   expect((await parole(page)).dits).toEqual([]);
-  // Le lecteur se ferme seul et revient à Bien-être ; le message « Noter mon émotion » y mène.
+  // Le lecteur se ferme seul et revient au Programme ; le message « Noter mon émotion » y mène.
   await page.clock.runFor(6200);
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await page.getByRole('status').getByRole('button', { name: 'Noter mon émotion' }).click();
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue(page, 'Émotion du moment')).toBeVisible();
@@ -265,7 +260,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   // La sortie : voix coupée, verrou rendu, et toujours une seule séance, à sa durée active (70 + 20 s).
   const annulees = (await parole(page)).annulations;
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 2 });
   expect((await parole(page)).annulations).toBeGreaterThan(annulees);
   await expect.poll(async () => (await seances(page))[0].dureeS).toBeGreaterThanOrEqual(notee.dureeS + 20);
@@ -290,7 +285,7 @@ test('aucune séance pour un arrêt avant 60 s : « Fermer », « Terminer » av
   await bouton(v, 'Commencer').click();
   await page.clock.runFor(45000);
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 
   v = await ouvrirExercice(page, 'Tension et détente');
   await bouton(v, 'Commencer').click();
@@ -304,9 +299,10 @@ test('aucune séance pour un arrêt avant 60 s : « Fermer », « Terminer » av
   await bouton(v, 'Terminer').click();
   await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 
   // La cohérence cardiaque de Bien-être, arrêtée à 30 s : rien.
+  await aller(page, '#/bien-etre');
   await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
   v = vue(page, 'Cohérence cardiaque');
   await expect(bouton(v, 'Pause')).toBeVisible();

@@ -522,3 +522,179 @@ Spec : `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`. Plan : `docs/sup
 - **En pause, l'écran garde la mise en page de la lecture** : « Reprendre » est à la place exacte de « Pause », et un second toucher au même endroit reprend. Les réglages du lecteur viennent sous l'écran de lecture : on les atteint en défilant.
 - **La fin n'affiche que « Fin de l'exercice. »**, sans anneau : menée au bout ou non, rien ne dit ce qui a été fait.
 - **Les textes de la cohérence cardiaque suivent les mots affichés**, pas le disque, qui ne bouge pas avec « Réduire les animations » : « Respire au rythme des mots, sans forcer. » et « Inspirer sur « Inspire », expirer sur « Expire ». ».
+
+### Programme (tâche 4)
+
+**Les étapes** (`domain/programme.js`, identifiants figés), dans l'ordre de l'annexe `programme-sophro.md` (§3), avec la spec §12.4 : Respiration abdominale ouvre le Programme à la place de « Premiers pas », qui n'est pas écrite. 8 étapes, 17 séances. L'écran ne montre que le titre des étapes, sans numéro.
+
+| Étape (`id`) | Séances |
+|---|---|
+| Respirer (`respirer`) | Respiration abdominale · Pause d'une minute |
+| Autour de toi (`autour-de-toi`) | Les sons · Ancrage 5-4-3-2-1 |
+| Les cinq zones (`cinq-zones`) | Les cinq zones · Respiration carrée |
+| Tendre et relâcher (`tendre-relacher`) | Relaxation dynamique des épaules · Mouvements lents |
+| Zone par zone (`zone-par-zone`) | Tension et détente · Faire le point avec mon corps |
+| Marcher, respirer en rythme (`marcher-rythme`) | Marche lente · Cohérence cardiaque (5 min) |
+| Un lieu, un souvenir (`lieu-souvenir`) | Lieu ressource · Un bon moment passé · Un moment à venir |
+| Le corps entier, ce qui compte (`corps-entier`) | Scan corporel · Ce qui compte pour moi |
+
+**La présentation**, écrite une fois en tête de l'écran Programme : « Inspiré de la sophrologie et de la pleine conscience, de la respiration au corps entier. » et « Une façon de faire : une étape par semaine, une ou deux séances, si tu veux. Tu peux aller plus vite, plus lentement, sauter une étape ou revenir en arrière. » Ce rythme n'est jamais mesuré ni comparé.
+
+**Choix faits pendant la construction**
+- **8 séances nouvelles, et non 9** : la spec §6 en compte 9 avec « Premiers pas », que le §12.4 retire. Elles sont ajoutées à la fin de `domain/exercices.js`, avec les deux blocs « Arriver » (60 s) et « Revenir » (55 s), qui ouvrent et ferment Les sons, Les cinq zones, Un bon moment passé, Un moment à venir et Ce qui compte pour moi. Aucune n'a de rythme écrit : ni disque ni souffle.
+- **Les exercices ne se lancent plus que depuis le Programme** (spec §2 et §3, « pas de séance hors du Programme, sauf la cohérence cardiaque ») : l'adresse `#/bien-etre/exercice/<id>` et son écran sont retirés, remplacés par `#/bien-etre/programme/<id>`. Une séance inconnue ramène au Programme.
+- **« Faite le 12/10 »** : seule compte une séance lancée depuis le Programme et menée au bout (`programme` et `fin: true`, spec §12.2). La date est le jour de la séance (avant 4 h, la veille, comme partout), la plus récente ; l'année ne s'écrit que si ce n'est pas celle du jour (« Faite le 12/10/2025 »). Une coche à la couleur de Bien-être et le texte en secondaire, sous la durée. Une séance pas faite n'affiche rien.
+- **`fin: true`** est posé sur toute séance menée au bout, d'où qu'elle vienne (Moment difficile, « Respirer », la carte de la cohérence) : le champ dit seulement « menée au bout ». Sans `programme`, elle ne date rien dans le Programme. Une séance notée en pause (après 60 s), puis reprise et menée au bout, reste une seule séance et prend `fin` à la fin.
+- **La séance qui vient** : celle qui suit, dans l'ordre du Programme, la dernière séance faite (la plus récente, à l'heure près) ; au tout début, Respiration abdominale ; après Ce qui compte pour moi, de nouveau Respiration abdominale. Une séance sautée n'est jamais signalée.
+- **La carte Programme de Bien-être** : un lien vers l'écran Programme (le carré à la feuille de Bien-être, « Programme › », la séance qui vient et « 5 min · assis ») et, à droite, le bouton lecture de 64, qui la lance d'un toucher ; le lecteur revient alors à Bien-être. Depuis l'écran Programme, un toucher sur une séance ouvre le lecteur, qui attend « Commencer », et revient au Programme : 1 toucher pour reprendre, 3 pour une séance au choix (la carte, la séance, lecture), comme dans l'annexe des propositions.
+- **La cohérence cardiaque du Programme** dure 5 min, au rythme réglé dans Réglages › Moment difficile. Celle de la carte de Bien-être, de Moment difficile et de « Respirer » ne compte pas.
+- **Les textes de l'annexe, retouchés** pour les règles de l'app : « Garde l'attention sur… » devient « Continue de remarquer tes pieds. » et « remarque ta respiration » ; « Pense à… » devient « Cherche… » et « Imagine… » ; « Tu n'as pas besoin de les nommer » devient « Pas besoin de les nommer » ; « Tu vas passer par cinq zones » devient « Cinq zones du corps, l'une après l'autre ». « Tu peux t'arrêter à tout moment. » est ajouté à chaque séance nouvelle (à la fin du bloc « Arriver », sinon dans la première étape), comme le demande la spec §6 : la première étape de Faire le point avec mon corps passe de 10 à 15 s pour le dire.
+- **Le son dans « Les sons »** (question 11 de l'annexe, non tranchée) : le bol d'étape, comme ailleurs ; « Son : Aucun » le coupe.
+
+**Séances nouvelles à relire** (titres et étapes, avec la durée de chaque étape ; spec §2 : relues après la publication). Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas. Les blocs communs y sont recopiés.
+
+#### Les sons (5 min, `les-sons`)
+
+Écouter les sons proches, puis plus loin, sans les nommer. Posture : assis.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Écoute les sons proches : dans la pièce, sur toi, ta respiration. *(40 s)*
+6. Écoute les sons plus loin : le bâtiment, la rue, dehors. *(40 s)*
+7. Pas besoin de les nommer. Remarque quand un son commence et quand il s'arrête. *(45 s)*
+8. Si un son te gêne, tu peux te boucher les oreilles, changer de pièce ou t'arrêter. *(15 s)*
+9. Remarque les moments plus calmes entre deux sons, s'il y en a. *(30 s)*
+10. Écoute tous les sons à la fois, sans en choisir un. *(30 s)*
+11. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+12. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+13. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+14. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Les cinq zones (6 min, `cinq-zones`)
+
+Passer par cinq zones du corps, puis le corps entier. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Cinq zones du corps, l'une après l'autre. Dans chacune, remarque ce qui est là, ou rien. *(15 s)*
+6. La tête et le visage : le front, les yeux, la mâchoire. *(30 s)*
+7. Si la mâchoire est serrée, laisse les dents se séparer un peu. *(15 s)*
+8. Le cou, les épaules, les bras, jusqu'aux mains. *(35 s)*
+9. La poitrine et le dos. Remarque le dos contre son appui, s'il y en a un. *(35 s)*
+10. Le ventre, qui bouge avec la respiration. *(30 s)*
+11. Le bassin, les jambes, jusqu'aux pieds. *(35 s)*
+12. Le corps entier, d'un coup, tel qu'il est maintenant. *(30 s)*
+13. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+14. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+15. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+16. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Mouvements lents (4 min, `mouvements-lents`)
+
+Tourner la tête et le buste, hausser les épaules, lentement. Posture : debout ou assis.
+
+1. Mets-toi debout, les pieds écartés, les genoux souples. Assis, c'est possible aussi. Tu peux t'arrêter à tout moment. *(20 s)*
+2. Tourne lentement la tête vers la droite, puis vers la gauche, sans forcer. Trois fois. *(30 s)*
+3. Remets la tête au milieu. Remarque ce que tu sens dans le cou. *(20 s)*
+4. Laisse les bras pendre. Tourne doucement le haut du corps à droite, puis à gauche. Les bras suivent sans effort. *(45 s)*
+5. Arrête-toi au milieu. Remarque ce que tu sens dans le dos et les bras. *(20 s)*
+6. Inspire et monte les épaules. Expire et laisse-les retomber. Trois fois, à ton rythme. *(40 s)*
+7. Laisse les bras le long du corps. Remarque les épaules et les mains. *(25 s)*
+8. Fais quelques pas sur place. Sens le poids passer d'un pied à l'autre. *(30 s)*
+9. Reste immobile. Respire comme d'habitude. *(20 s)*
+10. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Faire le point avec mon corps (3 min, `point-corps`)
+
+Une question à la fois : faim, soif, chaud ou froid, fatigue. Posture : là où tu es.
+
+1. Fais une pause là où tu es, les yeux ouverts si tu veux. Tu peux t'arrêter à tout moment. *(15 s)*
+2. As-tu faim ? Un peu, beaucoup, pas du tout ou « je ne sais pas » : tout se vaut. *(20 s)*
+3. As-tu soif ? *(15 s)*
+4. As-tu besoin d'aller aux toilettes ? *(15 s)*
+5. As-tu chaud, froid, ou ni l'un ni l'autre ? *(15 s)*
+6. Y a-t-il un endroit tendu ou douloureux : la mâchoire, les épaules, le ventre ? *(25 s)*
+7. Es-tu fatigué ? *(15 s)*
+8. Y a-t-il trop de bruit, de lumière ou de monde autour de toi ? *(20 s)*
+9. Si quelque chose est apparu, tu peux t'en occuper maintenant : boire, manger, te couvrir, sortir. *(25 s)*
+10. Reprends quand tu veux. *(10 s)*
+
+#### Marche lente (5 min, `marche-lente`)
+
+Marcher lentement, en remarquant chaque pas. Posture : en marchant.
+
+1. Trouve un endroit pour faire quelques pas : un couloir, une pièce, un chemin calme. Tu peux t'arrêter à tout moment. *(20 s)*
+2. Debout, sens le poids du corps sur tes deux pieds. *(20 s)*
+3. Marche plus lentement que d'habitude. Les bras comme tu veux. *(30 s)*
+4. Remarque le talon qui touche le sol, puis la plante du pied, puis les orteils. *(60 s)*
+5. Au bout de l'espace, arrête-toi, puis fais demi-tour. *(15 s)*
+6. Remarque le pied qui se lève, avance, puis se pose. *(60 s)*
+7. Si ton esprit part ailleurs, reviens aux pieds, sans te juger. *(20 s)*
+8. Si marcher lentement te gêne, marche à ton pas habituel. Continue de remarquer tes pieds. *(60 s)*
+9. Arrête-toi. Sens tes deux pieds sur le sol. *(20 s)*
+10. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Un bon moment passé (6 min, `bon-moment-passe`)
+
+Retrouver un moment passé, même petit, par les sens et les gestes. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Choisis un moment passé qui s'est bien passé, même petit : un repas, un trajet, une conversation. *(40 s)*
+6. Si rien ne vient, prends un moment neutre et récent : ce matin, un café, une douche. *(15 s)*
+7. Où étais-tu ? Regarde le lieu : les formes, les couleurs, la lumière. *(45 s)*
+8. Écoute les sons de ce moment. Remarque les odeurs, la température. *(45 s)*
+9. Que faisais-tu ? Repasse les gestes, un par un. *(45 s)*
+10. Si un souvenir pénible arrive, ouvre les yeux et regarde autour de toi. Tu peux t'arrêter là. *(15 s)*
+11. Remarque ton corps maintenant : les épaules, le ventre, la respiration. Il peut y avoir quelque chose, ou rien. *(40 s)*
+12. Laisse ce moment. Reviens aux appuis de ton corps. *(20 s)*
+13. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+14. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+15. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+16. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Un moment à venir (6 min, `moment-a-venir`)
+
+Imaginer un moment simple des prochains jours, par les sens. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Choisis un moment simple des prochains jours : un repas, une promenade, un moment seul. *(40 s)*
+6. Prends un moment qui ne t'inquiète pas. Si celui-ci te tend, choisis-en un plus petit. *(15 s)*
+7. Où seras-tu ? Regarde le lieu : les formes, les couleurs, la lumière. *(45 s)*
+8. Qu'y aura-t-il autour de toi : les objets, les sons, la température ? *(45 s)*
+9. Que feras-tu ? Repasse les gestes, un par un. *(45 s)*
+10. Remarque ton corps maintenant, pendant que tu y penses : les épaules, le ventre, la respiration. *(40 s)*
+11. Laisse ce moment. Reviens aux appuis de ton corps. *(20 s)*
+12. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+15. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Ce qui compte pour moi (6 min, `ce-qui-compte`)
+
+Choisir un mot qui compte pour toi, et une chose qui va avec. Posture : assis.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Voici des mots : calme, honnêteté, curiosité, justice, liberté, ordre, création, lien. Choisis-en un, ou un autre à toi. *(40 s)*
+6. Si aucun mot ne vient, remarque ta respiration jusqu'à la fin. *(15 s)*
+7. Cherche une chose faite ces derniers jours qui va avec ce mot, même petite. *(45 s)*
+8. Où étais-tu ? Que faisais-tu, geste par geste ? *(45 s)*
+9. Remarque ton corps en y pensant : les épaules, le ventre, la respiration. *(40 s)*
+10. Imagine une petite chose des prochains jours qui irait avec ce mot. Tu n'as rien à décider. *(40 s)*
+11. Laisse le mot. Reviens aux appuis de ton corps. *(20 s)*
+12. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+15. Reprends ce que tu faisais quand tu veux. *(10 s)*

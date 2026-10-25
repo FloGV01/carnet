@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = 'cdf764544c20';
+const VERSION = 'e73259a79adf';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -53,6 +53,7 @@ const FICHIERS = [
   "./js/domain/mon-plan.js",
   "./js/domain/notes.js",
   "./js/domain/phrase.js",
+  "./js/domain/programme.js",
   "./js/domain/releves.js",
   "./js/domain/respiration.js",
   "./js/domain/ressourcer.js",
@@ -124,7 +125,6 @@ const FICHIERS = [
   "./js/ui/ecrans/diagnostic.js",
   "./js/ui/ecrans/effacer.js",
   "./js/ui/ecrans/episode.js",
-  "./js/ui/ecrans/exercice.js",
   "./js/ui/ecrans/export-psy.js",
   "./js/ui/ecrans/guide.js",
   "./js/ui/ecrans/historique.js",
@@ -134,6 +134,7 @@ const FICHIERS = [
   "./js/ui/ecrans/moment.js",
   "./js/ui/ecrans/mon-plan.js",
   "./js/ui/ecrans/parcours-fiche.js",
+  "./js/ui/ecrans/programme.js",
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
   "./js/ui/ecrans/reglages-emotions.js",

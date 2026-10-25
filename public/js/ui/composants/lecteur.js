@@ -24,7 +24,9 @@
 //   la mise en page de la lecture, « Reprendre » est à la place exacte de « Pause ». Ils ne valent que pour ce lecteur :
 //   Moment difficile et « Respirer » gardent leur réglage (Réglages › Moment difficile, spec §12.1).
 // - Séance (ui/seance.js), d'origine `bien-etre` : menée au bout, ou arrêtée après 60 s, une seule par lecture. La durée
-//   est celle du temps actif, pauses exclues ; menée au bout, la dernière étape atteinte après la moitié de la durée.
+//   est celle du temps actif, pauses exclues ; menée au bout, la dernière étape atteinte après la moitié de la durée, elle
+//   porte `fin: true`. Lancée depuis le Programme (v8, spec §12.2), elle porte aussi `programme` : l'identifiant de la
+//   séance du Programme ; menée au bout, elle y porte alors « Faite le 12/10 ». Arrêtée en route, rien.
 // Le son ne naît que dans un toucher (« Commencer », « Reprendre », « Terminer », ou le bouton lecture d'une carte, par
 // lancerLecture) ; la voix est débloquée de même, par une parole muette (Safari ne parle qu'après un geste).
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
@@ -90,19 +92,21 @@ function useVoixFrancaise() {
 
 // Une lecture lancée d'un toucher ailleurs (le bouton lecture d'une carte de Bien-être) : le toucher prépare le son et la
 // voix, puis ouvre l'écran du lecteur, qui démarre aussitôt. Sans ce toucher (une adresse ouverte autrement), le lecteur
-// attend « Commencer » : rien ne joue seul.
+// attend « Commencer » : rien ne joue seul. `retour` : l'écran où revenir, s'il n'est pas celui que donne l'adresse (la
+// carte Programme de Bien-être lance une séance du Programme, et le lecteur revient à Bien-être).
 let demande = null;
 const DEMANDE_MS = 3000;
-export function lancerLecture(hash) {
+export function lancerLecture(hash, { retour = null } = {}) {
   if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
   if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
-  demande = { hash, instant: performance.now() };
+  demande = { hash, instant: performance.now(), retour };
   location.hash = hash;
 }
+// La demande de lecture qui vient d'ouvrir ce lecteur, ou null.
 function prendreDemande() {
   const d = demande;
   demande = null;
-  return Boolean(d) && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS;
+  return d && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS ? d : null;
 }
 // Une parole muette dans le toucher : Safari laisse ensuite parler le lecteur hors d'un geste.
 function amorcerVoix() {
@@ -121,9 +125,12 @@ const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `
 
 // seance : { id, titre, dureeMin, posture, description, etapes: [{ texte, dureeS, souffle? }] } (un exercice de
 // domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). origine : l'écran où revenir (« Fermer » et
-// la fermeture après la fin).
-export function Lecteur({ seance, origine = '#/bien-etre' }) {
-  const [auto] = useState(prendreDemande);
+// la fermeture après la fin), sauf si la lecture a été lancée avec un autre retour. programme : l'identifiant de la
+// séance du Programme, quand la lecture en est une (v8).
+export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
+  const [lancee] = useState(prendreDemande);
+  const auto = lancee != null;
+  const retour = (lancee && lancee.retour) || origine;
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'pause', 'fin'
   const [place, setPlace] = useState(0);
   const [voixVoulue, setVoixVoulue] = useState(() => lireLocal(CLE_VOIX, false) === true);
@@ -132,7 +139,7 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
   const [, tic] = useReducer((n) => n + 1, 0);
   const voix = useVoixFrancaise();
   const lecture = voixVoulue && voix != null;
-  const suivi = useSeance(seance.id, 'bien-etre');
+  const suivi = useSeance(seance.id, 'bien-etre', { programme });
   const etapes = seance.etapes;
   const totalMs = dureeExerciceS(seance) * 1000;
   // Le temps actif, en ms : cumulé aux pauses, compté depuis `depuis` quand la lecture tourne ; `debutEtape`, celui où
@@ -267,7 +274,7 @@ export function Lecteur({ seance, origine = '#/bien-etre' }) {
     if (courant.current.etat === 'fin') {
       afficherToast(FIN, { libelle: NOTER_EMOTION, faire: () => { location.hash = '#/moment'; } }, MESSAGE_MS);
     }
-    location.hash = origine;
+    location.hash = retour;
   };
   // La fin : au bout du temps de la dernière étape, ou « Terminer ».
   const finir = () => {

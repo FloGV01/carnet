@@ -53,6 +53,7 @@ async function verser(page) {
     const tr = await r.traitements.creer({ date: '2026-09-28', changement: 'Comprimé A : matin 1 → 1½', effetsSecondaires: ['effetSecondaire:aucun'], effetRessenti: 'effetRessenti:mieux' });
     await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });
     await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
+    await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
     await r.meta.ecrire('monPlan', plan);
     await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
     return { ep: ep.id, rdv: rdv.id, tr: tr.id };
@@ -185,10 +186,11 @@ const ECRANS = (ids) => [
   ['Comprendre, Rythmes', (p) => aller(p, '#/comprendre/rythmes'), '.comprendre figure.graphe'],
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
-  ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .exercices'],
-  // v8 : le lecteur, avant de commencer, sur une étape rythmée (le disque et « Inspire »), puis en pause (ses réglages,
-  // sous l'écran de lecture).
-  ['Exercice', (p) => aller(p, '#/bien-etre/exercice/respiration-carree'), '.lecteur-avant .reglages-lecteur'],
+  ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .carte-programme .seance-qui-vient'],
+  // v8 : le Programme (une séance faite porte « Faite le »), puis le lecteur, avant de commencer, sur une étape rythmée
+  // (le disque et « Inspire »), puis en pause (ses réglages, sous l'écran de lecture).
+  ['Programme', (p) => aller(p, '#/bien-etre/programme'), '.programme .seance-faite'],
+  ['Exercice', (p) => aller(p, '#/bien-etre/programme/respiration-carree'), '.lecteur-avant .reglages-lecteur'],
   ['Exercice, étape rythmée', async (p) => {
     await p.getByRole('button', { name: 'Commencer', exact: true }).click();
     for (let i = 0; i < 6; i += 1) await p.getByRole('button', { name: 'Suivant', exact: true }).click();
