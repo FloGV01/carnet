@@ -38,7 +38,7 @@ test('Retour ajoute la note, vide le champ et le garde prêt ; Retour sur un cha
   await champ(page).press('Enter');
   await champ(page).fill('   ');
   await champ(page).press('Enter');
-  await page.waitForTimeout(300);
+  await page.clock.runFor(300);
   expect(await notes(page)).toEqual([]);
   await expect(page.getByText('Aucune note pour l\'instant.')).toBeVisible();
 
@@ -123,7 +123,7 @@ test('texte effacé pendant la frappe : la note reste ; quittée vide, elle est 
   await t.click();
   await t.fill('');
   // Bien plus que les 500 ms de l'enregistrement : rien n'est supprimé tant qu'on est dans le champ.
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   expect(await notes(page)).toHaveLength(1);
   await expect(lignes(page)).toHaveCount(1);
   await expect(page.getByText('Note supprimée')).toHaveCount(0);
@@ -131,7 +131,7 @@ test('texte effacé pendant la frappe : la note reste ; quittée vide, elle est 
   await t.fill('Idée gardée');
   await expect.poll(async () => (await notes(page))[0].texte).toBe('Idée gardée');
   await t.fill('   ');
-  await page.waitForTimeout(700);
+  await page.clock.runFor(700);
   expect(await notes(page)).toHaveLength(1);
 
   // Sortie du champ : supprimée.
@@ -193,7 +193,7 @@ test('✕ quand la suppression échoue : la note reste, rien n\'est dit à tort,
   const croix = lignes(page).first().getByRole('button', { name: 'Supprimer la note du 14/10' });
   await croix.click();
   await expect.poll(() => page.evaluate(() => window.__essais())).toBe(1);
-  await page.waitForTimeout(200);
+  await page.clock.runFor(200);
   await expect(lignes(page)).toHaveCount(1);
   await expect(texteDe(lignes(page).first())).toHaveValue('Une idée à garder');
   await expect(page.getByText('Note supprimée')).toHaveCount(0);
@@ -276,6 +276,6 @@ test('les notes ne sortent ni dans l\'export PSY, ni dans la page du PDF, ni dan
 
   await aller(page, '#/analyse');
   await expect(page.getByRole('heading', { name: 'Analyse' })).toBeVisible();
-  await page.waitForTimeout(500);
+  await page.clock.runFor(500);
   expect(await page.locator('body').innerText()).not.toContain(MOT);
 });

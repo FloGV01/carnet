@@ -5,12 +5,13 @@ import { installerMicroFactice } from '../aides/micro-stub.js';
 // Micro factice (voir tests/aides/micro-stub.js) : la logique de l'app, pas la capture réelle.
 const audios = (page) => page.evaluate(() => window.__carnet.repo.audios.metas());
 
-test.beforeEach(async ({ page }) => { await installerMicroFactice(page); await page.goto('/'); await viderBase(page); });
+// v8 (Q31) : l'horloge de la page est factice, et le temps d'un enregistrement avance d'un coup (plus d'attente fixe).
+test.beforeEach(async ({ page }) => { await page.clock.install(); await installerMicroFactice(page); await page.goto('/'); await viderBase(page); });
 
 test('mémo du jour : enregistrer, puce, relecture après rechargement, supprimer puis Annuler', async ({ page }) => {
   await page.getByRole('button', { name: 'Mémo vocal' }).click();
   await expect(page.getByRole('button', { name: /Arrêter/ })).toBeVisible();
-  await page.waitForTimeout(1600);
+  await page.clock.runFor(1600);
   await page.getByRole('button', { name: /Arrêter/ }).click();
   await expect(page.getByText(/Mémo vocal · 0:0[12]/)).toBeVisible();
   const [a] = await audios(page);
@@ -31,7 +32,7 @@ test('mémo du jour : enregistrer, puce, relecture après rechargement, supprime
 
 test('passage en arrière-plan : l\'enregistrement s\'arrête et le mémo est gardé', async ({ page }) => {
   await page.getByRole('button', { name: 'Mémo vocal' }).click();
-  await page.waitForTimeout(1200);
+  await page.clock.runFor(1200);
   await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect.poll(async () => (await audios(page)).length).toBe(1);
 });
@@ -41,7 +42,7 @@ test('mémo dans un symptôme : la fiche est créée si besoin', async ({ page }
   await page.getByRole('link', { name: 'Symptôme', exact: true }).click();
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Passer', exact: true }).click();
   await page.getByRole('button', { name: 'Mémo vocal' }).click();
-  await page.waitForTimeout(1200);
+  await page.clock.runFor(1200);
   await page.getByRole('button', { name: /Arrêter/ }).click();
   await expect(page.getByText(/Mémo vocal · 0:0/)).toBeVisible();
   const [a] = await audios(page);

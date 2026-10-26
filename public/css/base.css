@@ -27,7 +27,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 input, textarea, select { font-size: max(16px, 1em); }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
-.chargement { padding: calc(32px + env(safe-area-inset-top)) var(--marge); font: 600 var(--t-ecran)/var(--l-ecran) var(--police); color: var(--text); }
+.chargement { padding: calc(32px + var(--zone-haut)) var(--marge); font: 600 var(--t-ecran)/var(--l-ecran) var(--police); color: var(--text); }
 .visuellement-cache {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { toucher, groupe, viderBase, aller, entreeDuJour } from '../aides/saisie.js';
+import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
 // v7 (4/9) · Aujourd'hui 2b : en-tête « Jeudi 15 octobre », rubriques du soir en cartes, replis en liste groupée,
@@ -37,8 +37,10 @@ const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, 
   };
 });
 
-test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six rubriques en cartes 2b, au-dessus de la bande', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 797 });
+// v8 (8/9, Q27) : avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas, spec §12.7), au lieu de 390 × 797
+// sans elles : 34 px de moins pour le soir.
+test('le soir tient sans défilement avec les zones sûres de l\'iPhone, en clair et en sombre : six rubriques en cartes 2b, au-dessus de la bande', async ({ page }) => {
+  await simulerZonesSures(page);
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await viderBase(page);
@@ -52,7 +54,7 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six 
     // De l'en-tête à la carte des points positifs, tout est à l'écran, au-dessus de la bande, sans débord de côté.
     const [titre, positifs, bande, onglets] = await Promise.all([boite(page, 'h1'), boite(page, '.carte-champ:has(#points-positifs)'),
       boite(page, '.actions-flottantes'), page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox()]);
-    expect(titre.y).toBeGreaterThanOrEqual(0);
+    expect(titre.y).toBeGreaterThanOrEqual(47);
     expect(positifs.y + positifs.height, schema).toBeLessThanOrEqual(bande.y);
     expect(Math.abs(bande.y + bande.height - onglets.y)).toBeLessThanOrEqual(0.5);
     expect(Math.round(bande.height)).toBe(64);
@@ -102,6 +104,8 @@ test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son ic�
 });
 
 // ---------- Sans défiler : Après coup (P2), après minuit, bandeau de mise à jour ----------
+// Ces tests gardent leurs tailles de la v7 (390 × 844 et 797, sans zones sûres). Avec celles de l'iPhone (v8, Q27), « J'ai
+// fini pour ce soir » passe 20 px sous la bande, et le bandeau fait défiler le soir de 28 px : le Diagnostic le dit.
 
 // La marge de chaque élément au-dessus de la bande du bas (positive : il est au-dessus), et le défilement de la page.
 const margesSurLaBande = (page, selecteurs) => page.evaluate((liste) => {

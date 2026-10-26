@@ -47,7 +47,7 @@ test('relevé noté par étapes : la tuile, le mot, retouche du mot, retouche de
   await retourEnergie(vue).click();
   await expect(tuile(vue, 'Basse')).toHaveAttribute('aria-pressed', 'true');
   await expect(tuiles(vue).getByRole('button', { pressed: true })).toHaveCount(1);
-  await page.waitForTimeout(150);
+  await page.clock.runFor(150);
   expect(await releves(page)()).toMatchObject([{ id, energie: 'energie:basse' }]);
   await tuile(vue, 'Basse').click();
   await expect(tuile(vue, 'Basse')).toHaveAttribute('aria-pressed', 'false');

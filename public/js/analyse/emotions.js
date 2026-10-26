@@ -114,17 +114,33 @@ export function apresNuit(journal, humeurs, periode) {
 }
 
 // Minutes écoulées depuis une origine fixe, à partir d'une date et d'une heure locales (sans fuseau : Paris et UTC donnent
-// le même résultat, changements d'heure compris).
+// le même résultat, changements d'heure compris). Le jour n'est calculé qu'une fois par date (v8, Q26 : des milliers de
+// relevés, quelques centaines de dates).
 const ORIGINE = '2000-01-01';
-const minutes = (date, heure) => diffDays(ORIGINE, date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+function minutesParDate() {
+  const jours = new Map();
+  return (date, heure) => {
+    if (!jours.has(date)) jours.set(date, diffDays(ORIGINE, date));
+    return jours.get(date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+  };
+}
 
 // Autour d'instants (explosions ; séances de Bien-être) : les familles des relevés notés dans les `avantH` heures avant un
 // instant ([t − avantH, t[) et dans les `apresH` heures après ([t, t + apresH]). Le temps écoulé se compte en dates et
 // heures calendaires : un relevé de 01:00 est à 2 h d'un instant de 23:00 la veille. Un relevé « vers » compte à son heure
 // ronde. Un relevé compte au plus une fois de chaque côté, même près de deux instants. Un instant ou un relevé sans heure
-// n'est pas placé.
+// n'est pas placé. v8 (Q26) : les instants sont triés, et chaque relevé ne cherche que l'instant voisin (recherche
+// dichotomique) : sur des années de séances et de relevés, le calcul ne croît plus comme leur produit.
 export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = S.heuresAutour } = {}) {
+  const minutes = minutesParDate();
   const temps = (instants || []).filter((i) => i && estDateValide(i.date) && estHeureValide(i.heure)).map((i) => minutes(i.date, i.heure));
+  const tries = Float64Array.from(temps).sort();
+  // L'indice du premier instant strictement après m.
+  const premierApres = (m) => {
+    let [a, b] = [0, tries.length];
+    while (a < b) { const k = (a + b) >> 1; if (tries[k] <= m) a = k + 1; else b = k; }
+    return a;
+  };
   const avant = comptesVides();
   const apres = comptesVides();
   let n = 0;
@@ -132,8 +148,11 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
     if (!h || !estDateValide(h.date) || !estHeureValide(h.heure) || !estEmotion(h.emotion)) continue;
     const m = minutes(h.date, h.heure);
     const f = familleDe(h.emotion);
-    if (temps.some((t) => m >= t - avantH * 60 && m < t)) { avant[f] += 1; n += 1; }
-    if (temps.some((t) => m >= t && m <= t + apresH * 60)) { apres[f] += 1; n += 1; }
+    const k = premierApres(m);
+    // Avant un instant t : t − avantH ≤ m < t, soit le premier instant après m, à avantH heures au plus.
+    if (k < tries.length && tries[k] - m <= avantH * 60) { avant[f] += 1; n += 1; }
+    // Après un instant t : t ≤ m ≤ t + apresH, soit le dernier instant jusqu'à m, à apresH heures au plus.
+    if (k > 0 && m - tries[k - 1] <= apresH * 60) { apres[f] += 1; n += 1; }
   }
   return { statut: selonSeuilEmotions(n), avant, apres, instants: temps.length, n };
 }

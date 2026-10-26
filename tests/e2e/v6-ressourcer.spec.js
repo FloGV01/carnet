@@ -76,7 +76,7 @@ test('règle allumée : une énergie basse notée maintenant affiche la liste au
   expect(await carteMots(vue).boundingBox()).toEqual(avant);
 
   // Un mot et l'énergie sont choisis, bien au-delà du délai de la fermeture : l'écran reste là.
-  await page.waitForTimeout(APRES_DELAI);
+  await page.clock.runFor(APRES_DELAI);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue).toBeVisible();
   await expect(noteeUneFois(page)).toHaveCount(0);
@@ -104,7 +104,7 @@ test('règle allumée : l\'énergie seule suffit, la carte suit l\'énergie choi
   await tuile(vue, 'Moyenne').click();
   await expect(carte(vue)).toHaveCount(0);
   await expect(vue).not.toContainText('Pour récupérer');
-  await page.waitForTimeout(APRES_DELAI);
+  await page.clock.runFor(APRES_DELAI);
   await expect(page).toHaveURL(/#\/moment$/);
   // Basse de nouveau, l'autre côté : la carte revient. Retoucher la tuile choisie retire l'énergie, et la carte.
   await retourEnergie(vue).click();
@@ -323,7 +323,7 @@ test('Réglages › Me ressourcer : l\'interrupteur allumé suffit à faire joue
   await expect.poll(() => lireRegle(page)).toEqual({ energieBasse: true });
   const vue = await noterBasse(page);
   await expect(carte(vue)).toBeVisible();
-  await page.waitForTimeout(APRES_DELAI);
+  await page.clock.runFor(APRES_DELAI);
   await expect(page).toHaveURL(/#\/moment$/);
 });
 

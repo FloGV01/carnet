@@ -6,6 +6,7 @@ import { Entete } from '../composants/entete.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { repo } from '../../donnees.js';
 import { calculerAnalyse } from './analyse.js';
+import { lireBase } from '../lecture.js';
 import { modeleSoignants } from '../../export/soignants.js';
 import { mettreEnPage } from '../../export/page-a4.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
@@ -41,9 +42,9 @@ export function Soignants() {
     let actif = true;
     setPdf(null);
     (async () => {
-      const [{ resultat, carte, zeroDepuis }, journal, episodes, symptomes, traitements, rdvs, traitementActuel, humeurs] = await Promise.all([
-        calculerAnalyse(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.rdv.tous(), repo.meta.lire('traitementActuel'),
-        repo.humeurs.tous(),
+      // La base n'est pas relue si elle n'a pas changé depuis l'Analyse ou la dernière page (v8, Q26, ui/lecture.js).
+      const [{ resultat, carte, zeroDepuis }, { journal, episodes, symptomes, traitements, rdvs, traitementActuel, humeurs }] = await Promise.all([
+        calculerAnalyse(), lireBase(),
       ]);
       const aujourdhui = repo.aujourdhui();
       const modele = modeleSoignants({ journal, episodes, symptomes, traitements, humeurs }, { aujourdhui, carte, analyse: resultat, professionnel: pro, prenom, rdvs, traitements, traitementActuel, zeroDepuis });

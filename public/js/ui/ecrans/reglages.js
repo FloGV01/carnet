@@ -16,6 +16,7 @@ import { repo } from '../../donnees.js';
 import { cleLocale, formaterDateLongue } from '../../domain/dates.js';
 import { pourAffichage } from '../../domain/typographie.js';
 import { useSauvegarde, analyserChoix } from '../sauvegarde.js';
+import { oublierLectures } from '../lecture.js';
 
 function useAppuiLong(action, ms = 700) {
   const minuteur = useRef(null);
@@ -55,6 +56,7 @@ export function Reglages() {
   };
   const revenir = async () => {
     await revenirAvantImport(repo);
+    oublierLectures();
     afficherToast("État d'avant l'import rétabli.", null, 3000);
     await sauvegarde.recharger();
   };

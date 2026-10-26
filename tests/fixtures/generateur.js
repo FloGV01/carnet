@@ -1,6 +1,18 @@
 // Générateur de journaux synthétiques à vérité connue (aucune donnée réelle).
-import { generateur } from '../../public/js/analyse/stats.js';
 import { addDays, jourSemaine } from '../../public/js/domain/dates.js';
+
+// Générateur pseudo-aléatoire semé (mulberry32) : mêmes données, même graine. Il vivait dans analyse/stats.js, qui ne
+// garde plus que la moyenne et la médiane (v8, Q32) : seuls les tests s'en servent.
+export function generateur(graine) {
+  let a = graine >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 const LIEUX = ['lieu:bureau', 'lieu:teletravail', 'lieu:conge_repos'];
 const SOMMEILS = ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'];

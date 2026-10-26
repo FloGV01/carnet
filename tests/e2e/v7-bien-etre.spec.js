@@ -108,7 +108,7 @@ test('un exercice complet, voix éteinte (v8) : une consigne par écran, les ét
   const v = await ouvrirExercice(page, 'Pause d\'une minute');
   // Avant de commencer : la description et la durée ; la voix est éteinte au départ ; rien n'est dit ni verrouillé.
   await expect(v.getByText('Un arrêt bref, là où tu es.')).toBeVisible();
-  await expect(v.locator('.lecteur-duree')).toHaveText(/^1\smin · là où tu es$/);
+  await expect(v.locator('.lecteur-duree')).toHaveText(/^1\smin\s·\slà où tu es$/);
   await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveAttribute('aria-checked', 'false');
   expect(await verrou(page)).toEqual({ demandes: 0, rendus: 0 });
 

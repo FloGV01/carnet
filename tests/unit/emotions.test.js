@@ -168,6 +168,45 @@ test('autourDe : 3 heures avant, 3 heures après, en heures calendaires, un rele
   assert.deepEqual(autourDe([{ date: '2026-10-12', heure: '23:00' }], humeurs, { avantH: 4, apresH: 1 }).avant, compte({ colere: 2 }));
 });
 
+// v8 (Q26) : autourDe cherche l'instant voisin par dichotomie. Les comptes restent ceux de la recherche de tous les
+// instants (la version d'avant, gardée ici comme référence), bornes comprises, sur des données tirées au hasard (semées).
+test('autourDe, par dichotomie : les mêmes comptes que la recherche de tous les instants, bornes et instants confondus compris', async () => {
+  const { generateur } = await import('../fixtures/generateur.js');
+  const { diffDays, addDays } = await import('../../public/js/domain/dates.js');
+  const { familleDe } = await import('../../public/js/domain/roue.js');
+  const minutes = (date, heure) => diffDays('2000-01-01', date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+  const reference = (instants, humeurs, avantH = 3, apresH = 3) => {
+    const temps = instants.map((i) => minutes(i.date, i.heure));
+    const avant = comptesVides();
+    const apres = comptesVides();
+    for (const h of humeurs) {
+      const m = minutes(h.date, h.heure);
+      if (temps.some((t) => m >= t - avantH * 60 && m < t)) avant[familleDe(h.emotion)] += 1;
+      if (temps.some((t) => m >= t && m <= t + apresH * 60)) apres[familleDe(h.emotion)] += 1;
+    }
+    return { avant, apres };
+  };
+  const alea = generateur(77);
+  const heure = () => `${String(Math.floor(alea() * 24)).padStart(2, '0')}:${['00', '15', '30', '59'][Math.floor(alea() * 4)]}`;
+  const mots = ['roue:colere:irrite', 'roue:peur', 'roue:joie:curieux', 'roue:serenite:calme', 'roue:tristesse:vide'];
+  for (let essai = 0; essai < 20; essai++) {
+    const jour = () => addDays('2026-09-01', Math.floor(alea() * 20));
+    const instants = Array.from({ length: Math.floor(alea() * 12) }, () => ({ date: jour(), heure: heure() }));
+    // Des relevés à 3 h pile avant et après, et à l'instant même : les bornes.
+    const bornes = instants.flatMap((i) => [-180, -181, 0, 180, 181].map((d) => {
+      const m = minutes(i.date, i.heure) + d;
+      const j = Math.floor(m / 1440);
+      const r = m - j * 1440;
+      return releve(addDays('2000-01-01', j), `${String(Math.floor(r / 60)).padStart(2, '0')}:${String(r % 60).padStart(2, '0')}`, mots[(j + r) % 5]);
+    }));
+    const humeurs = [...bornes, ...Array.from({ length: 60 }, (_, k) => releve(jour(), heure(), mots[k % 5]))];
+    for (const [a, p] of [[3, 3], [4, 1]]) {
+      const r = autourDe(instants, humeurs, { avantH: a, apresH: p });
+      assert.deepEqual({ avant: r.avant, apres: r.apres }, reference(instants, humeurs, a, p), `essai ${essai}, ${a} h et ${p} h`);
+    }
+  }
+});
+
 test('autourDe : la nuit du changement d\'heure se compte en heures d\'horloge, comme en UTC', () => {
   // Le 25 octobre 2026 à Paris, 3 h devient 2 h. De 01:00 à 03:30, il y a 2 h 30 sur l'horloge (3 h 30 écoulées) : dedans.
   const r = autourDe([{ date: '2026-10-25', heure: '01:00' }], [releve('2026-10-25', '03:30', 'roue:peur')]);

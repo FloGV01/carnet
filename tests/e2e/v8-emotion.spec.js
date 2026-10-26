@@ -31,7 +31,7 @@ const appuiLong = async (page, bouton, ms = 800) => {
   const b = await bouton.boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(ms);
+  await page.clock.runFor(ms);
   await page.mouse.up();
 };
 
@@ -71,12 +71,12 @@ test('relevé en deux touchers : une tuile (l\'énergie), un mot (sa définition
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:mecontent', energie: 'energie:moyenne' }]);
   await expect(mot(vue, 'Mécontent', 'Colère')).toHaveAttribute('aria-pressed', 'true');
   await expect(definition(vue)).toHaveText('Mécontent : pas satisfait de ce qui se passe ou de ce qu\'on a reçu.');
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   await expect(page).toHaveURL(/#\/moment$/);
   // Un autre toucher change le mot et relance le délai.
   await mot(vue, 'Honteux', 'Tristesse').click();
   await expect(definition(vue)).toHaveText('Honteux : l\'envie de se cacher, de disparaître du regard des autres.');
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page.getByText(NOTEE)).toBeVisible({ timeout: 2000 });
   await expect(page).toHaveURL(/#\/aujourdhui$/);
@@ -94,17 +94,17 @@ test('la fermeture attend sous « Maintenant ▾ » : ouvert dans le délai, l\'
   let vue = await ouvrir(page);
   await tuile(vue, 'Haute', 'agréable').click();
   await mot(vue, 'Amusé', 'Joie').click();
-  await page.waitForTimeout(600);
+  await page.clock.runFor(600);
   await puceQuand(vue).click();
   await expect(listeVers(vue)).toBeVisible();
   // Bien au-delà du délai : l'écran attend, la liste ouverte.
-  await page.waitForTimeout(2000);
+  await page.clock.runFor(2000);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(listeVers(vue)).toBeVisible();
   // Une heure choisie : le relevé passe à « vers 20 h », et l'écran se ferme 1,5 s plus tard.
   await listeVers(vue).getByRole('button', { name: '20 h', exact: true }).click();
   await expect.poll(releves(page)).toMatchObject([{ heure: '20:00', vers: true, emotion: 'roue:joie:amuse', energie: 'energie:haute' }]);
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page).toHaveURL(/#\/aujourdhui$/, { timeout: 2000 });
   await expect(page.getByText(NOTEE)).toBeVisible();
@@ -114,11 +114,11 @@ test('la fermeture attend sous « Maintenant ▾ » : ouvert dans le délai, l\'
   await tuile(vue, 'Basse').click();
   await mot(vue, 'Vide', 'Tristesse').click();
   await puceQuand(vue).click();
-  await page.waitForTimeout(2000);
+  await page.clock.runFor(2000);
   await expect(page).toHaveURL(/#\/moment$/);
   await puceQuand(vue).click();
   await expect(listeVers(vue)).toHaveCount(0);
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page).toHaveURL(/#\/aujourdhui$/, { timeout: 2000 });
   await expect.poll(async () => (await releves(page)()).find((h) => h.emotion === 'roue:tristesse:vide')).toMatchObject({ heure: '21:00', vers: null });
@@ -134,7 +134,7 @@ test('supprimer un relevé du jour pendant le délai : l\'écran reste, « Relev
   await expect(jour.getByRole('button', { name: 'Supprimer le relevé de 21:00' })).toBeVisible();
   await jour.getByRole('button', { name: 'Supprimer le relevé de 21:00' }).click();
   await expect.poll(async () => (await releves(page)()).length).toBe(1);
-  await page.waitForTimeout(2000);
+  await page.clock.runFor(2000);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page.getByText(NOTEE)).toHaveCount(0);
   // Un autre relevé du jour, supprimé dans le délai d'un nouveau mot : l'écran reste, et son « Annuler » le rend.
@@ -145,7 +145,7 @@ test('supprimer un relevé du jour pendant le délai : l\'écran reste, « Relev
   await expect.poll(async () => (await releves(page)()).length).toBe(2);
   await jour.getByRole('button', { name: 'Supprimer le relevé de 10:20' }).click();
   await expect(page.getByText('Relevé supprimé')).toBeVisible();
-  await page.waitForTimeout(2000);
+  await page.clock.runFor(2000);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page.getByText('Relevé supprimé')).toBeVisible();
   await page.getByRole('button', { name: 'Annuler' }).click();
@@ -183,9 +183,10 @@ test('la carte s\'ouvre centrée sur la zone de la tuile ; elle glisse dans les 
   // Un mot choisi, puis la carte qui glisse : l'écran attend, et se ferme 1,5 s après le dernier glissement.
   await tuile(vue, 'Haute', 'agréable').click();
   await mot(vue, 'Amusé', 'Joie').click();
+  // Chaque glissement attend son événement « scroll » (ou 200 ms, en butée) : le délai repart avant l'avance suivante.
   for (let i = 0; i < 5; i++) {
-    await page.waitForTimeout(500);
-    await carte(vue).evaluate((c) => c.scrollBy({ left: -40, top: 30 }));
+    await page.clock.runFor(500);
+    await carte(vue).evaluate((c) => new Promise((ok) => { c.addEventListener('scroll', ok, { once: true }); setTimeout(ok, 200); c.scrollBy({ left: -40, top: 30 }); }));
   }
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(page).toHaveURL(/#\/aujourdhui$/, { timeout: 3000 });
@@ -224,7 +225,7 @@ const doubleToucher = async (page, bouton) => {
   const b = await bouton.boundingBox();
   const [x, y] = [b.x + b.width / 2, b.y + b.height / 2];
   await page.touchscreen.tap(x, y);
-  await page.waitForTimeout(120);
+  await page.clock.runFor(120);
   await page.touchscreen.tap(x, y);
   return [x, y];
 };
@@ -258,7 +259,7 @@ test('point de vigilance 5 : deux touchers rapides, sur une tuile puis au même 
         await finGarde(tuiles(vue));
         await doubleToucher(page, laTuile);
         await expect(carte(vue), quoi).toBeVisible();
-        await page.waitForTimeout(400);
+        await page.clock.runFor(400);
         expect(await releves(page)(), quoi).toMatchObject([{ emotion: null, energie: `energie:${e}` }]);
         await expect(carte(vue).getByRole('button', { pressed: true }), quoi).toHaveCount(0);
         // 2. La tuile, puis 120 ms plus tard une bulle qui vient de paraître sous le doigt : rien n'est choisi.
@@ -269,10 +270,10 @@ test('point de vigilance 5 : deux touchers rapides, sur une tuile puis au même 
         await expect(laTuile, quoi).toHaveAttribute('aria-pressed', 'false');
         const t = await laTuile.boundingBox();
         await page.touchscreen.tap(t.x + t.width / 2, t.y + t.height / 2);
-        await page.waitForTimeout(120);
+        await page.clock.runFor(120);
         await page.touchscreen.tap(bulle.x, bulle.y);
         await expect(carte(vue), quoi).toBeVisible();
-        await page.waitForTimeout(400);
+        await page.clock.runFor(400);
         expect(await releves(page)(), quoi).toMatchObject([{ emotion: null, energie: `energie:${e}` }]);
         await expect(carte(vue).getByRole('button', { pressed: true }), quoi).toHaveCount(0);
         // La garde passée, le même toucher choisit la bulle : c'est bien la garde qui a joué.
@@ -298,7 +299,7 @@ test('point de vigilance 5 : un appui long montre la définition sans rien chois
   await expect(definition(vue)).toHaveText('Vide : plus rien à l\'intérieur, comme engourdi.');
   await expect(vide).toHaveAttribute('aria-pressed', 'false');
   await expect(vide).toHaveClass(/montree/);
-  await page.waitForTimeout(1800);
+  await page.clock.runFor(1800);
   await expect(page).toHaveURL(/#\/moment$/);
   expect(await releves(page)()).toMatchObject([{ emotion: null, energie: 'energie:basse' }]);
   // Un appui long levé hors de la bulle (le doigt a glissé) : rien n'est choisi, et le clic suivant sans pointeur
@@ -306,7 +307,7 @@ test('point de vigilance 5 : un appui long montre la définition sans rien chois
   const b = await vide.boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(800);
+  await page.clock.runFor(800);
   await page.mouse.move(5, 5, { steps: 4 });
   await page.mouse.up();
   await expect(vide).toHaveAttribute('aria-pressed', 'false');
@@ -341,7 +342,7 @@ test('point de vigilance 5 : fermer avec l\'énergie seule la garde ; « Toute l
   vue = await ouvrir(page);
   await touteLaCarte(vue).click();
   await expect(carte(vue).getByRole('button')).toHaveCount(79);
-  await page.waitForTimeout(150);
+  await page.clock.runFor(150);
   expect(await releves(page)()).toHaveLength(1);
   // Au milieu de la carte : la bande Moyenne, des deux côtés du centre.
   const vu = await carte(vue).evaluate((c) => {
@@ -510,7 +511,7 @@ test('Réglages › Émotions : les 79 mots par famille et leur sens ; un touche
   await expect(champ).toHaveValue(DEFINITIONS['roue:colere:irrite']);
   await champ.fill('Agacé par un bruit qui revient.');
   // Rien n'est enregistré pendant la frappe, même après une pause : seulement à la sortie du champ.
-  await page.waitForTimeout(700);
+  await page.clock.runFor(700);
   expect(await lireCorrections(page)).toBeNull();
   await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(0);
   // La sortie du champ l'enregistre.
@@ -526,14 +527,14 @@ test('Réglages › Émotions : les 79 mots par famille et leur sens ; un touche
   const irrite = page.getByRole('textbox', { name: 'Irrité', exact: true });
   await expect(irrite).toBeFocused();
   await irrite.fill('');
-  await page.waitForTimeout(700);
+  await page.clock.runFor(700);
   await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(1);
   expect(await lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
   await irrite.pressSequentially('Agacé par un bruit qui revient.');
-  await page.waitForTimeout(700);
+  await page.clock.runFor(700);
   await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(1);
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
-  await page.waitForTimeout(300);
+  await page.clock.runFor(300);
   expect(await lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
 
   // Sur la carte, le texte corrigé : un appui long sur Irrité (Moyenne, plutôt désagréable).
@@ -557,7 +558,7 @@ test('Réglages › Émotions : les 79 mots par famille et leur sens ; un touche
   const calme = page.getByRole('textbox', { name: 'Calme', exact: true });
   await calme.fill('');
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
-  await page.waitForTimeout(700);
+  await page.clock.runFor(700);
   expect(await lireCorrections(page)).toEqual({});
   await page.getByRole('button', { name: 'Retour' }).click();
   await expect(page).toHaveURL(/#\/reglages$/);

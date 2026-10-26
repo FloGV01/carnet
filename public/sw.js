@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '00328f3552cf';
+const VERSION = 'e76d4d9f626f';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -97,7 +97,6 @@ const FICHIERS = [
   "./js/ui/composants/mon-plan.js",
   "./js/ui/composants/multiples.js",
   "./js/ui/composants/notes.js",
-  "./js/ui/composants/oui-non.js",
   "./js/ui/composants/parcours.js",
   "./js/ui/composants/pastilles.js",
   "./js/ui/composants/pourquoi.js",
@@ -154,7 +153,9 @@ const FICHIERS = [
   "./js/ui/graphes/graphes.js",
   "./js/ui/hooks.js",
   "./js/ui/icones.js",
+  "./js/ui/lecture.js",
   "./js/ui/lib.js",
+  "./js/ui/mesures.js",
   "./js/ui/sauvegarde.js",
   "./js/ui/seance.js",
   "./js/version.js",

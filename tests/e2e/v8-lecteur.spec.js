@@ -66,7 +66,7 @@ test('avant de commencer : le titre, « 3 min · assis », la description, le bo
   await espionnerAudio(page, { session: true });
   const v = await ouvrir(page, 'Respiration carrée');
   await expect(v.getByRole('heading', { name: 'Respiration carrée', level: 1 })).toBeVisible();
-  await expect(v.locator('.lecteur-duree')).toHaveText(/^3\smin · assis$/);
+  await expect(v.locator('.lecteur-duree')).toHaveText(/^3\smin\s·\sassis$/);
   await expect(v.locator('.lecteur-description')).toHaveText(texte('Inspirer, retenir, expirer, retenir : quatre temps chacun.'));
   // Le bouton lecture, au centre de l'anneau, à la couleur de Bien-être, de 84.
   const lecture = bouton(v, 'Commencer');
@@ -412,7 +412,7 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   // Ouverte autrement que par sa carte (l'adresse seule) : elle attend « Commencer ».
   await aller(page, '#/bien-etre/coherence');
   await expect(bouton(vue(page, 'Cohérence cardiaque'), 'Commencer')).toBeVisible();
-  await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-duree')).toHaveText(/^2\smin · assis$/);
+  await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-duree')).toHaveText(/^2\smin\s·\sassis$/);
   await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-description')).toHaveText(texte('Inspirer sur « Inspire », expirer sur « Expire ».'));
   const avant = await audio(page);
   await page.clock.runFor(3000);

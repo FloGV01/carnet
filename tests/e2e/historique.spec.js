@@ -35,7 +35,9 @@ test('recherche dans les textes et filtres', async ({ page }) => {
   await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
   await expect(page.getByLabel('Rechercher dans les textes')).toHaveCount(0);
   await page.getByRole('button', { name: 'Filtrer' }).click();
-  await page.getByRole('group', { name: 'Humeur' }).getByRole('button', { name: '7-10' }).click();
+  // v8 (Q29) : le filtre s'appelle « Humeur (notes) », comme la rangée de Mes jours.
+  await expect(page.locator('.titre-filtre', { hasText: /^Humeur/ })).toHaveText('Humeur (notes)');
+  await page.getByRole('group', { name: 'Humeur (notes)', exact: true }).getByRole('button', { name: '7-10' }).click();
   await expect(page.getByText('humeur 7-10')).toBeVisible();
   await expect(page.getByText('humeur 7', { exact: true })).toBeVisible();
   await expect(page.getByText('humeur 4', { exact: true })).toHaveCount(0);

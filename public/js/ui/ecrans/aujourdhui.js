@@ -1,5 +1,5 @@
 // Écran d'ouverture : l'entrée du jour, saisie en quelques touchers, sans bouton « Enregistrer ».
-import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
+import { html, useEffect, useLayoutEffect, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { addDays, JOURS, jourSemaine, jourEvenement, estAvantBascule, formaterJour, formaterVers } from '../../domain/dates.js';
@@ -29,6 +29,7 @@ import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { prochainRdv } from '../../domain/soins.js';
 import { libelleRdv } from './soins.js';
+import { noterMargeSoir } from '../mesures.js';
 
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const EXPLOSIONS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: String(i) }));
@@ -151,7 +152,6 @@ function useGlissementJour(surGlisser) {
 // Le dernier jour atteint en glissant, et de quel côté : sa page entre de ce côté (un petit déplacement de 200 ms au
 // plus, supprimé avec « Réduire les animations »), le temps de l'animation.
 let dernierGlissement = null;
-const DUREE_ENTREE_MS = 400;
 
 // depuisHistorique (v6.1) : le jour a été ouvert depuis l'Historique. « ‹ Retour » y ramène, à la même position,
 // et ‹ › changent de jour sans quitter l'onglet Historique. « Revenir à aujourd'hui » reste, comme ouvert autrement.
@@ -220,16 +220,41 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     if (d) dernierGlissement = { date: d, sens };
   });
   const glisse = dernierGlissement && dernierGlissement.date === date ? dernierGlissement.sens : null;
+  const charge = Boolean(donnees && entree && entree.date === date);
+  const refPage = useRef(null);
+  // L'entrée finit avec les animations du jour arrivé (v8, Q31), et non plus avec une minuterie de 400 ms lancée avant
+  // l'arrivée de ses données : quand elles tardaient, la minuterie finissait d'abord, et le jour entrait sans glisser (ou
+  // à moitié). Sans animation (« Réduire les animations »), elle finit tout de suite. Un nouveau glissement pendant
+  // l'entrée coupe ses animations : leur fin ne touche pas à l'entrée du jour suivant.
   useEffect(() => {
-    if (!glisse) return undefined;
-    const t = setTimeout(() => { dernierGlissement = null; rafraichir(); }, DUREE_ENTREE_MS);
-    return () => clearTimeout(t);
-  }, [glisse, date]);
+    if (!glisse || !charge) return undefined;
+    const cetteEntree = dernierGlissement;
+    let fini = false;
+    const finir = () => {
+      if (fini || dernierGlissement !== cetteEntree) return;
+      fini = true;
+      dernierGlissement = null;
+      rafraichir();
+    };
+    const page = refPage.current;
+    const entrees = page && page.getAnimations
+      ? page.getAnimations({ subtree: true }).filter((a) => String(a.animationName || '').startsWith('entree-')) : [];
+    if (entrees.length) Promise.all(entrees.map((a) => a.finished)).then(finir, finir);
+    else finir();
+    return () => { fini = true; };
+  }, [glisse, charge, date]);
   useEffect(() => () => { dernierGlissement = null; }, []);
   const classeEcran = `ecran aujourdhui${glisse ? ` entree-${glisse === 'precedent' ? 'veille' : 'lendemain'}` : ''}`;
+  // Le Diagnostic (v8, Q27) : la marge du soir, reprise à chaque affichage et quand la fenêtre change de taille.
+  useLayoutEffect(() => { noterMargeSoir(refPage.current); });
+  useEffect(() => {
+    const surTaille = () => noterMargeSoir(refPage.current);
+    window.addEventListener('resize', surTaille);
+    return () => window.removeEventListener('resize', surTaille);
+  }, []);
 
-  if (!donnees || !entree || entree.date !== date) {
-    return html`<main class=${classeEcran}><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;
+  if (!charge) {
+    return html`<main class=${classeEcran} ref=${refPage}><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;
   }
 
   const { items, baseVide, journee } = donnees;
@@ -372,7 +397,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     ? html`<button type="button" class="btn-lien action fini-bouton" onClick=${() => terminer(true)}>${Icones.replierSoiree({ trait: 2 })}J'ai fini pour ce soir</button>`
     : null;
 
-  return html`<main class=${classeEcran}>
+  return html`<main class=${classeEcran} ref=${refPage}>
     <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} familles=${familles} surRetour=${retour}
       veille=${enVeille ? `Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.` : null} />
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}

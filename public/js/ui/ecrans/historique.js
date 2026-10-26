@@ -2,8 +2,8 @@
 // n'existent pas ici : ni ligne vide, ni décompte. v7 : la ligne d'un jour donne ses émotions du moment
 // (deux au plus, puis « … », avec les points de leurs familles) ; un jour qui n'a que des relevés a sa ligne.
 // Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
-// filtre « Humeur » n'est proposé que si une note existe. L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa
-// porte en haut de l'Analyse, et « Retour » y ramène.
+// filtre « Humeur (notes) », nommé comme la rangée de Mes jours (v8), n'est proposé que si une note existe.
+// L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa porte en haut de l'Analyse, et « Retour » y ramène.
 import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -23,6 +23,7 @@ import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { estExplosion, valeurExplosions } from '../../domain/explosions.js';
 import { versHash } from '../../routeur.js';
 import { options } from './aujourdhui.js';
+import { lireSiChange, lireBase } from '../lecture.js';
 
 const SEGMENTS = [{ valeur: 'jours', libelle: 'Jours' }, { valeur: 'episodes', libelle: 'Épisodes' }, { valeur: 'symptomes', libelle: 'Symptômes' }];
 const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }];
@@ -84,10 +85,9 @@ export function Historique() {
     return () => window.removeEventListener('scroll', noter);
   }, []);
 
-  const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, avecMemo, humeurs] = await Promise.all([
-      repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), repo.audios.parents(), repo.humeurs.tous(),
-    ]);
+  // La base n'est relue que si elle a changé depuis la dernière ouverture (v8, Q26, ui/lecture.js).
+  const { donnees } = useDonnees(() => lireSiChange('historique', async () => {
+    const { journal, episodes, symptomes, items, avecMemo, humeurs } = await lireBase();
     // Les relevés de chaque jour logique ; un jour qui n'a que des relevés à émotion reçoit une entrée minimale.
     const releves = new Map();
     for (const h of humeurs) {
@@ -99,7 +99,7 @@ export function Historique() {
     const presents = new Set(jours.map((j) => j.date));
     for (const [date, liste] of releves) if (!presents.has(date) && liste.some((h) => estEmotion(h.emotion))) jours.push({ date });
     return { journal: jours, releves, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
-  }, []);
+  }), []);
   // Avant que l'écran ne s'affiche : la liste revient là où on l'avait laissée.
   useLayoutEffect(() => {
     if (!donnees || restaure.current) return;
@@ -213,7 +213,7 @@ export function Historique() {
       <${GroupeFiltre} titre="Période"><${Pastilles} etiquette="Période" options=${PERIODES} valeur=${f.periode ?? null} surChoix=${majF('periode')} classe="souples" /></${GroupeFiltre}>
       ${segment === 'jours' && html`
         <${GroupeFiltre} titre="Lieu"><${Pastilles} etiquette="Lieu" options=${optionsListe('lieu')} valeur=${f.lieu ?? null} surChoix=${majF('lieu')} classe="souples" /></${GroupeFiltre}>
-        ${(f.humeur || donnees.journal.some((j) => j.humeur != null)) && html`<${GroupeFiltre} titre="Humeur"><${Pastilles} etiquette="Humeur" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>`}
+        ${(f.humeur || donnees.journal.some((j) => j.humeur != null)) && html`<${GroupeFiltre} titre="Humeur (notes)"><${Pastilles} etiquette="Humeur (notes)" options=${HUMEURS} valeur=${f.humeur ?? null} surChoix=${majF('humeur')} classe="souples" /></${GroupeFiltre}>`}
         <${GroupeFiltre} titre="Avec"><${Bascules} etiquette="Avec" f=${f} majF=${majF}
           choix=${[{ cle: 'avecExplosions', libelle: 'Avec explosions' }, { cle: 'avecNotes', libelle: 'Avec notes' }]} /></${GroupeFiltre}>`}
       ${segment === 'episodes' && html`

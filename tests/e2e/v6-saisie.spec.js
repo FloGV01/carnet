@@ -140,7 +140,7 @@ test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, el
   await expect(vue.getByRole('button', { name: 'C\'était vers 14 h' })).toBeVisible();
   // v6.1 : la liste reste ouverte, l'heure choisie allumée.
   await expect(heure(vue, '14 h')).toHaveAttribute('aria-pressed', 'true');
-  await page.waitForTimeout(150);
+  await page.clock.runFor(150);
   expect(await releves(page)()).toEqual([]);
 
   await tuile(vue, 'Basse').click();
@@ -277,7 +277,7 @@ test('Ce que je faisais (v8) : ouvert pendant la saisie, l\'écran ne se ferme p
 
   // Des activités seules ne créent pas de relevé ; elles partent avec la première valeur.
   await activites.getByRole('button', { name: 'Travail' }).click();
-  await page.waitForTimeout(150);
+  await page.clock.runFor(150);
   expect(await releves(page)()).toEqual([]);
   await tuile(vue, 'Haute', 'agréable').click();
   await mot(vue, 'Curieux', 'Joie').click();
@@ -286,7 +286,7 @@ test('Ce que je faisais (v8) : ouvert pendant la saisie, l\'écran ne se ferme p
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:joie:curieux', energie: 'energie:haute', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
 
   // Un mot et l'énergie sont choisis, bien au-delà du délai de la fermeture : l'écran reste là.
-  await page.waitForTimeout(APRES_DELAI);
+  await page.clock.runFor(APRES_DELAI);
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue).toBeVisible();
   await expect(page.getByText(NOTEE)).toHaveCount(0);
@@ -294,7 +294,7 @@ test('Ce que je faisais (v8) : ouvert pendant la saisie, l\'écran ne se ferme p
   await repliFaisais.click();
   await expect(repliFaisais).toHaveAttribute('aria-expanded', 'false');
   await mot(vue, 'Amusé', 'Joie').click();
-  await page.waitForTimeout(APRES_DELAI);
+  await page.clock.runFor(APRES_DELAI);
   await expect(page).toHaveURL(/#\/moment$/);
 
   await vue.getByRole('button', { name: 'Fermer' }).click();
@@ -329,7 +329,7 @@ test('Ce que je faisais : replié, le repli résume ce qui est noté ; un relev�
   await expect.poll(releves(page)).toMatchObject([{ emotion: null, energie: 'energie:basse' }]);
   await effacerEnergie(vue, 'Basse');
   await expect.poll(releves(page)).toMatchObject([{ emotion: null, humeur: null, energie: null, faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
-  await page.waitForTimeout(150);
+  await page.clock.runFor(150);
   expect(await releves(page)()).toHaveLength(1);
   // Les activités retirées à leur tour, il ne reste rien : le relevé est supprimé.
   await repliFaisais.click();

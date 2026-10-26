@@ -65,9 +65,10 @@ test('parents() ne lit aucune valeur du magasin audios (curseur de clés seuleme
   assert.equal(parents.size, 2);
 });
 
+// v8 (Q26) : l'Historique lit la base par ui/lecture.js, qui appelle parents().
 test('Aujourd\'hui, Soins et Historique lisent repo.audios.parents(), plus metas()', () => {
-  for (const f of ['aujourdhui', 'soins', 'historique']) {
-    const code = sansCommentaires(lire(join(RACINE, 'public', 'js', 'ui', 'ecrans', `${f}.js`)));
+  for (const f of ['ecrans/aujourdhui', 'ecrans/soins', 'lecture']) {
+    const code = sansCommentaires(lire(join(RACINE, 'public', 'js', 'ui', `${f}.js`)));
     assert.match(code, /repo\.audios\.parents\(\)/, `${f}.js appelle parents()`);
     assert.doesNotMatch(code, /audios\.metas\(/, `${f}.js n'appelle plus metas()`);
   }

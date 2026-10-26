@@ -66,9 +66,9 @@ test('l\'humeur du jour partout : résumé, Historique, trait du plus bas au plu
   await aller(page, '#/historique');
   await expect(page.locator('.puce')).toHaveText(['Bureau', 'humeur 5,6']);
   await page.getByRole('button', { name: 'Filtrer' }).click();
-  await page.getByRole('group', { name: 'Humeur' }).getByRole('button', { name: '5-6' }).click();
+  await page.getByRole('group', { name: 'Humeur (notes)', exact: true }).getByRole('button', { name: '5-6' }).click();
   await expect(page.locator('.puce')).toHaveText(['Bureau', 'humeur 5,6']);
-  await page.getByRole('group', { name: 'Humeur' }).getByRole('button', { name: '7-10' }).click();
+  await page.getByRole('group', { name: 'Humeur (notes)', exact: true }).getByRole('button', { name: '7-10' }).click();
   await expect(page.getByText('Rien ne correspond.')).toBeVisible();
 
   await page.getByRole('link', { name: 'Analyse' }).click();

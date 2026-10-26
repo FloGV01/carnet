@@ -16,15 +16,18 @@ export async function garderEcran() {
 // origine, rien n'est noté. programme (v8) : l'identifiant de la séance du Programme d'où elle a été lancée, et rien
 // ailleurs. `commencer()` ouvre une séance (son début fait sa date et son heure), `noter({ dureeS, terminee })` la note
 // si la règle le permet ; menée au bout (`terminee`), elle porte `fin: true` (v8), qui ne s'efface plus. Les écritures se
-// suivent ; un échec n'interrompt rien.
+// suivent ; un échec n'interrompt rien. `notee()` (v8, Q29) : la séance en cours a passé la règle (elle est, ou va être,
+// enregistrée) ; le lecteur ne propose « Noter mon émotion » qu'après une telle séance.
 function suivi(exercice, origine, programme) {
   let courante = null;
   let file = Promise.resolve();
   return {
-    commencer() { courante = { debut: repo.maintenant(), id: null }; },
+    commencer() { courante = { debut: repo.maintenant(), id: null, notee: false }; },
+    notee: () => Boolean(courante && courante.notee),
     noter({ dureeS, terminee = false }) {
       const s = courante;
       if (!origine || !s || !doitEnregistrer({ dureeS, terminee })) return file;
+      s.notee = true;
       const fin = terminee === true ? { fin: true } : {};
       file = file.then(async () => {
         if (s.id) { await repo.seances.modifier(s.id, { dureeS: dureeSeance(dureeS), ...fin }); return; }

@@ -101,7 +101,7 @@ test('traitement actuel : première saisie sans fiche, puis une fiche datée par
   await carte.getByRole('button', { name: 'Fermer' }).click();
   await expect(carte.getByRole('columnheader', { name: 'Soir' })).toBeVisible();
   await expect(carte.getByRole('row', { name: /Médicament A\s*½\s*1/ })).toBeVisible();
-  await page.waitForTimeout(300);
+  await page.clock.runFor(300);
   expect(await fiches()).toEqual([]);
   // Le lendemain : un changement crée une fiche datée, un second changement du jour la complète.
   await page.clock.setSystemTime(new Date(2026, 9, 2, 20, 0));

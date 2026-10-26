@@ -25,6 +25,7 @@ import {
   GrapheAligne, GrapheColonnes, GrapheNuits, GrapheMesNuits, GrapheActivites, GraphePeseRecharge, GrapheFamilles, GrapheFamillesColonnes, PasAssez, nomMesure,
 } from '../graphes/comprendre.js';
 import { versHash } from '../../routeur.js';
+import { lireSiChange, lireBase } from '../lecture.js';
 
 const CLE_PERIODE = 'carnet:comprendre:periode';
 const CLE_MESURE = 'carnet:comprendre:mesure';
@@ -38,16 +39,15 @@ const COTES = [{ valeur: 'avant', libelle: 'Avant' }, { valeur: 'apres', libelle
 // Un choix gardé, relu seulement s'il est encore valable.
 const lireChoix = (cle, valeurs, defaut) => { const v = lireLocal(cle); return valeurs.includes(v) ? v : defaut; };
 
-async function charger() {
-  const [journal, episodes, humeurs, seances, symptomes, items, zeroDepuis] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.humeurs.tous(), repo.seances.tous(), repo.symptomes.tous(), repo.listes.items(), repo.meta.lire('explosionsDepuis'),
-  ]);
+// La base n'est relue, et les jours recalculés, que si elle a changé depuis la dernière ouverture (v8, Q26).
+const charger = () => lireSiChange('comprendre', async () => {
+  const { journal, episodes, humeurs, seances, symptomes, items, explosionsDepuis: zeroDepuis } = await lireBase();
   const aujourdhui = repo.aujourdhui();
   const jours = facteursParJour({ journal, humeurs, episodes, symptomes, zeroDepuis });
   // « Tout » part du premier jour qui porte une donnée lue ici : un soir, un relevé, une explosion, (v8) une fiche de symptôme.
   const premier = premiereDate({ journal: [...jours.values()] }, aujourdhui);
   return { journal, humeurs, episodes, seances, items, jours, premier, aujourdhui, carte: carteLibelles(items) };
-}
+});
 
 // periode : { du, au }, pour les calculs ; choixPeriode : la clé du sélecteur (« 3mois » ou « tout »), pour la
 // phrase des graphiques. Sous son seuil, un graphique laisse sa place à PasAssez. Les graphiques alignés ont une

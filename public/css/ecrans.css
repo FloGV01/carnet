@@ -1,5 +1,5 @@
 /* Guide d'installation */
-.guide { max-width: 34rem; margin: 0 auto; gap: 28px; padding-top: calc(32px + env(safe-area-inset-top)); padding-left: 24px; padding-right: 24px; }
+.guide { max-width: 34rem; margin: 0 auto; gap: 28px; padding-top: calc(32px + var(--zone-haut)); padding-left: 24px; padding-right: 24px; }
 .guide-tete { display: flex; flex-direction: column; gap: 8px; }
 .guide-intro { font-size: var(--t-corps); line-height: 1.4; color: var(--text-2); text-wrap: pretty; }
 .guide-etapes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
@@ -16,6 +16,8 @@
 .diag .actions { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 .diag .resultat { margin-top: var(--esp-3); }
 .diag pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.78rem; background: var(--surface-2); padding: var(--esp-3); border-radius: var(--r-petit); }
+/* La sonde des zones sûres (v8, Q27, ui/mesures.js) : invisible, le temps d'une lecture. */
+.sonde-zones { position: fixed; left: 0; top: 0; visibility: hidden; pointer-events: none; padding: var(--zone-haut) var(--zone-droite) var(--zone-bas) var(--zone-gauche); }
 
 /* Historique */
 .barre-recherche { display: flex; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
@@ -86,10 +88,10 @@
 .soins .vide { margin: var(--esp-4) 0; }
 .entretoise { flex: 1; }
 .pied-collant {
-  position: sticky; bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); margin: 0 calc(-1 * var(--marge)); padding: 12px var(--marge);
+  position: sticky; bottom: calc(var(--hauteur-onglets) + var(--zone-bas)); margin: 0 calc(-1 * var(--marge)); padding: 12px var(--marge);
   background: var(--bg); border-top: 1px solid var(--line); font-size: var(--t-note); line-height: 1.4; color: var(--text-2); text-align: center;
 }
-.soins { padding-bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); min-height: 100dvh; }
+.soins { padding-bottom: calc(var(--hauteur-onglets) + var(--zone-bas)); min-height: 100dvh; }
 
 /* Trois onglets sur 390 px : « Rendez-vous » reste sur une ligne. */
 .soins .segmente.large button { padding: 0 var(--esp-1); white-space: nowrap; }
@@ -166,7 +168,7 @@
 .ajout-question .champ-une-ligne { padding-right: 46px; }
 
 /* Fiches RDV et Traitement */
-.fiche { gap: 16px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+.fiche { gap: 16px; padding-bottom: calc(100px + var(--zone-bas)); }
 .fiche > .entete-pousse { margin-bottom: 0; }
 .indicateur-fiche { font-size: var(--t-note); font-weight: 600; color: var(--text); min-width: 5em; text-align: right; }
 .libelle-champ { display: flex; align-items: center; gap: 6px; font-size: var(--t-sous); color: var(--text); }
@@ -202,7 +204,7 @@
 
 /* Analyse (v7 en 2b) : les portes en haut (Historique, puis les trois de Comprendre), Ma semaine en tuiles, le sélecteur
    de période qui ne colle que sur les sections qu'il règle (son bloc, .selon-periode). */
-.analyse { gap: 12px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+.analyse { gap: 12px; padding-bottom: calc(100px + var(--zone-bas)); }
 .analyse > .entete-onglet { margin-bottom: 2px; }
 .portes-analyse { display: flex; flex-direction: column; gap: 8px; }
 .carre-porte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
@@ -267,6 +269,9 @@
 .g-anneau { fill: var(--surface); stroke: var(--c); stroke-width: 2; }
 .g-plein { fill: var(--c); }
 .g-barre { fill: var(--c); }
+/* Le repère Bien-être de Mes jours (v8, Q29) : un contour, sans fond. Plein, il se confondait en sombre avec « nuit bien »
+   (1:1 entre les deux bleus) ; la forme les distingue, les teintes ne changent pas. */
+.g-barre.g-bien-etre { fill: none; stroke: var(--c); stroke-width: 1.5; }
 /* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques. */
 .g-emo { fill: var(--c); }
 .g-zone { fill: transparent; cursor: pointer; }
@@ -334,10 +339,10 @@
    des 48 du lot), 6 entre deux blocs. Avant 4 h, « Encore jeudi jusqu'à 4 h. » est dans la ligne du résumé, sans
    hauteur. Le geste horizontal reste à la page (changer de jour en glissant), le défilement vertical à iOS. */
 /* Un champ qui reçoit le focus (clavier, VoiceOver) défile au-dessus de la bande et des onglets, jamais dessous. */
-html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + env(safe-area-inset-bottom)); }
+html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + var(--zone-bas)); }
 .aujourdhui {
-  gap: 6px; padding-top: env(safe-area-inset-top);
-  padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + 24px + env(safe-area-inset-bottom));
+  gap: 6px; padding-top: var(--zone-haut);
+  padding-bottom: calc(var(--hauteur-onglets) + var(--h-bande) + 24px + var(--zone-bas));
   touch-action: pan-y pinch-zoom;
 }
 /* Un jour atteint en glissant entre de son côté : un petit déplacement de 200 ms au plus (rien avec « Réduire les
@@ -510,9 +515,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    lignes (13/600, 113 de large) et « Émotion », le plus large (flex 1,2), en --surface avec un carré à la couleur de
    leur parcours ; « + Épisode » (flex 1) en couleur action. Rien de touchable ne passe dessous. */
 .actions-flottantes {
-  position: fixed; left: 0; right: 0; bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom)); z-index: 9;
+  position: fixed; left: 0; right: 0; bottom: calc(var(--hauteur-onglets) + var(--zone-bas)); z-index: 9;
   height: var(--h-bande); display: flex; align-items: center; gap: var(--ecart);
-  padding: 0 calc(var(--marge) + env(safe-area-inset-right)) 0 calc(var(--marge) + env(safe-area-inset-left));
+  padding: 0 calc(var(--marge) + var(--zone-droite)) 0 calc(var(--marge) + var(--zone-gauche));
   background: var(--bg);
 }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
@@ -568,7 +573,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .import .actions-col, .effacer .actions-col { margin-top: 0; }
 
 /* Export PSY et Vue soignants */
-.export-psy, .soignants { gap: 14px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+.export-psy, .soignants { gap: 14px; padding-bottom: calc(100px + var(--zone-bas)); }
 .export-psy > .entete-pousse, .soignants > .entete-pousse { margin-bottom: 0; }
 .statut-centre { font-size: var(--t-sous); text-align: center; margin-top: -4px; }
 .lien-centre { align-self: center; font-size: var(--t-sous); }
@@ -642,7 +647,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }
 .feuille {
   width: 100%; max-width: 34rem; max-height: 85dvh; overflow-y: auto; background: var(--surface); --fond-choix: var(--surface-2);
-  border-radius: var(--r-feuille) var(--r-feuille) 0 0; padding: 18px var(--marge) calc(20px + env(safe-area-inset-bottom));
+  border-radius: var(--r-feuille) var(--r-feuille) 0 0; padding: 18px var(--marge) calc(20px + var(--zone-bas));
   display: flex; flex-direction: column; gap: 12px;
 }
 .feuille-tete { display: flex; align-items: center; justify-content: space-between; }
@@ -679,8 +684,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .point-releve-moment { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); margin-right: 10px; }
 .point-releve-moment.point-creux { background: none; border: 1.5px solid var(--text-2); }
 .texte-releve { flex: 1; min-width: 0; padding: 6px 0; line-height: 1.3; font-weight: 500; color: var(--text); }
-/* Analyse v4 : Avant tes explosions, Profil de ta journée */
-.profil-journee .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; font-variant-numeric: tabular-nums; }
+/* Analyse v4 : Avant tes explosions */
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }
 /* Moment difficile (v5) : cercle de respiration (10 s par cycle, la seule animation longue de
@@ -887,6 +891,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .g-energie-1 { fill: var(--c); opacity: .3; }
 .g-energie-2 { fill: var(--c); opacity: .6; }
 .g-energie-3 { fill: var(--c); }
+/* v8 (Q29) : en sombre, l'énergie basse passe à 0,2 pour se distinguer de la moyenne (2,5:1 entre elles, au lieu de 2:1) ;
+   elle reste aussi visible sur la carte qu'en clair (1,5:1). Une valeur change, jamais la teinte. */
+@media (prefers-color-scheme: dark) {
+  .g-energie-1 { opacity: .2; }
+}
 .g-rampe-0 { fill: var(--line); }
 .g-rampe-1 { fill: var(--c); opacity: .3; }
 .g-rampe-2 { fill: var(--c); opacity: .55; }

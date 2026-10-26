@@ -56,8 +56,8 @@ test('l\'écran Programme : la présentation, une carte par étape (son titre se
   // Les 17 séances, dans l'ordre, chacune avec sa durée et sa posture ; aucune « Faite le », aucune case, aucun grisé.
   await expect(ecran.locator('.exercice-titre')).toHaveText(TITRES);
   await expect(ecran.getByRole('link')).toHaveCount(17);
-  await expect(rangee(page, 'Les sons').locator('.exercice-description')).toHaveText(/^5\smin · assis$/);
-  await expect(rangee(page, 'Cohérence cardiaque').locator('.exercice-description')).toHaveText(/^5\smin · assis$/);
+  await expect(rangee(page, 'Les sons').locator('.exercice-description')).toHaveText(/^5\smin\s·\sassis$/);
+  await expect(rangee(page, 'Cohérence cardiaque').locator('.exercice-description')).toHaveText(/^5\smin\s·\sassis$/);
   await expect(ecran.locator('.seance-faite')).toHaveCount(0);
   await expect(ecran).not.toContainText(/Faite|faite|à faire|manqué|en retard|verrouill/);
   // Toutes les rangées se ressemblent (même opacité, même couleur de titre) et font 44 au moins.
@@ -71,7 +71,7 @@ test('l\'écran Programme : la présentation, une carte par étape (son titre se
   await expect(page).toHaveURL(/#\/bien-etre\/programme\/ce-qui-compte$/);
   const v = vue(page, 'Ce qui compte pour moi');
   await expect(bouton(v, 'Commencer')).toBeVisible();
-  await expect(v.locator('.lecteur-duree')).toHaveText(/^6\smin · assis$/);
+  await expect(v.locator('.lecteur-duree')).toHaveText(/^6\smin\s·\sassis$/);
   await bouton(v, 'Fermer').click();
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
@@ -84,7 +84,7 @@ test('l\'écran Programme : la présentation, une carte par étape (son titre se
 test('reprise en 1 toucher : la carte Programme lance la séance qui suit la dernière faite ; menée au bout, elle porte « Faite le » et la suivante vient', async ({ page }) => {
   // Au tout début : la première séance.
   await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Respiration abdominale\s*3\smin · assis ou allongé$/);
+  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Respiration abdominale\s*3\smin\s·\sassis ou allongé$/);
   // Respiration abdominale faite le 12/10 : vient Pause d'une minute.
   await faite(page, 'respiration-abdominale', '2026-10-12');
   await page.reload();
@@ -116,7 +116,7 @@ test('reprise en 1 toucher : la carte Programme lance la séance qui suit la der
   await expect(page.getByRole('status').getByRole('button', { name: 'Noter mon émotion' })).toBeVisible();
   // La séance qui vient : celle qui suit.
   await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Les sons' })).toBeVisible();
-  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Les sons\s*5\smin · assis$/);
+  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Les sons\s*5\smin\s·\sassis$/);
   // L'écran Programme : la coche et « Faite le », la date la plus récente ; rien ailleurs.
   await carteProgramme(page).getByRole('link').click();
   await expect(rangee(page, 'Pause d\'une minute').locator('.seance-faite')).toHaveText('Faite le 15/10');
@@ -282,7 +282,7 @@ test('une cohérence cardiaque lancée depuis sa carte ou Moment difficile ne ma
   await aller(page, '#/bien-etre/programme');
   await rangee(page, 'Cohérence cardiaque').click();
   const v = vue(page, 'Cohérence cardiaque');
-  await expect(v.locator('.lecteur-duree')).toHaveText(/^5\smin · assis$/);
+  await expect(v.locator('.lecteur-duree')).toHaveText(/^5\smin\s·\sassis$/);
   await bouton(v, 'Commencer').click();
   await expect(v.locator('.lecteur-reste')).toHaveText(/^il reste (5:00|4:59)$/);
   await page.clock.runFor(4300);

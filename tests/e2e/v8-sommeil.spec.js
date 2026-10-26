@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { toucher, groupe, viderBase, aller, entreeDuJour } from '../aides/saisie.js';
+import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
 // v8 (5/9) · Le sommeil en heures et en qualité (spec §7 bis), les détails dans leur carte (Q5) : la carte Sommeil et son lien
@@ -76,16 +76,20 @@ const soir = async (page) => {
 
 // ---------- Point de vigilance 3 ----------
 
-test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › », tient sans défiler à 390 × 797, en clair et en sombre, à 21 h, entre 0 h et 4 h et avec le bandeau', async ({ page }) => {
+// v8 (8/9, Q27) : à 21 h et entre 0 h et 4 h, avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas,
+// spec §12.7). Avec le bandeau, à 390 × 797 sans zones sûres, comme en v7 : avec elles, le soir défile (le Diagnostic dit
+// la marge, tests/e2e/v8-fiabilite.spec.js).
+test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › », tient sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h, et avec le bandeau à 390 × 797', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   const cas = [
+    ['bandeau', async () => { await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true })); await expect(page.locator('.bandeau')).toBeVisible(); }],
     ['21 h', async () => {}],
     ['01:30', async () => { await page.clock.setSystemTime(new Date(2026, 9, 16, 1, 30)); await page.reload(); }],
-    ['bandeau', async () => { await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true })); await expect(page.locator('.bandeau')).toBeVisible(); }],
   ];
-  for (const [schema] of THEMES) {
-    await page.emulateMedia({ colorScheme: schema });
-    for (const [nom, preparer] of cas) {
+  for (const [nom, preparer] of cas) {
+    if (nom === '21 h') { await page.setViewportSize({ width: 390, height: 844 }); await simulerZonesSures(page); }
+    for (const [schema] of THEMES) {
+      await page.emulateMedia({ colorScheme: schema });
       const quoi = `${schema} · ${nom}`;
       await page.clock.setSystemTime(new Date(2026, 9, 15, 21, 0));
       await viderBase(page);

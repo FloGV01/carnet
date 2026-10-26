@@ -4,8 +4,8 @@
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
 .ecran {
   flex: 1;
-  padding: calc(4px + env(safe-area-inset-top)) calc(var(--marge) + env(safe-area-inset-right))
-           calc(100px + env(safe-area-inset-bottom)) calc(var(--marge) + env(safe-area-inset-left));
+  padding: calc(4px + var(--zone-haut)) calc(var(--marge) + var(--zone-droite))
+           calc(100px + var(--zone-bas)) calc(var(--marge) + var(--zone-gauche));
   display: flex; flex-direction: column;
 }
 .discret { color: var(--text-2); font-size: var(--t-note); }
@@ -50,7 +50,6 @@
 .ligne-carte[disabled] { color: var(--text-2); }
 .ligne-info { display: flex; align-items: center; justify-content: space-between; min-height: var(--cible); padding: 0 16px; font-size: var(--t-sous); }
 .ligne-info > span:last-child { color: var(--text-2); }
-.lien-ligne { color: var(--text); text-decoration: none; }
 
 /* ---------- Boutons ---------- */
 /* Bouton neutre 2b : sans bordure, rayon 12, --surface sur le fond, --surface-2 dans une carte. L'action (Terminer,
@@ -75,7 +74,6 @@
 .btn-lien[disabled] { color: var(--line); cursor: default; }
 .lien-discret { color: var(--text-2); text-decoration: underline; border: 0; background: none; font-size: var(--t-sous); min-height: var(--cible); padding: 0; }
 .lien { color: var(--action); text-decoration: none; min-height: var(--cible); display: inline-flex; align-items: center; font-weight: 600; font-size: var(--t-sous); }
-.lien-bouton { text-decoration: none; }
 .pilule {
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 16px 0 12px;
   border-radius: var(--r-bouton); border: 0; background: var(--fond-choix); color: var(--text);
@@ -107,7 +105,7 @@
 .onglets {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex;
   background: var(--bg); border-top: 1px solid var(--line);
-  padding: 4px calc(2px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(2px + env(safe-area-inset-left));
+  padding: 4px calc(2px + var(--zone-droite)) var(--zone-bas) calc(2px + var(--zone-gauche));
 }
 .onglet {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -123,7 +121,7 @@
 /* ---------- Bandeau de mise à jour, bandeau TEST ---------- */
 .bandeau {
   position: sticky; top: 0; z-index: 20; display: flex; justify-content: center; align-items: center; gap: 2px;
-  min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0;
+  min-height: calc(44px + var(--zone-haut)); padding: var(--zone-haut) 16px 0;
   background: var(--surface); color: var(--text); font-size: var(--t-sous);
   box-shadow: inset 0 -1px 0 var(--line); /* un filet en bas, sans hauteur en plus : le soir tient toujours */
 }
@@ -134,21 +132,27 @@
 .bandeau > span:first-child { flex: 1 0 100%; text-align: center; padding-top: 4px; line-height: 1.25; }
 .bandeau button { border: 0; background: none; color: var(--action); font-weight: 600; font-size: inherit; padding: 0 6px; min-height: var(--cible); }
 .bandeau button[disabled] { color: var(--text-2); }
+/* Le bandeau prend la zone sûre du haut (sous l'encoche) : l'écran qui le suit ne la compte pas une seconde fois (v8,
+   Q27 ; avec 47 px simulés, le soir perdait 47 px sous le bandeau). */
+.bandeau ~ main { --zone-haut: 0px; }
 .bandeau-test { background: var(--surface-2); text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--text-2); padding: 2px; }
 
 /* ---------- Toast ---------- */
 .toast {
-  position: fixed; left: var(--marge); right: var(--marge); bottom: calc(122px + env(safe-area-inset-bottom)); z-index: 45;
+  position: fixed; left: var(--marge); right: var(--marge); bottom: calc(122px + var(--zone-bas)); z-index: 45;
   display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 16px;
   background: var(--text); color: var(--bg); border-radius: var(--r-bouton); font-size: var(--t-sous);
 }
 /* Dans un parcours, en haut, juste sous l'en-tête : les réponses sont en bas, près du pouce (2b). En grand texte,
    l'en-tête grandit (le repère d'étape passe sous le nom) : le toast se cale sur son bas réel, par ancrage CSS (iOS 26),
    et à défaut sous ses 48 px. */
-.toast.en-haut { top: calc(52px + env(safe-area-inset-top)); bottom: auto; }
+.toast.en-haut { top: calc(52px + var(--zone-haut)); bottom: auto; }
 @supports (top: anchor(bottom)) {
-  .toast.en-haut { top: calc(anchor(--tete-parcours bottom, calc(48px + env(safe-area-inset-top))) + 4px); }
+  .toast.en-haut { top: calc(anchor(--tete-parcours bottom, calc(48px + var(--zone-haut))) + 4px); }
 }
+/* Une feuille ou une boîte ouverte (v8, Q29) : le toast passe dessous, même dans un parcours (dont la feuille vit dans son
+   propre plan, sous le toast) : « Épisode enregistré » ne couvre plus « Mon plan ». Il revient à la fermeture. */
+.app:has(.voile) .toast { z-index: 39; }
 .toast-texte { flex: 1; }
 .toast button { border: 0; background: none; color: var(--bg); font-weight: 600; font-size: inherit; min-height: var(--cible); padding: 0 12px; text-decoration: underline; }
 
@@ -294,7 +298,7 @@ button.effacer svg { width: 18px; height: 18px; }
 
 /* Replis */
 /* Un filet plein au-dessus (2b : pas de tirets). */
-.repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
+.repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + var(--zone-haut)); }
 .repli-tete { width: 100%; display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible-grille); border: 0; background: none; padding: 0; text-align: left; color: var(--text); }
 .repli-fleche { display: inline-flex; color: var(--text-2); transition: transform var(--duree); }
 .repli-fleche svg { width: 16px; height: 16px; stroke-width: 2; }
@@ -356,7 +360,7 @@ button.effacer svg { width: 18px; height: 18px; }
 
 /* ---------- Bouton flottant ---------- */
 .fab {
-  position: fixed; right: calc(var(--marge) + env(safe-area-inset-right)); bottom: calc(57px + env(safe-area-inset-bottom)); z-index: 9;
+  position: fixed; right: calc(var(--marge) + var(--zone-droite)); bottom: calc(57px + var(--zone-bas)); z-index: 9;
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 18px 0 14px; border-radius: var(--r-bouton);
   background: var(--action); color: var(--action-on); font-weight: 600; font-size: var(--t-corps); text-decoration: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .16);
@@ -367,11 +371,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours {
   position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column;
   background-color: var(--bg);
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: var(--zone-haut) var(--zone-droite) var(--zone-bas) var(--zone-gauche);
 }
 /* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600) derrière un petit carré à sa couleur,
    et, à droite, le repère d'étapes en points de 9 px, jamais une barre : faites, pleines à la couleur du parcours ;
-   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --surface-2.
+   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --line (v8).
    En grand texte, rien ne se coupe : le nom ne passe pas à la ligne tant qu'il tient seul sur une ligne, et quand les
    trois ne tiennent plus côte à côte, le repère passe dessous, dans une rangée de 28 (flex-wrap). L'ancre
    --tete-parcours cale le toast sous l'en-tête, quelle que soit sa hauteur. */
@@ -384,7 +388,8 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
 .point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
 .reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
-.reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); }
+/* À venir (v8, Q29) : en --line, au lieu de --surface-2, qui ne se voyait pas sur le fond clair (1:1). */
+.reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
 .reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
 /* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
@@ -423,7 +428,7 @@ button.effacer svg { width: 18px; height: 18px; }
 .panneau-reponses {
   flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column; gap: 18px;
-  padding: 16px calc(var(--marge) + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(var(--marge) + env(safe-area-inset-left));
+  padding: 16px calc(var(--marge) + var(--zone-droite)) calc(16px + var(--zone-bas)) calc(var(--marge) + var(--zone-gauche));
   background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-feuille) var(--r-feuille) 0 0;
   container: reponses / inline-size;
 }

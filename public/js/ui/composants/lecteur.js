@@ -12,8 +12,8 @@
 //   pause au milieu de la première.
 // - La fin (au bout, ou « Terminer ») : trois bols, « Fin de l'exercice. » dit par la voix si elle est allumée, et rien
 //   d'autre à l'écran (ni anneau ni temps : rien ne dit ce qui a été fait ou non) ; le lecteur se ferme seul 6 s plus
-//   tard et revient à l'écran d'origine, où le message « Noter mon émotion » reste 6 s. Rien ne s'ouvre seul, aucune
-//   félicitation.
+//   tard et revient à l'écran d'origine, où le message « Noter mon émotion » reste 6 s (après une séance notée seulement,
+//   v8). Rien ne s'ouvre seul, aucune félicitation.
 // - Pause, page cachée (écran verrouillé, autre app) ou quittée : la voix et les sons se coupent, le verrou d'écran est
 //   rendu ; « Reprendre » repart de l'étape, le souffle d'un début de cycle. Le verrou d'écran est gardé pendant la séance.
 // - Réglages du lecteur, gardés sur cet appareil (localStorage) : « Son : Aucun · Repères · Repères + souffle » (Repères
@@ -271,9 +271,11 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     annoncer(0, true);
     garderEcran().then(tenir);
   };
+  // Après la fin, le message « Noter mon émotion » ne paraît qu'après une séance notée (v8, Q29) : « Terminer » touché
+  // trop tôt (moins de 60 s, sans être allé au bout) ne laisse aucun message, comme une respiration arrêtée tôt.
   const fermer = () => {
     clearTimeout(fermeture.current);
-    if (courant.current.etat === 'fin') {
+    if (courant.current.etat === 'fin' && suivi.notee()) {
       afficherToast(FIN, { libelle: NOTER_EMOTION, faire: () => { location.hash = '#/moment'; } }, MESSAGE_MS);
     }
     location.hash = retour;

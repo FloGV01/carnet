@@ -23,3 +23,19 @@ export async function aller(page, hash) {
   await appPrete(page);
   await page.evaluate((h) => { location.hash = h; }, hash);
 }
+
+// Les zones sûres de l'iPhone dans l'app installée (v8, Q27, spec §12.7) : 47 px en haut (encoche) et 34 en bas (barre
+// d'accueil), les valeurs standard en 390 × 844. WebKit sans iPhone les met à 0 : on les pose sur les variables de
+// tokens.css (--zone-*), par lesquelles passe toute l'app, à chaque chargement de la page (rechargements compris).
+export async function simulerZonesSures(page, { haut = 47, bas = 34 } = {}) {
+  const poser = (z) => {
+    const appliquer = () => {
+      document.documentElement.style.setProperty('--zone-haut', `${z.haut}px`);
+      document.documentElement.style.setProperty('--zone-bas', `${z.bas}px`);
+    };
+    if (document.documentElement) { appliquer(); return; }
+    new MutationObserver((_, o) => { if (document.documentElement) { o.disconnect(); appliquer(); } }).observe(document, { childList: true });
+  };
+  await page.addInitScript(poser, { haut, bas });
+  await page.evaluate(poser, { haut, bas });
+}

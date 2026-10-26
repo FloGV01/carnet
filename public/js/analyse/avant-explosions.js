@@ -61,8 +61,3 @@ export function tesMoments(episodes, du, au, items = []) {
   }
   return { groupes };
 }
-
-// Compatibilité v4 : le groupe des explosions seul.
-export function avantExplosions(episodes, du, au, items = []) {
-  return tesMoments(episodes, du, au, items).groupes[0];
-}

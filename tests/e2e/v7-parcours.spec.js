@@ -125,7 +125,8 @@ const points = (vue) => vue.locator('.reperes').evaluate((r) => [...r.children].
     fond: s.backgroundColor, anneau: s.boxShadow };
 }));
 
-test('repère d\'étape en points, jamais une barre : faites et en cours à la couleur du parcours, l\'étape en cours cerclée de -tint-2, à venir en --surface-2', async ({ page }) => {
+// v8 (8/9, Q29) : les étapes à venir passent de --surface-2 (invisible sur le fond clair) à --line.
+test('repère d\'étape en points, jamais une barre : faites et en cours à la couleur du parcours, l\'étape en cours cerclée de -tint-2, à venir en --line', async ({ page }) => {
   const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
@@ -151,7 +152,7 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à la c
       expect(p[0].anneau, `${quoi} : faite, sans anneau`).toBe('none');
       expect(p[1].fond, `${quoi} : en cours`).toBe(rgb(t[`c-${couleur}`]));
       expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t[`c-${couleur}-tint-2`])} 0px 0px 0px 3px`);
-      expect(p[2].fond, `${quoi} : à venir`).toBe(rgb(t['surface-2']));
+      expect(p[2].fond, `${quoi} : à venir`).toBe(rgb(t.line));
       // En-tête : « Fermer » (600, action), puis le nom derrière un petit carré à la couleur du parcours, sans « · ».
       const tete = await vue.locator('.parcours-tete').evaluate((h) => {
         const f = h.querySelector('.fermer');
