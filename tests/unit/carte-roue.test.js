@@ -100,6 +100,21 @@ test('docs/decisions.md : le tableau des 33 équivalents How We Feel donne la pl
   for (const m of MOTS.filter((x) => !equivalents.has(x.id))) assert.ok(autres.includes(m.libelle), `${m.libelle} absent des 46 autres`);
 });
 
+// v8 (9/9) : les définitions sont relues par l'utilisateur après la publication (spec §2), dans docs/decisions.md.
+test('docs/decisions.md : les 79 définitions, une ligne par mot sous sa famille, au texte de Carnet', () => {
+  const doc = lire('docs/decisions.md');
+  const debut = doc.indexOf('**Les 79 définitions**');
+  assert.ok(debut > 0, 'section des définitions absente');
+  const section = doc.slice(debut, doc.indexOf('**Les 8 séances nouvelles**', debut));
+  for (const f of FAMILLES) {
+    const titre = `#### ${f.libelle} (${f.mots.length})`;
+    assert.ok(section.includes(titre), `${titre} absent`);
+    const bloc = `${section.slice(section.indexOf(titre)).split('\n\n#### ')[0]}\n`;
+    for (const m of f.mots) assert.ok(bloc.includes(`- **${m.libelle}** : ${DEFINITIONS[m.id]}\n`), `${m.libelle} : définition absente ou pas à jour`);
+  }
+  assert.equal((section.match(/^- \*\*/gm) || []).length, 79);
+});
+
 test('les six zones de la carte : chaque mot une fois, les mots d\'une famille côte à côte, du plus haut au plus bas', () => {
   const vus = [];
   const comptes = {};

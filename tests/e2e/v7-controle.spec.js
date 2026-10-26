@@ -13,6 +13,9 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 //   élément visible ne sort de l'écran.
 // - Pas de tirets (2b) : aucun filet ni cadre en pointillés sur ces écrans ; tout choix fait a sa coche.
 // - Réglages et Le soir en listes groupées 2b, carrés d'icônes ; l'Historique et ses puces 2b.
+// v8 (9/9) : le parcours passe aussi par les écrans de la v8 : la Durée et le détail du Sport dans leurs cartes, la
+// carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur (avant, étape rythmée, pause,
+// fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), Réglages › Émotions (un sens corrigé).
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -26,14 +29,17 @@ const PLAN = {
 // Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
 // deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
 // texte d'aide est mesuré. Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
-// la pastille « Sommeil » choisie et le texte gris d'une question abordée. Renvoie les identifiants utiles.
+// la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
+// une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
+// bout et un sens de mot corrigé (Réglages › Émotions). Renvoie les identifiants utiles.
 async function verser(page) {
   return page.evaluate(async (plan) => {
     const r = window.__carnet.repo;
     const jours = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15'];
     for (const [i, d] of jours.entries()) {
       await r.journal.patch(d, {
-        lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
+        lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: i === 5 ? null : ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
+        heuresSommeil: i % 4 === 3 ? null : 4 + (i % 7),
         contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
         pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
       });
@@ -55,7 +61,9 @@ async function verser(page) {
     await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });
     await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
     await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
+    await r.seances.creer({ date: '2026-10-11', heure: '09:30', exercice: 'respiration-abdominale', origine: 'bien-etre', dureeS: 180, fin: true, programme: 'respiration-abdominale' });
     await r.meta.ecrire('monPlan', plan);
+    await r.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par ce qui se répète, et ça dure.' });
     await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
     return { ep: ep.id, rdv: rdv.id, tr: tr.id };
   }, PLAN);
@@ -170,6 +178,11 @@ const sansCoche = (page) => page.evaluate(() => [...document.querySelectorAll('[
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
+  // v8 (9/9) : la Durée de la nuit (« Durée › ») et le détail du Sport (« Détail › ») ouverts dans leurs cartes.
+  ['Aujourd\'hui, Durée et Sport en détail', async (p) => {
+    await p.getByRole('button', { name: 'Durée de la nuit', exact: true }).click();
+    await p.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  }, '.aujourdhui .heures-sommeil'],
   ['Émotion du moment', (p) => aller(p, '#/moment'), '.tuiles-emotion'],
   // v8 : la carte, ouverte par une tuile, un mot choisi et sa définition (« Ce que je faisais » ouvert d'abord : l'écran
   // ne se ferme pas seul pendant le contrôle).
@@ -178,13 +191,32 @@ const ECRANS = (ids) => [
     await p.getByRole('button', { name: 'Énergie moyenne, plutôt désagréable', exact: true }).click();
     await p.getByRole('button', { name: 'Préoccupé, famille Peur', exact: true }).click();
   }, '.mot-definition'],
+  // v8 (9/9) : « Toute la carte », puis un appui long sur un mot au sens corrigé : sa bulle cerclée et son sens, sans
+  // rien choisir.
+  ['Émotion du moment, toute la carte et un sens montré', async (p) => {
+    await p.getByRole('button', { name: 'Énergie', exact: true }).click();
+    await p.getByRole('button', { name: 'Toute la carte', exact: true }).click();
+    const carte = p.getByRole('group', { name: 'Émotion', exact: true });
+    await expect(carte).not.toHaveAttribute('aria-disabled', 'true');
+    const bulle = carte.getByRole('button', { name: 'Irrité, famille Colère', exact: true });
+    await bulle.scrollIntoViewIfNeeded();
+    const b = await bulle.boundingBox();
+    await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await p.mouse.down();
+    await p.clock.runFor(800);
+    await p.mouse.up();
+    await expect(p.locator('.definition-carte')).toContainText('agacé par ce qui se répète');
+  }, '.bulle-carte.montree'],
   ['Épisode, étape 1', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/episode/nouveau'); }, '.titre-question'],
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
   ['Analyse', (p) => aller(p, '#/analyse'), '.analyse .selecteur-periode'],
   ['Comprendre, Explosions', (p) => aller(p, '#/comprendre/explosions'), '.comprendre figure.graphe'],
   ['Comprendre, Énergie', (p) => aller(p, '#/comprendre/energie'), '.comprendre figure.graphe'],
-  ['Comprendre, Rythmes', (p) => aller(p, '#/comprendre/rythmes'), '.comprendre figure.graphe'],
+  ['Comprendre, Rythmes', (p) => aller(p, '#/comprendre/rythmes'), '.comprendre figure.g-mes-nuits svg'],
+  // v8 (9/9) : Mes nuits en tableau.
+  ['Comprendre, Mes nuits en tableau', (p) => p.locator('figure.g-mes-nuits').getByRole('button', { name: 'Voir en tableau' }).click(),
+    '.comprendre figure.g-mes-nuits table'],
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
   ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .carte-programme .seance-qui-vient'],
@@ -197,6 +229,11 @@ const ECRANS = (ids) => [
     for (let i = 0; i < 6; i += 1) await p.getByRole('button', { name: 'Suivant', exact: true }).click();
   }, '.mot-souffle'],
   ['Exercice en pause', (p) => p.getByRole('button', { name: 'Pause', exact: true }).click(), '.reglages-pause .reglages-lecteur'],
+  // v8 (9/9) : la fin (« Fin de l'exercice. » seul), puis la cohérence cardiaque de l'onglet dans le lecteur, avant de
+  // commencer et pendant (le disque, sans étapes).
+  ['Exercice, fin', (p) => p.getByRole('button', { name: 'Terminer', exact: true }).click(), '.lecteur-plein > .lecteur-consigne'],
+  ['Cohérence cardiaque', async (p) => { await aller(p, '#/bien-etre'); await aller(p, '#/bien-etre/coherence'); }, '.lecteur-avant .reglages-lecteur'],
+  ['Cohérence cardiaque en cours', (p) => p.getByRole('button', { name: 'Commencer', exact: true }).click(), '.mot-souffle'],
   ['Soins, Rendez-vous', async (p) => { await aller(p, '#/soins'); await p.getByRole('button', { name: 'Soins : Rendez-vous', exact: true }).click(); }, '.carte-prochain'],
   ['Soins, Notes', (p) => p.getByRole('button', { name: 'Soins : Notes', exact: true }).click(), '.notes-en-vrac'],
   ['Soins, Traitement', (p) => p.getByRole('button', { name: 'Soins : Traitement', exact: true }).click(), '.tableau-traitement'],
@@ -210,6 +247,8 @@ const ECRANS = (ids) => [
   ['Réglages › Le soir', (p) => aller(p, '#/reglages/journee'), '.ma-journee .avec-carres'],
   ['Réglages › Listes', (p) => aller(p, '#/reglages/listes'), '.listes .carte-groupe'],
   ['Réglages › Émotions', (p) => aller(p, '#/reglages/emotions'), '.reglages-emotions .bouton-definition'],
+  // v8 (9/9) : le sens corrigé d'Irrité, ouvert dans son champ, et « Revenir au texte de Carnet ».
+  ['Réglages › Émotions, un sens corrigé', (p) => p.getByRole('button', { name: /^Irrité/ }).click(), '.reglages-emotions .champ-definition + .revenir-carnet'],
   ['Réglages › une liste', (p) => aller(p, '#/reglages/listes/declencheur'), '.element-liste'],
   ['Réglages › Rappels', (p) => aller(p, '#/reglages/rappel'), '.heures-moment'],
   ['Réglages › Moment difficile', (p) => aller(p, '#/reglages/moment-difficile'), '.reglage-respiration'],

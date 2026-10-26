@@ -219,14 +219,21 @@ test('les mots d\'exemple d\'une tuile sont entiers dans le cadre dès l\'ouvert
   expect(await entieres(vue, [nomBulle('roue:colere:mecontent'), nomBulle('roue:tristesse:honteux')])).toEqual([]);
 });
 
-// Deux touchers à 120 ms au même point, le centre d'une tuile : sur l'iPhone, width=device-width supprime le délai du
-// double toucher, ce sont deux clics. La vue change entre les deux : le second tombe sur la carte qui vient de paraître.
+// Deux touchers à 120 ms d'écart, ici au même point, le centre d'une tuile : sur l'iPhone, width=device-width supprime le
+// délai du double toucher, ce sont deux clics. La vue change entre les deux : le second tombe sur la carte qui vient de
+// paraître. Les 120 ms sont mesurées sur l'horloge de la page, arrêtée avant le premier toucher (v8, 9/9) : l'horloge qui
+// courait ajoutait le temps réel entre les deux, et sous la charge de npm test la garde de 350 ms a expiré une fois avant
+// le second. L'appelant la relance (page.clock.resume()) une fois ses vérifications faites.
+const toucherDeuxFois = async (page, [x1, y1], [x2, y2]) => {
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 500));
+  await page.touchscreen.tap(x1, y1);
+  await page.clock.runFor(120);
+  await page.touchscreen.tap(x2, y2);
+};
 const doubleToucher = async (page, bouton) => {
   const b = await bouton.boundingBox();
   const [x, y] = [b.x + b.width / 2, b.y + b.height / 2];
-  await page.touchscreen.tap(x, y);
-  await page.clock.runFor(120);
-  await page.touchscreen.tap(x, y);
+  await toucherDeuxFois(page, [x, y], [x, y]);
   return [x, y];
 };
 const finAnimations = (vue) => vue.locator('.panneau-reponses').evaluate((p) => Promise.all(p.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))));
@@ -260,6 +267,7 @@ test('point de vigilance 5 : deux touchers rapides, sur une tuile puis au même 
         await doubleToucher(page, laTuile);
         await expect(carte(vue), quoi).toBeVisible();
         await page.clock.runFor(400);
+        await page.clock.resume();
         expect(await releves(page)(), quoi).toMatchObject([{ emotion: null, energie: `energie:${e}` }]);
         await expect(carte(vue).getByRole('button', { pressed: true }), quoi).toHaveCount(0);
         // 2. La tuile, puis 120 ms plus tard une bulle qui vient de paraître sous le doigt : rien n'est choisi.
@@ -269,11 +277,10 @@ test('point de vigilance 5 : deux touchers rapides, sur une tuile puis au même 
         await laTuile.click();
         await expect(laTuile, quoi).toHaveAttribute('aria-pressed', 'false');
         const t = await laTuile.boundingBox();
-        await page.touchscreen.tap(t.x + t.width / 2, t.y + t.height / 2);
-        await page.clock.runFor(120);
-        await page.touchscreen.tap(bulle.x, bulle.y);
+        await toucherDeuxFois(page, [t.x + t.width / 2, t.y + t.height / 2], [bulle.x, bulle.y]);
         await expect(carte(vue), quoi).toBeVisible();
         await page.clock.runFor(400);
+        await page.clock.resume();
         expect(await releves(page)(), quoi).toMatchObject([{ emotion: null, energie: `energie:${e}` }]);
         await expect(carte(vue).getByRole('button', { pressed: true }), quoi).toHaveCount(0);
         // La garde passée, le même toucher choisit la bulle : c'est bien la garde qui a joué.
@@ -483,6 +490,34 @@ test('en grand texte (17, 19, 21, 23), les tuiles et la carte : chaque mot dans 
     await mot(vue, 'Jaloux', 'Colère').click();
     await expect(definition(vue)).toContainText('Jaloux');
     expect(await debordements(vue), `définition de Jaloux, ${taille} px`).toEqual([]);
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+  }
+});
+
+// Le haut du nom d'énergie de chaque tuile, et le nombre de lignes de ses mots d'exemple, dans l'ordre des tuiles.
+const nomsDesTuiles = (vue) => tuiles(vue).getByRole('button').evaluateAll((bs) => bs.map((b) => {
+  const lignes = new Set([...b.querySelectorAll('.exemple-tuile')].map((x) => Math.round(x.getBoundingClientRect().top)));
+  return { haut: b.querySelector('.libelle-choix').getBoundingClientRect().top, lignes: lignes.size };
+}));
+
+test('les tuiles (contrôle v8) : sur une rangée, les deux noms d\'énergie sont à la même hauteur, même quand les mots d\'exemple d\'une seule passent à la ligne ; tuile choisie comprise', async ({ page }) => {
+  for (const taille of [null, 21, 23]) {
+    const vue = await ouvrir(page);
+    await page.evaluate((x) => { document.documentElement.style.fontSize = x ? `${x}px` : ''; }, taille);
+    for (const choisie of [false, true]) {
+      if (choisie) {
+        await tuile(vue, 'Haute', 'agréable').click();
+        await retourEnergie(vue).click();
+        await expect(tuile(vue, 'Haute', 'agréable')).toHaveAttribute('aria-pressed', 'true');
+      }
+      const noms = await nomsDesTuiles(vue);
+      const ou = `${taille ? `${taille} px` : 'défaut'}${choisie ? ', Haute agréable choisie' : ''}`;
+      // Au texte par défaut, la tuile Haute de droite a ses exemples sur deux lignes, celle de gauche sur une : le cas
+      // où un contenu centré décalait les deux noms.
+      if (!taille) expect([noms[0].lignes, noms[1].lignes], ou).toEqual([1, 2]);
+      for (let r = 0; r < 3; r += 1) expect(Math.abs(noms[2 * r].haut - noms[2 * r + 1].haut), `${ou}, rangée ${r + 1}`).toBeLessThanOrEqual(0.5);
+    }
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
     await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
   }

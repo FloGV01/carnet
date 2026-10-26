@@ -623,3 +623,13 @@ Version 7.0.0, construite du 20 au 22/10 en 9 tâches sur la branche `dev`. Elle
 - la base passe à `DB_VERSION` 5 (store `seances`), la sauvegarde au format 5 ; le format de l'Export PSY change.
 
 Le détail, les appels du concepteur et ce qui attend l'utilisateur sont dans `docs/decisions.md`, à l'entrée du 22/10.
+
+## 16. v8 (26/10)
+
+Version 8.0.0, construite du 24 au 26/10 en 9 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`, qui fait foi là où elle s'écarte de celle-ci et de celle de la v7 :
+- l'**émotion du moment** se note sur une carte, comme How We Feel : une tuile (l'énergie, « plutôt désagréable » ou « plutôt agréable »), puis un mot, avec sa définition, corrigeable dans Réglages › Émotions ;
+- le **Bien-être** passe dans un lecteur avec des sons, et les exercices dans un **Programme** de 8 étapes et 17 séances, où une séance menée au bout porte « Faite le 12/10 », sans aucun compteur ;
+- le **sommeil** se note en heures et en qualité ; coucher, lever et réveils ne se saisissent plus le soir, et « Mes nuits » les montre nuit par nuit, aussi sur l'A4 des soignants ;
+- la base passe à `DB_VERSION` 6 (liste `sujetRdv`), la sauvegarde au format 6 ; le format de l'Export PSY change (la nuit dit ses heures).
+
+Le détail, les appels du concepteur, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 26/10.
