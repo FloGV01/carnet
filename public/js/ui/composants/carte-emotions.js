@@ -30,8 +30,8 @@ const NOM_FAMILLE = new Map(FAMILLES.flatMap((f) => f.mots.map((m) => [m.id, f.l
 const ZONES = ENERGIES.flatMap((energie) => COTES.map((cote) => ({ energie, cote, cle: cleZone({ energie, cote }), mots: motsDeZone({ energie, cote }) })));
 
 // Ouvre la carte sur une zone : centrée si elle tient dans le cadre, sinon son haut. Sans zone (« Toute la carte »), au
-// milieu : de part et d'autre du centre, sur la bande Moyenne. Positions de mise en page (offset*), que le fondu
-// d'apparition ne fausse pas.
+// milieu : de part et d'autre du centre, sur la bande Moyenne, la moitié de chaque zone et sa légende (rangée contre le
+// centre, composants.css). Positions de mise en page (offset*), que le fondu d'apparition ne fausse pas.
 function centrer(cadre, cle) {
   const carte = cadre.firstElementChild;
   const zone = carte.querySelector(`[data-zone="${cle || cleZone({ energie: 'moyenne', cote: 'gauche' })}"]`);
@@ -149,7 +149,7 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
       onScroll=${() => surGeste.relancer()}>
       <div class="carte-roue">
         ${ZONES.map((z) => html`<div class=${`zone-carte zone-${z.cote}`} data-zone=${z.cle} role="group" aria-labelledby=${`legende-${z.cle}`} tabindex="-1">
-          <p class="legende-zone" id=${`legende-${z.cle}`}>${libelle(ID_ENERGIE[z.energie])} · ${COTE_TEXTE[z.cote]}</p>
+          <p class="legende-zone" id=${`legende-${z.cle}`}><span>${libelle(ID_ENERGIE[z.energie])} ·</span> <span>${COTE_TEXTE[z.cote]}</span></p>
           <div class="bulles-zone">${z.mots.map((id) => {
             const choisi = emotion === id;
             const nom = libelleEmotion(id);

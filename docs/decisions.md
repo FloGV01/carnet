@@ -669,7 +669,7 @@ Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Somme
 
 Les tests de la v7 restaient aux tailles d'avant (844 sans zones, 797), qui laissent 34 px de plus que l'iPhone : verts, ils ne protégeaient rien. Ils tournent maintenant avec les zones, et les quatre attentes qui ne tiennent pas sont marquées `test.fail()` (`v7-aujourdhui.spec.js` : P2, P3, « J'ai fini » avec le bandeau ; `v8-sommeil.spec.js` : vigilance 3 avec le bandeau). Une marque qui passe fait échouer la suite : on la retire quand la mise en page change.
 
-Le Diagnostic donne les deux marges réelles, « Marge du soir » et « Marge de « J'ai fini » », prises sur le soir d'aujourd'hui seulement (un autre jour a « Revenir à aujourd'hui » en plus).
+Le Diagnostic donne les deux marges réelles, « Marge du soir » et « Marge de « J'ai fini » », prises sur le soir d'aujourd'hui seulement (un autre jour a « Revenir à aujourd'hui » en plus), détails fermés (relecture finale : voir plus bas).
 
 Pistes à proposer, aucune appliquée :
 - un bandeau d'une seule rangée de 44 px sur Aujourd'hui : environ 23 px de gagnés (67 sous la zone aujourd'hui), il resterait 5 px à trouver pour le soir avec le bandeau ;
@@ -699,6 +699,13 @@ Pistes à proposer, aucune appliquée :
   - dans les graphiques, le texte des SVG ne grandit pas avec le grand texte, comme ailleurs dans Comprendre ;
   - le lecteur en très grand texte. Les 17 séances ont été mesurées étape par étape, avec les zones sûres. Au texte par défaut et à 19 px, rien ne défile. À 21 px, une étape défile de 2 px. À 23 px, 8 étapes de 6 séances défilent, de 6 à 72 px. Avec les consignes les plus longues, le bas de l'anneau et « il reste » passent alors sous Précédent et Suivant. La consigne reste entière en haut, la voix et les bols ne changent pas, et l'anneau revient en défilant. Réduire la consigne ou l'anneau en grand texte irait contre le grand texte, et c'est à juger sur l'iPhone (« À essayer sur l'iPhone »).
 
+### Relecture finale
+
+- **La marge du soir du Diagnostic est celle du soir, détails fermés.** Elle était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait « −71,7 px (le soir défile) » d'un soir qui tient (28,3 px fermé, dans WebKit avec les zones). Elle n'est plus prise, ni quand la fenêtre change de taille, tant que « Durée › » ou le « Détail › » du Sport ou du Contact est ouvert ; refermés, la mesure reprend. Test : `v8-fiabilite.spec.js` (Q27, détails fermés).
+- **Le repère Bien-être de Mes jours est un losange plein.** Le contour arrondi de la v8 (Q29) faisait, sur 30 jours, un ovale de 5 × 8 px qui se lisait « 0 » : la rangée disait « 0  00 00 », comme un compteur à zéro. Le losange est plein, à la couleur de Bien-être (3,9:1 sur la carte en clair, 8,3:1 en sombre), de 8 px sur 7 jours et de 6 sur 30, avec 2 px entre deux jours voisins (1 au moins, par mois sur 5 ans). Il ne se confond ni avec « nuit bien », une barre du même bleu en sombre, ni avec un chiffre. Toujours le même repère, sans nombre.
+- **Les légendes de la carte de l'Émotion sont rangées contre le centre**, comme les bulles : celle de gauche alignée à droite, celle de droite à gauche. « Toute la carte » s'ouvre au milieu et ne montre que la moitié de chaque zone Moyenne : les deux légendes étaient hors du cadre, et rien ne disait quel côté était désagréable et lequel agréable. Elles tiennent maintenant dans cette moitié, à la marge de la page du bord de l'écran. Quand la place manque, la légende passe à la ligne après l'énergie (« Moyenne · », puis « plutôt désagréable ») : à 390 de large au texte par défaut, seule « Moyenne · plutôt désagréable » le fait ; à 375, les trois de gauche ; en grand texte, davantage. La légende ne change pas de place entre « Toute la carte » et une tuile. Test : `v8-emotion.spec.js`, à 390 et 375 de large, au texte par défaut et à 23 px.
+- **Un test instable stabilisé** : « la Vue soignants ouverte à froid lit la base une seule fois » (Q26) a échoué une fois dans une suite complète, avec deux lectures des rendez-vous. Aujourd'hui, ouvert au rechargement, lit les rendez-vous (le prochain) ; sous charge, sa lecture tombait après la pose des compteurs. Le test attend maintenant Aujourd'hui avant d'ouvrir la Vue soignants, comme son voisin.
+
 ### Le format de l'Export PSY change (v8, à signaler)
 
 Si l'assistant PSY de l'utilisateur lit la nuit d'un jour, ses consignes sont à mettre à jour :
@@ -715,6 +722,10 @@ Si l'assistant PSY de l'utilisateur lit la nuit d'un jour, ses consignes sont à
 - **Deux titres voisins dans Comprendre › Énergie** : « Selon ce que tu faisais » (v6), puis « Émotions selon ce que je faisais » (le titre de la spec, Q18).
   - Ils se suivent avec deux personnes différentes. Le titre de la spec est gardé ; « Avant mes jours à énergie basse » et « Mes nuits » disent aussi « mes ».
   - À harmoniser si l'utilisateur le veut.
+- **« Tes nuits selon le jour » ne reçoit plus de nuits nouvelles** (relecture finale). Ce graphique de Comprendre › Rythmes, juste sous « Mes nuits », ne compte que les nuits qui ont un coucher et un lever (`nuitsParSoir`, par `minutesCoucherLever`). Depuis la v8, le soir ne les propose plus : « Nuit en détail » est masqué par défaut, et ne se réaffiche que dans Réglages › Le soir. Seules les nuits anciennes l'alimentent : en « 3 mois », il finira toujours sur « Pas encore assez de données pour le dire ». Le code ne change pas sans décision. Trois choix :
+  - le garder tel quel, pour les nuits anciennes ;
+  - le masquer quand la période n'a aucune nuit avec un coucher et un lever ;
+  - le retirer.
 - **Les points en attente de la v7 restent ouverts** : le pire cas du soir à 8 rubriques, « Effacer définitivement » en rouge, la rubrique du soir « Humeur ». Seule la ligne de CLAUDE.md sur le vocabulaire de la roue a été ajoutée, le 22/10.
 
 ### À essayer sur l'iPhone
@@ -724,7 +735,7 @@ Si l'assistant PSY de l'utilisateur lit la nuit d'un jour, ses consignes sont à
   - Allumé : il joue, et la musique se met en pause.
   - Moment difficile et « Respirer » restent muets au départ.
 - **Le souffle** : un bruit doux qui monte pendant l'inspiration et redescend à l'expiration, calé sur le disque. À essayer : son volume, sa douceur, et les bols de début, d'étape et de fin.
-- **La marge réelle du soir.** Le Diagnostic (appui long sur la version, dans Réglages) donne la hauteur utile, les zones sûres, la « Marge du soir » et la « Marge de « J'ai fini » » de l'app installée. Elles sont à comparer aux valeurs simulées : 28,3 px et −19,7 px (tâche 8).
+- **La marge réelle du soir.** Le Diagnostic (appui long sur la version, dans Réglages) donne la hauteur utile, les zones sûres, la « Marge du soir » et la « Marge de « J'ai fini » » de l'app installée. Elles sont prises sur le soir d'aujourd'hui, détails fermés : « Durée › » ouverte, le soir défile, et ce n'est pas sa marge. Elles sont à comparer aux valeurs simulées : 28,3 px et −19,7 px (tâche 8).
 - **La carte de l'Émotion sous le pouce** : le glissement, l'appui long (0,5 s) à côté du défilement, la taille des bulles.
 - **Le lecteur écran verrouillé**, la voix française du système, et le grand texte d'iOS sur la carte, le lecteur et le Programme.
 

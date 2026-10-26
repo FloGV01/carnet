@@ -167,8 +167,19 @@ test('v7 · Mes jours, rangée Bien-être : le même repère pour chaque colonne
   assert.deepEqual(bie.libelle, ['Bien-être']);
   assert.equal(g.rangees.at(-1).cle, 'bienEtre', 'la dernière rangée, sous l\'énergie basse');
   assert.deepEqual(g.bienEtre.map((m) => m.cle), ['2026-10-01', '2026-10-04']);
-  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && !('n' in m)), 'la même marque, sans nombre');
+  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && m.r === g.bienEtre[0].r && !('n' in m)), 'la même marque, sans nombre');
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Relecture finale : un losange plein (le contour arrondi se lisait « 0 » sur 30 jours), dans sa rangée, et deux
+  // colonnes voisines gardent un écart, à 7 colonnes comme à 30 ou à 60 (par mois).
+  for (const n of [7, 30, 60]) {
+    const cols = Array.from({ length: n }, (_, i) => jour(`2026-${String(1 + Math.floor(i / 28)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`, { bienEtre: true, aDonnee: true }));
+    const gn = geometrieMesJours({ pas: 'jour', colonnes: cols, avecBienEtre: true });
+    const r = gn.bienEtre[0].r;
+    assert.equal(gn.bienEtre.length, n);
+    assert.ok(r >= 1.5 && r <= gn.bienEtre[0].h / 2, `${n} colonnes : r = ${r}`);
+    assert.ok(2 * r <= gn.largeurColonne - 1, `${n} colonnes : ${2 * r} pour une colonne de ${gn.largeurColonne}`);
+    assert.ok(gn.bienEtre.every((m) => m.x - m.r >= DIM_MES_JOURS.gauche - 1e-9 && m.x + m.r <= gn.dim.largeur), `${n} colonnes : dans le cadre`);
+  }
   // Par semaine : un repère, qu'il y ait une séance ou dix dans la semaine.
   const semaines = geometrieMesJours({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', bienEtre: true, aDonnee: true }, { cle: '2026-10-05', bienEtre: false }], avecBienEtre: true });
   assert.equal(semaines.bienEtre.length, 1);

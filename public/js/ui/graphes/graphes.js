@@ -100,6 +100,12 @@ export function detailColonne(pas, c, lib) {
 const SANS_REPERE = { traits: [], legende: [] };
 const UNITE = { jour: 'une colonne par jour', semaine: 'une colonne par semaine', mois: 'une colonne par mois' };
 
+// Le losange du repère Bien-être (geometrie.js) : ses quatre pointes, autour du milieu de la rangée.
+const losange = ({ x, y, h, r }) => {
+  const m = y + h / 2;
+  return [[x, m - r], [x + r, m], [x, m + r], [x - r, m]].map((p) => p.map((v) => Math.round(v * 10) / 10).join(',')).join(' ');
+};
+
 // Les étiquettes des rangées, au début de chaque rangée (2b).
 const Etiquettes = ({ g }) => g.libelles.map((r) => r.lignes.map((l) => html`<text class="g-etiquette" x="0" y=${l.y}>${l.texte}</text>`));
 
@@ -152,7 +158,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-plein" cx=${a.x} cy=${a.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}</g>
     <g class="teinte-energie">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
-    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<rect class="g-barre g-bien-etre" x=${b.x} y=${b.y} width=${b.l} height=${b.h} rx=${Math.min(b.l, b.h) / 2} />`)}</g>
+    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<polygon class="g-plein g-bien-etre" points=${losange(b)} />`)}</g>
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;
 }

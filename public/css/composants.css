@@ -472,12 +472,22 @@ button.effacer svg { width: 18px; height: 18px; }
 }
 @keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
 .carte-roue {
-  position: relative; display: grid; grid-template-columns: repeat(2, 100cqi); gap: 26px 28px; width: max-content;
+  --ecart-cotes: 28px;
+  position: relative; display: grid; grid-template-columns: repeat(2, 100cqi); gap: 26px var(--ecart-cotes); width: max-content;
   padding: 10px var(--marge) 18px;
 }
 .zone-carte { display: flex; flex-direction: column; gap: 8px; }
-.legende-zone { padding: 0 2px; font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
-.zone-droite .legende-zone { text-align: right; }
+/* La légende d'une zone, rangée contre le centre de la carte, comme ses bulles (relecture finale) : « Toute la carte »
+   s'ouvre au milieu et ne montre que la moitié de chaque zone (et la marge, moins la moitié de l'écart entre les deux
+   côtés). La légende tient dans cette moitié en gardant la marge de la page au bord de l'écran ; sinon, elle passe à la
+   ligne après l'énergie (« Moyenne · » puis « plutôt désagréable »). */
+.legende-zone {
+  max-width: calc(50% - var(--ecart-cotes) / 2);
+  font-size: var(--t-note); line-height: 1.3; color: var(--text-2);
+}
+.legende-zone > span { display: inline-block; }
+.zone-gauche .legende-zone { align-self: flex-end; text-align: right; }
+.zone-droite .legende-zone { align-self: flex-start; text-align: left; }
 .bulles-zone { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; }
 /* À gauche, la carte part du bord gauche (le plus désagréable) ; à droite, du bord droit (le plus agréable). Une ligne
    incomplète se range contre le centre. */

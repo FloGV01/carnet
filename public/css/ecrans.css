@@ -269,9 +269,6 @@
 .g-anneau { fill: var(--surface); stroke: var(--c); stroke-width: 2; }
 .g-plein { fill: var(--c); }
 .g-barre { fill: var(--c); }
-/* Le repère Bien-être de Mes jours (v8, Q29) : un contour, sans fond. Plein, il se confondait en sombre avec « nuit bien »
-   (1:1 entre les deux bleus) ; la forme les distingue, les teintes ne changent pas. */
-.g-barre.g-bien-etre { fill: none; stroke: var(--c); stroke-width: 1.5; }
 /* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques. */
 .g-emo { fill: var(--c); }
 .g-zone { fill: transparent; cursor: pointer; }

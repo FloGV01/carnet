@@ -42,7 +42,7 @@ function placerNumeros(reperes, centre, largeur) {
 // par semaine ou par mois, une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de
 // relevés), Humeur (notes) seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait
 // du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté), Bien-être
-// (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une). Les
+// (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une ; un losange plein). Les
 // repères de traitement : leurs numéros sous les noms de colonnes, leurs traits à travers les rangées. Une colonne vide ne
 // dessine rien. La Vue soignants (PDF) dessine la même frise par semaine ou par mois, aux dimensions DIM_MES_JOURS_PDF (sa
 // largeur suit le cadre de la page), sans la rangée d'énergie (avecEnergie faux) ni celle du Bien-être. Pure.
@@ -128,6 +128,8 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));
   const joursBas = (c) => (c.energieBasse === true ? 1 : c.energieBasse || 0);
   const maxEnergie = Math.max(1, ...colonnes.map(joursBas));
+  // Le losange Bien-être : la hauteur de sa rangée au plus, et 2 px entre deux colonnes voisines (1 px au moins).
+  const rLosange = bie ? r1(Math.min(bie.h / 2, Math.max(1.5, (l - 2) / 2))) : 0;
   colonnes.forEach((c, i) => {
     const x = r1(centre(i));
     const xb = r1(x - larg / 2);
@@ -172,8 +174,11 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
       const h = pas === 'jour' ? ene.h : r1(Math.max(3, (jours / maxEnergie) * ene.h));
       energieBasse.push({ x: xb, y: r1(ene.y + ene.h - h), l: larg, h, n: jours });
     }
-    // Un repère de la même taille pour chaque colonne qui a une séance : ni hauteur ni nombre.
-    if (bie && c.bienEtre) bienEtre.push({ x: xb, y: bie.y, l: larg, h: bie.h, cle: c.cle });
+    // Un repère de la même taille pour chaque colonne qui a une séance : ni hauteur ni nombre. Un losange plein, centré
+    // en x sur la colonne et au milieu de la rangée (y, h), de demi-diagonale r. Une barre pleine se confondait en sombre
+    // avec « nuit bien » (1:1 entre les deux bleus), et le contour arrondi qui l'a remplacée (v8, Q29) se lisait « 0 »
+    // sur 30 jours (relecture finale) : la forme les distingue, les teintes ne changent pas.
+    if (bie && c.bienEtre) bienEtre.push({ x, y: bie.y, h: bie.h, r: rLosange, cle: c.cle });
     if (c.aDonnee) zones.push({ x: r1(d.gauche + l * i), l: r1(l), cle: c.cle, i });
   });
   // Le trait d'un repère part sous son numéro et traverse toutes les rangées.

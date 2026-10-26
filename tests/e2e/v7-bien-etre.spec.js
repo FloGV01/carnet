@@ -575,7 +575,7 @@ test('Mes jours : une rangée « Bien-être » sur une période qui a une séanc
   await expect(mesJours.locator('svg text.g-etiquette', { hasText: 'Bien-être' })).toHaveCount(1);
   await expect(mesJours.locator('.g-bien-etre')).toHaveCount(2);
   // Le même repère pour le jour de deux séances et pour celui d'une seule.
-  const tailles = await mesJours.locator('.g-bien-etre').evaluateAll((rs) => rs.map((x) => `${x.getAttribute('width')}×${x.getAttribute('height')}`));
+  const tailles = await mesJours.locator('.g-bien-etre').evaluateAll((rs) => rs.map((x) => { const b = x.getBBox(); return `${b.width}×${b.height}`; }));
   expect(new Set(tailles).size).toBe(1);
   // Le détail d'un jour le dit, sans nombre.
   await mesJours.getByRole('button', { name: 'Voir en tableau' }).click();

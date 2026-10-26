@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { toucher, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
+import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { addDays } from '../../public/js/domain/dates.js';
 
@@ -130,6 +130,45 @@ test('Q27 · le Diagnostic garde les marges du soir d\'aujourd\'hui, celle de «
   expect(await diagnostic(page)).toMatchObject(attendu);
 });
 
+// Relecture finale : la marge était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note
+// chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait
+// « −71,7 px (le soir défile) » d'un soir qui tient fermé. La marge est celle du soir, détails fermés.
+test('Q27 · la marge du soir est celle du soir détails fermés : la Durée ouverte et notée, le détail du Sport ouvert, la fenêtre qui change pendant ce temps ne la changent pas', async ({ page }) => {
+  await simulerZonesSures(page);
+  const lienDuree = page.getByRole('button', { name: /^Durée de la nuit/ });
+  const texteMarge = (m) => `${enPx(m)}${m < 0 ? ' (le soir défile)' : ''}`;
+  await toucher(page, 'Lieu', 'Bureau');
+  const ferme = (await geometrieSoir(page)).marge;
+  expect(ferme, 'le soir fermé tient').toBeGreaterThanOrEqual(0);
+  // La Durée ouverte et 4 h notée, la rangée laissée ouverte : le soir défile alors, mais ce n'est pas sa marge.
+  await lienDuree.click();
+  await groupe(page, 'Durée de la nuit').getByRole('button', { name: '4 h ou moins' }).click();
+  await expect(lienDuree).toHaveText('4 h ou moins');
+  expect((await geometrieSoir(page)).marge, 'la Durée ouverte allonge le soir').toBeLessThan(0);
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme));
+  // Revenu sur le soir, la Durée est refermée : la mesure reprend, « 4 h ou moins › » compris.
+  await aller(page, '#/aujourdhui');
+  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
+  await expect(lienDuree).toHaveText('4 h ou moins');
+  const ferme2 = (await geometrieSoir(page)).marge;
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+  // Le détail du Sport ouvert, et la fenêtre qui change de taille pendant ce temps (rotation, clavier) : rien n'est noté.
+  await aller(page, '#/aujourdhui');
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+  // Refermé, le détail rend la mesure.
+  await aller(page, '#/aujourdhui');
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toBeVisible();
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toHaveCount(0);
+  expect((await geometrieSoir(page)).marge).toBe(ferme2);
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+});
+
 // ---------- Q29 : les finitions ----------
 
 test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journée) ; en clair, rien ne change', async ({ page }) => {
@@ -162,25 +201,42 @@ test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journé
   }
 });
 
-test('Q29 · le repère Bien-être de Mes jours est un contour, distinct de « nuit bien » (une barre pleine), en clair et en sombre', async ({ page }) => {
+// Relecture finale : le contour arrondi de la v8 (Q29) faisait, sur 30 jours, un ovale de 5 × 8 qui se lisait « 0 » (la
+// rangée disait « 0  00 00 »). Le repère est maintenant un losange plein : ni une barre comme « nuit bien » (le même bleu en
+// sombre, 1:1), ni un chiffre.
+test('Q29 · le repère Bien-être de Mes jours est un losange plein, distinct de « nuit bien » (une barre) et d\'un « 0 », à 7 et à 30 jours, en clair et en sombre', async ({ page }) => {
   await page.evaluate(async () => {
     const r = window.__carnet.repo;
     await r.journal.patch('2026-10-14', { sommeilRessenti: 'sommeil:bien' });
-    await r.seances.creer({ date: '2026-10-14', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
+    for (const date of ['2026-10-13', '2026-10-14']) await r.seances.creer({ date, heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
   });
   await aller(page, '#/analyse');
-  await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: /7 j/ }).click();
   const mesJours = page.locator('figure', { hasText: 'Mes jours' });
-  await expect(mesJours.locator('rect.g-bien-etre')).toHaveCount(1);
-  await expect(mesJours.locator('svg[role="img"] rect.g-sommeil-3')).toHaveCount(1);
-  for (const [schema, t] of THEMES) {
-    await page.emulateMedia({ colorScheme: schema });
-    const [bienEtre, nuit] = await Promise.all(['rect.g-bien-etre', 'svg[role="img"] rect.g-sommeil-3'].map((x) => mesJours.locator(x).first()
-      .evaluate((e) => { const s = getComputedStyle(e); return { fill: s.fill, stroke: s.stroke, trait: parseFloat(s.strokeWidth) }; })));
-    expect(bienEtre.fill, schema).toBe('none');
-    expect(bienEtre.stroke, schema).toBe(rgb(t['c-difficile']));
-    expect(bienEtre.trait, schema).toBeGreaterThanOrEqual(1.5);
-    expect(nuit.fill, schema).toBe(rgb(t['chart-sommeil-3']));
+  for (const periode of [/7 j/, /30 j/]) {
+    await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: periode }).click();
+    await expect(mesJours.locator('polygon.g-bien-etre')).toHaveCount(2);
+    await expect(mesJours.locator('rect.g-bien-etre, circle.g-bien-etre, ellipse.g-bien-etre')).toHaveCount(0);
+    await expect(mesJours.locator('svg[role="img"] rect.g-sommeil-3')).toHaveCount(1);
+    // Deux jours voisins : deux losanges pareils, aussi larges que hauts, et un écart entre eux.
+    const [a, b] = await mesJours.locator('polygon.g-bien-etre').evaluateAll((ps) => ps.map((p) => {
+      const r = p.getBBox();
+      return { pointes: p.points.numberOfItems, x: r.x, l: r.width, h: r.height };
+    }));
+    expect(b.l, String(periode)).toBe(a.l);
+    expect(b.h, String(periode)).toBe(a.h);
+    expect(a.pointes).toBe(4);
+    expect(a.h).toBeGreaterThanOrEqual(6);
+    expect(Math.abs(a.l - a.h)).toBeLessThanOrEqual(0.2);
+    expect(b.x - (a.x + a.l), `${periode} : un écart entre deux jours voisins`).toBeGreaterThanOrEqual(1.5);
+    for (const [schema, t] of THEMES) {
+      await page.emulateMedia({ colorScheme: schema });
+      const [bienEtre, nuit] = await Promise.all(['polygon.g-bien-etre', 'svg[role="img"] rect.g-sommeil-3'].map((x) => mesJours.locator(x).first()
+        .evaluate((e) => { const s = getComputedStyle(e); return { fill: s.fill, stroke: s.stroke }; })));
+      expect(bienEtre.fill, schema).toBe(rgb(t['c-difficile']));
+      expect(bienEtre.stroke, schema).toBe('none');
+      expect(contraste(t['c-difficile'], t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
+      expect(nuit.fill, schema).toBe(rgb(t['chart-sommeil-3']));
+    }
   }
   // En sombre, les deux bleus sont les mêmes à l'œil (1:1) : seule la forme les distingue.
   expect(contraste(sombre['c-difficile'], sombre['chart-sommeil-3'])).toBeLessThan(1.2);
@@ -407,6 +463,9 @@ test('Q26 · la Vue soignants ouverte à froid lit la base une seule fois, même
   });
   await page.reload();
   await compterLectures(page);
+  // Relecture finale : Aujourd'hui, ouvert au rechargement, lit les rendez-vous (le prochain) ; sous charge, sa lecture
+  // tombait après compterLectures et comptait double (rdv: 2). On l'attend, et elle ne compte pas.
+  await surAujourdhui(page);
   await aller(page, '#/soignants');
   await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled();
   // Relecture : les deux demandes trouvaient la mémoire vide, et chaque store était lu deux fois (14 lectures).

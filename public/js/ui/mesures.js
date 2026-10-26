@@ -1,7 +1,7 @@
 // Mesures de l'écran pour le Diagnostic (v8, Q27) : les zones sûres de l'iPhone, la hauteur utile, et la marge du soir,
 // entre la dernière carte du soir et la bande du bas (positive : le soir tient sans défiler), et celle de « J'ai fini pour
 // ce soir ». Des chiffres techniques seulement, rien sur l'usage : les marges sont prises à chaque affichage du soir
-// d'aujourd'hui, gardées en mémoire le temps de la session, jamais enregistrées.
+// d'aujourd'hui, détails fermés (aujourdhui.js), gardées en mémoire le temps de la session, jamais enregistrées.
 
 let margeSoir = null;
 
@@ -25,7 +25,7 @@ export function hauteurUtile(zones = zonesSures()) {
 }
 
 // La marge du soir sur la page affichée (page en haut, quel que soit le défilement) : du bas de la dernière carte du soir
-// (rubrique, paire Contact et Sport, ou détail ouvert) au haut de la bande du bas. null sans soir affiché.
+// (rubrique, ou paire Contact et Sport) au haut de la bande du bas. null sans soir affiché.
 export function mesurerMargeSoir(main = document.querySelector('main.aujourdhui')) {
   const bande = main && main.querySelector(':scope > .actions-flottantes');
   const cartes = main ? main.querySelectorAll(':scope > .carte-champ, :scope > .deux-colonnes') : [];
@@ -43,8 +43,9 @@ export function mesurerMargeFini(main = document.querySelector('main.aujourdhui'
   return Math.round((bande.getBoundingClientRect().top - (fini.getBoundingClientRect().bottom + window.scrollY)) * 10) / 10;
 }
 
-// Seul le soir d'aujourd'hui, ouvert depuis l'onglet, est mesuré (aujourdhui.js) : la page d'un autre jour a « Revenir à
-// aujourd'hui » en plus, et le soir replié n'a plus de carte (rien n'est noté).
+// Seul le soir d'aujourd'hui, ouvert depuis l'onglet, détails fermés, est mesuré (aujourdhui.js) : la page d'un autre
+// jour a « Revenir à aujourd'hui » en plus, un détail ouvert (« Durée › », « Détail › ») allonge le soir, et le soir
+// replié n'a plus de carte (rien n'est noté).
 export function noterMargeSoir(main) {
   const soir = mesurerMargeSoir(main);
   if (soir != null) margeSoir = { soir, fini: mesurerMargeFini(main) };

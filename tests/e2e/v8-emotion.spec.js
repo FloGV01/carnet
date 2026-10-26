@@ -366,6 +366,47 @@ test('point de vigilance 5 : fermer avec l\'énergie seule la garde ; « Toute l
   await expect(tuiles(vue).getByRole('button', { pressed: true })).toHaveCount(0);
 });
 
+// Relecture finale : « Toute la carte » s'ouvre au milieu, sur la moitié de chaque zone Moyenne ; or la légende de gauche
+// était au bord gauche de sa zone, et celle de droite au bord droit : toutes deux hors du cadre, rien ne disait quel côté
+// était désagréable et lequel agréable. Elles sont rangées contre le centre, comme les bulles, et tiennent dans la moitié.
+test('« Toute la carte » montre ses deux légendes entières, plutôt désagréable à gauche et plutôt agréable à droite, à 390 et 375 de large, au texte par défaut et à 23 px ; depuis une tuile, la légende de la zone aussi', async ({ page }) => {
+  // Les légendes dont le texte est entier dans le cadre de la carte, à la marge de la page (14 px) au moins de ses côtés.
+  const visibles = (vue, ids) => carte(vue).evaluate((c, ls) => {
+    const r = c.getBoundingClientRect();
+    return ls.map((id) => c.querySelector(`#${id}`)).filter((l) => {
+      const plage = document.createRange();
+      plage.selectNodeContents(l);
+      const t = plage.getBoundingClientRect();
+      return t.left >= r.left + 13.5 && t.right <= r.right - 13.5 && t.top >= r.top - 0.5 && t.bottom <= r.bottom + 0.5;
+    }).map((l) => [l.textContent, Math.round(l.getBoundingClientRect().left - r.left)]);
+  }, ids);
+  for (const largeur of [390, 375]) {
+    for (const taille of [null, 23]) {
+      const quoi = `${largeur} · ${taille || 'texte par défaut'}`;
+      await page.setViewportSize({ width: largeur, height: 844 });
+      await page.evaluate((x) => { document.documentElement.style.fontSize = x ? `${x}px` : ''; }, taille);
+      const vue = await ouvrir(page);
+      await touteLaCarte(vue).click();
+      await expect(carte(vue).getByRole('button')).toHaveCount(79);
+      const [gauche, droite] = await visibles(vue, ['legende-moyenne-gauche', 'legende-moyenne-droite']);
+      expect([gauche?.[0], droite?.[0]], quoi).toEqual(['Moyenne · plutôt désagréable', 'Moyenne · plutôt agréable']);
+      expect(gauche[1], `${quoi} : désagréable à gauche`).toBeLessThan(droite[1]);
+      await retourEnergie(vue).click();
+      for (const e of ENERGIES) {
+        for (const c of COTES) {
+          const cle = cleZone({ energie: e, cote: c });
+          await tuile(vue, e, c === 'gauche' ? 'désagréable' : 'agréable').click();
+          await expect(carte(vue).getByRole('button')).toHaveCount(79);
+          expect(await visibles(vue, [`legende-${cle}`]), `${quoi} · ${cle}`).toHaveLength(1);
+          await retourEnergie(vue).click();
+        }
+      }
+      await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+      await expect(page).toHaveURL(/#\/aujourdhui$/);
+    }
+  }
+});
+
 // Style d'une bulle de la carte et de son libellé.
 const stylesBulles = (vue) => carte(vue).evaluate(async (c) => {
   await Promise.all(c.closest('.panneau-reponses').getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));

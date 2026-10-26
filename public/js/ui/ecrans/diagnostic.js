@@ -1,8 +1,8 @@
 // Écran de diagnostic (appui long sur la version, dans Réglages) : vérifie sur l'iPhone
 // ce qu'aucune source ne garantit (partage, impression, presse-papier, micro, dictée). v8 (Q27) : l'écran aussi, la
 // fenêtre, les zones sûres (encoche, barre d'accueil), la hauteur utile entre elles, la marge du soir (entre la
-// dernière carte du soir et la bande du bas, prise au dernier affichage du soir d'aujourd'hui) et celle de « J'ai fini
-// pour ce soir » : des chiffres techniques, rien sur l'usage.
+// dernière carte du soir et la bande du bas, prise au dernier affichage du soir d'aujourd'hui, détails fermés) et celle
+// de « J'ai fini pour ce soir » : des chiffres techniques, rien sur l'usage.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { VERSION, VERSION_APP } from '../../version.js';
