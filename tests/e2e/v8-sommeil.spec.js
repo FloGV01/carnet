@@ -5,8 +5,9 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
 // v8 (5/9) · Le sommeil en heures et en qualité (spec §7 bis), les détails dans leur carte (Q5) : la carte Sommeil et son lien
 // « Durée › » (la rangée Durée ne tient pas avec le soir sans défiler : docs/decisions.md), « Nuit en détail » masqué par
-// défaut et réaffichable, « Détail › » du Sport et du Contact, le point de vigilance 3 (le soir sans défiler à 390 × 797, en
-// clair et en sombre, entre 0 h et 4 h, avec le bandeau), les lectures (résumé du jour, Analyse). Données inventées.
+// défaut et réaffichable, « Détail › » du Sport et du Contact, le point de vigilance 3 (le soir sans défiler avec les zones
+// sûres de l'iPhone, en clair et en sombre, entre 0 h et 4 h, avec le bandeau), les lectures (résumé du jour, Analyse).
+// Données inventées.
 // Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844, sauf mention).
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -76,33 +77,43 @@ const soir = async (page) => {
 
 // ---------- Point de vigilance 3 ----------
 
-// v8 (8/9, Q27) : à 21 h et entre 0 h et 4 h, avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas,
-// spec §12.7). Avec le bandeau, à 390 × 797 sans zones sûres, comme en v7 : avec elles, le soir défile (le Diagnostic dit
-// la marge, tests/e2e/v8-fiabilite.spec.js).
-test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › », tient sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h, et avec le bandeau à 390 × 797', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 797 });
-  const cas = [
-    ['bandeau', async () => { await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true })); await expect(page.locator('.bandeau')).toBeVisible(); }],
-    ['21 h', async () => {}],
-    ['01:30', async () => { await page.clock.setSystemTime(new Date(2026, 9, 16, 1, 30)); await page.reload(); }],
-  ];
-  for (const [nom, preparer] of cas) {
-    if (nom === '21 h') { await page.setViewportSize({ width: 390, height: 844 }); await simulerZonesSures(page); }
+// v8 (8/9, Q27) : avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas, spec §12.7), à 21 h et entre 0 h
+// et 4 h, puis avec le bandeau (relecture : il restait à 390 × 797 sans zones sûres, 34 px de plus que l'iPhone).
+const vigilance3 = async (page, quoi) => {
+  await soir(page);
+  // La Durée est fermée au départ : la carte Sommeil n'a que la qualité, et le lien ne lui prend aucune hauteur.
+  await expect(lienDuree(page), quoi).toHaveAttribute('aria-expanded', 'false');
+  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
+  const [sommeil, traitement] = await Promise.all([boite(carteDe(page, 'Sommeil')), boite(carteDe(page, 'Traitement pris'))]);
+  expect(Math.abs(sommeil.h - traitement.h), `${quoi} : Sommeil aussi haute que Traitement pris`).toBeLessThanOrEqual(0.5);
+  toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), quoi);
+};
+
+test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › », tient sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h', async ({ page }) => {
+  await simulerZonesSures(page);
+  for (const [nom, heure] of [['21 h', new Date(2026, 9, 15, 21, 0)], ['01:30', new Date(2026, 9, 16, 1, 30)]]) {
     for (const [schema] of THEMES) {
       await page.emulateMedia({ colorScheme: schema });
-      const quoi = `${schema} · ${nom}`;
-      await page.clock.setSystemTime(new Date(2026, 9, 15, 21, 0));
+      await page.clock.setSystemTime(heure);
       await viderBase(page);
-      await preparer();
       if (nom === '01:30') await expect(page.getByText('Encore jeudi jusqu\'à 4 h.', { exact: true })).toBeVisible();
-      await soir(page);
-      // La Durée est fermée au départ : la carte Sommeil n'a que la qualité, et le lien ne lui prend aucune hauteur.
-      await expect(lienDuree(page), quoi).toHaveAttribute('aria-expanded', 'false');
-      await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
-      const [sommeil, traitement] = await Promise.all([boite(carteDe(page, 'Sommeil')), boite(carteDe(page, 'Traitement pris'))]);
-      expect(Math.abs(sommeil.h - traitement.h), `${quoi} : Sommeil aussi haute que Traitement pris`).toBeLessThanOrEqual(0.5);
-      toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), quoi);
+      await vigilance3(page, `${schema} · ${nom}`);
     }
+  }
+});
+
+// Avec le bandeau, le soir passe 28,4 px sous la bande : une décision ouverte de l'utilisateur (docs/decisions.md, v8,
+// « Fiabilité (tâche 8) »), à trancher sur l'iPhone. Un test.fail() qui passe fait échouer la suite : une fois la mise en
+// page corrigée, on retire la marque.
+test('vigilance 3 · avec le bandeau « Nouvelle version prête », le soir tient encore sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre', async ({ page }) => {
+  test.fail(true, 'décision ouverte (docs/decisions.md, v8, tâche 8) : avec le bandeau, le soir est 28,4 px sous la bande');
+  await simulerZonesSures(page);
+  for (const [schema] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await viderBase(page);
+    await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+    await expect(page.locator('.bandeau')).toBeVisible();
+    await vigilance3(page, `${schema} · bandeau`);
   }
 });
 

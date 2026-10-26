@@ -122,11 +122,12 @@ test('symptôme et Après coup : réponses courtes près du pouce, listes longue
 const points = (vue) => vue.locator('.reperes').evaluate((r) => [...r.children].map((i) => {
   const s = getComputedStyle(i);
   return { classe: i.className, taille: `${i.getBoundingClientRect().width}×${i.getBoundingClientRect().height}`, rond: s.borderTopLeftRadius === '50%',
-    fond: s.backgroundColor, anneau: s.boxShadow };
+    fond: s.backgroundColor, contour: s.borderTopColor, anneau: s.boxShadow };
 }));
 
-// v8 (8/9, Q29) : les étapes à venir passent de --surface-2 (invisible sur le fond clair) à --line.
-test('repère d\'étape en points, jamais une barre : faites et en cours à la couleur du parcours, l\'étape en cours cerclée de -tint-2, à venir en --line', async ({ page }) => {
+// v8 (8/9, Q29) : les étapes à venir passent de --surface-2 (invisible sur le fond clair) à un contour en --text-2, sans
+// fond (README 2b : « contour (2a) »), à 3:1 au moins sur le fond (relecture : --line restait sous 3:1).
+test('repère d\'étape en points, jamais une barre : faites et en cours à la couleur du parcours, l\'étape en cours cerclée de -tint-2, à venir en contour', async ({ page }) => {
   const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
@@ -152,7 +153,9 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à la c
       expect(p[0].anneau, `${quoi} : faite, sans anneau`).toBe('none');
       expect(p[1].fond, `${quoi} : en cours`).toBe(rgb(t[`c-${couleur}`]));
       expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t[`c-${couleur}-tint-2`])} 0px 0px 0px 3px`);
-      expect(p[2].fond, `${quoi} : à venir`).toBe(rgb(t.line));
+      expect(p[2].fond, `${quoi} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
+      expect(p[2].contour, `${quoi} : à venir, en contour`).toBe(rgb(t['text-2']));
+      expect(p[0].contour, `${quoi} : faite, pleine`).toBe(p[0].fond);
       // En-tête : « Fermer » (600, action), puis le nom derrière un petit carré à la couleur du parcours, sans « · ».
       const tete = await vue.locator('.parcours-tete').evaluate((h) => {
         const f = h.querySelector('.fermer');

@@ -245,13 +245,17 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   }, [glisse, charge, date]);
   useEffect(() => () => { dernierGlissement = null; }, []);
   const classeEcran = `ecran aujourdhui${glisse ? ` entree-${glisse === 'precedent' ? 'veille' : 'lendemain'}` : ''}`;
-  // Le Diagnostic (v8, Q27) : la marge du soir, reprise à chaque affichage et quand la fenêtre change de taille.
-  useLayoutEffect(() => { noterMargeSoir(refPage.current); });
+  // Le Diagnostic (v8, Q27) : la marge du soir, reprise à chaque affichage et quand la fenêtre change de taille. Celle du
+  // soir d'aujourd'hui seulement : un autre jour (glissé, ou ouvert depuis l'Historique) a « Revenir à aujourd'hui » ou
+  // « ‹ Retour » en plus, et sa marge n'est pas celle du soir à saisir (relecture : 36 px d'écart).
+  const soirDuJour = date === aujourdhui && !depuisHistorique;
+  useLayoutEffect(() => { if (soirDuJour) noterMargeSoir(refPage.current); });
   useEffect(() => {
+    if (!soirDuJour) return undefined;
     const surTaille = () => noterMargeSoir(refPage.current);
     window.addEventListener('resize', surTaille);
     return () => window.removeEventListener('resize', surTaille);
-  }, []);
+  }, [soirDuJour]);
 
   if (!charge) {
     return html`<main class=${classeEcran} ref=${refPage}><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;

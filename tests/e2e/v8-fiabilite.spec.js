@@ -96,6 +96,40 @@ test('Q27 · sans simulation (WebKit sans iPhone), le Diagnostic dit des zones s
   expect(d).toMatchObject({ Fenêtre: '390 × 797', 'Zones sûres': 'haut 0 · bas 0 · gauche 0 · droite 0', 'Hauteur utile': '797 px', 'Marge du soir': enPx(g.marge) });
 });
 
+// Relecture : la marge était notée à chaque affichage de l'écran, celle d'un autre jour comprise (« Revenir à
+// aujourd'hui » en plus, 36 px d'écart), et le Diagnostic pouvait dire « le soir défile » alors que le soir d'aujourd'hui
+// tient.
+test('Q27 · le Diagnostic garde les marges du soir d\'aujourd\'hui, celle de « J\'ai fini pour ce soir » comprise : un autre jour, glissé ou ouvert depuis l\'Historique, n\'est pas mesuré', async ({ page }) => {
+  await simulerZonesSures(page);
+  const marges = () => page.evaluate(() => {
+    const bande = document.querySelector('main.aujourdhui > .actions-flottantes').getBoundingClientRect().top;
+    const fini = document.querySelector('.fini-bouton');
+    const arrondi = (n) => Math.round(n * 10) / 10;
+    return { soir: arrondi(bande - document.querySelector('.carte-champ:has(#points-positifs)').getBoundingClientRect().bottom),
+      fini: fini ? arrondi(bande - fini.getBoundingClientRect().bottom) : null };
+  });
+  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { lieu: 'lieu:teletravail' }));
+  await toucher(page, 'Lieu', 'Bureau');
+  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+  const auj = await marges();
+  const attendu = { 'Marge du soir': `${enPx(auj.soir)}${auj.soir < 0 ? ' (le soir défile)' : ''}`,
+    'Marge de « J\'ai fini »': `${enPx(auj.fini)}${auj.fini < 0 ? ' (sous la bande)' : ''}` };
+  expect(await diagnostic(page)).toMatchObject(attendu);
+  await expect(page.locator('main.diag pre')).toContainText(`marge du soir ${attendu['Marge du soir']} · marge de « J'ai fini » ${attendu['Marge de « J\'ai fini »']}`);
+  // La veille (par le hash, comme après un glissement), puis la veille et aujourd'hui ouverts depuis l'Historique.
+  for (const hash of ['#/jour/2026-10-14', '#/historique/jour/2026-10-14', '#/historique/jour/2026-10-15']) {
+    await aller(page, hash);
+    await expect(page.locator('main.aujourdhui .carte-champ:has(#points-positifs)')).toBeVisible();
+    const autre = await marges();
+    if (hash === '#/jour/2026-10-14') expect(autre.soir, 'la veille a sa propre marge').toBeLessThan(auj.soir - 20);
+    expect(await diagnostic(page), hash).toMatchObject(attendu);
+  }
+  // Revenu sur le soir d'aujourd'hui, la mesure reprend.
+  await aller(page, '#/aujourdhui');
+  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+  expect(await diagnostic(page)).toMatchObject(attendu);
+});
+
 // ---------- Q29 : les finitions ----------
 
 test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journée) ; en clair, rien ne change', async ({ page }) => {
@@ -152,18 +186,28 @@ test('Q29 · le repère Bien-être de Mes jours est un contour, distinct de « n
   expect(contraste(sombre['c-difficile'], sombre['chart-sommeil-3'])).toBeLessThan(1.2);
 });
 
-test('Q29 · dans un parcours, les étapes à venir se voient, en clair comme en sombre', async ({ page }) => {
+test('Q29 · dans un parcours, les étapes à venir se voient, en clair comme en sombre : un contour à 3:1 au moins, sans fond, distinct des points pleins', async ({ page }) => {
   await page.getByRole('link', { name: 'Épisode' }).click();
   const parcours = page.getByRole('dialog', { name: 'Épisode' });
   await expect(parcours.locator('.reperes i')).toHaveCount(5);
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     const [fond, aVenir, enCours] = await parcours.evaluate((p) => [getComputedStyle(p).backgroundColor,
-      getComputedStyle(p.querySelector('.reperes i:last-child')).backgroundColor, getComputedStyle(p.querySelector('.reperes i.en-cours')).backgroundColor]);
+      ...['.reperes i:last-child', '.reperes i.en-cours'].map((x) => {
+        const e = p.querySelector(x);
+        const s = getComputedStyle(e);
+        return { fond: s.backgroundColor, contour: s.borderTopColor, trait: parseFloat(s.borderTopWidth), taille: e.getBoundingClientRect().width };
+      })]);
     expect(fond, schema).toBe(rgb(t.bg));
-    expect(aVenir, schema).toBe(rgb(t.line));
-    expect(contraste(aVenir, fond), `${schema} : à venir sur le fond`).toBeGreaterThanOrEqual(1.4);
-    expect(aVenir, schema).not.toBe(enCours);
+    // Les éléments graphiques non textuels : 3:1 au moins sur le fond (AA).
+    expect(aVenir.fond, `${schema} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
+    expect(aVenir.contour, schema).toBe(rgb(t['text-2']));
+    expect(aVenir.trait, schema).toBeGreaterThanOrEqual(1);
+    expect(contraste(aVenir.contour, fond), `${schema} : à venir sur le fond`).toBeGreaterThanOrEqual(3);
+    // L'étape en cours reste pleine, de la même taille.
+    expect(enCours.fond, schema).not.toBe('rgba(0, 0, 0, 0)');
+    expect(enCours.contour, schema).toBe(enCours.fond);
+    expect(enCours.taille, schema).toBe(aVenir.taille);
   }
 });
 
@@ -291,16 +335,19 @@ async function cinqAns(page) {
   });
 }
 
-// Les lectures de la base, comptées : chaque appel à `tous()` d'un store (l'objet repo de l'app, partagé avec ses écrans).
-const compterLectures = (page) => page.evaluate(() => {
+// Les lectures de la base, comptées : chaque appel à `tous()` d'un store (l'objet repo de l'app, partagé avec ses écrans),
+// les sept que lit ui/lecture.js. `parStore` dit combien de fois chacun.
+const STORES = ['journal', 'humeurs', 'episodes', 'symptomes', 'seances', 'traitements', 'rdv'];
+const compterLectures = (page) => page.evaluate((stores) => {
   window.__lectures = 0;
+  window.__parStore = {};
   const r = window.__carnet.repo;
-  for (const store of ['journal', 'humeurs', 'episodes', 'symptomes', 'seances']) {
+  for (const store of stores) {
     const tous = r[store].tous;
-    r[store].tous = (...a) => { window.__lectures += 1; return tous(...a); };
+    r[store].tous = (...a) => { window.__lectures += 1; window.__parStore[store] = (window.__parStore[store] || 0) + 1; return tous(...a); };
   }
-});
-const lectures = (page) => page.evaluate(() => { const n = window.__lectures; window.__lectures = 0; return n; });
+}, STORES);
+const lectures = (page) => page.evaluate(() => { const n = window.__lectures; window.__lectures = 0; window.__parStore = {}; return n; });
 
 const ECRANS = [
   ['Analyse', '#/analyse', (page) => page.locator('.tuile').first()],
@@ -308,6 +355,13 @@ const ECRANS = [
   ['Vue soignants', '#/soignants', (page) => page.getByRole('button', { name: 'Partager en PDF' })],
   ['Historique', '#/historique', (page) => page.locator('.ligne-hist').first()],
 ];
+
+// Aujourd'hui, ouvert entre deux écrans : ses propres lectures (le prochain rendez-vous) ne comptent pas.
+async function surAujourdhui(page) {
+  await aller(page, '#/aujourdhui');
+  await expect(page.locator('main.aujourdhui .carte-champ').first()).toBeVisible();
+  await lectures(page);
+}
 
 test('Q26 · 5 ans de données inventées : l\'Analyse, Comprendre, la Vue soignants et l\'Historique s\'ouvrent sous leur budget ; rouverts, ils ne relisent pas la base tant qu\'elle n\'a pas changé', async ({ page }) => {
   test.setTimeout(120000);
@@ -319,30 +373,49 @@ test('Q26 · 5 ans de données inventées : l\'Analyse, Comprendre, la Vue soign
   // Première ouverture : chaque écran lit la base (une seule fois pour les quatre, la lecture étant partagée), sous son
   // budget, généreux pour une machine chargée : mesuré sur Mac, 0,25 s pour l'Analyse, Comprendre et la Vue soignants, 2 s
   // pour l'Historique (qui rend toutes ses semaines d'un coup : la piste Q25, non retenue).
+  let total = 0;
   for (const [nom, hash, pret] of ECRANS) {
-    await aller(page, '#/aujourdhui');
-    await expect(page.locator('main.aujourdhui .carte-champ').first()).toBeVisible();
+    await surAujourdhui(page);
     const t0 = Date.now();
     await aller(page, hash);
     await expect(pret(page), nom).toBeVisible({ timeout: 20000 });
     const ms = Date.now() - t0;
     console.log(`  ${nom}, 5 ans : ${ms} ms`);
     expect(ms, nom).toBeLessThan(8000);
+    total += await lectures(page);
   }
-  expect(await lectures(page), 'la base lue une fois, pour les quatre écrans').toBe(5);
+  expect(total, 'la base lue une fois, pour les quatre écrans').toBe(STORES.length);
   // Rouverts sans écriture : aucune lecture.
   for (const [nom, hash, pret] of ECRANS) {
-    await aller(page, '#/aujourdhui');
-    await expect(page.locator('main.aujourdhui .carte-champ').first()).toBeVisible();
+    await surAujourdhui(page);
     await aller(page, hash);
-    await expect(pret(page), nom).toBeVisible();
+    await expect(pret(page), nom).toBeVisible({ timeout: 20000 });
     expect(await lectures(page), `${nom} rouvert`).toBe(0);
   }
-  // Une écriture (un choix du soir) : l'écran suivant relit la base, une fois.
-  await aller(page, '#/aujourdhui');
-  await toucher(page, 'Lieu', 'Bureau');
-  await expect.poll(async () => (await entreeDuJour(page))?.lieu).toBe('lieu:bureau');
-  await aller(page, '#/historique');
-  await expect(page.locator('.ligne-hist').first()).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.__lectures)).toBe(5);
+  // Une écriture, l'Historique ouvert (le dernier des quatre) : il relit la base, une fois, chaque store une fois.
+  // Le 15/10, au bureau dans les données inventées, passe en télétravail.
+  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-15', { lieu: 'lieu:teletravail' }));
+  await expect.poll(() => page.evaluate(() => window.__parStore), { timeout: 20000 }).toEqual(Object.fromEntries(STORES.map((s) => [s, 1])));
+  await expect(page.locator('.ligne-hist').first()).toContainText('Télétravail', { timeout: 20000 });
+});
+
+test('Q26 · la Vue soignants ouverte à froid lit la base une seule fois, même si elle la demande deux fois en même temps (pour l\'Analyse et pour elle-même)', async ({ page }) => {
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.journal.patch('2026-10-14', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:bien' });
+    await r.episodes.creer({ date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', intensite: 6 });
+  });
+  await page.reload();
+  await compterLectures(page);
+  await aller(page, '#/soignants');
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled();
+  // Relecture : les deux demandes trouvaient la mémoire vide, et chaque store était lu deux fois (14 lectures).
+  expect(await page.evaluate(() => window.__parStore), 'chaque store lu une fois').toEqual(Object.fromEntries(STORES.map((s) => [s, 1])));
+  // Rouverte depuis l'Analyse, sans écriture : aucune lecture.
+  await lectures(page);
+  await aller(page, '#/analyse');
+  await expect(page.locator('.tuile').first()).toBeVisible();
+  await aller(page, '#/soignants');
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled();
+  expect(await lectures(page)).toBe(0);
 });

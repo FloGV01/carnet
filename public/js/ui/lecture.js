@@ -16,13 +16,17 @@ async function cleBase() {
 }
 
 // La valeur gardée sous `nom` si la base n'a pas changé depuis, sinon `calculer()`, gardée pour la fois suivante. La clé
-// est lue avant le calcul : une écriture pendant le calcul le fera refaire la fois suivante, jamais l'inverse.
+// est lue avant le calcul : une écriture pendant le calcul le fera refaire la fois suivante, jamais l'inverse. La promesse
+// est gardée dès le départ du calcul : deux appels en même temps (la Vue soignants ouverte à froid lit la base pour
+// l'Analyse et pour elle-même) attendent la même lecture, au lieu de lire la base deux fois. Un calcul qui échoue n'est
+// pas gardé : l'appel suivant le refait.
 export async function lireSiChange(nom, calculer) {
   const cle = await cleBase();
   const gardee = memoire.get(nom);
   if (gardee && gardee.cle === cle) return gardee.valeur;
-  const valeur = await calculer();
+  const valeur = Promise.resolve().then(calculer);
   memoire.set(nom, { cle, valeur });
+  valeur.catch(() => { if (memoire.get(nom)?.valeur === valeur) memoire.delete(nom); });
   return valeur;
 }
 

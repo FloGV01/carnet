@@ -14,7 +14,6 @@
   font-size: var(--t-section); letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2);
   font-weight: 600; margin-bottom: 10px;
 }
-.note-carte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); margin: 8px 4px 0; }
 
 /* En-têtes */
 .entete-onglet { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--esp-2); margin-bottom: 14px; }
@@ -388,9 +387,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
 .point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
 .reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
-/* À venir (v8, Q29) : en --line, au lieu de --surface-2, qui ne se voyait pas sur le fond clair (1:1). */
-.reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
-.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); }
+/* À venir (v8, Q29) : un contour de 1,5 en --text-2, sans fond (README 2b : « contour (2a) »), au moins 3:1 sur le fond
+   (5,6:1 en clair, 7,3:1 en sombre) ; --surface-2 ne se voyait pas sur le fond clair (1:1), et --line restait sous 3:1
+   (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille. */
+.reperes i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-2); background: none; }
+.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); border-color: var(--c, var(--action)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
 /* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
 .reperes:has(i:nth-child(8)) { gap: 6px; }

@@ -15,6 +15,7 @@ import { estExplosion } from '../../public/js/domain/explosions.js';
 import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { FAMILLES } from '../../public/js/domain/roue.js';
+import { addDays } from '../../public/js/domain/dates.js';
 import { generer } from '../fixtures/generateur.js';
 
 // v8 (Q26) : un garde-fou de performance sur 5 ans de données inventées, jamais réelles. Les calculs de l'Analyse, de
@@ -37,7 +38,7 @@ const ENERGIES = ['energie:basse', 'energie:moyenne', 'energie:haute'];
 // les deux.
 function donnees(annees) {
   const jours = annees * 365 + 1;
-  const debut = new Date(Date.UTC(2026, 9, 25 - jours + 1)).toISOString().slice(0, 10);
+  const debut = addDays('2026-10-25', -(jours - 1));
   const { journal: j, humeurs: h } = generer({ jours, seed: 31, scenario: 'bureau', releves: true, debut, trous: 0.05 });
   const journal = j.map((x, i) => ({ ...x, heuresSommeil: 4 + (i % 7), notes: i % 3 ? null : 'une note du soir inventée, de longueur moyenne, pour la recherche',
     pointsPositifs: i % 4 ? null : 'un point positif inventé', pese: i % 5 ? null : ['pese:bruit'], recharge: i % 6 ? null : ['recharge:calme'] }));

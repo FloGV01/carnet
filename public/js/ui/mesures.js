@@ -1,7 +1,7 @@
 // Mesures de l'écran pour le Diagnostic (v8, Q27) : les zones sûres de l'iPhone, la hauteur utile, et la marge du soir,
-// entre la dernière carte du soir et la bande du bas (positive : le soir tient sans défiler). Des chiffres techniques
-// seulement, rien sur l'usage : la marge est prise à chaque affichage du soir sur Aujourd'hui, gardée en mémoire le temps
-// de la session, jamais enregistrée.
+// entre la dernière carte du soir et la bande du bas (positive : le soir tient sans défiler), et celle de « J'ai fini pour
+// ce soir ». Des chiffres techniques seulement, rien sur l'usage : les marges sont prises à chaque affichage du soir
+// d'aujourd'hui, gardées en mémoire le temps de la session, jamais enregistrées.
 
 let margeSoir = null;
 
@@ -34,8 +34,20 @@ export function mesurerMargeSoir(main = document.querySelector('main.aujourdhui'
   return Math.round((bande.getBoundingClientRect().top - (derniere.bottom + window.scrollY)) * 10) / 10;
 }
 
-export function noterMargeSoir(main) {
-  const m = mesurerMargeSoir(main);
-  if (m != null) margeSoir = m;
+// La marge de « J'ai fini pour ce soir » (relecture v8), mesurée de même : du bas du bouton au haut de la bande. null sans
+// le bouton (soir encore vide).
+export function mesurerMargeFini(main = document.querySelector('main.aujourdhui')) {
+  const bande = main && main.querySelector(':scope > .actions-flottantes');
+  const fini = main && main.querySelector('.fini-bouton');
+  if (!bande || !fini) return null;
+  return Math.round((bande.getBoundingClientRect().top - (fini.getBoundingClientRect().bottom + window.scrollY)) * 10) / 10;
 }
-export const lireMargeSoir = () => margeSoir;
+
+// Seul le soir d'aujourd'hui, ouvert depuis l'onglet, est mesuré (aujourdhui.js) : la page d'un autre jour a « Revenir à
+// aujourd'hui » en plus, et le soir replié n'a plus de carte (rien n'est noté).
+export function noterMargeSoir(main) {
+  const soir = mesurerMargeSoir(main);
+  if (soir != null) margeSoir = { soir, fini: mesurerMargeFini(main) };
+}
+export const lireMargeSoir = () => (margeSoir ? margeSoir.soir : null);
+export const lireMargeFini = () => (margeSoir ? margeSoir.fini : null);

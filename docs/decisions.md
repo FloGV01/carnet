@@ -736,3 +736,21 @@ Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Somme
 - **Nuit par nuit, sur l'A4** : entre l'évolution et « Ce qui revient le plus », en 4 colonnes lues de haut en bas, une nuit par ligne (jour, barre, texte), à la rampe imprimée de la frise. La légende, au bout du titre : « barre : heures dormies, de 0 à 12 h · date : le jour qui suit la nuit ». Rien sans durée sur la fenêtre.
 - **Q17** : « Énergie haute notée » suit la règle de l'énergie basse (oui dès un relevé « haute », non avec des relevés d'énergie sans « haute », inconnue sans relevé). « Hyperfocus » (le symptôme, son id fait foi) est oui le jour d'une fiche Hyperfocus, non un jour qui a une saisie du soir ou une autre fiche de symptôme, inconnu sinon : comme les explosions, un jour de relevés seuls ne vaut jamais « non ». Les deux viennent après les facteurs de la v6, avant ce qui a pesé et rechargé.
 - **Q18 · « Émotions selon ce que je faisais »** : dans Comprendre › Énergie, juste après l'énergie selon ce que je faisais. Une ligne par activité, dans l'ordre de sa liste, découpée par famille, en nombres de relevés (le graphique des autres vues d'émotions). Un relevé de deux activités compte pour chacune. Le seuil (5 relevés) compte les relevés qui ont une émotion et une activité, une fois chacun.
+
+### Fiabilité (tâche 8)
+
+**À trancher sur l'iPhone : le soir avec les zones sûres.** Les tests simulent celles de l'iPhone en 390 × 844 (spec §12.7) : 47 px en haut, 34 en bas, soit 763 px de hauteur utile. Mesuré dans WebKit, en clair comme en sombre, à 21 h comme à 01:30 :
+- le soir tient : 28,3 px entre la carte des points positifs et la bande du bas ;
+- « J'ai fini pour ce soir » passe 19,7 px sous la bande (P3), et la ligne Après coup 69,7 px (P2) ;
+- avec le bandeau « Nouvelle version prête » (114 px, dont les 47 de la zone), le soir passe 28,4 px sous la bande (point de vigilance 3), et « J'ai fini » 74,4 px.
+
+Les tests de la v7 restaient aux tailles d'avant (844 sans zones, 797), qui laissent 34 px de plus que l'iPhone : verts, ils ne protégeaient rien. Ils tournent maintenant avec les zones, et les quatre attentes qui ne tiennent pas sont marquées `test.fail()` (`v7-aujourdhui.spec.js` : P2, P3, « J'ai fini » avec le bandeau ; `v8-sommeil.spec.js` : vigilance 3 avec le bandeau). Une marque qui passe fait échouer la suite : on la retire quand la mise en page change.
+
+Le Diagnostic donne les deux marges réelles, « Marge du soir » et « Marge de « J'ai fini » », prises sur le soir d'aujourd'hui seulement (un autre jour a « Revenir à aujourd'hui » en plus).
+
+Pistes à proposer, aucune appliquée :
+- un bandeau d'une seule rangée de 44 px sur Aujourd'hui : environ 23 px de gagnés (67 sous la zone aujourd'hui), il resterait 5 px à trouver pour le soir avec le bandeau ;
+- « Mémo vocal » et « J'ai fini » plus serrés, ou ailleurs : les cartes ne peuvent plus se resserrer sans cibles de moins de 44 ;
+- ou garder le défilement pour ce qui suit la dernière carte (« J'ai fini », Après coup) : le soir lui-même tient.
+
+**Étapes à venir d'un parcours** : un contour de 1,5 px en --text-2, sans fond (README 2b : « contour (2a) »), à 5,6:1 sur le fond en clair et 7,3:1 en sombre. En --line, elles restaient sous le 3:1 des éléments graphiques (1,45:1 en clair).
