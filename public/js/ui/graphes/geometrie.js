@@ -334,36 +334,6 @@ export function geometrieColonnes({ pas, colonnes }, d = DIM_COLONNES) {
   };
 }
 
-// Tes nuits selon le jour (spec §2.5, graphique 4) : une colonne par soir de coucher, du lundi au dimanche.
-// Axe en minutes depuis minuit du soir du coucher, de 20 h (1200, en haut) à 12 h le lendemain (2160, en bas).
-// Un trait de la médiane du coucher à celle du lever, plein à partir de 3 nuits, en pointillé avec 1 ou 2.
-// Une médiane hors de l'axe est ramenée au bord, avec horsAxe et une marque qui pointe vers l'extérieur.
-export const DIM_NUITS = { largeur: 326, gauche: 30, droite: 6, haut: 12, bas: 140, axeY: 160, hauteur: 164 };
-export const AXE_NUITS = { debut: 1200, fin: 2160 };
-
-export function geometrieNuits(colonnes, d = DIM_NUITS) {
-  const { debut, fin } = AXE_NUITS;
-  const n = Math.max(1, colonnes.length);
-  const l = (d.largeur - d.gauche - d.droite) / n;
-  const centre = (i) => r1(d.gauche + l * (i + 0.5));
-  const y = (m) => r1(d.haut + ((Math.min(fin, Math.max(debut, m)) - debut) / (fin - debut)) * (d.bas - d.haut));
-  const hors = (m) => (m < debut ? 'haut' : m > fin ? 'bas' : null);
-  const traits = [];
-  const marques = [];
-  colonnes.forEach((c, i) => {
-    if (!c.n) return;
-    const x = centre(i);
-    const sens = [hors(c.coucher), hors(c.lever)].filter(Boolean);
-    traits.push({ x, y1: y(Math.min(c.coucher, c.lever)), y2: y(Math.max(c.coucher, c.lever)), plein: !c.fragile, horsAxe: sens.length > 0, cle: c.cle });
-    for (const s of new Set(sens)) {
-      marques.push(s === 'haut' ? { x, yBase: d.haut - 5, yPointe: d.haut - 10, sens: s, cle: c.cle } : { x, yBase: d.bas + 5, yPointe: d.bas + 10, sens: s, cle: c.cle });
-    }
-  });
-  const graduations = [debut, 1440, 1680, 1920, fin].map((m) => ({ m, y: y(m), texte: `${(m / 60) % 24} h` }));
-  const etiquettes = colonnes.map((c, i) => ({ x: centre(i), y: d.axeY, cle: c.cle }));
-  return { traits, marques, graduations, etiquettes, filets: graduations.map((g) => ({ x1: d.gauche, x2: d.largeur, y: g.y })) };
-}
-
 // Mes nuits (v8, Q15 et §7 bis) : une ligne par nuit notée, dans l'ordre des jours. Le jour à gauche ; une barre longue
 // comme les heures dormies, à la teinte de sa qualité (la rampe du sommeil, comme Mes jours ; creuse sans qualité) ; le
 // texte de la nuit à droite (« Mal · 6 h »), qui dit aussi la qualité d'une nuit sans durée, laquelle n'a pas de barre.

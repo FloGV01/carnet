@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../../public/js/analyse/index.js';
 import {
-  facteursParJour, periodeComprendre, explosionsAvant, explosionsApres, energieAvant, retoursBureau, parColonnes, nuitsParSoir,
+  facteursParJour, periodeComprendre, explosionsAvant, explosionsApres, energieAvant, retoursBureau, parColonnes,
   energieParActivite, peseRecharge, mesNuits, periodeMesNuits, MESURES,
 } from '../../public/js/analyse/comprendre.js';
 import { apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite } from '../../public/js/analyse/emotions.js';
@@ -90,7 +90,7 @@ test('Comprendre : les jours et tous les graphiques sur « Tout » ; 5 ans, moin
     const p = periodeComprendre('tout', d.aujourdhui, premiereDate({ journal: [...jours.values()] }, d.aujourdhui));
     explosionsAvant(jours, p, items); explosionsApres(jours, p, items); energieAvant(jours, p, items); retoursBureau(jours, p);
     for (const cle of ['semaine', 'mois']) for (const mesure of MESURES) parColonnes(jours, p, { cle, mesure }, items);
-    nuitsParSoir(d.journal, p); mesNuits(d.journal, periodeMesNuits(d.aujourdhui));
+    mesNuits(d.journal, periodeMesNuits(d.aujourdhui));
     energieParActivite(d.humeurs, p, items); peseRecharge(d.journal, p, items);
     apresNuit(d.journal, d.humeurs, p); autourDuBienEtre(d.seances, d.humeurs, p);
     relevesAvecActivite(d.humeurs, p); emotionsParActivite(d.humeurs, p, items);

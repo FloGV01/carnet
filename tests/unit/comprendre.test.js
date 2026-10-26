@@ -7,7 +7,7 @@ import { SEUILS } from '../../public/js/analyse/seuils.js';
 import {
   periodeComprendre, facteursParJour, aligne, elementsFrequents,
   explosionsAvant, explosionsApres, energieAvant, retoursBureau,
-  MESURES, parColonnes, nuitsParSoir, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
+  MESURES, parColonnes, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
 } from '../../public/js/analyse/comprendre.js';
 import { texteNuit, texteHeuresNuit } from '../../public/js/analyse/textes.js';
 import { analyserFichiers, remplacer } from '../../public/js/db/sauvegarde.js';
@@ -609,79 +609,6 @@ test('colonnes, seuils : 2 colonnes à au moins 3 valeurs (jour de la semaine, l
   assert.deepEqual(parMois(nuits(septembre)), { statut: 'insuffisant', colonnes: [] }, 'un seul mois');
   assert.equal(parMois([...nuits(septembre), ...nuits(octobre.slice(0, 2))]).statut, 'insuffisant', 'un mois de 3 valeurs, un de 2');
   assert.equal(parMois([...nuits(septembre), ...nuits(octobre)]).statut, 'ok');
-});
-
-// ---------- Nuits : une colonne par soir de coucher (§2.5, graphique 4) ----------
-
-const nuit = (date, coucher, lever) => soir(date, { heureCoucher: coucher, heureLever: lever });
-// Mardis 01, 08, 15 : nuits du lundi soir. Lundis 07, 14, 21 : nuits du dimanche soir.
-const MARDIS = ['2026-09-01', '2026-09-08', '2026-09-15'];
-const LUNDIS = ['2026-09-07', '2026-09-14', '2026-09-21'];
-const nuitsDe = (dates, coucher = '23:00', lever = '07:00') => dates.map((d) => nuit(d, coucher, lever));
-
-test('nuitsParSoir : la nuit notée le jour D va au soir D−1, du lundi au dimanche', () => {
-  // Notées les mardis : soir du lundi. Notées les lundis : soir du dimanche. Notées les dimanches 13 et 20 : soir du samedi.
-  const journal = [...nuitsDe(MARDIS), ...nuitsDe(LUNDIS), ...nuitsDe(['2026-09-13', '2026-09-20'])];
-  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
-  assert.equal(g.statut, 'ok');
-  assert.deepEqual(g.colonnes.map((c) => c.cle), [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(g.colonnes.map((c) => c.n), [3, 0, 0, 0, 0, 2, 3]);
-});
-
-test('nuitsParSoir : une nuit compte si le coucher et le lever sont notés et que minutesCoucherLever n\'est pas nul', () => {
-  const journal = [
-    ...nuitsDe(LUNDIS), ...nuitsDe(MARDIS),
-    // Des mardis qui ne comptent pas.
-    nuit('2026-09-22', '23:00', null), nuit('2026-09-29', null, '07:00'), nuit('2026-09-23', null, null),
-    nuit('2026-09-24', '05:00', '06:00'), // 1 h : sous la durée minimale
-    nuit('2026-09-25', '20:00', '13:00'), // 17 h : au-dessus de la durée maximale
-    nuit('2026-09-26', 'tard', '07:00'), // pas une heure
-    soir('2026-09-27', { sommeilRessenti: MAL }), // une nuit notée sans horaires
-  ];
-  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
-  assert.deepEqual(g.colonnes.map((c) => c.n), [3, 0, 0, 0, 0, 0, 3]);
-});
-
-test('nuitsParSoir : un coucher avant midi compte après minuit ; médianes en minutes depuis 0 h du soir, heures exactes', () => {
-  // Soir du lundi : coucher 23:00, 00:30 et 01:00 (1380, 1470, 1500), lever 07:00, 08:00 et 06:30.
-  // Soir du dimanche : coucher 22:30, 22:30 et 23:30, lever 07:00, 07:30 et 06:30.
-  const journal = [
-    nuit('2026-09-01', '23:00', '07:00'), nuit('2026-09-08', '00:30', '08:00'), nuit('2026-09-15', '01:00', '06:30'),
-    nuit('2026-09-07', '22:30', '07:00'), nuit('2026-09-14', '22:30', '07:30'), nuit('2026-09-21', '23:30', '06:30'),
-  ];
-  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
-  assert.deepEqual(g.colonnes[0], { cle: 0, n: 3, fragile: false, coucher: 1470, lever: 1860, heureCoucher: '00:30', heureLever: '07:00' });
-  assert.deepEqual(g.colonnes[6], { cle: 6, n: 3, fragile: false, coucher: 1350, lever: 1860, heureCoucher: '22:30', heureLever: '07:00' });
-});
-
-test('nuitsParSoir : fragile avec 1 ou 2 nuits, sans valeur avec aucune nuit', () => {
-  const journal = [...nuitsDe(MARDIS), ...nuitsDe(LUNDIS), nuit('2026-09-13', '23:15', '07:45'), nuit('2026-09-20', '23:45', '08:15')];
-  const g = nuitsParSoir(journal, tout('2026-09-30', '2026-09-01'));
-  assert.deepEqual(g.colonnes.map((c) => c.fragile), [false, true, true, true, true, true, false]);
-  // Le samedi : deux nuits, médiane des deux.
-  assert.deepEqual(g.colonnes[5], { cle: 5, n: 2, fragile: true, coucher: 1410, lever: 1920, heureCoucher: '23:30', heureLever: '08:00' });
-  // Le mardi : aucune nuit.
-  assert.deepEqual(g.colonnes[1], { cle: 1, n: 0, fragile: true, coucher: null, lever: null, heureCoucher: null, heureLever: null });
-});
-
-test('nuitsParSoir : seuil de 2 colonnes à au moins 3 nuits', () => {
-  const periode = tout('2026-09-30', '2026-09-01');
-  assert.deepEqual(nuitsParSoir(nuitsDe(MARDIS), periode), { statut: 'insuffisant', colonnes: [] }, 'une seule colonne');
-  assert.deepEqual(nuitsParSoir([...nuitsDe(MARDIS), ...nuitsDe(LUNDIS.slice(0, 2))], periode), { statut: 'insuffisant', colonnes: [] }, 'une colonne de 3 nuits, une de 2');
-  assert.equal(nuitsParSoir([...nuitsDe(MARDIS), ...nuitsDe(LUNDIS)], periode).statut, 'ok');
-  assert.deepEqual(nuitsParSoir([], periode), { statut: 'insuffisant', colonnes: [] });
-});
-
-test('nuitsParSoir : la période porte sur le jour où la nuit est notée, bornes comprises', () => {
-  // Notées les mardis 01, 08, 15 et 22 (soir du lundi), les lundis 07, 14 et 21 (soir du dimanche).
-  const journal = nuitsDe([...MARDIS, '2026-09-22', ...LUNDIS]);
-  const nombres = (periode) => nuitsParSoir(journal, periode).colonnes.map((c) => c.n);
-  assert.deepEqual(nombres({ du: '2026-09-01', au: '2026-09-30' }), [4, 0, 0, 0, 0, 0, 3]);
-  assert.deepEqual(nombres({ du: '2026-09-02', au: '2026-09-30' }), [3, 0, 0, 0, 0, 0, 3], 'la nuit notée le 01 est avant la période');
-  assert.deepEqual(nombres({ du: '2026-09-01', au: '2026-09-21' }), [3, 0, 0, 0, 0, 0, 3], 'la nuit notée le 22 est après ; celle du 21 est gardée');
-  // Notée le 07, premier jour de la période, une nuit est celle du soir du 06 : elle compte.
-  assert.deepEqual(nombres({ du: '2026-09-07', au: '2026-09-30' }), [3, 0, 0, 0, 0, 0, 3]);
-  assert.deepEqual(nuitsParSoir(journal, { du: '2026-09-08', au: '2026-09-30' }), { statut: 'insuffisant', colonnes: [] }, 'le dimanche n\'a plus que 2 nuits');
 });
 
 // ---------- Énergie selon ce que je faisais (§2.4, graphique 3) ----------

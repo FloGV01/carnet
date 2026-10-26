@@ -36,16 +36,22 @@ const verserNuits = (page, nuits = NUITS) => repo(page, async (liste) => {
   for (const [date, champs] of liste) await window.__carnet.repo.journal.patch(date, champs);
 }, nuits);
 
-test('Mes nuits : une ligne par nuit notée des 4 dernières semaines, au-dessus de « Tes nuits selon le jour », quelle que soit la période', async ({ page }) => {
+test('Mes nuits : une ligne par nuit notée des 4 dernières semaines, entre « Autour d\'un retour au bureau » et « Après une nuit », quelle que soit la période', async ({ page }) => {
   await verserNuits(page);
   await aller(page, '#/comprendre/rythmes');
   const nuits = carte(page, 'Mes nuits');
   const svg = nuits.getByRole('img', { name: /^Mes nuits, sur les quatre dernières semaines : une ligne par nuit notée/ });
   await expect(svg).toBeVisible();
   await expect(nuits.locator('.graphe-droite')).toHaveText('4 dernières semaines');
-  // Au-dessus de « Tes nuits selon le jour ».
-  const [haut, bas] = await Promise.all([nuits.boundingBox(), carte(page, 'Tes nuits selon le jour').boundingBox()]);
-  expect(haut.y + haut.height).toBeLessThanOrEqual(bas.y);
+  // Sa place : juste après « Autour d'un retour au bureau », juste avant « Après une nuit ». « Tes nuits selon le jour »,
+  // qui la suivait, est retiré (26/10) : Mes nuits le remplace.
+  const titres = await page.locator('.comprendre figure.graphe .graphe-titre').allTextContents();
+  const i = titres.indexOf('Mes nuits');
+  expect(titres.slice(i - 1, i + 2)).toEqual(["Autour d'un retour au bureau", 'Mes nuits', 'Après une nuit']);
+  expect(titres).not.toContain('Tes nuits selon le jour');
+  const [avant, ici, apres] = await Promise.all(["Autour d'un retour au bureau", 'Mes nuits', 'Après une nuit'].map((t) => carte(page, t).boundingBox()));
+  expect(avant.y + avant.height).toBeLessThanOrEqual(ici.y);
+  expect(ici.y + ici.height).toBeLessThanOrEqual(apres.y);
 
   // Six nuits notées : ni celle d'avant la fenêtre, ni le soir sans nuit. Le jour à gauche, le texte de la nuit à droite.
   const textes = await svg.locator('text').allTextContents();

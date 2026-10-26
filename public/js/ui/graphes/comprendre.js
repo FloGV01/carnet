@@ -5,13 +5,13 @@
 // valeur ; « Voir en tableau », qui donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des
 // causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
 // v8 : Mes nuits (Q15), nuit par nuit sur 4 semaines ; Émotions selon ce que je faisais (Q18) ; l'énergie haute et
-// l'hyperfocus dans « Avant mes jours à énergie basse » (Q17).
+// l'hyperfocus dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le jour » est retiré le 26/10 : Mes nuits
+// le remplace.
 import { html, useState } from '../lib.js';
 import { Cadre, LegendeFamilles, LegendeEnergie, LegendeNuits, famillesPresentes, texteFamilles } from './graphes.js';
 import { Pourquoi } from '../composants/pourquoi.js';
 import {
-  DIM_ALIGNE, DIM_BARRES, DIM_COLONNES, DIM_MES_NUITS, DIM_NUITS, geometrieActivites, geometrieAligne, geometrieBarres, geometrieColonnes, geometrieMesNuits,
-  geometrieNuits,
+  DIM_ALIGNE, DIM_BARRES, DIM_COLONNES, DIM_MES_NUITS, geometrieActivites, geometrieAligne, geometrieBarres, geometrieColonnes, geometrieMesNuits,
 } from './geometrie.js';
 import { PIED_EXPLOSIONS, REGLES_COMPRENDRE, texteHeuresNuit, texteNuit } from '../../analyse/textes.js';
 import { SEUILS } from '../../analyse/seuils.js';
@@ -70,8 +70,6 @@ const G = {
   // v8 · Mes nuits : toujours les 4 dernières semaines (SEUILS.comprendre.nuitsSemaines), quelle que soit la période choisie.
   mesNuits: { titre: 'Mes nuits', rubrique: 'sommeil', sur: 'sur les quatre dernières semaines',
     montre: () => 'une ligne par nuit notée, avec une barre longue comme les heures dormies, à la teinte de la qualité de la nuit' },
-  nuits: { titre: 'Tes nuits selon le jour', rubrique: 'sommeil',
-    montre: () => 'pour chaque soir de la semaine, un trait du coucher au lever, en heures médianes, de vingt heures en haut à midi en bas' },
   activites: { titre: 'Selon ce que tu faisais', rubrique: 'energie',
     montre: () => "pour chaque activité, une barre découpée en relevés d'énergie basse, moyenne et haute" },
   peseRecharge: { titre: 'Ce qui a pesé, ce qui a rechargé', rubrique: 'energie',
@@ -277,30 +275,6 @@ export function GrapheMesNuits({ nuits, periode, carte }) {
     ${g.lignes.map((l, i) => html`<text class="g-axe g-graduation" x="0" y=${l.y}>${formaterJourCourt(l.date)}</text>
       ${l.barre && html`<rect class=${l.barre.classe === 'creuse' ? 'g-barre-creuse' : `g-${l.barre.classe}`} x=${l.barre.x} y=${l.barre.y} width=${l.barre.l} height=${l.barre.h} rx="2" />`}
       <text class="g-axe g-graduation" x=${g.texteX} y=${l.y} text-anchor="end">${texteNuit(nuits[i], lib)}</text>`)}
-  </${Cadre}>`;
-}
-
-// ---------- Tes nuits selon le jour (spec §2.5, graphique 4) ----------
-
-export function GrapheNuits({ resultat, periode }) {
-  const { colonnes } = resultat;
-  const g = geometrieNuits(colonnes);
-  const d = DIM_NUITS;
-  const nuits = (c) => `${c.n}${c.fragile ? ` ${PEU}` : ''}`;
-  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Soir</th><th scope="col">Coucher</th><th scope="col">Lever</th><th scope="col">Nuits</th></tr></thead>
-    <tbody>${colonnes.filter((c) => c.n > 0).map((c) => html`<tr><td>${JOURS[c.cle]}</td><td>${c.heureCoucher}</td><td>${c.heureLever}</td><td>${nuits(c)}</td></tr>`)}</tbody></table>`;
-  const legende = html`<p class="legende-graphe legende-frise">
-    <span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-nuit" x1="6" x2="6" y1="3" y2="9" /></svg>du coucher au lever, heures médianes</span>
-    ${g.traits.some((t) => !t.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-nuit g-pointille" x1="6" x2="6" y1="2" y2="11" /></svg>une ou deux nuits</span>`}
-    ${g.marques.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><polygon class="g-marque" points="2,9 10,9 6,3" /></svg>au-delà de l'axe : l'heure est dans le tableau</span>`}
-  </p>`;
-  return html`<${Cadre} titre=${G.nuits.titre} rubrique=${G.nuits.rubrique} droite="soir du coucher" tableau=${tableau} legende=${legende}
-    dim=${d} aria=${phraseAria('nuits', periode)} pied=${PIED}>
-    ${g.graduations.map((t) => html`<text class="g-axe g-graduation" x="0" y=${t.y}>${t.texte}</text>`)}
-    ${g.filets.map((f) => html`<line class="g-filet" x1=${f.x1} x2=${f.x2} y1=${f.y} y2=${f.y} />`)}
-    ${g.traits.map((t) => html`<line class=${t.plein ? 'g-nuit' : 'g-nuit g-pointille'} x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
-    ${g.marques.map((m) => html`<polygon class="g-marque" points=${`${m.x - 4},${m.yBase} ${m.x + 4},${m.yBase} ${m.x},${m.yPointe}`} />`)}
-    ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${e.y} text-anchor="middle">${JOURS_COURTS[e.cle]}</text>`)}
   </${Cadre}>`;
 }
 

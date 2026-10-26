@@ -915,7 +915,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .barre-nom { font-size: var(--t-sous); font-weight: 600; overflow-wrap: anywhere; }
 .barre-svg { width: 100%; height: 12px; display: block; }
 .barre-detail { grid-column: 2; font-size: var(--t-note); color: var(--text-2); font-variant-numeric: tabular-nums; }
-/* v6 · Comprendre : graphique aligné, colonnes, nuits, barres empilées */
+/* v6 · Comprendre : graphique aligné, colonnes, barres empilées */
 .g-titre-bloc { font-size: 11px; font-weight: 600; fill: var(--text); }
 .g-nom { font-size: 11px; fill: var(--text); }
 .g-compte { fill: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -924,9 +924,6 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .g-barre-creuse { fill: var(--surface); stroke: var(--c); stroke-width: 1.5; }
 .g-repere { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .g-repere-fond { stroke: var(--surface); stroke-width: 4; }
-.g-nuit { stroke: var(--c); stroke-width: 6; stroke-linecap: round; }
-.g-nuit.g-pointille { stroke-width: 4; stroke-dasharray: 0.1 6; }
-.g-marque { fill: var(--c); }
 .tableau-comprendre tbody th { text-align: left; font-size: var(--t-sous); font-weight: 600; padding: 12px 0 4px; }
 .graphe-blocs { display: flex; flex-direction: column; gap: 14px; }
 .dates-barre { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; column-gap: 14px; }

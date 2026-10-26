@@ -5,7 +5,9 @@
 // v7 : la mesure « Humeur » devient « Émotions » (les familles), avec « Après une nuit » et « Autour de tes explosions » ;
 // « Autour du Bien-être » (spec §6.4) ferme l'onglet Énergie. v8 : « Mes nuits » (Q15) ouvre les nuits de Rythmes, sur les 4
 // dernières semaines quelle que soit la période ; « Émotions selon ce que je faisais » (Q18) suit l'énergie selon ce que je
-// faisais ; l'énergie haute et l'hyperfocus entrent dans « Avant mes jours à énergie basse » (Q17).
+// faisais ; l'énergie haute et l'hyperfocus entrent dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le
+// jour » est retiré le 26/10, à la demande de l'utilisateur : il lisait le coucher et le lever, que le soir ne propose plus
+// depuis la v8 ; Mes nuits le remplace.
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -15,14 +17,14 @@ import { carteLibelles } from '../../domain/libelles.js';
 import { premiereDate } from '../../analyse/fenetres.js';
 import {
   PERIODES, MESURES, periodeComprendre, facteursParJour, explosionsAvant, explosionsApres, energieAvant, retoursBureau,
-  parColonnes, nuitsParSoir, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
+  parColonnes, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
 } from '../../analyse/comprendre.js';
 import { apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite, selonSeuilEmotions } from '../../analyse/emotions.js';
 import { SEUILS } from '../../analyse/seuils.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { jourEvenement } from '../../domain/dates.js';
 import {
-  GrapheAligne, GrapheColonnes, GrapheNuits, GrapheMesNuits, GrapheActivites, GraphePeseRecharge, GrapheFamilles, GrapheFamillesColonnes, PasAssez, nomMesure,
+  GrapheAligne, GrapheColonnes, GrapheMesNuits, GrapheActivites, GraphePeseRecharge, GrapheFamilles, GrapheFamillesColonnes, PasAssez, nomMesure,
 } from '../graphes/comprendre.js';
 import { versHash } from '../../routeur.js';
 import { lireSiChange, lireBase } from '../lecture.js';
@@ -131,14 +133,12 @@ function Rythmes({ d, periode, choixPeriode, mesure, choisirMesure }) {
     return mesure === 'emotions' ? html`<${GrapheFamillesColonnes} pas=${pas} resultat=${r} periode=${choixPeriode} carte=${d.carte} />`
       : html`<${GrapheColonnes} pas=${pas} mesure=${mesure} resultat=${r} periode=${choixPeriode} carte=${d.carte} />`;
   };
-  const nuits = nuitsParSoir(d.journal, periode);
   return html`<${Segmente} etiquette="Mesure" options=${MESURES.map((m) => ({ valeur: m, libelle: nomMesure(m, lib) }))}
       valeur=${mesure} surChoix=${choisirMesure} classe="petit" sansVide=${true} />
     ${colonnes('semaine')}
     ${colonnes('lieu')}
     <${Aligne} graphe="retoursBureau" resultat=${retoursBureau(d.jours, periode)} d=${d} choixPeriode=${choixPeriode} />
     <${MesNuits} d=${d} choixPeriode=${choixPeriode} />
-    ${nuits.statut === 'ok' ? html`<${GrapheNuits} resultat=${nuits} periode=${choixPeriode} />` : html`<${PasAssez} graphe="nuits" />`}
     <${ApresNuit} d=${d} periode=${periode} choixPeriode=${choixPeriode} />
     ${colonnes('mois')}`;
 }

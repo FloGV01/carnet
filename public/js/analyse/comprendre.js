@@ -1,17 +1,17 @@
 // Comprendre (v6, spec §2) : les calculs de l'écran. Les facteurs de chaque jour logique et le graphique
 // aligné : des jours repères (explosions, jours à énergie basse, retours au bureau), lus à quelques jours de
-// décalage. Puis les colonnes (jour de la semaine, lieu, mois), les nuits selon le soir du coucher, l'énergie
-// selon ce que je faisais, et ce qui a pesé ou rechargé. Des comptes seulement, rassemblés : jamais une cause,
-// jamais une phrase calculée. v7 : la note de 1 à 10 n'est plus une mesure ; les colonnes comptent les émotions du
-// moment par famille (emotions.js). v8 : Mes nuits (Q15), nuit par nuit ; l'énergie haute et l'hyperfocus avant les jours à
-// énergie basse (Q17). La date du jour arrive par la période, qui finit aujourd'hui. Pur.
-import { addDays, jourEvenement, jourSemaine, JOURS } from '../domain/dates.js';
+// décalage. Puis les colonnes (jour de la semaine, lieu, mois), l'énergie selon ce que je faisais, et ce qui a pesé ou
+// rechargé. Des comptes seulement, rassemblés : jamais une cause, jamais une phrase calculée. v7 : la note de 1 à 10
+// n'est plus une mesure ; les colonnes comptent les émotions du moment par famille (emotions.js). v8 : Mes nuits (Q15),
+// nuit par nuit ; l'énergie haute et l'hyperfocus avant les jours à énergie basse (Q17). « Tes nuits selon le jour »
+// (les nuits selon le soir du coucher) est retiré le 26/10 : le soir ne propose plus le coucher et le lever, Mes nuits
+// le remplace. La date du jour arrive par la période, qui finit aujourd'hui. Pur.
+import { addDays, jourEvenement, JOURS } from '../domain/dates.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { energieBasseParJour, energieHauteParJour } from './energie-jour.js';
 import { famillesParJour, famillesParColonnes } from './emotions.js';
 import { ordreDeListe, clesDeColonnes, colonneDe } from './colonnes.js';
-import { bornesFenetre, minutesCoucherLever, coucherAjuste, enMinutes, versHeure, dureeNuit } from './fenetres.js';
-import { mediane } from './stats.js';
+import { bornesFenetre, dureeNuit } from './fenetres.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.comprendre;
@@ -265,32 +265,6 @@ export function mesNuits(journal, periode) {
     .map((j) => ({ date: j.date, heures: dureeNuit(j), qualite: QUALITES.has(j.sommeilRessenti) ? j.sommeilRessenti : null }))
     .filter((n) => n.heures != null || n.qualite != null)
     .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-// ---------- Tes nuits selon le jour (§2.5, graphique 4) ----------
-
-const LENDEMAIN = 1440; // le lever est le lendemain du coucher, en minutes
-const heureExacte = (m) => (m == null ? null : versHeure(m));
-
-// Une colonne par soir de coucher, du lundi (0) au dimanche. La nuit notée le jour D (celle qui précède D)
-// est celle du soir D−1 ; la période porte sur D. Une nuit compte si le coucher et le lever sont notés et
-// que minutesCoucherLever n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis minuit
-// du jour du coucher (un coucher avant 12:00 compte après minuit, donc au-delà de 1440 ; le lever est le
-// lendemain, + 1440) ; heureCoucher et heureLever : les mêmes, en heure exacte, pour le tableau. n === 0 :
-// aucune nuit, tout est null et il n'y a rien à tracer ; à tester avant `fragile` (aussi vrai à n = 0, même
-// règle « moins de 3 valeurs » que `peu` dans aligne()).
-export function nuitsParSoir(journal, periode) {
-  const ici = dans(periode);
-  const soirs = Array.from({ length: 7 }, () => []);
-  for (const j of journal || []) {
-    if (!j || !ici(j.date) || minutesCoucherLever(j.heureCoucher, j.heureLever) == null) continue;
-    soirs[jourSemaine(addDays(j.date, -1))].push(j);
-  }
-  return selonSeuil(soirs.map((nuits, cle) => {
-    const coucher = mediane(nuits.map((j) => coucherAjuste(j.heureCoucher)));
-    const lever = mediane(nuits.map((j) => enMinutes(j.heureLever) + LENDEMAIN));
-    return { cle, n: nuits.length, fragile: nuits.length < S.minValeurs, coucher, lever, heureCoucher: heureExacte(coucher), heureLever: heureExacte(lever) };
-  }));
 }
 
 // ---------- Selon ce que je faisais (§2.4, graphique 3) ----------

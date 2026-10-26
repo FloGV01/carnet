@@ -28,7 +28,6 @@ export const REGLES_COMPRENDRE = {
   semaine: regleColonnes('jours de la semaine'),
   lieu: regleColonnes('lieux'),
   mois: regleColonnes('mois'),
-  nuits: `La règle : au moins ${C.minColonnes} soirs de la semaine qui ont chacun au moins ${C.minValeurs} nuits avec l'heure du coucher et du lever (« Nuit en détail »).`,
   activites: `La règle : une activité de « Ce que je faisais » apparaît à partir de ${C.minActivite} relevés avec une énergie.`,
   // v8 · Mes nuits (Q15) : une barre dès qu'une nuit a sa durée.
   mesNuits: `La règle : au moins une nuit notée avec sa durée sur les ${C.nuitsSemaines} dernières semaines.`,

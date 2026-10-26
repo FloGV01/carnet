@@ -340,40 +340,6 @@ test('v6 · Comprendre, colonnes par lieu : étiquettes sur deux rangs quand les
   assert.equal(g4.hauteur, d.hauteur);
 });
 
-const nuit = (cle, n, coucher, lever) => ({ cle, n, fragile: n < 3, coucher: n ? coucher : null, lever: n ? lever : null });
-
-test('v6 · Comprendre, nuits : axe de 20 h en haut à 12 h en bas, trait plein à 3 nuits, pointillé à 1 ou 2, absent sans nuit', async () => {
-  const { geometrieNuits, DIM_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  const colonnes = [nuit(0, 5, 1380, 1860), nuit(1, 2, 1440, 1920), nuit(2, 0), nuit(3, 3, 1200, 2160), nuit(4, 1, 1530, 1950), nuit(5, 0), nuit(6, 4, 1410, 1890)];
-  const g = geometrieNuits(colonnes);
-  const y = (m) => r1(d.haut + ((m - 1200) / 960) * (d.bas - d.haut));
-  assert.deepEqual(g.graduations.map((t) => [t.texte, t.y]), [['20 h', d.haut], ['0 h', y(1440)], ['4 h', y(1680)], ['8 h', y(1920)], ['12 h', d.bas]]);
-  assert.deepEqual(g.traits.map((t) => t.cle), [0, 1, 3, 4, 6], 'absent sans nuit');
-  assert.deepEqual(g.traits.map((t) => t.plein), [true, false, true, false, true]);
-  assert.deepEqual([g.traits[0].y1, g.traits[0].y2], [y(1380), y(1860)], 'du coucher (en haut) au lever (en bas)');
-  assert.deepEqual([g.traits[2].y1, g.traits[2].y2, g.traits[2].horsAxe], [d.haut, d.bas, false], 'sur les bords, pas hors de l\'axe');
-  assert.deepEqual(g.marques, []);
-  assert.deepEqual(g.etiquettes.map((e) => e.cle), [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
-});
-
-test('v6 · Comprendre, nuits : une médiane hors de l\'axe est ramenée au bord, avec horsAxe et une marque', async () => {
-  const { geometrieNuits, DIM_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  // Coucher à 18:30 (avant 20 h), lever à 13:30 (après 12 h), et les deux à la fois.
-  const colonnes = [nuit(0, 4, 1110, 1860), nuit(1, 3, 1380, 2250), nuit(2, 1, 900, 2400), nuit(3, 0), nuit(4, 0), nuit(5, 0), nuit(6, 0)];
-  const g = geometrieNuits(colonnes);
-  assert.deepEqual(g.traits.map((t) => [t.cle, t.horsAxe]), [[0, true], [1, true], [2, true]]);
-  assert.equal(g.traits[0].y1, d.haut);
-  assert.equal(g.traits[1].y2, d.bas);
-  assert.deepEqual([g.traits[2].y1, g.traits[2].y2], [d.haut, d.bas]);
-  assert.deepEqual(g.marques.map((m) => [m.cle, m.sens]), [[0, 'haut'], [1, 'bas'], [2, 'haut'], [2, 'bas']]);
-  for (const m of g.marques) {
-    assert.equal(m.x, g.traits.find((t) => t.cle === m.cle).x);
-    assert.ok(m.sens === 'haut' ? m.yPointe < m.yBase && m.yBase <= d.haut : m.yPointe > m.yBase && m.yBase >= d.bas, 'la marque pointe hors de l\'axe');
-  }
-  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
-});
-
 test('v6 · Comprendre, activités : une barre par activité, longue comme ses relevés, découpée en énergie basse, moyenne et haute', async () => {
   const { geometrieActivites, DIM_BARRES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const g = geometrieActivites([
@@ -422,7 +388,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(libelleAutres({ oui: 0, n: 0, peu: true }), null);
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
-  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'mesNuits', 'nuits', 'activites',
+  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'mesNuits', 'activites',
     'peseRecharge', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
@@ -445,7 +411,7 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
     }
   }
   // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas ; Mes nuits ne dit pas la période.
-  assert.equal(phrases.size, 2 * (11 + 3 * 4) + 1);
+  assert.equal(phrases.size, 2 * (10 + 3 * 4) + 1);
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -475,7 +441,7 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   }
   // Les nombres sont ceux de seuils.js.
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
-  for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
+  for (const g of ['semaine', 'lieu', 'mois']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
   for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
   // v8 · Mes nuits : sa fenêtre vient de SEUILS.comprendre ; Q18 nomme la liste « Ce que je faisais ».

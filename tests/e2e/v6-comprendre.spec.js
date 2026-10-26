@@ -33,7 +33,7 @@ async function demarrer(page) {
 
 // 180 jours qui finissent aujourd'hui : le générateur (lieu, nuit, contact, explosions, relevés du moment),
 // puis, sans hasard, ce qu'il ne note pas : l'énergie, l'émotion (v7, à la place de la note) et « Ce que je faisais »
-// des relevés, pesé et rechargé, le coucher et le lever.
+// des relevés, pesé et rechargé, le coucher et le lever (des nuits d'avant la v8, que Mes nuits lit).
 const EMOTIONS = FAMILLES.flatMap((f) => [f.id, ...f.mots.slice(0, 2).map((m) => m.id)]);
 const ENERGIES = ['energie:basse', 'energie:moyenne', 'energie:haute', 'energie:moyenne'];
 const ACTIVITES = ['activiteMoment:travail', 'activiteMoment:trajet', 'activiteMoment:maison', 'activiteMoment:repos'];
@@ -87,9 +87,12 @@ test('accès depuis l\'Analyse, trois onglets ; sans données, « Pas encore ass
   await expect(page).toHaveURL(/#\/comprendre\/rythmes$/);
   await expect(groupe(page, 'Mesure').getByRole('button')).toHaveText(['Émotions', 'Nuits Mal', 'Explosions', 'Énergie basse']);
   await expect(bouton(page, 'Mesure', 'Émotions')).toHaveAttribute('aria-pressed', 'true');
-  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Mes nuits', 'Tes nuits selon le jour', 'Après une nuit', 'Selon le mois']) {
+  for (const titre of ['Selon le jour de la semaine', 'Selon le lieu', "Autour d'un retour au bureau", 'Mes nuits', 'Après une nuit', 'Selon le mois']) {
     await pasAssez(page, titre);
   }
+  // « Tes nuits selon le jour » est retiré (26/10) : Mes nuits le remplace.
+  await expect(page.locator('figure.graphe')).toHaveCount(6);
+  await expect(page.getByText('Tes nuits selon le jour')).toHaveCount(0);
 
   // « ‹ Retour » ramène à l'Analyse ; chaque porte mène à son onglet.
   await page.getByRole('button', { name: 'Retour' }).click();
@@ -170,7 +173,10 @@ test('180 jours inventés : les graphiques des trois onglets, les choix gardés,
   await expect(page.getByRole('img', { name: /^Selon le jour de la semaine, sur tout ce que tu as noté : une barre des émotions du moment/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /^Selon le lieu, sur tout ce que tu as noté : / })).toBeVisible();
   await expect(page.getByRole('group', { name: /^Autour d'un retour au bureau, sur tout ce que tu as noté : / })).toBeVisible();
-  await expect(page.getByRole('img', { name: /^Tes nuits selon le jour, sur tout ce que tu as noté : / })).toBeVisible();
+  // Les nuits anciennes (coucher et lever) des 4 dernières semaines ont leur ligne dans Mes nuits ; « Tes nuits selon le
+  // jour », qui les lisait par soir, est retiré (26/10).
+  await expect(page.getByRole('img', { name: /^Mes nuits, sur les quatre dernières semaines : / })).toBeVisible();
+  await expect(page.getByText('Tes nuits selon le jour')).toHaveCount(0);
   await expect(page.getByRole('img', { name: /^Après une nuit, sur tout ce que tu as noté : / })).toBeVisible();
   await expect(page.getByRole('img', { name: /^Selon le mois, sur tout ce que tu as noté : une barre des émotions du moment/ })).toBeVisible();
   // Les colonnes d'émotions : un jour de la semaine par ligne, les familles en légende, aucun pourcentage.
@@ -250,8 +256,9 @@ test('180 jours inventés : « Voir en tableau », le toucher d\'une barre et se
     phrases.push(...await page.locator('figure.graphe [role="group"], figure.graphe svg[role="img"]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))));
   }
   // Explosions : Avant (Autour de tes explosions n'a pas d'heure d'explosion ici) ; Énergie : 3, et (v8) Émotions selon ce que
-  // je faisais ; Rythmes : 5, Après une nuit, et (v8) Mes nuits (le coucher et le lever de chaque nuit lui donnent sa durée).
-  expect(phrases).toHaveLength(1 + 4 + 7);
+  // je faisais ; Rythmes : 4 (jour de la semaine, lieu, retour au bureau, mois), Après une nuit, et (v8) Mes nuits (le coucher
+  // et le lever de chaque nuit lui donnent sa durée). « Tes nuits selon le jour » est retiré (26/10).
+  expect(phrases).toHaveLength(1 + 4 + 6);
   for (const p of phrases) {
     expect(p).toMatch(/« Voir en tableau »\.$/);
     expect(p).not.toMatch(/\d|%/);
