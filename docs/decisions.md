@@ -689,9 +689,10 @@ Pistes à proposer, aucune appliquée :
   - le lecteur : avant de commencer, une étape rythmée, la pause et la fin ;
   - la cohérence cardiaque de l'onglet, avant et pendant ;
   - Mes nuits, en graphique et en tableau, avec une nuit sans qualité et une nuit sans durée ;
+  - « Émotions selon ce que je faisais » (Q18), en graphique et en tableau : les relevés d'émotion versés ont maintenant ce que je faisais, une ou deux activités (relecture : sans eux, la carte restait sur « Pas encore assez de données », sans graphique à mesurer) ;
   - Réglages › Émotions, avec un sens corrigé ouvert dans son champ.
 
-  Il compte 48 écrans, contre 41. Tout texte visible a au moins 4,5:1 sur son fond, aucun cadre n'est en tirets, et tout choix fait a sa coche. À 390 px, au texte par défaut et à 23 px, rien ne sort de l'écran de côté.
+  Il compte 49 écrans, contre 41. Tout texte visible a au moins 4,5:1 sur son fond, aucun cadre n'est en tirets, et tout choix fait a sa coche. À 390 px, au texte par défaut et à 23 px, rien ne sort de l'écran de côté.
 - **Un test instable stabilisé** : « deux touchers rapides » (point de vigilance 5) a échoué une fois sous la charge de `npm test`. Entre les deux touchers, à 120 ms d'écart sur l'horloge de la page, le temps réel s'ajoutait, et la garde de 350 ms expirait. L'horloge de la page est maintenant arrêtée pendant les deux touchers, puis relancée. Le test passe dans `npm test`, et il échoue toujours avec une garde de 100 ms.
 - **Vu et laissé tel quel** :
   - le séparateur « · » des messages (« Fin de l'exercice. · Noter mon émotion »), au milieu de la place libre : c'est le message commun de l'app depuis la v6 ;

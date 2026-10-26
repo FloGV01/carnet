@@ -15,7 +15,8 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 // - Réglages et Le soir en listes groupées 2b, carrés d'icônes ; l'Historique et ses puces 2b.
 // v8 (9/9) : le parcours passe aussi par les écrans de la v8 : la Durée et le détail du Sport dans leurs cartes, la
 // carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur (avant, étape rythmée, pause,
-// fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), Réglages › Émotions (un sens corrigé).
+// fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), « Émotions selon ce que je faisais »
+// (graphique et tableau), Réglages › Émotions (un sens corrigé).
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -31,7 +32,8 @@ const PLAN = {
 // texte d'aide est mesuré. Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
 // la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
 // une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
-// bout et un sens de mot corrigé (Réglages › Émotions). Renvoie les identifiants utiles.
+// bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
+// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. Renvoie les identifiants utiles.
 async function verser(page) {
   return page.evaluate(async (plan) => {
     const r = window.__carnet.repo;
@@ -47,9 +49,11 @@ async function verser(page) {
     await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
     await r.humeurs.creer({ date: '2026-10-09', heure: '18:00', humeur: 4, energie: 'energie:basse' });
     const emotions = ['roue:colere:irrite', 'roue:serenite:calme', 'roue:joie:curieux', 'roue:tristesse', 'roue:peur:preoccupe', 'roue:surprise:perplexe', 'roue:degout:hesitant'];
+    const faisais = [['activiteMoment:travail'], ['activiteMoment:repos'], ['activiteMoment:trajet', 'activiteMoment:travail']];
     for (const [i, d] of jours.slice(2).entries()) {
-      await r.humeurs.creer({ date: d, heure: '12:00', emotion: emotions[i % emotions.length], energie: 'energie:moyenne' });
-      await r.humeurs.creer({ date: d, heure: '19:30', emotion: emotions[(i + 3) % emotions.length], energie: i % 2 ? 'energie:basse' : 'energie:haute' });
+      await r.humeurs.creer({ date: d, heure: '12:00', emotion: emotions[i % emotions.length], energie: 'energie:moyenne', faisais: faisais[i % 3] });
+      await r.humeurs.creer({ date: d, heure: '19:30', emotion: emotions[(i + 3) % emotions.length], energie: i % 2 ? 'energie:basse' : 'energie:haute',
+        faisais: faisais[(i + 1) % 3] });
     }
     const ep = await r.episodes.creer({ date: '2026-10-14', heure: '18:40', declencheur: 'declencheur:surcharge_sensorielle', emotion: 'emotion:colere',
       intensite: 7, dessous: 'dessous:fatigue_debordement', reaction: 'reaction:explosion', situation: 'Open space bruyant.' });
@@ -212,7 +216,11 @@ const ECRANS = (ids) => [
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
   ['Analyse', (p) => aller(p, '#/analyse'), '.analyse .selecteur-periode'],
   ['Comprendre, Explosions', (p) => aller(p, '#/comprendre/explosions'), '.comprendre figure.graphe'],
-  ['Comprendre, Énergie', (p) => aller(p, '#/comprendre/energie'), '.comprendre figure.graphe'],
+  // v8 (9/9) : le graphique « Émotions selon ce que je faisais » (Q18) dessiné, puis son tableau.
+  ['Comprendre, Énergie', (p) => aller(p, '#/comprendre/energie'), '.comprendre figure.graphe svg[aria-label^="Émotions selon ce que je faisais"]'],
+  ['Comprendre, Émotions selon ce que je faisais en tableau',
+    (p) => p.locator('figure.graphe', { has: p.locator('svg[aria-label^="Émotions selon ce que je faisais"]') }).getByRole('button', { name: 'Voir en tableau' }).click(),
+    '.comprendre figure.graphe:has-text("Émotions selon ce que je faisais") table.tableau-familles'],
   ['Comprendre, Rythmes', (p) => aller(p, '#/comprendre/rythmes'), '.comprendre figure.g-mes-nuits svg'],
   // v8 (9/9) : Mes nuits en tableau.
   ['Comprendre, Mes nuits en tableau', (p) => p.locator('figure.g-mes-nuits').getByRole('button', { name: 'Voir en tableau' }).click(),
