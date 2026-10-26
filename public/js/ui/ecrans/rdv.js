@@ -1,11 +1,12 @@
-// Fiche d'un rendez-vous : enregistrement automatique, questions à cocher, mémo vocal.
+// Fiche d'un rendez-vous : enregistrement automatique, questions à cocher (et à modifier sur place, v8), sujets à
+// toucher sous le champ des questions (v8, Q22), mémo vocal.
 import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { ChampTexte } from '../composants/texte.js';
 import { MemoVocal } from '../composants/memo-vocal.js';
 import { Confirmation } from '../composants/confirmation.js';
-import { QuestionsACocher, AjoutQuestion, BoutonConsultation } from '../composants/questions.js';
+import { QuestionsACocher, AjoutQuestion, BoutonConsultation, SujetsRdv } from '../composants/questions.js';
 import { Icones } from '../icones.js';
 import { LibelleChamp } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
@@ -17,13 +18,17 @@ export { AjoutQuestion };
 
 export function Rdv({ id: idRoute }) {
   const [items, setItems] = useState(null);
+  const [sujets, setSujets] = useState(null);
   const [confirmer, setConfirmer] = useState(false);
-  useEffect(() => { repo.listes.items('professionnel').then(setItems); }, []);
+  useEffect(() => {
+    repo.listes.items('professionnel').then(setItems);
+    repo.listes.items('sujetRdv').then(setSujets);
+  }, []);
   const { fiche, id, ecrire, assurer, supprimer, indicateur } = useFiche({
     store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({ date: null, heure: null }),
   });
   const retour = () => { location.hash = '#/soins'; };
-  if (!fiche || !items) return html`<main class="ecran fiche"><${Entete} titre="Rendez-vous" retour=${retour} /></main>`;
+  if (!fiche || !items || !sujets) return html`<main class="ecran fiche"><${Entete} titre="Rendez-vous" retour=${retour} /></main>`;
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const enConsultation = async () => { const i = await assurer(); if (i) location.hash = versHash('consultation', { id: i }); };
@@ -58,8 +63,9 @@ export function Rdv({ id: idRoute }) {
     <div class="champ-fiche">
       <${LibelleChamp} icone="questions">Questions</${LibelleChamp}>
       ${questions.length > 0 && html`<div class="carte-questions"><${QuestionsACocher} questions=${questions} surChanger=${majQuestions}
-        surRetirer=${(i) => majQuestions(questions.filter((_, k) => k !== i))} /></div>`}
+        surModifier=${majQuestions} surRetirer=${(i) => majQuestions(questions.filter((_, k) => k !== i))} /></div>`}
       <${AjoutQuestion} surAjouter=${(t) => majQuestions([...(fiche.questions || []), { texte: t, abordee: false }])} />
+      <${SujetsRdv} sujets=${sujets} questions=${questions} surChanger=${majQuestions} />
     </div>
     <div class="champ-fiche"><${ChampTexte} key=${`cr-${idRoute}`} id="rdv-compte-rendu" etiquette="Ce qui a été dit / décidé" icone="note" valeur=${fiche.compteRendu}
       cleBrouillon=${id ? `carnet:brouillon:${id}:compteRendu` : null} surEnregistrer=${(v) => ecrire({ compteRendu: v })} /></div>

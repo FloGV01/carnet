@@ -129,6 +129,19 @@
 .questions-grandes .case-question svg { width: 16px; height: 16px; }
 .carte-questions { background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-bouton); padding: 0 4px 0 12px; }
 .voir-question { flex: none; padding: 0 4px 0 12px; font-weight: 600; }
+/* Fiche d'un rendez-vous (v8) : la case seule coche (cible de 44, le carré à sa place), le texte se modifie sur place,
+   dans une zone à sa taille ; « Parler de… » et ses sujets sous le champ des questions. */
+.question-modifiable .case-seule { flex: none; width: var(--cible); margin-left: -11px; justify-content: center; }
+.texte-question-bouton {
+  flex: 1; min-width: 0; min-height: var(--cible); padding: 6px 0; border: 0; background: none;
+  text-align: left; color: var(--text); font-size: var(--t-corps); line-height: 1.35; overflow-wrap: anywhere;
+}
+/* Le cadre du focus (rendu au texte après Retour) dans la rangée, arrondi, sans toucher les filets : le texte ne bouge pas. */
+.texte-question-bouton:focus-visible { outline-offset: -2px; border-radius: var(--r-petit); padding-inline: 8px; margin-inline: -8px; }
+.question-modifiable.abordee .texte-question { color: var(--text-2); }
+.question-ligne textarea.zone-question { --lignes: 1; flex: 1; min-width: 0; margin: 2px 0 2px -8px; padding-left: 8px; overflow-wrap: anywhere; }
+.sujets-rdv { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.libelle-sujets { margin: 0; font-size: var(--t-sous); color: var(--text-2); }
 
 /* « La dernière fois » (v6) : le compte rendu et la prochaine étape tels qu'écrits, « Reprendre » à côté de chaque question. */
 .bloc-lecture { display: flex; flex-direction: column; gap: 2px; }
