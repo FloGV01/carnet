@@ -184,7 +184,7 @@ test('questionSujet : « Parler de : sommeil », l\'initiale en minuscule sauf u
   assert.equal(questionSujet('  Mon sommeil '), 'Parler de : mon sommeil');
 });
 
-test('basculerSujet : un toucher pose la question, un second la retire telle quelle ; une question modifiée reste', () => {
+test('basculerSujet : un toucher pose la question, un second la retire telle quelle ; abordée ou modifiée, elle reste', () => {
   const avant = [{ texte: 'Les réveils vers 3 h', abordee: true }];
   const copie = structuredClone(avant);
   const un = basculerSujet(avant, 'Sommeil');
@@ -193,7 +193,17 @@ test('basculerSujet : un toucher pose la question, un second la retire telle que
   assert.deepEqual(basculerSujet(un, 'Sommeil'), avant);
   // Sans question, ou avec une liste absente.
   assert.deepEqual(basculerSujet(null, 'Autre chose'), [{ texte: 'Parler de : autre chose', abordee: false }]);
-  assert.deepEqual(basculerSujet([{ texte: 'Parler de : sommeil', abordee: true }], 'Sommeil'), [], 'cochée ou non, la question amorcée part');
+  // Cochée « abordée », elle reste (relecture) : la coche nourrit « La dernière fois » et l'A4 ; rien ne change (null).
+  const abordee = [{ texte: 'Effets du matin', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }];
+  const copieAbordee = structuredClone(abordee);
+  assert.equal(basculerSujet(abordee, 'Sommeil'), null, 'une question abordée ne part pas par sa pastille');
+  assert.deepEqual(abordee, copieAbordee);
+  assert.equal(basculerSujet([{ texte: ' Parler de : sommeil ', abordee: true }], 'Sommeil'), null, 'telle quelle, aux espaces près');
+  assert.equal(basculerSujet([{ texte: 'Parler de : sommeil', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }], 'Sommeil'), null,
+    'en double (écrite à la main), rien ne part si l\'une est abordée');
+  // Décochée, elle repart d'un toucher ; les autres sujets ne sont pas touchés.
+  assert.deepEqual(basculerSujet([{ texte: 'Parler de : sommeil', abordee: false }], 'Sommeil'), []);
+  assert.deepEqual(basculerSujet(abordee, 'Travail'), [...abordee, { texte: 'Parler de : travail', abordee: false }]);
   // Modifiée ensuite, elle est à l'utilisateur : un toucher en pose une nouvelle, sans toucher à la sienne.
   const modifiee = [{ texte: 'Parler de : sommeil, les réveils', abordee: false }];
   assert.deepEqual(basculerSujet(modifiee, 'Sommeil'), [...modifiee, { texte: 'Parler de : sommeil', abordee: false }]);

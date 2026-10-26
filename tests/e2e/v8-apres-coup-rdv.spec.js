@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
+import { canaux, jetons } from '../aides/couleurs.js';
 
 // v8 (7/9) · Après coup quand la honte reste (Q20) et sujets d'un rendez-vous (Q22), spec §7 :
 // - « Une autre façon de voir » vient aussi après Honte ou Regret touché dans « Plus tard », quel que soit le type ;
@@ -7,6 +9,8 @@ import { viderBase, aller } from '../aides/saisie.js';
 //   « Parler de : sommeil », un second la retire ; la question se modifie ensuite sur place. La liste se règle dans
 //   Réglages › Listes. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00.
 const repo = (page, f, arg) => page.evaluate(f, arg);
+const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
+const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 const lireEp = (page, id) => repo(page, (i) => window.__carnet.repo.episodes.lire(i), id);
 const lireRdv = (page, id) => repo(page, (i) => window.__carnet.repo.rdv.lire(i), id);
 
@@ -161,6 +165,46 @@ test('Q22 · un toucher pose « Parler de : sommeil » sous le champ des questio
   await page.getByRole('button', { name: 'Retirer la question Les réveils vers 3 h' }).click();
   await expect.poll(async () => (await lireRdv(page, id)).questions ?? null).toBeNull();
   await expect(sujets(page).getByRole('button', { name: 'Sommeil' })).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('Q22 · cochée « abordée », la question reste au toucher de son sujet (le toucher le dit) ; grise dans la fiche ; le ✕ la retire', async ({ page }) => {
+  const questions = [{ texte: 'Les réveils vers 3 h', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }];
+  const id = await creerRdv(page, questions);
+  const sommeil = sujets(page).getByRole('button', { name: 'Sommeil' });
+  const texte = (nom) => page.getByRole('button', { name: `Modifier la question ${nom}`, exact: true }).locator('.texte-question');
+  // Abordée, le texte passe au gris secondaire (--text-2), en clair et en sombre ; l'autre garde --text.
+  for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
+    await page.emulateMedia({ colorScheme: schema });
+    await aller(page, '#/soins');
+    await aller(page, `#/rdv/${id}`);
+    await expect(sommeil).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => texte('Parler de : sommeil').evaluate((e) => getComputedStyle(e).color), schema).toBe(rgb(t['text-2']));
+    await expect.poll(() => texte('Les réveils vers 3 h').evaluate((e) => getComputedStyle(e).color), schema).toBe(rgb(t.text));
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  // Le toucher ne retire rien, ni la coche : il dit pourquoi.
+  await sommeil.click();
+  await expect(page.locator('.toast-texte')).toHaveText('Question déjà abordée : elle reste');
+  expect((await lireRdv(page, id)).questions).toEqual(questions);
+  await expect(sommeil).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Parler de : sommeil', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  // Décochée, un toucher la retire, comme avant ; reposée puis cochée, elle reste de nouveau.
+  await page.getByRole('button', { name: 'Parler de : sommeil', exact: true }).click();
+  await expect.poll(async () => (await lireRdv(page, id)).questions[1].abordee).toBe(false);
+  await sommeil.click();
+  await expect.poll(async () => (await lireRdv(page, id)).questions.map((q) => q.texte)).toEqual(['Les réveils vers 3 h']);
+  await expect(sommeil).toHaveAttribute('aria-pressed', 'false');
+  await sommeil.click();
+  await page.getByRole('button', { name: 'Parler de : sommeil', exact: true }).click();
+  await expect.poll(async () => (await lireRdv(page, id)).questions).toEqual(questions);
+  await sommeil.click();
+  await expect(page.locator('.toast-texte')).toHaveText('Question déjà abordée : elle reste');
+  expect((await lireRdv(page, id)).questions).toEqual(questions);
+  // Le ✕ de la question la retire, abordée ou non.
+  await page.getByRole('button', { name: 'Retirer la question Parler de : sommeil' }).click();
+  await expect.poll(async () => (await lireRdv(page, id)).questions).toEqual([questions[0]]);
+  await expect(sommeil).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('Q22 · la question se modifie ensuite sur place (Retour, sortie du champ, Échap) ; la case seule coche ; un doublon est refusé', async ({ page }) => {

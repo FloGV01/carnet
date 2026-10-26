@@ -59,14 +59,18 @@ export function reprendreQuestion(rdvCible, question) {
 
 // Sujets d'un rendez-vous (v8, Q22) : un toucher sur « Sommeil » pose la question « Parler de : sommeil » (l'initiale
 // en minuscule, sauf un sigle). Le sujet paraît choisi tant que sa question est là telle quelle ; un second toucher
-// la retire. Une question modifiée ensuite est à l'utilisateur : le sujet ne la touche plus (un toucher en repose une).
-// L'app n'écrit rien sur le fond : le sujet seulement.
+// la retire, sauf cochée « abordée » : basculerSujet renvoie alors null et rien ne change (relecture : la coche nourrit
+// « La dernière fois » et l'A4 des soignants, et la pastille ne se présente pas comme une suppression ; le ✕ de la
+// question la retire). Une question modifiée ensuite est à l'utilisateur : le sujet ne la touche plus (un toucher en
+// repose une). L'app n'écrit rien sur le fond : le sujet seulement.
 export const questionSujet = (libelleSujet) => `Parler de : ${minusculeInitiale(String(libelleSujet).trim())}`;
 export const sujetsPoses = (questions, sujets) => sujets.filter((s) => dejaPosee(questions, questionSujet(s.libelle))).map((s) => s.id);
 export function basculerSujet(questions, libelleSujet) {
   const liste = questions || [];
   const texte = questionSujet(libelleSujet);
-  if (dejaPosee(liste, texte)) return liste.filter((q) => q.texte.trim() !== texte);
+  const posees = liste.filter((q) => q.texte.trim() === texte);
+  if (posees.some((q) => q.abordee)) return null;
+  if (posees.length > 0) return liste.filter((q) => q.texte.trim() !== texte);
   return [...liste, { texte, abordee: false }];
 }
 

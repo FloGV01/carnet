@@ -25,7 +25,8 @@ const PLAN = {
 
 // Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
 // deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
-// texte d'aide est mesuré. Renvoie les identifiants utiles.
+// texte d'aide est mesuré. Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
+// la pastille « Sommeil » choisie et le texte gris d'une question abordée. Renvoie les identifiants utiles.
 async function verser(page) {
   return page.evaluate(async (plan) => {
     const r = window.__carnet.repo;
@@ -48,7 +49,7 @@ async function verser(page) {
       intensite: 7, dessous: 'dessous:fatigue_debordement', reaction: 'reaction:explosion', situation: 'Open space bruyant.' });
     await r.symptomes.creer({ date: '2026-10-13', symptome: 'symptome:ruminations', intensite: 5, duree: 'duree:moins_une_heure' });
     const rdv = await r.rdv.creer({ date: '2026-10-22', heure: '14:00', professionnel: 'professionnel:psychiatre',
-      questions: [{ texte: 'Le sommeil du week-end est plus décalé.', abordee: false }] });
+      questions: [{ texte: 'Le sommeil du week-end est plus décalé.', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }] });
     await r.rdv.creer({ date: '2026-10-07', heure: '10:30', professionnel: 'professionnel:psychologue', compteRendu: 'Travail sur les premiers signes.' });
     const tr = await r.traitements.creer({ date: '2026-09-28', changement: 'Comprimé A : matin 1 → 1½', effetsSecondaires: ['effetSecondaire:aucun'], effetRessenti: 'effetRessenti:mieux' });
     await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });

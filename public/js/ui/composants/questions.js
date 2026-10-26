@@ -83,7 +83,8 @@ function TexteQuestion({ questions, i, surModifier }) {
 }
 
 // Sujets d'un rendez-vous (v8, Q22), sous le champ des questions : un toucher pose « Parler de : sommeil », choisi
-// tant que la question est là telle quelle ; un second toucher la retire (domain/soins.js). Ni compte ni avis.
+// tant que la question est là telle quelle ; un second toucher la retire (domain/soins.js). Cochée « abordée », elle
+// reste : le toucher le dit, et le ✕ de la question la retire. Ni compte ni avis.
 // `sujets` : les éléments de la liste `sujetRdv` (Réglages › Listes) ; un sujet archivé ne paraît que s'il est posé.
 export function SujetsRdv({ sujets, questions, surChanger }) {
   const poses = sujetsPoses(questions, sujets);
@@ -94,7 +95,10 @@ export function SujetsRdv({ sujets, questions, surChanger }) {
     const apres = nouveaux || [];
     const touche = apres.find((id) => !poses.includes(id)) || poses.find((id) => !apres.includes(id));
     const sujet = sujets.find((s) => s.id === touche);
-    if (sujet) surChanger(basculerSujet(questions, sujet.libelle));
+    if (!sujet) return;
+    const liste = basculerSujet(questions, sujet.libelle);
+    if (liste) surChanger(liste);
+    else afficherToast('Question déjà abordée : elle reste', null, 2500);
   };
   return html`<div class="sujets-rdv">
     <p class="libelle-sujets" aria-hidden="true">Parler de…</p>
