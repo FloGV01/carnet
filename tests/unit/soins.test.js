@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statutRdv, trierRdv, prochainRdv, rdvReference, derniereFois, reprendreQuestion, questionPreecrite } from '../../public/js/domain/soins.js';
+import { statutRdv, trierRdv, prochainRdv, rdvReference, derniereFois, reprendreQuestion, questionPreecrite, questionSujet, sujetsPoses, basculerSujet, modifierQuestion } from '../../public/js/domain/soins.js';
 import { modeleSoignants } from '../../public/js/export/soignants.js';
 import { mettreEnPage } from '../../public/js/export/page-a4.js';
 import { analyze } from '../../public/js/analyse/index.js';
-import { SEED_V1, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 
 const rdvs = [
@@ -171,4 +171,62 @@ test('questionPreecrite : traitement, le changement coupé à 60 caractères, ja
   // Un changement court reste entier ; ses retours à la ligne deviennent des espaces.
   assert.equal(questionPreecrite({ date: '2026-10-02', changement: 'Arrêt du\nmatin', effetRessenti: 'effetRessenti:mieux' }, { store: 'traitements', carte }), 'Traitement du 2/10 · Arrêt du matin · Mieux');
   assert.equal(questionPreecrite({ date: '2026-10-02' }, { store: 'traitements', carte }), 'Traitement du 2/10');
+});
+
+// ---------- v8 (Q22) : sujets d'un rendez-vous, question modifiée sur place ----------
+
+const SUJETS = seedItems(SEED_V6_AJOUTS, 'x');
+
+test('questionSujet : « Parler de : sommeil », l\'initiale en minuscule sauf un sigle, sans espaces autour', () => {
+  assert.deepEqual(SUJETS.map((s) => questionSujet(s.libelle)), ['Parler de : sommeil', 'Parler de : traitement', 'Parler de : explosions',
+    'Parler de : fatigue', 'Parler de : travail', 'Parler de : émotions', 'Parler de : autre chose']);
+  assert.equal(questionSujet('TDAH'), 'Parler de : TDAH');
+  assert.equal(questionSujet('  Mon sommeil '), 'Parler de : mon sommeil');
+});
+
+test('basculerSujet : un toucher pose la question, un second la retire telle quelle ; abordée ou modifiée, elle reste', () => {
+  const avant = [{ texte: 'Les réveils vers 3 h', abordee: true }];
+  const copie = structuredClone(avant);
+  const un = basculerSujet(avant, 'Sommeil');
+  assert.deepEqual(un, [{ texte: 'Les réveils vers 3 h', abordee: true }, { texte: 'Parler de : sommeil', abordee: false }]);
+  assert.deepEqual(avant, copie, 'la liste reçue ne change pas');
+  assert.deepEqual(basculerSujet(un, 'Sommeil'), avant);
+  // Sans question, ou avec une liste absente.
+  assert.deepEqual(basculerSujet(null, 'Autre chose'), [{ texte: 'Parler de : autre chose', abordee: false }]);
+  // Cochée « abordée », elle reste (relecture) : la coche nourrit « La dernière fois » et l'A4 ; rien ne change (null).
+  const abordee = [{ texte: 'Effets du matin', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }];
+  const copieAbordee = structuredClone(abordee);
+  assert.equal(basculerSujet(abordee, 'Sommeil'), null, 'une question abordée ne part pas par sa pastille');
+  assert.deepEqual(abordee, copieAbordee);
+  assert.equal(basculerSujet([{ texte: ' Parler de : sommeil ', abordee: true }], 'Sommeil'), null, 'telle quelle, aux espaces près');
+  assert.equal(basculerSujet([{ texte: 'Parler de : sommeil', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }], 'Sommeil'), null,
+    'en double (écrite à la main), rien ne part si l\'une est abordée');
+  // Décochée, elle repart d'un toucher ; les autres sujets ne sont pas touchés.
+  assert.deepEqual(basculerSujet([{ texte: 'Parler de : sommeil', abordee: false }], 'Sommeil'), []);
+  assert.deepEqual(basculerSujet(abordee, 'Travail'), [...abordee, { texte: 'Parler de : travail', abordee: false }]);
+  // Modifiée ensuite, elle est à l'utilisateur : un toucher en pose une nouvelle, sans toucher à la sienne.
+  const modifiee = [{ texte: 'Parler de : sommeil, les réveils', abordee: false }];
+  assert.deepEqual(basculerSujet(modifiee, 'Sommeil'), [...modifiee, { texte: 'Parler de : sommeil', abordee: false }]);
+});
+
+test('sujetsPoses : les sujets dont la question amorcée est là telle quelle, dans l\'ordre de la liste', () => {
+  const questions = [{ texte: 'Parler de : autre chose', abordee: false }, { texte: ' Parler de : sommeil ', abordee: true },
+    { texte: 'Parler de : travail, les horaires', abordee: false }];
+  assert.deepEqual(sujetsPoses(questions, SUJETS), ['sujetRdv:sommeil', 'sujetRdv:autre']);
+  assert.deepEqual(sujetsPoses(null, SUJETS), []);
+  assert.deepEqual(sujetsPoses(questions, []), []);
+});
+
+test('modifierQuestion : le texte sur une ligne, case et lien gardés ; vide, identique, doublon ou absente : null', () => {
+  const lien = { store: 'episodes', id: 'ep-1' };
+  const avant = [{ texte: 'Parler de : sommeil', abordee: true, lien }, { texte: 'Effets du matin', abordee: false }];
+  const copie = structuredClone(avant);
+  const apres = modifierQuestion(avant, 0, '  Parler de : sommeil,\n les réveils   vers 3 h ');
+  assert.deepEqual(apres, [{ texte: 'Parler de : sommeil, les réveils vers 3 h', abordee: true, lien }, avant[1]]);
+  assert.deepEqual(avant, copie, 'la liste reçue ne change pas');
+  for (const texte of ['', '   ', null, undefined, 'Parler de : sommeil', ' Parler de : sommeil ', 'Effets du matin', ' Effets du matin ']) {
+    assert.equal(modifierQuestion(avant, 0, texte), null, JSON.stringify(texte));
+  }
+  assert.equal(modifierQuestion(avant, 2, 'Une autre'), null);
+  assert.equal(modifierQuestion(null, 0, 'Une autre'), null);
 });

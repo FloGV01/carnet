@@ -81,8 +81,10 @@ test('l\'Analyse avec des émotions : portes, Ma semaine « Tes émotions », Me
 
   // Les plus fréquents, sur 7 jours : « Émotion du moment », le mot le plus noté (une famille seule n'est pas un mot).
   const frequents = page.locator('section', { has: page.getByRole('heading', { name: 'Les plus fréquents' }) });
-  await expect(frequents.locator('.ligne-classement').first()).toHaveText(/^Émotion du moment\s*Irrité · 4 relevés sur 11$/);
+  await expect(frequents.locator('.ligne-classement').first()).toHaveText(/^Émotion du moment\s*Irrité\u00a0· 4 relevés sur 11$/);
   await expect(frequents).toContainText('Émotion (épisodes)');
+  // v8 (Q29) : « · » tient au mot qui le précède (espace insécable) : il ne commence jamais une ligne.
+  for (const t of await frequents.locator('.ligne-classement > span:last-child').allTextContents()) expect(t, t).not.toMatch(/(^|[^\u00a0])·/);
 
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity|%/);
   await expect(page.locator('main')).not.toContainText(RETIREES);

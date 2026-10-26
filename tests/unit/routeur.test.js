@@ -10,6 +10,7 @@ test('routes connues', () => {
   assert.equal(lireRoute('#/reglages/sauvegarde').nom, 'reglages-sauvegarde');
   assert.equal(lireRoute('#/reglages/moment-difficile').nom, 'reglages-moment-difficile');
   assert.equal(lireRoute('#/reglages/ressourcer').nom, 'reglages-ressourcer');
+  assert.equal(lireRoute('#/reglages/emotions').nom, 'reglages-emotions');
   assert.equal(lireRoute('#/reglages/aide-iphone').nom, 'reglages-aide-iphone');
   assert.equal(lireRoute('#/reglages/listes/declencheur').params.liste, 'declencheur');
 });
@@ -42,6 +43,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
   assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
+  assert.equal(ongletDe('reglages-emotions'), 'reglages', 'v8 : le sens des mots se règle dans Réglages');
   assert.equal(ongletDe('rdv'), 'soins');
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
@@ -108,19 +110,34 @@ test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour
   }
 });
 
-test('v7 · Bien-être : /bien-etre et /bien-etre/exercice/ID allument l\'onglet Bien-être ; l\'Historique, sorti de la barre, allume l\'Analyse', () => {
+test('v7 · Bien-être : /bien-etre allume l\'onglet Bien-être ; l\'Historique, sorti de la barre, allume l\'Analyse', () => {
   assert.deepEqual(lireRoute('#/bien-etre'), { nom: 'bien-etre', params: {}, chemin: '/bien-etre' });
-  assert.deepEqual(lireRoute('#/bien-etre/exercice/ancrage-54321'), { nom: 'exercice', params: { id: 'ancrage-54321' }, chemin: '/bien-etre/exercice/ancrage-54321' });
   assert.equal(versHash('bien-etre'), '#/bien-etre');
-  assert.equal(versHash('exercice', { id: 'scan-corporel' }), '#/bien-etre/exercice/scan-corporel');
   assert.equal(ongletDe('bien-etre'), 'bien-etre');
-  assert.equal(ongletDe('exercice'), 'bien-etre');
-  for (const h of ['#/bien-etre/', '#/bien-etre/exercice', '#/bien-etre/exercice/', '#/exercice/scan-corporel']) assert.equal(lireRoute(h).inconnue, true, h);
+  // v8 : les exercices ne se font plus que dans le Programme ; l'adresse d'un exercice seul n'existe plus.
+  for (const h of ['#/bien-etre/', '#/bien-etre/exercice/ancrage-54321', '#/bien-etre/exercice/', '#/exercice/scan-corporel']) assert.equal(lireRoute(h).inconnue, true, h);
   // L'Historique garde sa route et ses jours ; il n'a plus d'onglet à lui.
   assert.equal(lireRoute('#/historique').nom, 'historique');
   assert.equal(ongletDe('historique'), 'analyse');
   assert.equal(ongletDe('historique-jour'), 'analyse');
   assert.equal(ongletDe('moment'), 'aujourdhui', 'l\'Émotion du moment, ouverte depuis Bien-être, reste un parcours d\'Aujourd\'hui');
+});
+
+test('v8 · le Programme : /bien-etre/programme, et une séance du Programme dans le lecteur, /bien-etre/programme/ID ; onglet Bien-être', () => {
+  assert.deepEqual(lireRoute('#/bien-etre/programme'), { nom: 'programme', params: {}, chemin: '/bien-etre/programme' });
+  assert.deepEqual(lireRoute('#/bien-etre/programme/ancrage-54321'), { nom: 'seance-programme', params: { id: 'ancrage-54321' }, chemin: '/bien-etre/programme/ancrage-54321' });
+  assert.equal(versHash('programme'), '#/bien-etre/programme');
+  assert.equal(versHash('seance-programme', { id: 'coherence' }), '#/bien-etre/programme/coherence');
+  assert.equal(ongletDe('programme'), 'bien-etre');
+  assert.equal(ongletDe('seance-programme'), 'bien-etre');
+  for (const h of ['#/bien-etre/programme/', '#/programme', '#/bien-etre/programme/a/b']) assert.equal(lireRoute(h).inconnue, true, h);
+});
+
+test('v8 · la cohérence cardiaque de Bien-être dans le lecteur : /bien-etre/coherence, onglet Bien-être', () => {
+  assert.deepEqual(lireRoute('#/bien-etre/coherence'), { nom: 'coherence', params: {}, chemin: '/bien-etre/coherence' });
+  assert.equal(versHash('coherence'), '#/bien-etre/coherence');
+  assert.equal(ongletDe('coherence'), 'bien-etre');
+  assert.equal(lireRoute('#/bien-etre/coherence/5').inconnue, true);
 });
 
 test('v7 · la barre d\'onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages, chacun avec une route et son onglet', async () => {

@@ -17,6 +17,8 @@ test('les onglets mènent aux écrans, sans pastille ni compteur', async ({ page
 });
 
 test('l\'appui long sur la version ouvre le diagnostic', async ({ page }) => {
+  // L'horloge factice fait durer l'appui sans attente fixe (v8, Q31).
+  await page.clock.install();
   await page.goto('/');
   await page.goto('/#/reglages');
   const version = page.locator('.version-app');
@@ -24,7 +26,7 @@ test('l\'appui long sur la version ouvre le diagnostic', async ({ page }) => {
   const boite = await version.boundingBox();
   await page.mouse.move(boite.x + 5, boite.y + 5);
   await page.mouse.down();
-  await page.waitForTimeout(900);
+  await page.clock.runFor(900);
   await page.mouse.up();
   await expect(page.getByRole('heading', { name: 'Diagnostic' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Partager un ZIP' })).toBeVisible();

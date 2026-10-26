@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons, FAMILLES_ROUE } from '../aides/couleurs.js';
-import { FAMILLES } from '../../public/js/domain/roue.js';
 
 // v7 (1/9) · Fondations 2b : la sélection commune (fond -fill, texte -on, 600, coche, AA) sur tous les choix, en
 // clair et en sombre, avec la couleur de la rubrique, du parcours ou de la famille d'émotions, et la couleur action
@@ -373,89 +372,4 @@ test('en grand texte (19, 21, 23), aucun choix ne déborde de sa boîte : Soins,
     }
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   }
-});
-
-// Émotion du moment (v7, tâche 3) : la grappe des familles, mesurée une fois ses animations finies. Les rangées
-// (bulles par hauteur), la taille du nom et celle de --t-sous, et le texte du nom (Range) dans le cercle, coins compris.
-const grappe = (page) => page.locator('.bulles-familles').evaluate(async (g) => {
-  await Promise.all(g.closest('.panneau-reponses').getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
-  const sonde = document.createElement('span');
-  sonde.style.fontSize = 'var(--t-sous)';
-  document.body.append(sonde);
-  const tSous = parseFloat(getComputedStyle(sonde).fontSize);
-  sonde.remove();
-  const bulles = [...g.querySelectorAll('.bulle-famille')].map((b) => {
-    const r = b.getBoundingClientRect();
-    const nom = b.querySelector('.bulle-nom');
-    const rg = document.createRange();
-    rg.selectNodeContents(nom);
-    const t = rg.getBoundingClientRect();
-    const [cx, cy, rayon] = [r.left + r.width / 2, r.top + r.height / 2, r.width / 2];
-    return {
-      nom: nom.textContent, choisi: b.getAttribute('aria-pressed') === 'true', haut: Math.round(r.top), centre: cx,
-      largeur: r.width, hauteur: r.height, gauche: r.left, droite: r.right, lignes: rg.getClientRects().length,
-      police: parseFloat(getComputedStyle(nom).fontSize),
-      dedans: [[t.left, t.top], [t.right, t.top], [t.left, t.bottom], [t.right, t.bottom]].every(([x, y]) => Math.hypot(x - cx, y - cy) <= rayon),
-    };
-  });
-  return { tSous, bulles };
-});
-// Rien ne dépasse des 390 px : ni la page, ni le panneau (de côté), ni un bouton du panneau. Mesuré une fois le fondu
-// d'une vue fini (il part d'une échelle de 0,97).
-const largeurs = (page) => page.locator('.panneau-reponses').evaluate(async (p) => {
-  await Promise.all(p.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
-  return { page: document.documentElement.scrollWidth, panneau: p.scrollWidth - p.clientWidth,
-    boutons: [...p.querySelectorAll('button')].filter((b) => { const r = b.getBoundingClientRect(); return r.left < -0.5 || r.right > innerWidth + 0.5; }).length };
-});
-
-test('en grand texte (19, 21, 23), Émotion du moment : grappe 4-3 puis 2-3-2, nom des familles à --t-sous au moins et dans sa bulle ; rien ne déborde des 390 px, familles comme mots', async ({ page }) => {
-  test.setTimeout(60000);
-  await aller(page, '#/moment');
-  const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
-  const familles = groupe(page, 'Émotion');
-  await expect(familles).toBeVisible();
-  const verifierGrappe = async (taille, quoi) => {
-    const { tSous, bulles } = await grappe(page);
-    // 4-3 au texte par défaut ; dès 19 px, 4 bulles ne tiennent plus avec un nom à --t-sous : 2-3-2.
-    const rangees = [...new Set(bulles.map((b) => b.haut))].map((h) => bulles.filter((b) => b.haut === h).length);
-    expect(rangees, quoi).toEqual(taille === 17 ? [4, 3] : [2, 3, 2]);
-    expect(bulles.map((b) => b.nom), quoi).toEqual(FAMILLES.map((f) => f.libelle));
-    for (const b of bulles) {
-      const ici = `${quoi}, ${b.nom}${b.choisi ? ' (choisie)' : ''}`;
-      expect(b.police, `${ici} : nom à --t-sous (${tSous} px) au moins`).toBeGreaterThanOrEqual(tSous - 0.01);
-      expect([b.dedans, b.lignes], `${ici} : nom dans le cercle, sur une ligne`).toEqual([true, 1]);
-      expect(Math.abs(b.largeur - b.hauteur), `${ici} : ronde`).toBeLessThanOrEqual(0.5);
-      expect(b.largeur, `${ici} : 44 pt au moins`).toBeGreaterThanOrEqual(44);
-      expect([b.gauche >= 0, b.droite <= 390], `${ici} : dans l'écran`).toEqual([true, true]);
-    }
-    // Chaque rangée est centrée dans l'écran (la grappe est symétrique).
-    for (const h of new Set(bulles.map((b) => b.haut))) {
-      const r = bulles.filter((b) => b.haut === h);
-      expect(Math.abs((r[0].gauche + r[r.length - 1].droite) / 2 - 195), `${quoi} : rangée centrée`).toBeLessThanOrEqual(1);
-    }
-    expect(await largeurs(page), quoi).toEqual({ page: 390, panneau: 0, boutons: 0 });
-    expect(await debordements(page), quoi).toEqual([]);
-  };
-  for (const taille of [17, 19, 21, 23]) {
-    await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
-    await verifierGrappe(taille, `texte de ${taille} px`);
-    // Chaque famille tour à tour : la vue de ses mots, puis la grappe où elle est choisie (coche au-dessus du nom).
-    for (const f of FAMILLES) {
-      await familles.getByRole('button', { name: f.libelle, exact: true }).click();
-      const mots = groupe(page, `Mots de la famille ${f.libelle}`);
-      await expect(mots.getByRole('button')).toHaveCount(f.mots.length);
-      const quoi = `texte de ${taille} px, mots de ${f.libelle}`;
-      expect(await largeurs(page), quoi).toEqual({ page: 390, panneau: 0, boutons: 0 });
-      expect(await debordements(page), quoi).toEqual([]);
-      const hauteurs = await mots.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getBoundingClientRect().height));
-      for (const h of hauteurs) expect(h, quoi).toBeGreaterThanOrEqual(44);
-      await vue.getByRole('button', { name: 'Familles', exact: true }).click();
-      await expect(familles.getByRole('button', { name: f.libelle, exact: true })).toHaveAttribute('aria-pressed', 'true');
-      await verifierGrappe(taille, `texte de ${taille} px, ${f.libelle} choisie`);
-    }
-    // La dernière famille retouchée : plus d'émotion, pour repartir de rien à la taille suivante.
-    await familles.getByRole('button', { name: FAMILLES.at(-1).libelle, exact: true }).click();
-    await expect(familles.getByRole('button', { pressed: true })).toHaveCount(0);
-  }
-  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });

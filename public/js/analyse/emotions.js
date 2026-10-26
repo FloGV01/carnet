@@ -1,13 +1,14 @@
 // Émotions du moment (v7, spec §5 et §6.4) : les relevés qui portent une émotion de la roue (domain/roue.js), comptés
 // par famille. Par jour, par heure, par colonne (jour de la semaine, mois, lieu), après une nuit, et autour d'instants
-// (les explosions ; les séances lancées depuis Bien-être). Des comptes de relevés, dans l'ordre fixe des familles :
-// jamais une famille additionnée à une autre en score, ni un pourcentage, ni une famille « meilleure » qu'une autre.
+// (les explosions ; les séances lancées depuis Bien-être), et (v8, Q18) selon ce que je faisais. Des comptes de relevés,
+// dans l'ordre fixe des familles : jamais une famille additionnée à une autre en score, ni un pourcentage, ni une famille
+// « meilleure » qu'une autre.
 // Les anciennes notes de 1 à 10 n'entrent pas ici (humeur-jour.js). Un relevé se rattache à son jour logique par
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
 import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
 import { minusculeInitiale } from '../domain/phrase.js';
-import { clesDeColonnes, colonneDe } from './colonnes.js';
+import { clesDeColonnes, colonneDe, ordreDeListe } from './colonnes.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.emotions;
@@ -113,17 +114,33 @@ export function apresNuit(journal, humeurs, periode) {
 }
 
 // Minutes écoulées depuis une origine fixe, à partir d'une date et d'une heure locales (sans fuseau : Paris et UTC donnent
-// le même résultat, changements d'heure compris).
+// le même résultat, changements d'heure compris). Le jour n'est calculé qu'une fois par date (v8, Q26 : des milliers de
+// relevés, quelques centaines de dates).
 const ORIGINE = '2000-01-01';
-const minutes = (date, heure) => diffDays(ORIGINE, date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+function minutesParDate() {
+  const jours = new Map();
+  return (date, heure) => {
+    if (!jours.has(date)) jours.set(date, diffDays(ORIGINE, date));
+    return jours.get(date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+  };
+}
 
 // Autour d'instants (explosions ; séances de Bien-être) : les familles des relevés notés dans les `avantH` heures avant un
 // instant ([t − avantH, t[) et dans les `apresH` heures après ([t, t + apresH]). Le temps écoulé se compte en dates et
 // heures calendaires : un relevé de 01:00 est à 2 h d'un instant de 23:00 la veille. Un relevé « vers » compte à son heure
 // ronde. Un relevé compte au plus une fois de chaque côté, même près de deux instants. Un instant ou un relevé sans heure
-// n'est pas placé.
+// n'est pas placé. v8 (Q26) : les instants sont triés, et chaque relevé ne cherche que l'instant voisin (recherche
+// dichotomique) : sur des années de séances et de relevés, le calcul ne croît plus comme leur produit.
 export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = S.heuresAutour } = {}) {
+  const minutes = minutesParDate();
   const temps = (instants || []).filter((i) => i && estDateValide(i.date) && estHeureValide(i.heure)).map((i) => minutes(i.date, i.heure));
+  const tries = Float64Array.from(temps).sort();
+  // L'indice du premier instant strictement après m.
+  const premierApres = (m) => {
+    let [a, b] = [0, tries.length];
+    while (a < b) { const k = (a + b) >> 1; if (tries[k] <= m) a = k + 1; else b = k; }
+    return a;
+  };
   const avant = comptesVides();
   const apres = comptesVides();
   let n = 0;
@@ -131,8 +148,11 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
     if (!h || !estDateValide(h.date) || !estHeureValide(h.heure) || !estEmotion(h.emotion)) continue;
     const m = minutes(h.date, h.heure);
     const f = familleDe(h.emotion);
-    if (temps.some((t) => m >= t - avantH * 60 && m < t)) { avant[f] += 1; n += 1; }
-    if (temps.some((t) => m >= t && m <= t + apresH * 60)) { apres[f] += 1; n += 1; }
+    const k = premierApres(m);
+    // Avant un instant t : t − avantH ≤ m < t, soit le premier instant après m, à avantH heures au plus.
+    if (k < tries.length && tries[k] - m <= avantH * 60) { avant[f] += 1; n += 1; }
+    // Après un instant t : t ≤ m ≤ t + apresH, soit le dernier instant jusqu'à m, à apresH heures au plus.
+    if (k > 0 && m - tries[k - 1] <= apresH * 60) { apres[f] += 1; n += 1; }
   }
   return { statut: selonSeuilEmotions(n), avant, apres, instants: temps.length, n };
 }
@@ -143,4 +163,35 @@ export function autourDuBienEtre(seances, humeurs, periode) {
   const instants = (seances || []).filter((x) => x && x.origine === 'bien-etre' && estDateValide(x.date) && estHeureValide(x.heure)
     && (() => { const j = jourEvenement(x.date, x.heure); return j >= periode.du && j <= periode.au; })());
   return autourDe(instants, humeurs);
+}
+
+// ---------- Émotions selon ce que je faisais (v8, Q18) ----------
+
+// Les relevés de la période qui portent une émotion et au moins une activité de « Ce que je faisais » : { date (le jour
+// logique), famille, faisais (sans doublon) }. Leur nombre fait le seuil commun des vues d'émotions (5 relevés).
+export function relevesAvecActivite(humeurs, periode) {
+  const res = [];
+  for (const h of humeurs || []) {
+    if (!h || !estDateValide(h.date) || !estEmotion(h.emotion) || !Array.isArray(h.faisais) || !h.faisais.length) continue;
+    const date = jourEvenement(h.date, h.heure);
+    if (date < periode.du || date > periode.au) continue;
+    res.push({ date, famille: familleDe(h.emotion), faisais: [...new Set(h.faisais.filter(Boolean))] });
+  }
+  return res;
+}
+
+// Pour chaque activité notée, le nombre de relevés de chaque famille : { [idActivite]: { colere: 2, …, serenite: 0 } },
+// les activités dans l'ordre de leur liste (`items`, Réglages › Listes), celles qui n'ont aucun relevé absentes. Comme
+// l'énergie selon ce que je faisais (comprendre.js), un relevé de deux activités compte pour chacune ; « vers » compris.
+// Des comptes de relevés, jamais une part.
+export function emotionsParActivite(humeurs, periode, items = []) {
+  const par = new Map();
+  for (const r of relevesAvecActivite(humeurs, periode)) {
+    for (const id of r.faisais) {
+      if (!par.has(id)) par.set(id, comptesVides());
+      par.get(id)[r.famille] += 1;
+    }
+  }
+  const ordre = ordreDeListe(items);
+  return Object.fromEntries([...par].sort(([a], [b]) => ordre(a, b)));
 }

@@ -27,18 +27,24 @@ const ECHELLE = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: 
 const DELAI_SUIVANT_MS = 250;
 const COLERE = 'typeExplosion:colere';
 const SURCHARGE = ['typeExplosion:surcharge', 'typeExplosion:fige'];
+const HONTE = ['consequenceLong:honte', 'consequenceLong:regret'];
 
 // Étapes. L'étape 6 dépend de l'étape 1 : 6a si Colère est cochée, 6b si Surcharge ou Figé l'est ;
-// aucun type, ou « Je ne sais pas » seul : pas d'étape 6. Une branche décochée qui porte des
-// réponses reste affichée (rien n'est caché ni effacé en silence). Le repère compte ces écrans.
+// aucun type, ou « Je ne sais pas » seul : pas d'étape 6. « Une autre façon de voir » suit la Colère, et aussi
+// (v8, Q20) Honte ou Regret touché dans « Plus tard », quel que soit le type : elle vient après « Ce que ça a
+// donné », un toucher là ne déplace donc pas l'étape en cours. Une branche décochée qui porte des réponses reste
+// affichée (rien n'est caché ni effacé en silence). Le repère compte ces écrans.
 // recap : les lignes du récapitulatif, [libellé court à la première personne, champs…] (spec §8) ; la question
 // complète reste sur l'écran de l'étape. courte : quelques réponses (types, échelles), posées en bas de l'écran,
 // près du pouce (2b, P6) ; les autres étapes remplissent l'écran depuis le haut.
 const rempli = (v) => v != null && !(Array.isArray(v) && v.length === 0);
 export function etapesPour(ac = {}) {
   const t = ac.types || [];
-  const colere = t.includes(COLERE) || ['pieges', 'pensees', 'autreFacon'].some((c) => rempli(ac[c]));
+  // « Une autre façon de voir » remplie ne rouvre plus l'étape 6a (v8) : écrite après Honte, elle ferait apparaître
+  // une étape avant celle en cours, et l'écran sauterait pendant la frappe.
+  const colere = t.includes(COLERE) || ['pieges', 'pensees'].some((c) => rempli(ac[c]));
   const surcharge = t.some((x) => SURCHARGE.includes(x)) || ['tropDe', 'besoins'].some((c) => rempli(ac[c]));
+  const autreFacon = colere || (ac.plusTard || []).some((x) => HONTE.includes(x)) || rempli(ac.autreFacon);
   return [
     { cle: 'types', courte: true, question: 'C\'était plutôt…', sous: 'Plusieurs choix possibles.', blocs: [{ type: 'multi', champ: 'types', liste: 'typeExplosion' }],
       recap: [['C\'était plutôt', 'types']] },
@@ -56,7 +62,7 @@ export function etapesPour(ac = {}) {
       recap: [['Ce qui était trop', 'tropDe'], ['Ce dont j\'avais besoin', 'besoins']] },
     { cle: 'consequences', question: 'Ce que ça a donné', blocs: [{ type: 'multi', champ: 'surLeMoment', liste: 'consequenceCourt', titre: 'Sur le moment' }, { type: 'multi', champ: 'plusTard', liste: 'consequenceLong', titre: 'Plus tard' }],
       recap: [['Sur le moment', 'surLeMoment'], ['Plus tard', 'plusTard']] },
-    colere && { cle: 'autreFacon', question: 'Une autre façon de voir', sous: 'Ce qui est sûr, ce que je suppose. Si un ami me racontait ça, je lui dirais…', blocs: [{ type: 'texte', champ: 'autreFacon', etiquette: 'Une autre façon de voir', lignes: 3 }],
+    autreFacon && { cle: 'autreFacon', question: 'Une autre façon de voir', sous: 'Ce qui est sûr, ce que je suppose. Si un ami me racontait ça, je lui dirais…', blocs: [{ type: 'texte', champ: 'autreFacon', etiquette: 'Une autre façon de voir', lignes: 3 }],
       recap: [['Une autre façon de voir', 'autreFacon']] },
     { cle: 'siAlors', question: 'Pour la prochaine fois', blocs: [{ type: 'siAlors' }],
       recap: [['La prochaine fois', 'siAlors']] },

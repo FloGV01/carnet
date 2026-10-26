@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { toucher, groupe, viderBase, aller, entreeDuJour } from '../aides/saisie.js';
+import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
 // v7 (4/9) · Aujourd'hui 2b : en-tête « Jeudi 15 octobre », rubriques du soir en cartes, replis en liste groupée,
@@ -37,8 +37,10 @@ const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, 
   };
 });
 
-test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six rubriques en cartes 2b, au-dessus de la bande', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 797 });
+// v8 (8/9, Q27) : avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas, spec §12.7), au lieu de 390 × 797
+// sans elles : 34 px de moins pour le soir.
+test('le soir tient sans défilement avec les zones sûres de l\'iPhone, en clair et en sombre : six rubriques en cartes 2b, au-dessus de la bande', async ({ page }) => {
+  await simulerZonesSures(page);
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await viderBase(page);
@@ -52,7 +54,7 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six 
     // De l'en-tête à la carte des points positifs, tout est à l'écran, au-dessus de la bande, sans débord de côté.
     const [titre, positifs, bande, onglets] = await Promise.all([boite(page, 'h1'), boite(page, '.carte-champ:has(#points-positifs)'),
       boite(page, '.actions-flottantes'), page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox()]);
-    expect(titre.y).toBeGreaterThanOrEqual(0);
+    expect(titre.y).toBeGreaterThanOrEqual(47);
     expect(positifs.y + positifs.height, schema).toBeLessThanOrEqual(bande.y);
     expect(Math.abs(bande.y + bande.height - onglets.y)).toBeLessThanOrEqual(0.5);
     expect(Math.round(bande.height)).toBe(64);
@@ -84,13 +86,13 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre : six 
   }
 });
 
-test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son icône, sans défiler à 390 × 844', async ({ page }) => {
+test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son icône', async ({ page }) => {
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await viderBase(page);
     await toucher(page, 'Lieu', 'Bureau');
     const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
-    await expect(fini).toBeInViewport({ ratio: 1 });
+    await expect(fini).toBeVisible();
     const s = await fini.evaluate((b) => ({ couleur: getComputedStyle(b).color, fond: getComputedStyle(b).backgroundColor, graisse: getComputedStyle(b).fontWeight, icone: Boolean(b.querySelector('svg')) }));
     expect(s.couleur, schema).toBe(rgb(t.action));
     expect(s.fond, schema).toBe('rgba(0, 0, 0, 0)');
@@ -101,7 +103,14 @@ test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son ic�
   }
 });
 
-// ---------- Sans défiler : Après coup (P2), après minuit, bandeau de mise à jour ----------
+// ---------- Sans défiler : Après coup (P2), « J'ai fini » (P3), après minuit, bandeau de mise à jour ----------
+// v8 (relecture de la tâche 8) : avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas, spec §12.7), et
+// non plus aux tailles de la v7 (844 et 797 sans zones), qui laissaient 34 px de plus que l'iPhone et restaient vertes
+// sans rien protéger. Le soir tient (28,3 px de marge) ; « J'ai fini pour ce soir » (−19,7 px), la ligne Après coup
+// (−69,7 px) et, avec le bandeau, le soir (−28,4 px) passent sous la bande. Ces attentes sont marquées test.fail() :
+// la mise en page est une décision ouverte de l'utilisateur (docs/decisions.md, v8, « Fiabilité (tâche 8) », à trancher
+// sur l'iPhone, où le Diagnostic donne les vraies marges). Un test.fail() qui passe fait échouer la suite : une fois la
+// mise en page corrigée, on retire la marque.
 
 // La marge de chaque élément au-dessus de la bande du bas (positive : il est au-dessus), et le défilement de la page.
 const margesSurLaBande = (page, selecteurs) => page.evaluate((liste) => {
@@ -112,22 +121,42 @@ const toutAuDessus = (m, quoi) => {
   expect(m.scrollY, quoi).toBe(0);
   for (const [x, marge] of m.marges) expect(marge, `${quoi} · ${x}`).toBeGreaterThanOrEqual(0);
 };
+const bandeau = async (page) => {
+  await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+  await expect(page.locator('.bandeau')).toBeVisible();
+};
 
-test('P2 · avec un épisode récent, la ligne Après coup se voit sans défiler à 390 × 844, sous « J\'ai fini pour ce soir », en clair et en sombre', async ({ page }) => {
+test('P2 · avec un épisode récent, la ligne Après coup se voit sans défiler, sous « J\'ai fini pour ce soir », en clair et en sombre, avec les zones sûres de l\'iPhone', async ({ page }) => {
+  test.fail(true, 'décision ouverte (docs/decisions.md, v8, tâche 8) : la ligne Après coup est 69,7 px sous la bande');
+  await simulerZonesSures(page);
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
     await viderBase(page);
     await repo(page, () => window.__carnet.repo.episodes.creer({ date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', intensite: 5 }));
     await page.reload();
     await toucher(page, 'Lieu', 'Bureau');
-    const apres = page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ });
-    await expect(apres).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeInViewport({ ratio: 1 });
-    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton', '.ligne-apres-coup-jour']), schema);
+    await expect(page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ })).toBeVisible();
+    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)', '.ligne-apres-coup-jour']), schema);
   }
 });
 
-test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résumé, sans hauteur : le soir tient sans défiler (797) et « J\'ai fini » se voit (844)', async ({ page }) => {
+test('P3 · « J\'ai fini pour ce soir » se voit sans défiler, au-dessus de la bande, à 21 h et entre 0 h et 4 h, en clair et en sombre, avec les zones sûres de l\'iPhone', async ({ page }) => {
+  test.fail(true, 'décision ouverte (docs/decisions.md, v8, tâche 8) : « J\'ai fini pour ce soir » est 19,7 px sous la bande');
+  await simulerZonesSures(page);
+  for (const [schema] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    for (const heure of [new Date(2026, 9, 15, 21, 0), new Date(2026, 9, 16, 1, 30)]) {
+      await page.clock.setSystemTime(heure);
+      await viderBase(page);
+      await toucher(page, 'Lieu', 'Bureau');
+      await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+      toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), `${schema} · ${heure.getHours()} h`);
+    }
+  }
+});
+
+test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résumé, sans hauteur : le soir tient sans défiler avec les zones sûres de l\'iPhone', async ({ page }) => {
+  await simulerZonesSures(page);
   // À 21 h, la première carte est à cette hauteur ; à 01:30, elle n'a pas bougé.
   const hautPremiereCarte = () => page.locator('.carte-champ').first().evaluate((c) => c.getBoundingClientRect().top);
   await toucher(page, 'Lieu', 'Bureau');
@@ -144,38 +173,34 @@ test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résu
   expect(await hautPremiereCarte()).toBe(aVingtEtUneHeures);
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
-    await page.setViewportSize({ width: 390, height: 797 });
     await expect(veille).toBeVisible();
-    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), `${schema} · 797`);
-    await page.setViewportSize({ width: 390, height: 844 });
-    const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
-    await expect(fini).toBeInViewport({ ratio: 1 });
-    toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), `${schema} · 844`);
+    toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), schema);
   }
 });
 
-test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte ; le soir tient encore sans défiler (797) et « J\'ai fini » se voit (844)', async ({ page }) => {
-  for (const hauteur of [797, 844]) {
-    await page.setViewportSize({ width: 390, height: hauteur });
-    await viderBase(page);
-    await toucher(page, 'Lieu', 'Bureau');
-    await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
-    const bandeau = page.locator('.bandeau');
-    await expect(bandeau).toBeVisible();
-    const b = await bandeau.evaluate((x) => {
-      const [texte, sauvegarder, recharger] = [...x.children].map((k) => k.getBoundingClientRect());
-      return { hauteur: x.getBoundingClientRect().height, texte, sauvegarder, recharger };
-    });
-    expect(b.hauteur).toBeLessThanOrEqual(68);
-    expect(b.sauvegarder.top).toBeGreaterThanOrEqual(b.texte.bottom - 0.5);
-    expect(Math.abs(b.sauvegarder.top - b.recharger.top), 'côte à côte').toBeLessThanOrEqual(0.5);
-    expect(Math.min(b.sauvegarder.height, b.recharger.height)).toBeGreaterThanOrEqual(44);
-    if (hauteur === 797) toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), '797');
-    else {
-      await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeInViewport({ ratio: 1 });
-      toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), '844');
-    }
-  }
+test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte, avec les zones sûres de l\'iPhone', async ({ page }) => {
+  await simulerZonesSures(page);
+  await toucher(page, 'Lieu', 'Bureau');
+  await bandeau(page);
+  const b = await page.locator('.bandeau').evaluate((x) => {
+    const [texte, sauvegarder, recharger] = [...x.children].map((k) => k.getBoundingClientRect());
+    // Sa hauteur sous l'encoche : la zone sûre du haut lui revient (Q27, tests/e2e/v8-fiabilite.spec.js).
+    return { hauteur: x.getBoundingClientRect().height - parseFloat(getComputedStyle(x).paddingTop), texte, sauvegarder, recharger };
+  });
+  expect(b.texte.top).toBeGreaterThanOrEqual(47);
+  expect(b.hauteur).toBeLessThanOrEqual(68);
+  expect(b.sauvegarder.top).toBeGreaterThanOrEqual(b.texte.bottom - 0.5);
+  expect(Math.abs(b.sauvegarder.top - b.recharger.top), 'côte à côte').toBeLessThanOrEqual(0.5);
+  expect(Math.min(b.sauvegarder.height, b.recharger.height)).toBeGreaterThanOrEqual(44);
+});
+
+test('bandeau « Nouvelle version prête » : « J\'ai fini pour ce soir » se voit encore sans défiler, avec les zones sûres de l\'iPhone', async ({ page }) => {
+  test.fail(true, 'décision ouverte (docs/decisions.md, v8, tâche 8) : avec le bandeau, « J\'ai fini pour ce soir » est 74,4 px sous la bande');
+  await simulerZonesSures(page);
+  await toucher(page, 'Lieu', 'Bureau');
+  await bandeau(page);
+  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+  toutAuDessus(await margesSurLaBande(page, ['.fini-bouton']), 'bandeau');
 });
 
 // ---------- Grand texte ----------
@@ -367,6 +392,8 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 
 // ---------- Replis en liste groupée ----------
 
+// v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
+// reste là pour une nuit déjà notée.
 test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré à la couleur de la rubrique, le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
@@ -375,7 +402,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
-    await expect(page.locator('.replis .repli-titre')).toHaveText(['Nuit en détail', 'Ce qui a pesé · ce qui a rechargé', 'Sport en détail', 'Contact en détail', 'Notes libres']);
+    await expect(page.locator('.replis .repli-titre')).toHaveText(['Nuit en détail', 'Ce qui a pesé · ce qui a rechargé', 'Notes libres']);
     const m = await page.locator('.replis').evaluate((g) => {
       const carte = g.getBoundingClientRect();
       return {
@@ -401,7 +428,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
     const quoi = (i) => `${schema} · rangée ${i + 1}`;
     expect(m.fond).toBe(rgb(t.surface));
     expect(m.rayon).toBe('14px');
-    const couleurs = ['sommeil', 'energie', 'sport', 'contact'];
+    const couleurs = ['sommeil', 'energie'];
     m.rangees.forEach((r, i) => {
       expect(r.hauteur, quoi(i)).toBeGreaterThanOrEqual(58);
       expect(r.taille, quoi(i)).toBe(28);
@@ -415,7 +442,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
       } else expect(r.carre, `${quoi(i)} : Notes libres, neutre`).toBe(rgb(t['surface-2']));
     });
     // Résumés : sous le libellé, en 14 px --text-2, une ligne coupée par une ellipse ; AA sur la carte.
-    for (const i of [0, 1, 2]) {
+    for (const i of [0, 1]) {
       const r = m.rangees[i].resume;
       expect(r, quoi(i)).toMatchObject({ dessous: true, gauche: true, taille: 14, ellipse: 'ellipsis', couleur: rgb(t['text-2']) });
       expect(contraste(r.couleur, m.fond)).toBeGreaterThanOrEqual(4.5);

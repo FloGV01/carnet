@@ -4,6 +4,7 @@
 // l'initiale passe en minuscule au fil de la phrase, sauf pour un sigle (« TDAH » reste « TDAH »).
 import { libelle } from './libelles.js';
 import { valeurExplosions } from './explosions.js';
+import { texteHeuresSommeil } from './champs.js';
 
 const ESPACE_FINE = ' ';
 
@@ -54,10 +55,15 @@ const ouiNon = (v) => (v ? 'oui' : 'non');
 const uneDecimaleAuPlus = (v) => (Number.isFinite(v) ? v.toFixed(1).replace('.', ',').replace(/,0$/, '') : String(v));
 // Journée : « Bureau · nuit moyen · humeur 5,6 · contact oui · … », chaque valeur à sa couleur
 // (aussi les puces d'un jour dans l'Historique). `humeur` : l'humeur du jour quand l'appelant l'a
-// posée (analyse/humeur-jour.js), sinon celle du soir.
+// posée (analyse/humeur-jour.js), sinon celle du soir. La nuit (v8) dit aussi ses heures, en un
+// seul segment : « nuit moyen · 6 h », ou « nuit 6 h » sans la qualité.
+const texteNuit = (entree, c) => {
+  const morceaux = [entree.sommeilRessenti != null && minusculeInitiale(libelle(c, entree.sommeilRessenti)), texteHeuresSommeil(entree.heuresSommeil)].filter(Boolean);
+  return morceaux.length ? `nuit ${morceaux.join(' · ')}` : null;
+};
 const JOUR = [
   ['lieu', 'lieu', (v, c) => libelle(c, v)],
-  ['sommeilRessenti', 'sommeil', (v, c) => `nuit ${minusculeInitiale(libelle(c, v))}`],
+  ['sommeilRessenti', 'sommeil', (v) => v],
   ['humeur', 'humeur', (v) => `humeur ${uneDecimaleAuPlus(v)}`],
   ['contactHumain', 'contact', (v) => `contact ${ouiNon(v)}`],
   ['sportMouvement', 'sport', (v) => `sport ${ouiNon(v)}`],
@@ -76,7 +82,9 @@ function phraseJour(entree, carte, nExplosions, emotions) {
     segments.push(segment);
   };
   for (const [champ, rubrique, forme] of JOUR) {
-    const v = champ === 'explosions' ? valeurExplosions(entree.explosions ?? null, nExplosions) : entree[champ];
+    let v = entree[champ];
+    if (champ === 'explosions') v = valeurExplosions(entree.explosions ?? null, nExplosions);
+    if (champ === 'sommeilRessenti') v = texteNuit(entree, carte);
     if (v != null) ajouter({ texte: forme(v, carte), valeur: true, rubrique });
     if (champ === 'humeur' && emotions && emotions.mots.length) {
       ajouter({ texte: `${emotions.mots.join(', ')}${emotions.plus ? '…' : ''}`, valeur: true, rubrique: 'emotions', familles: emotions.familles });

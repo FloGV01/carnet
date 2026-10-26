@@ -2,9 +2,9 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { LISTES, NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 
-// v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Rappels) et « Moment
-// difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 : la section
-// Analyse disparaît avec le signal de ressemblance et les tendances).
+// v6.1 · Réglages (P16, A1) : la sauvegarde en tête, puis « Ma saisie » (Le soir, Listes, Émotions en v8, Rappels)
+// et « Moment difficile » (Mon plan, Moment difficile, Me ressourcer, Aide iPhone), puis À propos, Zone sensible (v7 :
+// la section Analyse disparaît avec le signal de ressemblance et les tendances).
 // « Le soir » (ex-« Ma journée ») ne règle plus que les champs du soir ; les heures de l'humeur du moment passent
 // dans Rappels, dans la même méta. L'index des Listes est rangé par écran. Écran de 390 × 844, celui du projet.
 const nav = (page, nom) => page.getByRole('navigation').getByRole('link', { name: nom, exact: true });
@@ -26,7 +26,7 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
   const ordre = await page.locator('main.reglages').evaluate((m) => [...m.querySelectorAll('h2, a[href^="#/"]')].map((e) => e.textContent.trim()));
   expect(ordre).toEqual([
     'Sauvegarde',
-    'Ma saisie', 'Le soir', 'Listes', 'Rappels',
+    'Ma saisie', 'Le soir', 'Listes', 'Émotions', 'Rappels',
     'Moment difficile', 'Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone',
     'À propos', 'Zone sensible', 'Tout effacer',
   ]);
@@ -34,7 +34,7 @@ test('ordre de Réglages : Sauvegarde, « Ma saisie », « Moment difficile », 
   await expect(page.getByRole('switch')).toHaveCount(0);
   // Chaque groupe de liens porte le nom de son intertitre et mène où il faut.
   const liens = async (nom) => page.getByRole('list', { name: nom, exact: true }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href')));
-  expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/rappel']);
+  expect(await liens('Ma saisie')).toEqual(['#/reglages/journee', '#/reglages/listes', '#/reglages/emotions', '#/reglages/rappel']);
   expect(await liens('Moment difficile')).toEqual(['#/mon-plan', '#/reglages/moment-difficile', '#/reglages/ressourcer', '#/reglages/aide-iphone']);
   // La sauvegarde reste en tête : ses boutons avant le premier intertitre de liens.
   const exporter = await page.getByRole('button', { name: 'Exporter' }).boundingBox();
@@ -50,8 +50,8 @@ test('Le soir : les seuls champs du soir, sans les heures ; un changement garde 
   await expect(page).toHaveURL(/#\/reglages\/journee$/);
   await expect(page.getByRole('heading', { name: 'Le soir', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toHaveCount(0);
-  // Huit champs et le repli « pesé · rechargé » ; ni heures, ni lien vers Rappels.
-  await expect(page.getByRole('switch')).toHaveCount(9);
+  // Huit champs, les replis « Nuit en détail » (v8) et « pesé · rechargé » ; ni heures, ni lien vers Rappels.
+  await expect(page.getByRole('switch')).toHaveCount(10);
   await expect(heures(page)).toHaveCount(0);
   await expect(page.locator('main.ma-journee')).not.toContainText('Humeur du moment');
   await expect(page.locator('main.ma-journee a')).toHaveCount(0);
@@ -111,7 +111,7 @@ const GROUPES = [
   ['Épisode', ['Déclencheur', 'Émotion', 'Ce qu\'il y avait dessous', 'Réaction', 'Professionnel']],
   ['Après coup', ['C\'était plutôt', 'Fragilités', 'Premiers signes', 'Ça ressemble à', 'Ce qui était trop', 'Besoins', 'Sur le moment', 'Plus tard']],
   ['Symptôme', ['Symptôme', 'Durée']],
-  ['Soins', ['Effet secondaire', 'Effet ressenti']],
+  ['Soins', ["Sujets d'un rendez-vous", 'Effet secondaire', 'Effet ressenti']],
 ];
 
 test('Listes : l\'index rangé par écran sous six intertitres, toutes les listes encore là, une fois chacune', async ({ page }) => {

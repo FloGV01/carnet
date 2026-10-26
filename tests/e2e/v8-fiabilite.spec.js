@@ -1,0 +1,480 @@
+import { readFileSync } from 'node:fs';
+import { test, expect } from '../aides/gardes.js';
+import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
+import { canaux, contraste, jetons } from '../aides/couleurs.js';
+import { addDays } from '../../public/js/domain/dates.js';
+
+// v8 (8/9) · Fiabilité (spec §8 et §12.7) : Q27, le soir avec les zones sûres de l'iPhone (47 px en haut, 34 en bas, en
+// 390 × 844) et le Diagnostic qui les affiche ; Q29, les finitions ; Q31, l'entrée d'un jour qui attend ses données ;
+// Q26, 5 ans de données inventées et des écrans qui ne relisent la base que si elle a changé. Données inventées.
+// Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
+const AUJ = '2026-10-15';
+const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
+const THEMES = [['light', clair], ['dark', sombre]];
+const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
+// Une couleur d'opacité a posée sur un fond : la couleur vue.
+const vue = (couleur, fond, a) => `rgb(${canaux(couleur).map((c, i) => Math.round(c * a + canaux(fond)[i] * (1 - a))).join(', ')})`;
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
+  await page.goto('/');
+  await viderBase(page);
+});
+
+// ---------- Q27 : les zones sûres de l'iPhone, et le Diagnostic ----------
+
+// Les boîtes du soir, page en haut : l'en-tête, la dernière carte, la bande du bas, les onglets.
+const geometrieSoir = (page) => page.evaluate(() => {
+  const r = (s) => document.querySelector(s).getBoundingClientRect();
+  const bande = r('.actions-flottantes');
+  return {
+    scrollY: window.scrollY, large: document.documentElement.scrollWidth > window.innerWidth, entete: r('.entete-jour').top,
+    marge: bande.top - r('.carte-champ:has(#points-positifs)').bottom, bande: [bande.top, bande.bottom], onglets: [r('.onglets').top, r('.onglets').bottom],
+    bandeau: document.querySelector('.bandeau') ? [r('.bandeau').bottom, r('.bandeau > span').top] : null,
+  };
+});
+// Ce que le Diagnostic affiche, ligne par ligne : { Fenêtre: '390 × 844', … }.
+async function diagnostic(page) {
+  await aller(page, '#/diagnostic');
+  const dl = page.locator('main.diag dl').first();
+  await expect(dl.locator('dt', { hasText: 'Marge du soir' })).toBeVisible();
+  return dl.evaluate((l) => Object.fromEntries([...l.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent])));
+}
+const enPx = (n) => `${String(Math.round(n * 10) / 10).replace('-', '−').replace('.', ',')} px`;
+
+test('Q27 · avec les zones sûres de l\'iPhone (47 en haut, 34 en bas, 390 × 844), le soir tient sans défiler, en clair et en sombre, à 21 h et entre 0 h et 4 h ; le Diagnostic donne la même marge', async ({ page }) => {
+  await simulerZonesSures(page);
+  for (const [schema] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    for (const heure of [new Date(2026, 9, 15, 21, 0), new Date(2026, 9, 16, 1, 30)]) {
+      const quoi = `${schema} · ${heure.getHours()} h`;
+      await page.clock.setSystemTime(heure);
+      await viderBase(page);
+      await toucher(page, 'Lieu', 'Bureau');
+      await toucher(page, 'Sommeil', 'Moyen');
+      await toucher(page, 'Contact humain', 'Oui');
+      await toucher(page, 'Sport / mouvement', 'Non');
+      await toucher(page, 'Traitement pris', 'Oui');
+      await expect.poll(async () => (await entreeDuJour(page))?.traitementPris, quoi).toBe('traitementPris:oui');
+      const g = await geometrieSoir(page);
+      expect(g.scrollY, quoi).toBe(0);
+      expect(g.large, quoi).toBe(false);
+      // L'en-tête sous l'encoche, la bande du bas collée aux onglets, les onglets au-dessus de la barre d'accueil.
+      expect(g.entete, quoi).toBeGreaterThanOrEqual(47);
+      expect(Math.abs(g.bande[1] - g.onglets[0]), quoi).toBeLessThanOrEqual(0.5);
+      expect(g.onglets[1] - g.onglets[0], quoi).toBe(50 + 34);
+      expect(g.marge, `${quoi} : la dernière carte au-dessus de la bande`).toBeGreaterThanOrEqual(0);
+      const d = await diagnostic(page);
+      expect(d, quoi).toMatchObject({ Fenêtre: '390 × 844', 'Zones sûres': 'haut 47 · bas 34 · gauche 0 · droite 0', 'Hauteur utile': '763 px', 'Marge du soir': enPx(g.marge) });
+      await expect(page.locator('main.diag pre')).toContainText(`zones sûres haut 47 · bas 34 · gauche 0 · droite 0 · hauteur utile 763 px · marge du soir ${enPx(g.marge)}`);
+    }
+  }
+});
+
+test('Q27 · le bandeau « Nouvelle version prête » prend la zone sûre du haut, et le soir ne la compte pas une seconde fois ; le Diagnostic dit la marge, même négative', async ({ page }) => {
+  await simulerZonesSures(page);
+  await toucher(page, 'Lieu', 'Bureau');
+  const sans = await geometrieSoir(page);
+  await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+  await expect(page.locator('.bandeau')).toBeVisible();
+  const g = await geometrieSoir(page);
+  // Le texte du bandeau sous l'encoche ; l'en-tête du jour juste sous le bandeau (la zone sûre n'est pas comptée deux fois).
+  expect(g.bandeau[1]).toBeGreaterThanOrEqual(47);
+  expect(g.entete - g.bandeau[0]).toBeGreaterThanOrEqual(0);
+  expect(g.entete - g.bandeau[0]).toBeLessThanOrEqual(1);
+  // Le soir descend de la hauteur du bandeau moins la zone du haut, l'espace entre les cartes resserré (6 → 4).
+  expect(g.marge).toBeGreaterThan(sans.marge - (g.bandeau[0] - 47));
+  const d = await diagnostic(page);
+  expect(d['Marge du soir']).toBe(`${enPx(g.marge)}${g.marge < 0 ? ' (le soir défile)' : ''}`);
+});
+
+test('Q27 · sans simulation (WebKit sans iPhone), le Diagnostic dit des zones sûres nulles et toute la fenêtre comme hauteur utile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 797 });
+  await toucher(page, 'Lieu', 'Bureau');
+  const g = await geometrieSoir(page);
+  const d = await diagnostic(page);
+  expect(d).toMatchObject({ Fenêtre: '390 × 797', 'Zones sûres': 'haut 0 · bas 0 · gauche 0 · droite 0', 'Hauteur utile': '797 px', 'Marge du soir': enPx(g.marge) });
+});
+
+// Relecture : la marge était notée à chaque affichage de l'écran, celle d'un autre jour comprise (« Revenir à
+// aujourd'hui » en plus, 36 px d'écart), et le Diagnostic pouvait dire « le soir défile » alors que le soir d'aujourd'hui
+// tient.
+test('Q27 · le Diagnostic garde les marges du soir d\'aujourd\'hui, celle de « J\'ai fini pour ce soir » comprise : un autre jour, glissé ou ouvert depuis l\'Historique, n\'est pas mesuré', async ({ page }) => {
+  await simulerZonesSures(page);
+  const marges = () => page.evaluate(() => {
+    const bande = document.querySelector('main.aujourdhui > .actions-flottantes').getBoundingClientRect().top;
+    const fini = document.querySelector('.fini-bouton');
+    const arrondi = (n) => Math.round(n * 10) / 10;
+    return { soir: arrondi(bande - document.querySelector('.carte-champ:has(#points-positifs)').getBoundingClientRect().bottom),
+      fini: fini ? arrondi(bande - fini.getBoundingClientRect().bottom) : null };
+  });
+  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { lieu: 'lieu:teletravail' }));
+  await toucher(page, 'Lieu', 'Bureau');
+  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+  const auj = await marges();
+  const attendu = { 'Marge du soir': `${enPx(auj.soir)}${auj.soir < 0 ? ' (le soir défile)' : ''}`,
+    'Marge de « J\'ai fini »': `${enPx(auj.fini)}${auj.fini < 0 ? ' (sous la bande)' : ''}` };
+  expect(await diagnostic(page)).toMatchObject(attendu);
+  await expect(page.locator('main.diag pre')).toContainText(`marge du soir ${attendu['Marge du soir']} · marge de « J'ai fini » ${attendu['Marge de « J\'ai fini »']}`);
+  // La veille (par le hash, comme après un glissement), puis la veille et aujourd'hui ouverts depuis l'Historique.
+  for (const hash of ['#/jour/2026-10-14', '#/historique/jour/2026-10-14', '#/historique/jour/2026-10-15']) {
+    await aller(page, hash);
+    await expect(page.locator('main.aujourdhui .carte-champ:has(#points-positifs)')).toBeVisible();
+    const autre = await marges();
+    if (hash === '#/jour/2026-10-14') expect(autre.soir, 'la veille a sa propre marge').toBeLessThan(auj.soir - 20);
+    expect(await diagnostic(page), hash).toMatchObject(attendu);
+  }
+  // Revenu sur le soir d'aujourd'hui, la mesure reprend.
+  await aller(page, '#/aujourdhui');
+  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
+  expect(await diagnostic(page)).toMatchObject(attendu);
+});
+
+// Relecture finale : la marge était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note
+// chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait
+// « −71,7 px (le soir défile) » d'un soir qui tient fermé. La marge est celle du soir, détails fermés.
+test('Q27 · la marge du soir est celle du soir détails fermés : la Durée ouverte et notée, le détail du Sport ouvert, la fenêtre qui change pendant ce temps ne la changent pas', async ({ page }) => {
+  await simulerZonesSures(page);
+  const lienDuree = page.getByRole('button', { name: /^Durée de la nuit/ });
+  const texteMarge = (m) => `${enPx(m)}${m < 0 ? ' (le soir défile)' : ''}`;
+  await toucher(page, 'Lieu', 'Bureau');
+  const ferme = (await geometrieSoir(page)).marge;
+  expect(ferme, 'le soir fermé tient').toBeGreaterThanOrEqual(0);
+  // La Durée ouverte et 4 h notée, la rangée laissée ouverte : le soir défile alors, mais ce n'est pas sa marge.
+  await lienDuree.click();
+  await groupe(page, 'Durée de la nuit').getByRole('button', { name: '4 h ou moins' }).click();
+  await expect(lienDuree).toHaveText('4 h ou moins');
+  expect((await geometrieSoir(page)).marge, 'la Durée ouverte allonge le soir').toBeLessThan(0);
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme));
+  // Revenu sur le soir, la Durée est refermée : la mesure reprend, « 4 h ou moins › » compris.
+  await aller(page, '#/aujourdhui');
+  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
+  await expect(lienDuree).toHaveText('4 h ou moins');
+  const ferme2 = (await geometrieSoir(page)).marge;
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+  // Le détail du Sport ouvert, et la fenêtre qui change de taille pendant ce temps (rotation, clavier) : rien n'est noté.
+  await aller(page, '#/aujourdhui');
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+  // Refermé, le détail rend la mesure.
+  await aller(page, '#/aujourdhui');
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toBeVisible();
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await expect(page.locator('#detail-sport')).toHaveCount(0);
+  expect((await geometrieSoir(page)).marge).toBe(ferme2);
+  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+});
+
+// ---------- Q29 : les finitions ----------
+
+test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journée) ; en clair, rien ne change', async ({ page }) => {
+  // Cinq jours de relevés à 10 h (basse), 14 h (moyenne) et 18 h (haute) : Ta journée a ses trois pas d'énergie.
+  await page.evaluate(async (jours) => {
+    const r = window.__carnet.repo;
+    for (const date of jours) {
+      for (const [heure, energie] of [['10:00', 'energie:basse'], ['14:00', 'energie:moyenne'], ['18:00', 'energie:haute']]) {
+        await r.humeurs.creer({ date, heure, emotion: 'roue:serenite:calme', energie });
+      }
+    }
+  }, Array.from({ length: 5 }, (_, i) => addDays(AUJ, -i)));
+  await aller(page, '#/analyse');
+  const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
+  await expect(journee.locator('.pas-rampe rect.g-energie-1')).toHaveCount(1);
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    const pas = await journee.evaluate((f) => [1, 2, 3].map((n) => {
+      const s = getComputedStyle(f.querySelector(`.pas-rampe rect.g-energie-${n}`));
+      return { fill: s.fill, opacite: Number(s.opacity) };
+    }));
+    for (const p of pas) expect(p.fill, schema).toBe(rgb(t['c-energie']));
+    const [basse, moyenne, haute] = pas.map((p) => vue(t['c-energie'], t.surface, p.opacite));
+    if (schema === 'light') expect(pas.map((p) => p.opacite)).toEqual([0.3, 0.6, 1]);
+    else {
+      expect(contraste(basse, moyenne), 'basse et moyenne distinctes').toBeGreaterThanOrEqual(2.4);
+      expect(contraste(moyenne, haute)).toBeGreaterThanOrEqual(2);
+      expect(contraste(basse, t.surface), 'basse visible sur la carte').toBeGreaterThanOrEqual(1.4);
+    }
+  }
+});
+
+// Relecture finale : le contour arrondi de la v8 (Q29) faisait, sur 30 jours, un ovale de 5 × 8 qui se lisait « 0 » (la
+// rangée disait « 0  00 00 »). Le repère est maintenant un losange plein : ni une barre comme « nuit bien » (le même bleu en
+// sombre, 1:1), ni un chiffre.
+test('Q29 · le repère Bien-être de Mes jours est un losange plein, distinct de « nuit bien » (une barre) et d\'un « 0 », à 7 et à 30 jours, en clair et en sombre', async ({ page }) => {
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.journal.patch('2026-10-14', { sommeilRessenti: 'sommeil:bien' });
+    for (const date of ['2026-10-13', '2026-10-14']) await r.seances.creer({ date, heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
+  });
+  await aller(page, '#/analyse');
+  const mesJours = page.locator('figure', { hasText: 'Mes jours' });
+  for (const periode of [/7 j/, /30 j/]) {
+    await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: periode }).click();
+    await expect(mesJours.locator('polygon.g-bien-etre')).toHaveCount(2);
+    await expect(mesJours.locator('rect.g-bien-etre, circle.g-bien-etre, ellipse.g-bien-etre')).toHaveCount(0);
+    await expect(mesJours.locator('svg[role="img"] rect.g-sommeil-3')).toHaveCount(1);
+    // Deux jours voisins : deux losanges pareils, aussi larges que hauts, et un écart entre eux.
+    const [a, b] = await mesJours.locator('polygon.g-bien-etre').evaluateAll((ps) => ps.map((p) => {
+      const r = p.getBBox();
+      return { pointes: p.points.numberOfItems, x: r.x, l: r.width, h: r.height };
+    }));
+    expect(b.l, String(periode)).toBe(a.l);
+    expect(b.h, String(periode)).toBe(a.h);
+    expect(a.pointes).toBe(4);
+    expect(a.h).toBeGreaterThanOrEqual(6);
+    expect(Math.abs(a.l - a.h)).toBeLessThanOrEqual(0.2);
+    expect(b.x - (a.x + a.l), `${periode} : un écart entre deux jours voisins`).toBeGreaterThanOrEqual(1.5);
+    for (const [schema, t] of THEMES) {
+      await page.emulateMedia({ colorScheme: schema });
+      const [bienEtre, nuit] = await Promise.all(['polygon.g-bien-etre', 'svg[role="img"] rect.g-sommeil-3'].map((x) => mesJours.locator(x).first()
+        .evaluate((e) => { const s = getComputedStyle(e); return { fill: s.fill, stroke: s.stroke }; })));
+      expect(bienEtre.fill, schema).toBe(rgb(t['c-difficile']));
+      expect(bienEtre.stroke, schema).toBe('none');
+      expect(contraste(t['c-difficile'], t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
+      expect(nuit.fill, schema).toBe(rgb(t['chart-sommeil-3']));
+    }
+  }
+  // En sombre, les deux bleus sont les mêmes à l'œil (1:1) : seule la forme les distingue.
+  expect(contraste(sombre['c-difficile'], sombre['chart-sommeil-3'])).toBeLessThan(1.2);
+});
+
+test('Q29 · dans un parcours, les étapes à venir se voient, en clair comme en sombre : un contour à 3:1 au moins, sans fond, distinct des points pleins', async ({ page }) => {
+  await page.getByRole('link', { name: 'Épisode' }).click();
+  const parcours = page.getByRole('dialog', { name: 'Épisode' });
+  await expect(parcours.locator('.reperes i')).toHaveCount(5);
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    const [fond, aVenir, enCours] = await parcours.evaluate((p) => [getComputedStyle(p).backgroundColor,
+      ...['.reperes i:last-child', '.reperes i.en-cours'].map((x) => {
+        const e = p.querySelector(x);
+        const s = getComputedStyle(e);
+        return { fond: s.backgroundColor, contour: s.borderTopColor, trait: parseFloat(s.borderTopWidth), taille: e.getBoundingClientRect().width };
+      })]);
+    expect(fond, schema).toBe(rgb(t.bg));
+    // Les éléments graphiques non textuels : 3:1 au moins sur le fond (AA).
+    expect(aVenir.fond, `${schema} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
+    expect(aVenir.contour, schema).toBe(rgb(t['text-2']));
+    expect(aVenir.trait, schema).toBeGreaterThanOrEqual(1);
+    expect(contraste(aVenir.contour, fond), `${schema} : à venir sur le fond`).toBeGreaterThanOrEqual(3);
+    // L'étape en cours reste pleine, de la même taille.
+    expect(enCours.fond, schema).not.toBe('rgba(0, 0, 0, 0)');
+    expect(enCours.contour, schema).toBe(enCours.fond);
+    expect(enCours.taille, schema).toBe(aVenir.taille);
+  }
+});
+
+test('Q29 · le message « Épisode enregistré » passe sous une feuille ouverte (Mon plan, dans l\'épisode), puis revient', async ({ page }) => {
+  await page.evaluate(() => window.__carnet.repo.meta.ecrire('monPlan', { quandCaMonte: 'je sors marcher' }));
+  const id = await page.evaluate(async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-15', heure: '18:42', emotion: 'emotion:colere', intensite: 7 })).id);
+  await aller(page, `#/episode/${id}`);
+  const fiche = page.getByRole('dialog', { name: 'Épisode' });
+  await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
+  await page.evaluate(() => window.__carnet.etatApp.maj({ toast: { id: 991, texte: 'Épisode enregistré', action: null, dureeMs: 60000 } }));
+  const toast = page.getByRole('status').filter({ hasText: 'Épisode enregistré' });
+  await expect(toast).toBeVisible();
+  // Ce qu'on touche au milieu du message : le message lui-même, tant qu'aucune feuille n'est ouverte…
+  const auMilieu = () => toast.evaluate((t) => { const r = t.getBoundingClientRect(); return t.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); });
+  expect(await auMilieu()).toBe(true);
+  await fiche.locator('.ligne-plan').getByRole('button', { name: 'Mon plan' }).click();
+  const feuille = page.getByRole('dialog', { name: 'Mon plan' });
+  await expect(feuille).toContainText('je sors marcher');
+  // … puis le voile de la feuille : le message est dessous, il ne couvre ni la feuille ni son voile.
+  expect(await auMilieu()).toBe(false);
+  expect(await feuille.evaluate((f) => {
+    const t = document.querySelector('.toast').getBoundingClientRect();
+    const sous = document.elementFromPoint(t.left + t.width / 2, t.top + t.height / 2);
+    return Boolean(sous && sous.closest('.voile'));
+  })).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(feuille).toHaveCount(0);
+  expect(await auMilieu()).toBe(true);
+});
+
+test('Q29 · le lecteur : « Terminer » touché tôt (moins de 60 s, sans aller au bout) ne laisse pas de « Noter mon émotion »', async ({ page }) => {
+  await aller(page, '#/bien-etre/programme');
+  await page.locator('main.programme').getByRole('link', { name: /^Pause d'une minute/ }).click();
+  const lecteur = page.getByRole('dialog', { name: 'Pause d\'une minute' });
+  await lecteur.getByRole('button', { name: 'Commencer', exact: true }).click();
+  await page.clock.runFor(20000);
+  await lecteur.getByRole('button', { name: 'Terminer', exact: true }).click();
+  await expect(lecteur.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
+  // Le lecteur se ferme seul 6 s plus tard : aucun message, aucune séance.
+  await page.clock.runFor(6500);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
+  await expect(page.getByRole('status').filter({ hasText: 'Fin de l\'exercice.' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Noter mon émotion' })).toHaveCount(0);
+  expect(await page.evaluate(() => window.__carnet.repo.seances.tous())).toEqual([]);
+});
+
+// ---------- Q31 : l'entrée d'un jour qui attend ses données ----------
+
+// Un glissement au doigt, posé au centre de l'élément visé, levé 300 ms (d'horloge) plus tard.
+async function glisser(page, selecteur, dx) {
+  const depart = await page.locator(selecteur).first().evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    el.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true }));
+    return [x, y];
+  });
+  await page.clock.runFor(300);
+  await page.locator(selecteur).first().evaluate((el, [x, y, d]) => {
+    el.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x + d, clientY: y, bubbles: true }));
+  }, [...depart, dx]);
+}
+
+test('Q31 · un jour dont les données arrivent après 600 ms entre quand même de son côté, ses cartes comprises ; l\'entrée finit avec son animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => {
+    window.__entrees = [];
+    document.addEventListener('animationstart', (e) => {
+      if (e.animationName.startsWith('entree-')) window.__entrees.push({ nom: e.animationName, carte: e.target.classList.contains('carte-champ') });
+    });
+    // La lecture d'un jour tarde (une base lente) : ses cartes arrivent bien après les 400 ms de l'ancienne minuterie.
+    const r = window.__carnet.repo;
+    const lire = r.journal.lire;
+    r.journal.lire = (date) => new Promise((ok) => { setTimeout(ok, 600); }).then(() => lire(date));
+  });
+  await glisser(page, '.carte-champ .tete-rubrique', 120);
+  await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
+  await expect(page.locator('main.aujourdhui')).toHaveClass(/entree-veille/);
+  await page.clock.runFor(700);
+  await expect(page.locator('main.aujourdhui > .carte-champ').first()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__entrees.filter((e) => e.carte).length)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => [...new Set(window.__entrees.map((e) => e.nom))])).toEqual(['entree-veille']);
+  // Les animations jouées, la page n'a plus de classe d'entrée : rien ne rejoue l'entrée.
+  await expect(page.locator('main.aujourdhui')).not.toHaveClass(/entree-/);
+});
+
+// ---------- Q26 : 5 ans de données inventées ----------
+
+// Cinq ans écrits d'un coup dans la base (une transaction), chaque fiche passée par la validation de l'app : un soir par
+// jour, trois émotions du moment, un épisode tous les trois jours, un symptôme tous les cinq, une séance tous les deux.
+async function cinqAns(page) {
+  return page.evaluate(async () => {
+    const { normaliser } = await import('/js/domain/champs.js');
+    const { addDays } = await import('/js/domain/dates.js');
+    const familles = ['colere', 'degout', 'tristesse', 'joie', 'surprise', 'peur', 'serenite'];
+    const fiches = { journal: [], humeurs: [], episodes: [], symptomes: [], seances: [] };
+    const valide = (store, brut) => {
+      const { valeur, erreurs } = normaliser(store, brut, { origine: 'app' });
+      if (erreurs.length) throw new Error(`${store} : ${erreurs.join(', ')}`);
+      fiches[store].push({ ...valeur, createdAt: '2026-10-15T19:00:00.000Z', updatedAt: '2026-10-15T19:00:00.000Z' });
+    };
+    const jours = 5 * 365 + 1;
+    for (let i = 0; i < jours; i++) {
+      const date = addDays('2021-10-15', i);
+      valide('journal', { date, lieu: i % 2 ? 'lieu:bureau' : 'lieu:teletravail', sommeilRessenti: ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
+        heuresSommeil: 4 + (i % 7), contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
+        notes: i % 3 ? null : 'une note du soir inventée pour la mesure', pointsPositifs: i % 4 ? null : 'un point positif inventé' });
+      for (let k = 0; k < 3; k++) {
+        valide('humeurs', { id: `hu-perf-${i}-${k}`, date, heure: `${10 + 4 * k}:00`, emotion: `roue:${familles[(i + k) % 7]}`,
+          energie: ['energie:basse', 'energie:moyenne', 'energie:haute'][k] });
+      }
+      if (i % 3 === 0) valide('episodes', { id: `ep-perf-${i}`, date, heure: '15:00', emotion: 'emotion:colere', intensite: 6, reaction: i % 2 ? 'reaction:explosion' : null });
+      if (i % 5 === 0) valide('symptomes', { id: `sy-perf-${i}`, date, symptome: 'symptome:crise_angoisse', intensite: 4 });
+      if (i % 2 === 0) valide('seances', { id: `se-perf-${i}`, date, heure: '21:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' });
+    }
+    const db = await new Promise((ok, ko) => { const r = indexedDB.open('carnet'); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); });
+    await new Promise((ok, ko) => {
+      const t = db.transaction([...Object.keys(fiches), 'meta'], 'readwrite');
+      for (const [store, liste] of Object.entries(fiches)) for (const f of liste) t.objectStore(store).put(f);
+      t.objectStore('meta').put({ cle: 'derniereEcriture', valeur: new Date().toISOString() });
+      t.oncomplete = ok;
+      t.onerror = () => ko(t.error);
+    });
+    db.close();
+    return Object.fromEntries(Object.entries(fiches).map(([s, l]) => [s, l.length]));
+  });
+}
+
+// Les lectures de la base, comptées : chaque appel à `tous()` d'un store (l'objet repo de l'app, partagé avec ses écrans),
+// les sept que lit ui/lecture.js. `parStore` dit combien de fois chacun.
+const STORES = ['journal', 'humeurs', 'episodes', 'symptomes', 'seances', 'traitements', 'rdv'];
+const compterLectures = (page) => page.evaluate((stores) => {
+  window.__lectures = 0;
+  window.__parStore = {};
+  const r = window.__carnet.repo;
+  for (const store of stores) {
+    const tous = r[store].tous;
+    r[store].tous = (...a) => { window.__lectures += 1; window.__parStore[store] = (window.__parStore[store] || 0) + 1; return tous(...a); };
+  }
+}, STORES);
+const lectures = (page) => page.evaluate(() => { const n = window.__lectures; window.__lectures = 0; window.__parStore = {}; return n; });
+
+const ECRANS = [
+  ['Analyse', '#/analyse', (page) => page.locator('.tuile').first()],
+  ['Comprendre', '#/comprendre/energie', (page) => page.locator('main.comprendre figure.graphe').first()],
+  ['Vue soignants', '#/soignants', (page) => page.getByRole('button', { name: 'Partager en PDF' })],
+  ['Historique', '#/historique', (page) => page.locator('.ligne-hist').first()],
+];
+
+// Aujourd'hui, ouvert entre deux écrans : ses propres lectures (le prochain rendez-vous) ne comptent pas.
+async function surAujourdhui(page) {
+  await aller(page, '#/aujourdhui');
+  await expect(page.locator('main.aujourdhui .carte-champ').first()).toBeVisible();
+  await lectures(page);
+}
+
+test('Q26 · 5 ans de données inventées : l\'Analyse, Comprendre, la Vue soignants et l\'Historique s\'ouvrent sous leur budget ; rouverts, ils ne relisent pas la base tant qu\'elle n\'a pas changé', async ({ page }) => {
+  test.setTimeout(120000);
+  const n = await cinqAns(page);
+  expect(n.journal).toBe(1826);
+  expect(n.humeurs).toBe(1826 * 3);
+  await page.reload();
+  await compterLectures(page);
+  // Première ouverture : chaque écran lit la base (une seule fois pour les quatre, la lecture étant partagée), sous son
+  // budget, généreux pour une machine chargée : mesuré sur Mac, 0,25 s pour l'Analyse, Comprendre et la Vue soignants, 2 s
+  // pour l'Historique (qui rend toutes ses semaines d'un coup : la piste Q25, non retenue).
+  let total = 0;
+  for (const [nom, hash, pret] of ECRANS) {
+    await surAujourdhui(page);
+    const t0 = Date.now();
+    await aller(page, hash);
+    await expect(pret(page), nom).toBeVisible({ timeout: 20000 });
+    const ms = Date.now() - t0;
+    console.log(`  ${nom}, 5 ans : ${ms} ms`);
+    expect(ms, nom).toBeLessThan(8000);
+    total += await lectures(page);
+  }
+  expect(total, 'la base lue une fois, pour les quatre écrans').toBe(STORES.length);
+  // Rouverts sans écriture : aucune lecture.
+  for (const [nom, hash, pret] of ECRANS) {
+    await surAujourdhui(page);
+    await aller(page, hash);
+    await expect(pret(page), nom).toBeVisible({ timeout: 20000 });
+    expect(await lectures(page), `${nom} rouvert`).toBe(0);
+  }
+  // Une écriture, l'Historique ouvert (le dernier des quatre) : il relit la base, une fois, chaque store une fois.
+  // Le 15/10, au bureau dans les données inventées, passe en télétravail.
+  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-15', { lieu: 'lieu:teletravail' }));
+  await expect.poll(() => page.evaluate(() => window.__parStore), { timeout: 20000 }).toEqual(Object.fromEntries(STORES.map((s) => [s, 1])));
+  await expect(page.locator('.ligne-hist').first()).toContainText('Télétravail', { timeout: 20000 });
+});
+
+test('Q26 · la Vue soignants ouverte à froid lit la base une seule fois, même si elle la demande deux fois en même temps (pour l\'Analyse et pour elle-même)', async ({ page }) => {
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.journal.patch('2026-10-14', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:bien' });
+    await r.episodes.creer({ date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', intensite: 6 });
+  });
+  await page.reload();
+  await compterLectures(page);
+  // Relecture finale : Aujourd'hui, ouvert au rechargement, lit les rendez-vous (le prochain) ; sous charge, sa lecture
+  // tombait après compterLectures et comptait double (rdv: 2). On l'attend, et elle ne compte pas.
+  await surAujourdhui(page);
+  await aller(page, '#/soignants');
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled();
+  // Relecture : les deux demandes trouvaient la mémoire vide, et chaque store était lu deux fois (14 lectures).
+  expect(await page.evaluate(() => window.__parStore), 'chaque store lu une fois').toEqual(Object.fromEntries(STORES.map((s) => [s, 1])));
+  // Rouverte depuis l'Analyse, sans écriture : aucune lecture.
+  await lectures(page);
+  await aller(page, '#/analyse');
+  await expect(page.locator('.tuile').first()).toBeVisible();
+  await aller(page, '#/soignants');
+  await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled();
+  expect(await lectures(page)).toBe(0);
+});

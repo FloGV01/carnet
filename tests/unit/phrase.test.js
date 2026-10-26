@@ -96,3 +96,15 @@ test('journée v7 : les émotions du jour (Après coup, « Ce jour-là »), apr�
   assert.equal(texte(phraseResume('jour', {}, carte, { emotions })), 'irrité, calme', 'un jour qui n\'a que des émotions');
   assert.deepEqual(phraseResume('jour', entree, carte, { emotions: resumeEmotions([], Infinity) }), phraseResume('jour', entree, carte));
 });
+
+// v8 (spec §7 bis) : la nuit dit aussi ses heures, en un seul segment de la rubrique Sommeil (une seule puce dans l'Historique).
+test('v8 : « nuit moyen · 6 h » en un segment ; les heures seules disent « nuit 6 h » ; hors bornes, rien', () => {
+  const nuit = (o) => phraseResume('jour', { date: '2026-10-25', ...o }, carte).filter((x) => x.rubrique === 'sommeil');
+  assert.deepEqual(nuit({ sommeilRessenti: 'sommeil:moyen', heuresSommeil: 6 }).map((x) => x.texte), ['nuit moyen · 6 h']);
+  assert.deepEqual(nuit({ heuresSommeil: 4 }).map((x) => x.texte), ['nuit 4 h ou moins']);
+  assert.deepEqual(nuit({ heuresSommeil: 10, lieu: 'lieu:bureau' }).map((x) => x.texte), ['nuit 10 h ou plus']);
+  assert.deepEqual(nuit({ sommeilRessenti: 'sommeil:moyen' }).map((x) => x.texte), ['nuit moyen']);
+  assert.deepEqual(nuit({ heuresSommeil: 12 }), []);
+  assert.deepEqual(nuit({ heureCoucher: '23:00', heureLever: '07:00' }), [], 'le coucher et le lever ne sont pas dans la phrase');
+  assert.equal(texte(phraseResume('jour', { date: '2026-10-25', lieu: 'lieu:bureau', heuresSommeil: 7, contactHumain: true }, carte)), 'Bureau · nuit 7 h · contact oui');
+});

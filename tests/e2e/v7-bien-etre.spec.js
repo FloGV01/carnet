@@ -1,55 +1,17 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
+import { tuile, mot } from '../aides/emotion.js';
+import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
-// v7 · Bien-être (spec §6) : l'onglet (respiration en tête, les exercices, la ligne fixe), un exercice une consigne par
-// écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran (factice), les
-// séances (menées au bout ou arrêtées après 60 s, une seule, avec leur origine), le repère de Mes jours, et aucun compteur.
+// v7 · Bien-être (spec §6) : l'onglet (v8 : le Programme, la cohérence cardiaque, la ligne fixe), un exercice une
+// consigne par écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran
+// (factice), les séances (menées au bout ou arrêtées après 60 s, une seule, avec leur origine), le repère de Mes jours,
+// et aucun compteur.
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
-// Une synthèse vocale factice : `voix` est la liste de getVoices() ; null retire la synthèse vocale.
-const installerParole = (page, voix = [{ lang: 'fr-FR', name: 'Voix factice', localService: true }]) => page.addInitScript((liste) => {
-  const p = { dits: [], annulations: 0 };
-  window.__parole = p;
-  if (liste === null) {
-    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: undefined });
-    return;
-  }
-  class Enonce { constructor(texte) { this.text = texte; } }
-  Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: Enonce });
-  Object.defineProperty(window, 'speechSynthesis', {
-    configurable: true,
-    value: {
-      getVoices: () => liste,
-      speak: (u) => { p.dits.push(u.text); p.voix = u.voice && u.voice.lang; },
-      cancel: () => { p.annulations += 1; },
-      addEventListener() {}, removeEventListener() {},
-    },
-  });
-}, voix);
-const parole = (page) => page.evaluate(() => ({ ...window.__parole }));
-// Un verrou d'écran factice : les demandes et les rendus.
-const installerVerrou = (page) => page.evaluate(() => {
-  const j = { demandes: 0, rendus: 0 };
-  window.__verrou = j;
-  Object.defineProperty(navigator, 'wakeLock', {
-    configurable: true,
-    value: { request: async () => { j.demandes += 1; return { release: async () => { j.rendus += 1; } }; } },
-  });
-});
-const verrou = (page) => page.evaluate(() => ({ ...window.__verrou }));
-// La page cachée (écran verrouillé, autre app), puis de nouveau visible.
-const cacher = (page) => page.evaluate(() => {
-  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
-  document.dispatchEvent(new Event('visibilitychange'));
-});
-const montrer = (page) => page.evaluate(() => {
-  delete document.visibilityState;
-  document.dispatchEvent(new Event('visibilitychange'));
-});
-const seances = (page) => page.evaluate(() => window.__carnet.repo.seances.tous());
-// Une durée en secondes : le temps de l'horloge factice, plus les quelques secondes réelles des touchers (l'horloge tourne).
-const environ = (dureeS, attendu) => { expect(dureeS).toBeGreaterThanOrEqual(attendu); expect(dureeS).toBeLessThan(attendu + 8); };
-
+// Le lecteur (v8) remplace l'écran d'un exercice : les tests du lecteur lui-même sont dans v8-lecteur.spec.js ; ici, ce
+// qui reste de la v7 (l'onglet, les séances et leur règle, la voix, l'interruption, Mes jours, Comprendre). Les exercices
+// s'ouvrent depuis l'écran Programme (v8, tâche 4 ; v8-programme.spec.js), et y reviennent.
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 20, 30) });
   await installerParole(page);
@@ -61,14 +23,15 @@ const nav = (page) => page.getByRole('navigation', { name: 'Navigation principal
 const vue = (page, titre) => page.getByRole('dialog', { name: titre });
 const bouton = (zone, nom) => zone.getByRole('button', { name: nom, exact: true });
 const ouvrirExercice = async (page, titre) => {
-  await aller(page, '#/bien-etre');
-  await page.getByRole('list', { name: 'Exercices' }).getByRole('link', { name: new RegExp(`^${titre}`) }).click();
+  await aller(page, '#/bien-etre/programme');
+  await page.locator('main.programme').getByRole('link', { name: new RegExp(`^${titre}`) }).click();
   const v = vue(page, titre);
   await expect(bouton(v, 'Commencer')).toBeVisible();
   return v;
 };
-const texteEtape = (v) => v.locator('.exercice-texte');
-const minuteur = (v) => v.getByRole('timer', { name: 'Temps de l\'étape' });
+const texteEtape = (v) => v.locator('.lecteur-consigne');
+// Les textes passent par pourAffichage (espaces insécables) : on les compare espaces normalisés.
+const texte = (t) => new RegExp(`^${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s/g, '\\s')}$`);
 
 const PAUSE = [
   'Arrête ce que tu fais. Pose ce que tu as dans les mains.', 'Sens tes pieds sur le sol.', 'Inspire lentement par le nez.',
@@ -93,121 +56,98 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await page.getByRole('button', { name: 'Retour', exact: true }).click();
   await expect(page).toHaveURL(/#\/analyse$/);
 
-  // Un exercice est plein écran, sans onglets ; il allume Bien-être quand on en sort.
+  // Un exercice (v8 : ouvert depuis le Programme) est plein écran, sans onglets ; il revient au Programme, qui allume
+  // Bien-être.
   await ouvrirExercice(page, 'Scan corporel');
   await expect(nav(page)).toHaveCount(0);
   await bouton(page, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(nav(page).getByRole('link', { name: 'Bien-être' })).toHaveAttribute('aria-current', 'page');
-  // Un exercice inconnu ramène à Bien-être.
-  await aller(page, '#/bien-etre/exercice/inconnu');
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  // Une séance inconnue ramène au Programme.
+  await aller(page, '#/bien-etre/programme/inconnu');
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 });
 
-test('l\'écran Bien-être : la respiration en tête, les 8 exercices (titre, durée, description), la ligne fixe en bas ; aucun compteur', async ({ page }) => {
+test('l\'écran Bien-être (v8) : le Programme en tête, la cohérence cardiaque, la ligne fixe en bas ; plus de liste d\'exercices ; aucun compteur', async ({ page }) => {
   await aller(page, '#/bien-etre');
   const ecran = page.locator('main.bien-etre');
+  const programme = ecran.getByRole('region', { name: 'Programme' });
+  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
+  // v8 : la carte compacte de la cohérence cardiaque, sa durée, son rythme et son bouton lecture.
   const respiration = ecran.getByRole('region', { name: 'Cohérence cardiaque' });
-  await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeVisible();
-  const liste = ecran.getByRole('list', { name: 'Exercices' });
-  await expect(liste.getByRole('link')).toHaveCount(8);
-  await expect(liste.locator('.exercice-titre')).toHaveText([
-    'Respiration abdominale', 'Respiration carrée', 'Relaxation dynamique des épaules', 'Tension et détente', 'Scan corporel',
-    'Lieu ressource', 'Ancrage 5-4-3-2-1', 'Pause d\'une minute',
-  ]);
-  await expect(liste.locator('.exercice-description').first()).toHaveText('3 min · Respirer avec le ventre, une main posée dessus.');
-  await expect(liste.locator('.exercice-description').nth(4)).toHaveText(/^10\smin · /);
-  await expect(liste.getByRole('link').first()).toHaveAttribute('href', '#/bien-etre/exercice/respiration-abdominale');
-  // Dans l'ordre : la respiration, la liste, la ligne fixe, qui est la dernière chose de l'écran.
-  const [r, l, f] = await Promise.all([respiration.boundingBox(), liste.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
-  expect(r.y + r.height).toBeLessThanOrEqual(l.y);
-  expect(l.y + l.height).toBeLessThanOrEqual(f.y);
+  await expect(respiration.getByRole('button', { name: 'Commencer la cohérence cardiaque' })).toBeVisible();
+  await expect(respiration.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
+  await expect(ecran.getByRole('list', { name: 'Exercices' })).toHaveCount(0);
+  await expect(ecran.locator('.ligne-exercice')).toHaveCount(0);
+  // Dans l'ordre : le Programme, la respiration, la ligne fixe, qui est la dernière chose de l'écran. Les deux cartes ont
+  // un titre de niveau 2, que le rotor « Titres » de VoiceOver trouve ; celui du Programme reste dans le lien.
+  await expect(ecran.getByRole('heading', { level: 2 })).toHaveText(['Programme', 'Cohérence cardiaque']);
+  await expect(programme.getByRole('link').getByRole('heading', { name: 'Programme', level: 2 })).toBeVisible();
+  const [p, r, f] = await Promise.all([programme.boundingBox(), respiration.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
+  expect(p.y + p.height).toBeLessThanOrEqual(r.y);
+  expect(r.y + r.height).toBeLessThanOrEqual(f.y);
   await expect(ecran.locator(':scope > *').last()).toHaveText('Tu peux t\'arrêter à tout moment.');
-  // Les cibles font 44 au moins.
-  for (const b of await liste.getByRole('link').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
-  // Rien ne compte les séances : l'écran est le même avant et après six séances de toutes origines.
+  // Rien ne compte les séances : l'écran est le même avant et après six séances de toutes origines, hors du Programme.
   const avant = await ecran.innerText();
   await page.evaluate(async () => {
     const rp = window.__carnet.repo;
     for (const [date, origine] of [['2026-10-15', 'bien-etre'], ['2026-10-15', 'bien-etre'], ['2026-10-14', 'moment-difficile'], ['2026-10-13', 'ressourcer'], ['2026-10-12', 'bien-etre'], ['2026-10-11', 'bien-etre']]) {
-      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine });
+      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine, fin: true });
     }
   });
   await page.reload();
   await appPrete(page);
   await aller(page, '#/bien-etre');
-  await expect(ecran.getByRole('list', { name: 'Exercices' }).getByRole('link')).toHaveCount(8);
+  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
   expect(await ecran.innerText()).toBe(avant);
-  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d+\s*\/\s*\d+/i);
+  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d+\s*\/\s*\d+|%/i);
 });
 
-test('un exercice complet, voix éteinte : une consigne par écran, Précédent, Suivant, Terminer ; verrou d\'écran ; une séance ; « Noter mon émotion »', async ({ page }) => {
+test('un exercice complet, voix éteinte (v8) : une consigne par écran, les étapes avancent seules ; verrou d\'écran ; une séance', async ({ page }) => {
   await installerVerrou(page);
   const v = await ouvrirExercice(page, 'Pause d\'une minute');
   // Avant de commencer : la description et la durée ; la voix est éteinte au départ ; rien n'est dit ni verrouillé.
   await expect(v.getByText('Un arrêt bref, là où tu es.')).toBeVisible();
-  await expect(v.getByText('Environ 1 minute.')).toBeVisible();
+  await expect(v.locator('.lecteur-duree')).toHaveText(/^1\smin\s·\slà où tu es$/);
   await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveAttribute('aria-checked', 'false');
   expect(await verrou(page)).toEqual({ demandes: 0, rendus: 0 });
 
   await bouton(v, 'Commencer').click();
   await expect(texteEtape(v)).toHaveText(PAUSE[0]);
-  await expect(minuteur(v)).toHaveText('0:10');
   await expect(bouton(v, 'Précédent')).toBeDisabled();
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
-  // Le minuteur ne fait qu'indiquer le temps : voix éteinte, l'étape reste.
-  await page.clock.runFor(3000);
-  await expect(minuteur(v)).toHaveText('0:07');
-  await page.clock.runFor(15000);
-  await expect(minuteur(v)).toHaveText('0:00');
-  await expect(texteEtape(v)).toHaveText(PAUSE[0]);
+  // Voix éteinte, l'étape passe seule à la suivante à la fin de sa durée (v8).
+  await page.clock.runFor(10300);
+  await expect(texteEtape(v)).toHaveText(PAUSE[1]);
   // Aucun repère de position.
   await expect(v).not.toContainText(/\d+\s*(sur|\/)\s*\d+/);
-
-  for (let i = 1; i <= 4; i++) {
-    await bouton(v, 'Suivant').click();
-    await expect(texteEtape(v)).toHaveText(PAUSE[i]);
-  }
-  await expect(minuteur(v)).toHaveText('0:15');
-  await bouton(v, 'Précédent').click();
-  await expect(texteEtape(v)).toHaveText(PAUSE[3]);
-  await expect(minuteur(v)).toHaveText('0:10', { timeout: 2000 });
-  await bouton(v, 'Suivant').click();
-  await bouton(v, 'Suivant').click();
-  // La dernière : « Terminer » à la place de « Suivant », une seule fois.
+  await page.clock.runFor(30000);
+  await expect(texteEtape(v)).toHaveText(texte(PAUSE[4]));
+  await page.clock.runFor(15000);
   await expect(texteEtape(v)).toHaveText(PAUSE[5]);
-  await expect(bouton(v, 'Suivant')).toHaveCount(0);
-  await expect(bouton(v, 'Terminer')).toHaveCount(1);
-  // Menée au bout : la dernière étape, après la moitié de la durée de l'exercice (30 s) au moins.
-  await page.clock.runFor(14000);
-  await bouton(v, 'Terminer').click();
-
-  await expect(v.getByText('Fin de l\'exercice.')).toBeVisible();
-  const lien = v.getByRole('link', { name: 'Noter mon émotion' });
-  await expect(lien).toHaveAttribute('href', '#/moment');
+  await expect(bouton(v, 'Suivant')).toBeDisabled();
+  // La dernière étape écoulée finit l'exercice.
+  await page.clock.runFor(5000);
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
   await expect.poll(() => seances(page)).toHaveLength(1);
   const [s] = await seances(page);
   expect(s).toMatchObject({ date: '2026-10-15', heure: '20:30', exercice: 'pause-une-minute', origine: 'bien-etre' });
-  environ(s.dureeS, 32);
+  environ(s.dureeS, 60);
   expect((await parole(page)).dits).toEqual([]);
-  // Rien ne s'ouvre tout seul.
-  await page.clock.runFor(5000);
-  await expect(page).toHaveURL(/#\/bien-etre\/exercice\/pause-une-minute$/);
-  await lien.click();
+  // Le lecteur se ferme seul et revient au Programme ; le message « Noter mon émotion » y mène.
+  await page.clock.runFor(6200);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
+  await page.getByRole('status').getByRole('button', { name: 'Noter mon émotion' }).click();
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue(page, 'Émotion du moment')).toBeVisible();
   expect(await seances(page)).toHaveLength(1);
 });
 
-test('voix allumée : réglage gardé, chaque étape lue avec la voix française, les étapes avancent seules à la fin de leur durée', async ({ page }) => {
+test('voix allumée : réglage gardé, chaque étape lue avec la voix française, après son bol', async ({ page }) => {
   await installerVerrou(page);
   let v = await ouvrirExercice(page, 'Pause d\'une minute');
   const interrupteur = v.getByRole('switch', { name: 'Lecture à voix haute' });
-  // Sa zone de toucher fait 44 de haut au moins : 7 px au-dessus et au-dessous de l'interrupteur, c'est encore lui.
-  const b = await interrupteur.boundingBox();
-  const touche = (y) => page.evaluate(([x, yy]) => Boolean(document.elementFromPoint(x, yy)?.closest('[role=switch]')), [b.x + b.width / 2, y]);
-  expect([await touche(b.y - 7), await touche(b.y + b.height + 6)]).toEqual([true, true]);
   await interrupteur.click();
   await expect(interrupteur).toHaveAttribute('aria-checked', 'true');
   expect(await page.evaluate(() => localStorage.getItem('carnet:exercice:voix'))).toBe('true');
@@ -215,42 +155,49 @@ test('voix allumée : réglage gardé, chaque étape lue avec la voix française
 
   await bouton(v, 'Commencer').click();
   await expect(texteEtape(v)).toHaveText(PAUSE[0]);
+  // Le bol de début sonne d'abord ; la consigne est dite 1,5 s plus tard.
+  await page.clock.runFor(1600);
   expect(await parole(page)).toMatchObject({ dits: [PAUSE[0]], voix: 'fr-FR' });
-  await page.clock.runFor(10300);
+  await page.clock.runFor(8700);
   await expect(texteEtape(v)).toHaveText(PAUSE[1]);
   await page.clock.runFor(30300);
-  await expect(texteEtape(v)).toHaveText(PAUSE[4]);
+  await expect(texteEtape(v)).toHaveText(texte(PAUSE[4]));
+  await page.clock.runFor(1000);
   expect((await parole(page)).dits).toEqual(PAUSE.slice(0, 5));
   // « Suivant » reste possible.
   await bouton(v, 'Suivant').click();
   await expect(texteEtape(v)).toHaveText(PAUSE[5]);
-  // La dernière étape écoulée finit l'exercice, qui le dit.
+  // La dernière étape écoulée finit l'exercice, qui le dit après ses bols.
   await page.clock.runFor(5300);
-  await expect(v.getByText('Fin de l\'exercice.')).toBeVisible();
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
+  await page.clock.runFor(3000);
   expect((await parole(page)).dits).toEqual([...PAUSE, 'Fin de l\'exercice.']);
   await expect.poll(() => seances(page)).toHaveLength(1);
   expect((await seances(page))[0]).toMatchObject({ exercice: 'pause-une-minute', origine: 'bien-etre' });
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
 
-  // Le réglage est gardé : rouvert, l'exercice a la voix allumée ; l'éteindre coupe la voix et l'oublie.
+  // Le réglage est gardé : rouvert, l'exercice a la voix allumée ; l'éteindre en pause coupe la voix et l'oublie.
   await bouton(v, 'Fermer').click();
   v = await ouvrirExercice(page, 'Ancrage 5-4-3-2-1');
   await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveAttribute('aria-checked', 'true');
   await bouton(v, 'Commencer').click();
   await expect.poll(async () => (await parole(page)).dits.at(-1)).toBe('Garde les yeux ouverts. Regarde autour de toi.');
+  await bouton(v, 'Pause').click();
   const annulees = (await parole(page)).annulations;
+  const dits = (await parole(page)).dits.length;
   await v.getByRole('switch', { name: 'Lecture à voix haute' }).click();
-  expect((await parole(page)).annulations).toBeGreaterThan(annulees);
   expect(await page.evaluate(() => localStorage.getItem('carnet:exercice:voix'))).toBeNull();
-  // Éteinte : l'étape ne passe plus seule.
-  await page.clock.runFor(15000);
-  await expect(texteEtape(v)).toHaveText('Garde les yeux ouverts. Regarde autour de toi.');
-  // Rallumée pendant une étape : elle est lue, et son temps repart.
-  await v.getByRole('switch', { name: 'Lecture à voix haute' }).click();
-  await expect.poll(async () => (await parole(page)).dits.at(-1)).toBe('Garde les yeux ouverts. Regarde autour de toi.');
-  await expect(minuteur(v)).toHaveText('0:10');
+  await bouton(v, 'Reprendre').click();
+  // Éteinte : l'étape passe quand même, en silence.
   await page.clock.runFor(10300);
   await expect(texteEtape(v)).toHaveText('Nomme cinq choses que tu vois.');
+  expect((await parole(page)).dits).toHaveLength(dits);
+  expect((await parole(page)).annulations).toBeGreaterThanOrEqual(annulees);
+  // Rallumée en pause, puis la reprise : l'étape est lue.
+  await bouton(v, 'Pause').click();
+  await v.getByRole('switch', { name: 'Lecture à voix haute' }).click();
+  await bouton(v, 'Reprendre').click();
+  await expect.poll(async () => (await parole(page)).dits.at(-1)).toBe('Nomme cinq choses que tu vois.');
 });
 
 test('sans voix française, ni synthèse vocale, la lecture à voix haute n\'apparaît pas', async ({ page }) => {
@@ -258,18 +205,18 @@ test('sans voix française, ni synthèse vocale, la lecture à voix haute n\'app
   await page.reload();
   await appPrete(page);
   let v = await ouvrirExercice(page, 'Scan corporel');
-  await expect(v.getByRole('switch')).toHaveCount(0);
-  await expect(v.getByText(/Voix allumée/)).toHaveCount(0);
+  await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveCount(0);
   await bouton(v, 'Commencer').click();
   await expect(texteEtape(v)).toHaveText(/^Installe-toi allongé ou assis/);
-  await expect(v.getByRole('switch')).toHaveCount(0);
+  await bouton(v, 'Pause').click();
+  await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveCount(0);
   await bouton(v, 'Fermer').click();
 
   await installerParole(page, null);
   await page.reload();
   await appPrete(page);
   v = await ouvrirExercice(page, 'Scan corporel');
-  await expect(v.getByRole('switch')).toHaveCount(0);
+  await expect(v.getByRole('switch', { name: 'Lecture à voix haute' })).toHaveCount(0);
   await bouton(v, 'Commencer').click();
   await expect(texteEtape(v)).toHaveText(/^Installe-toi allongé ou assis/);
   await bouton(v, 'Suivant').click();
@@ -282,7 +229,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   const v = await ouvrirExercice(page, 'Scan corporel');
   await bouton(v, 'Commencer').click();
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
-  // 70 s : la voix allumée a passé l'étape 1 (30 s) et l'étape 2 (40 s).
+  // 70 s : l'étape 1 (30 s) et l'étape 2 (40 s) sont passées.
   await page.clock.runFor(70000);
   await expect(texteEtape(v)).toHaveText(/^Va vers tes pieds/);
   expect(await seances(page)).toEqual([]);
@@ -290,7 +237,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   // L'écran se verrouille : pause, voix coupée, verrou rendu ; la séance est notée dès maintenant.
   const avant = await parole(page);
   await cacher(page);
-  await expect(v.getByText('En pause')).toBeVisible();
+  await expect(v.getByText(/^En pause/)).toBeVisible();
   await expect(bouton(v, 'Reprendre')).toBeVisible();
   expect((await parole(page)).annulations).toBeGreaterThan(avant.annulations);
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
@@ -303,7 +250,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   await page.clock.runFor(120000);
   await montrer(page);
   await page.clock.runFor(2000);
-  await expect(v.getByText('En pause')).toBeVisible();
+  await expect(v.getByText(/^En pause/)).toBeVisible();
   await expect(texteEtape(v)).toHaveText(/^Va vers tes pieds/);
   expect((await parole(page)).dits).toHaveLength(dits);
   expect(await verrou(page)).toEqual({ demandes: 1, rendus: 1 });
@@ -316,7 +263,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   // La sortie : voix coupée, verrou rendu, et toujours une seule séance, à sa durée active (70 + 20 s).
   const annulees = (await parole(page)).annulations;
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 2 });
   expect((await parole(page)).annulations).toBeGreaterThan(annulees);
   await expect.poll(async () => (await seances(page))[0].dureeS).toBeGreaterThanOrEqual(notee.dureeS + 20);
@@ -328,7 +275,7 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   await bouton(v2, 'Commencer').click();
   await page.clock.runFor(65000);
   await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
-  await expect(v2.getByText('En pause')).toBeVisible();
+  await expect(v2.getByText(/^En pause/)).toBeVisible();
   await expect.poll(async () => (await seances(page)).filter((s) => s.exercice === 'lieu-ressource')).toHaveLength(1);
   environ((await seances(page)).find((s) => s.exercice === 'lieu-ressource').dureeS, 65);
   await bouton(v2, 'Fermer').click();
@@ -336,34 +283,35 @@ test('point de vigilance 4 : exercice interrompu après 60 s (arrière-plan, pui
   expect(await seances(page)).toHaveLength(2);
 });
 
-test('aucune séance pour un arrêt avant 60 s : « Fermer », « Terminer » avant la fin, la page cachée, la respiration arrêtée', async ({ page }) => {
+test('aucune séance pour un arrêt avant 60 s : « Fermer », « Terminer » avant la fin, la page cachée, la cohérence arrêtée', async ({ page }) => {
   let v = await ouvrirExercice(page, 'Tension et détente');
   await bouton(v, 'Commencer').click();
   await page.clock.runFor(45000);
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 
   v = await ouvrirExercice(page, 'Tension et détente');
   await bouton(v, 'Commencer').click();
   await page.clock.runFor(30000);
   await cacher(page);
-  await expect(v.getByText('En pause')).toBeVisible();
+  await expect(v.getByText(/^En pause/)).toBeVisible();
   await montrer(page);
   await bouton(v, 'Reprendre').click();
   await page.clock.runFor(20000);
   // 50 s d'exercice actif, la pause exclue : « Terminer » avant la dernière étape ne garde rien.
   await bouton(v, 'Terminer').click();
-  await expect(v.getByText('Fin de l\'exercice.')).toBeVisible();
-  await bouton(v, 'Revenir à Bien-être').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
+  await bouton(v, 'Fermer').click();
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 
-  // La respiration de Bien-être, arrêtée à 30 s : rien, et pas de lien.
-  const respiration = page.getByRole('region', { name: 'Cohérence cardiaque' });
-  await respiration.getByRole('button', { name: 'Commencer' }).click();
+  // La cohérence cardiaque de Bien-être, arrêtée à 30 s : rien.
+  await aller(page, '#/bien-etre');
+  await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
+  v = vue(page, 'Cohérence cardiaque');
+  await expect(bouton(v, 'Pause')).toBeVisible();
   await page.clock.runFor(30000);
-  await respiration.getByRole('button', { name: 'Arrêter' }).click();
-  await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeVisible();
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toHaveCount(0);
+  await bouton(v, 'Fermer').click();
+  await expect(page).toHaveURL(/#\/bien-etre$/);
   await page.clock.runFor(2000);
   expect(await seances(page)).toEqual([]);
 });
@@ -375,75 +323,53 @@ test('parcourir les textes jusqu\'à « Terminer » ne crée pas de séance : la
   for (let i = 1; i <= 5; i++) await bouton(v, 'Suivant').click();
   await expect(texteEtape(v)).toHaveText(PAUSE[5]);
   await bouton(v, 'Terminer').click();
-  await expect(v.getByText('Fin de l\'exercice.')).toBeVisible();
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
   await page.clock.runFor(2000);
   expect(await seances(page)).toEqual([]);
 
-  // « Terminer » en pause, sur la dernière étape, après 10 s : rien non plus.
-  await bouton(v, 'Revenir à Bien-être').click();
+  // « Terminer » en pause, sur la dernière étape, après 3 s : rien non plus.
+  await bouton(v, 'Fermer').click();
   v = await ouvrirExercice(page, 'Pause d\'une minute');
   await bouton(v, 'Commencer').click();
   for (let i = 1; i <= 5; i++) await bouton(v, 'Suivant').click();
-  await page.clock.runFor(10000);
+  await page.clock.runFor(3000);
   await cacher(page);
-  await expect(v.getByText('En pause')).toBeVisible();
+  await expect(v.getByText(/^En pause/)).toBeVisible();
   await montrer(page);
   await bouton(v, 'Terminer').click();
-  await expect(v.getByText('Fin de l\'exercice.')).toBeVisible();
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
   await page.clock.runFor(2000);
   expect(await seances(page)).toEqual([]);
 
-  // La dernière étape après 31 s d'exercice actif (plus de la moitié d'une minute) : menée au bout, avant les 60 s.
-  await bouton(v, 'Revenir à Bien-être').click();
+  // La dernière étape après 30 s d'exercice actif (la moitié d'une minute) : menée au bout à sa fin, avant les 60 s.
+  await bouton(v, 'Fermer').click();
   v = await ouvrirExercice(page, 'Pause d\'une minute');
   await bouton(v, 'Commencer').click();
   await page.clock.runFor(25000);
-  for (let i = 1; i <= 5; i++) await bouton(v, 'Suivant').click();
+  await expect(texteEtape(v)).toHaveText(PAUSE[2]);
+  for (let i = 1; i <= 3; i++) await bouton(v, 'Suivant').click();
   await page.clock.runFor(6000);
-  await bouton(v, 'Terminer').click();
+  await expect(texteEtape(v)).toHaveText('Fin de l\'exercice.');
   await expect.poll(() => seances(page)).toHaveLength(1);
   expect((await seances(page))[0]).toMatchObject({ exercice: 'pause-une-minute', origine: 'bien-etre' });
-  environ((await seances(page))[0].dureeS, 31);
+  environ((await seances(page))[0].dureeS, 30);
 });
 
-test('respiration, page cachée : le temps caché ne compte pas, la séance est notée dès que la page se cache, une seule', async ({ page }) => {
+test('respiration de Moment difficile, page cachée : le temps caché ne compte pas, la séance est notée dès que la page se cache, une seule', async ({ page }) => {
   // L'horloge factice fait tourner plusieurs minutes de minuteries.
   test.setTimeout(90000);
   await installerVerrou(page);
-  // Bien-être, 5 min : 30 s, puis la page cachée 5 min (iPhone verrouillé), plus que le temps qui restait. Au retour, la
-  // respiration reprend ; elle n'est ni finie ni notée.
-  await aller(page, '#/bien-etre');
-  const respiration = page.getByRole('region', { name: 'Cohérence cardiaque' });
-  const phase = respiration.locator('.phase-respiration');
-  await respiration.getByRole('button', { name: 'Commencer' }).click();
-  await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
-  await page.clock.runFor(30000);
-  await cacher(page);
-  await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
-  await page.clock.runFor(5 * 60000);
-  await expect(phase).toHaveText(/^(Inspire|Expire)$/);
-  await montrer(page);
-  await page.clock.runFor(1000);
-  await expect(phase).toHaveText(/^(Inspire|Expire)$/);
-  await expect(respiration.getByRole('button', { name: 'Arrêter' })).toBeVisible();
-  await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 1 });
-  expect(await seances(page)).toEqual([]);
-  await respiration.getByRole('button', { name: 'Arrêter' }).click();
-  await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeVisible();
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toHaveCount(0);
-  await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 2 });
-  await page.clock.runFor(2000);
-  expect(await seances(page)).toEqual([]);
-
-  // Moment difficile : 70 s, puis la page cachée. La séance est notée tout de suite (l'app peut ne pas revenir) ; le temps
-  // caché n'y entre pas ; au retour, la respiration continue, et « Arrêter » met à jour la même séance.
+  // 70 s, puis la page cachée. La séance est notée tout de suite (l'app peut ne pas revenir) ; le temps caché n'y entre
+  // pas ; au retour, la respiration continue, et « Arrêter » met à jour la même séance.
   await aller(page, '#/moment-difficile');
   const md = vue(page, 'Moment difficile');
   await md.getByRole('button', { name: 'Commencer' }).click();
+  await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
   await page.clock.runFor(70000);
   expect(await seances(page)).toEqual([]);
   await cacher(page);
   await expect.poll(() => seances(page)).toHaveLength(1);
+  await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
   const notee = (await seances(page))[0];
   expect(notee).toMatchObject({ exercice: 'coherence', origine: 'moment-difficile', date: '2026-10-15' });
   environ(notee.dureeS, 70);
@@ -451,36 +377,37 @@ test('respiration, page cachée : le temps caché ne compte pas, la séance est 
   await montrer(page);
   await page.clock.runFor(20000);
   await expect(md.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
+  await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 1 });
   expect(await seances(page)).toEqual([notee]);
   await md.getByRole('button', { name: 'Arrêter' }).click();
   await expect.poll(async () => (await seances(page))[0].dureeS).toBeGreaterThanOrEqual(notee.dureeS + 15);
   expect(await seances(page)).toHaveLength(1);
   environ((await seances(page))[0].dureeS, 90);
+  await expect.poll(() => verrou(page)).toEqual({ demandes: 2, rendus: 2 });
 
   // La page quittée (pagehide) après 65 s : la séance est notée, une seule, même après le retour et « Arrêter ».
-  await aller(page, '#/bien-etre');
-  await respiration.getByRole('button', { name: 'Commencer' }).click();
+  await md.getByRole('button', { name: 'Commencer' }).click();
   await page.clock.runFor(65000);
   await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
-  await expect.poll(async () => (await seances(page)).filter((x) => x.origine === 'bien-etre')).toHaveLength(1);
-  environ((await seances(page)).find((x) => x.origine === 'bien-etre').dureeS, 65);
+  await expect.poll(async () => (await seances(page)).length).toBe(2);
+  const seconde = (await seances(page)).find((x) => x.id !== notee.id);
+  environ(seconde.dureeS, 65);
   await page.clock.runFor(60000);
   await montrer(page);
-  await expect(phase).toHaveText(/^(Inspire|Expire)$/);
-  await respiration.getByRole('button', { name: 'Arrêter' }).click();
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toBeVisible();
+  await expect(md.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
+  await md.getByRole('button', { name: 'Arrêter' }).click();
   await page.clock.runFor(2000);
-  expect((await seances(page)).filter((x) => x.origine === 'bien-etre')).toHaveLength(1);
   expect(await seances(page)).toHaveLength(2);
 });
 
 test('respiration : un tic de la minuterie entre « Arrêter » et le nettoyage ne relance pas le cercle ; une seule séance, le verrou rendu', async ({ page }) => {
   // Relecture finale : Preact nettoie l'effet de la respiration après l'affichage. Un tic de 200 ms tombé entre le rendu
   // d'« Arrêter » et ce nettoyage relançait le cercle : le toucher était perdu, la séance n'était pas notée et le verrou
-  // d'écran restait pris. Le tic est appelé ici à la main, dans cette fenêtre.
+  // d'écran restait pris. Le tic est appelé ici à la main, dans cette fenêtre (v8 : dans Moment difficile, la
+  // respiration de Bien-être passant au lecteur).
   await installerVerrou(page);
-  await aller(page, '#/bien-etre');
-  const respiration = page.getByRole('region', { name: 'Cohérence cardiaque' });
+  await aller(page, '#/moment-difficile');
+  const respiration = vue(page, 'Moment difficile').getByRole('region', { name: 'Cohérence cardiaque' });
   await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeEnabled();
   // La minuterie de 200 ms de la respiration : son rappel, et si elle a été effacée.
   await page.evaluate(() => {
@@ -500,7 +427,7 @@ test('respiration : un tic de la minuterie entre « Arrêter » et le nettoyage 
   await expect(respiration.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
   const course = await page.evaluate(async () => {
     const m = window.__minuterie;
-    const zone = document.querySelector('main.bien-etre .respiration');
+    const zone = document.querySelector('.moment-difficile .respiration');
     [...zone.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Arrêter').click();
     // Le rendu de Preact suit le toucher d'une micro-tâche ; le nettoyage de l'effet attend l'affichage.
     for (let i = 0; i < 20 && zone.querySelector('.cercle-respiration.en-cours'); i += 1) await Promise.resolve();
@@ -514,11 +441,10 @@ test('respiration : un tic de la minuterie entre « Arrêter » et le nettoyage 
   await expect(respiration.locator('.cercle-respiration.en-cours')).toHaveCount(0);
   await expect(respiration.getByRole('button', { name: 'Arrêter' })).toHaveCount(0);
   await expect(respiration.getByRole('button', { name: 'Commencer' })).toBeVisible();
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toBeVisible();
   expect(await page.evaluate(() => window.__minuterie.effacee)).toBe(true);
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 1 });
   await expect.poll(() => seances(page)).toHaveLength(1);
-  expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'bien-etre' });
+  expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'moment-difficile' });
   environ((await seances(page))[0].dureeS, 65);
   await page.clock.runFor(2000);
   expect(await seances(page)).toHaveLength(1);
@@ -531,12 +457,12 @@ const lignesPhase = (phase) => phase.evaluate((p) => {
   return { nom: Math.max(...lignes(p.firstChild).map((x) => x.bottom)), duree: duree.getBoundingClientRect().top, lignesDuree: lignes(duree).length };
 });
 
-test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme sur leurs puces ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
-  // Bien-être (tâche 9, finitions) : « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces, comme Moment
-  // difficile ; un choix se règle au même endroit (méta respiration).
+test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, réglés au même endroit ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
+  // Bien-être (v8) : la carte compacte, son titre, la durée et le rythme sur leurs puces, comme Moment difficile ; un choix
+  // se règle au même endroit (méta respiration).
   await aller(page, '#/bien-etre');
-  const carteBe = page.locator('main.bien-etre .carte-respiration');
-  await expect(carteBe.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
+  const carteBe = page.locator('main.bien-etre .carte-coherence');
+  await expect(carteBe.getByRole('heading', { name: 'Cohérence cardiaque', level: 2 })).toBeVisible();
   await expect(carteBe.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
   await expect(carteBe.getByRole('combobox', { name: 'Rythme', exact: true })).toHaveValue('5-5');
   await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('2');
@@ -544,7 +470,7 @@ test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme
   await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('5');
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(5);
 
-  // « Pour récupérer, je… » : pareil, une fois la respiration arrêtée.
+  // « Pour récupérer, je… » : une fois la respiration arrêtée.
   await page.evaluate(async () => {
     const m = window.__carnet.repo.meta;
     await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
@@ -552,8 +478,8 @@ test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme
   });
   await aller(page, '#/moment');
   const emo = vue(page, 'Émotion du moment');
-  await emo.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Tristesse', exact: true }).click();
-  await emo.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Basse' }).click();
+  await tuile(emo, 'Basse').click();
+  await mot(emo, 'Vide', 'Tristesse').click();
   const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await carte.getByRole('button', { name: 'Arrêter' }).click();
@@ -575,21 +501,18 @@ test('Bien-être et Moment difficile : la même carte 2b, la durée et le rythme
   await expect(vue(page, 'Moment difficile').getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
 });
 
-test('la respiration crée une séance avec son origine : Bien-être (au bout, puis « Noter mon émotion »), Moment difficile, « Pour récupérer, je… »', async ({ page }) => {
+test('la respiration crée une séance avec son origine : Bien-être (au bout, dans le lecteur), Moment difficile, « Pour récupérer, je… »', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('respiration', { duree: 2, rythme: '5-5', son: false }));
-  // Bien-être : menée au bout (2 min).
+  // Bien-être : menée au bout (2 min), dans le lecteur.
   await aller(page, '#/bien-etre');
-  const respiration = page.getByRole('region', { name: 'Cohérence cardiaque' });
-  await respiration.getByRole('button', { name: 'Commencer' }).click();
-  await page.clock.runFor(122000);
-  await expect(respiration.locator('.phase-respiration')).toHaveText('2 minutes de respiration.');
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toHaveAttribute('href', '#/moment');
+  await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
+  const lecteur = vue(page, 'Cohérence cardiaque');
+  await page.clock.runFor(120400);
+  await expect(lecteur.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
   await expect.poll(() => seances(page)).toHaveLength(1);
   expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'bien-etre', dureeS: 120, date: '2026-10-15', heure: '20:30' });
-  // « Recommencer » efface le lien jusqu'à la séance suivante.
-  await respiration.getByRole('button', { name: 'Recommencer' }).click();
-  await expect(respiration.getByRole('link', { name: 'Noter mon émotion' })).toHaveCount(0);
-  await respiration.getByRole('button', { name: 'Arrêter' }).click();
+  await page.clock.runFor(6200);
+  await expect(page).toHaveURL(/#\/bien-etre$/);
 
   // Moment difficile : arrêtée après 61 s.
   await aller(page, '#/moment-difficile');
@@ -603,6 +526,7 @@ test('la respiration crée une séance avec son origine : Bien-être (au bout, p
   expect(md1.exercice).toBe('coherence');
   environ(md1.dureeS, 61);
   // Pas de « Noter mon émotion » dans Moment difficile.
+  await expect(page.getByRole('button', { name: 'Noter mon émotion' })).toHaveCount(0);
   await expect(md.getByRole('link', { name: 'Noter mon émotion' })).toHaveCount(0);
   // Quitter l'écran pendant une respiration de plus de 60 s la note aussi, une fois.
   await md.getByRole('button', { name: 'Commencer' }).click();
@@ -620,8 +544,8 @@ test('la respiration crée une séance avec son origine : Bien-être (au bout, p
   });
   await aller(page, '#/moment');
   const emo = vue(page, 'Émotion du moment');
-  await emo.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Tristesse', exact: true }).click();
-  await emo.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Basse' }).click();
+  await tuile(emo, 'Basse').click();
+  await mot(emo, 'Vide', 'Tristesse').click();
   const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await expect(carte.locator('.phase-respiration')).toHaveText('Inspire');
@@ -651,7 +575,7 @@ test('Mes jours : une rangée « Bien-être » sur une période qui a une séanc
   await expect(mesJours.locator('svg text.g-etiquette', { hasText: 'Bien-être' })).toHaveCount(1);
   await expect(mesJours.locator('.g-bien-etre')).toHaveCount(2);
   // Le même repère pour le jour de deux séances et pour celui d'une seule.
-  const tailles = await mesJours.locator('.g-bien-etre').evaluateAll((rs) => rs.map((x) => `${x.getAttribute('width')}×${x.getAttribute('height')}`));
+  const tailles = await mesJours.locator('.g-bien-etre').evaluateAll((rs) => rs.map((x) => { const b = x.getBBox(); return `${b.width}×${b.height}`; }));
   expect(new Set(tailles).size).toBe(1);
   // Le détail d'un jour le dit, sans nombre.
   await mesJours.getByRole('button', { name: 'Voir en tableau' }).click();

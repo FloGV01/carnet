@@ -96,3 +96,13 @@ on reprend le rendu, jamais le code des maquettes de `references/` (React, style
   aux rendus 2b ; un test e2e vérifie un contraste d'au moins 4,5:1 pour tout texte visible des écrans principaux
   (textes d'aide des champs compris, mesurés à leur `::placeholder`), en clair et en sombre, et l'absence de
   débordement à 390 px, en grand texte compris.
+
+## v8 : les écrans nouveaux dans le système 2b (26/10)
+
+Aucun écran de la v8 n'est dessiné par Claude Design ; tous sont déduits du système 2b, sans couleur nouvelle.
+
+- **Émotion du moment en carte** : les tuiles sont des choix neutres (`--surface-2`, puis `-fill`, `-on`, 600 et coche à la couleur du parcours). Les bulles prennent la couleur de leur famille (`-tint-2` et `-text`, puis `-fill` et `-on` une fois choisies). Les légendes de zone sont en texte secondaire.
+- **Lecteur de Bien-être** : la couleur de Bien-être (celle de Moment difficile) pour l'anneau, le disque et le bouton lecture, la consigne en grand, en haut, et les réglages en liste groupée, sous l'anneau.
+- **Programme** : des cartes neutres, une rangée par séance, « Faite le 12/10 » en texte secondaire, derrière une coche à la couleur de Bien-être.
+- **Mes nuits** : la rampe sommeil du lot, avec un contour au pas « Moyen » pour la barre « Mal » (trop claire sur la carte), et une barre creuse pour une nuit sans qualité.
+- **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre, texte par défaut et 23 px), hors dépôt, et le test de contrôle étendu aux écrans de la v8. Le détail est dans `docs/decisions.md`, à l'entrée du 26/10.

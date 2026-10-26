@@ -12,14 +12,15 @@ import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
+import { texteHeuresSommeil } from '../../domain/champs.js';
 
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
 // `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
 // Sans `rubrique` (v7 : Mes jours, Ta journée, les graphiques d'émotions), le titre n'a pas de point de couleur : les
-// rangées et les familles portent les leurs.
-export function Cadre({ titre, rubrique = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
+// rangées et les familles portent les leurs. `classe` : une classe propre au graphique, sur la figure (Mes nuits).
+export function Cadre({ titre, rubrique = null, classe = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
   const [voirTableau, setVoirTableau] = useState(false);
-  return html`<figure class=${rubrique ? `graphe teinte-${rubrique}` : 'graphe'}>
+  return html`<figure class=${['graphe', rubrique && `teinte-${rubrique}`, classe].filter(Boolean).join(' ')}>
     <figcaption>
       <span class="graphe-tete"><span class="graphe-titre">${rubrique && html`<span class="point-rubrique" aria-hidden="true"></span>`}${titre}</span>
         ${droite && html`<span class="graphe-droite">${droite}</span>`}</span>
@@ -73,7 +74,9 @@ export function detailColonne(pas, c, lib) {
   }
   if (pas === 'jour') {
     const e = c.entree || {};
-    if (c.nuit) m.push(`nuit ${lib(c.nuit).toLowerCase()}`);
+    // La nuit (v8) : sa qualité et ses heures, « nuit moyen · 6 h », comme la phrase du jour.
+    const nuit = [c.nuit && lib(c.nuit).toLowerCase(), texteHeuresSommeil(e.heuresSommeil)].filter(Boolean);
+    if (nuit.length) m.push(`nuit ${nuit.join(' · ')}`);
     if (e.reveilsNocturnes != null) m.push(e.reveilsNocturnes === 5 ? '5 réveils ou plus' : pluriel(e.reveilsNocturnes, 'réveil', 'réveils'));
     if (c.explosions > 0) m.push(pluriel(c.explosions, 'explosion', 'explosions'));
     if (c.autres > 0) m.push(pluriel(c.autres, 'autre épisode', 'autres épisodes'));
@@ -96,6 +99,12 @@ export function detailColonne(pas, c, lib) {
 
 const SANS_REPERE = { traits: [], legende: [] };
 const UNITE = { jour: 'une colonne par jour', semaine: 'une colonne par semaine', mois: 'une colonne par mois' };
+
+// Le losange du repère Bien-être (geometrie.js) : ses quatre pointes, autour du milieu de la rangée.
+const losange = ({ x, y, h, r }) => {
+  const m = y + h / 2;
+  return [[x, m - r], [x + r, m], [x, m + r], [x - r, m]].map((p) => p.map((v) => Math.round(v * 10) / 10).join(',')).join(' ');
+};
 
 // Les étiquettes des rangées, au début de chaque rangée (2b).
 const Etiquettes = ({ g }) => g.libelles.map((r) => r.lignes.map((l) => html`<text class="g-etiquette" x="0" y=${l.y}>${l.texte}</text>`));
@@ -149,7 +158,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
     <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-plein" cx=${a.x} cy=${a.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}</g>
     <g class="teinte-energie">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
-    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<rect class="g-barre g-bien-etre" x=${b.x} y=${b.y} width=${b.l} height=${b.h} rx=${Math.min(b.l, b.h) / 2} />`)}</g>
+    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<polygon class="g-plein g-bien-etre" points=${losange(b)} />`)}</g>
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;
 }

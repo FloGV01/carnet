@@ -6,7 +6,7 @@ import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
   revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES,
 } from '../../public/js/db/sauvegarde.js';
-import { SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
 
@@ -16,6 +16,8 @@ const json = (o) => [{ nom: 'x.json', octets: enc.encode(JSON.stringify(o)) }];
 const contenuDe = (f) => JSON.parse(new TextDecoder().decode(octetsDe(f)));
 // Identifiants des listes versées par la v6 (SEED_V4_AJOUTS).
 const IDS_V6 = seedItems(SEED_V4_AJOUTS, 'x').map((i) => i.id);
+// Identifiants des sujets d'un rendez-vous, versés par la v8 (SEED_V6_AJOUTS).
+const IDS_V8 = seedItems(SEED_V6_AJOUTS, 'x').map((i) => i.id);
 // Pose une copie « avant-import » telle qu'une version donnée l'écrivait.
 const poserCopie = (repo, copie) => repo.tx(['snapshots'], 'readwrite', (t) => new Promise((ok) => { t.objectStore('snapshots').put(copie).onsuccess = ok; }));
 
@@ -135,8 +137,8 @@ test('tout effacer : données vidées, listes par défaut recréées', async () 
   assert.equal(tout.journal.length, 0);
   assert.equal(tout.episodes.length, 0);
   assert.equal(tout.notes.length, 0);
-  assert.equal(tout.listes.length, 197, 'listes v1, v4 et v6');
-  for (const id of IDS_V6) assert.ok(tout.listes.some((i) => i.id === id), `${id} réensemencé`);
+  assert.equal(tout.listes.length, 204, 'listes v1, v4, v6 et v8');
+  for (const id of [...IDS_V6, ...IDS_V8]) assert.ok(tout.listes.some((i) => i.id === id), `${id} réensemencé`);
   assert.equal(tout.listes.find((i) => i.id === 'lieu:bureau').libelle, 'Bureau');
   assert.ok(await a.repo.meta.lire('installation'));
 });
@@ -183,14 +185,14 @@ test('v4 : l\'import remplace Mon plan et les réglages, « Revenir » les resta
   assert.equal(await b.repo.meta.lire('journee'), null, 'absente du fichier : retirée');
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je sors' });
   assert.equal(await b.repo.meta.lire('explosionsDepuis'), '2026-09-15', 'absente du fichier : gardée');
-  assert.equal(await b.repo.meta.lire('schema'), 5);
+  assert.equal(await b.repo.meta.lire('schema'), 6);
 
   await revenirAvantImport(b.repo);
   assert.deepEqual(metaRemplacee([{ cle: 'monPlan', valeur: { a: 1 } }, { cle: 'journee', valeur: { b: 2 } }, { cle: 'schema', valeur: 2 }, { cle: 'explosionsDepuis', valeur: 'x' }],
     [{ cle: 'journee', valeur: { b: 2 } }]), ['monPlan'], 'aperçu : seul ce qui change est annoncé');
   assert.deepEqual(await b.repo.meta.lire('journee'), { masques: [] });
   assert.deepEqual(await b.repo.meta.lire('monPlan'), { quandCaMonte: 'je respire' });
-  assert.equal(await b.repo.meta.lire('schema'), 5);
+  assert.equal(await b.repo.meta.lire('schema'), 6);
 });
 
 test('v5 : une sauvegarde v2 (un détail de contact par jour) devient une ligne de contacts, telle quelle', () => {
@@ -229,19 +231,20 @@ test('v6 : une sauvegarde au format 3 se met à niveau (listes v6, notes vides, 
   const a = analyserFichiers(json(v3));
   assert.deepEqual(v3, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
   assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
-  assert.equal(a.sauvegarde.counts.listes, 2 + IDS_V6.length - 1);
-  for (const id of IDS_V6) assert.equal(a.sauvegarde.data.listes.filter((i) => i.id === id).length, 1, id);
+  assert.equal(a.sauvegarde.counts.listes, 2 + IDS_V6.length - 1 + IDS_V8.length, 'listes v6, puis sujets de la v8');
+  for (const id of [...IDS_V6, ...IDS_V8]) assert.equal(a.sauvegarde.data.listes.filter((i) => i.id === id).length, 1, id);
   assert.deepEqual(a.valides.listes.find((i) => i.id === 'pese:bruit'), v3.data.listes[1]);
   assert.equal(a.valides.listes.find((i) => i.id === 'recharge:sieste').createdAt, v3.exportedAt);
   assert.deepEqual(a.sauvegarde.data.notes, []);
   assert.equal(a.sauvegarde.counts.notes, 0);
   assert.equal(a.resume.notes, 0);
-  assert.deepEqual(a.valides.meta, [{ cle: 'journee', valeur: { ordre: ['humeur', 'lieu'], masques: ['explosions', 'humeur'], heuresMoment: [] } }]);
+  // v8 : « Nuit en détail » rejoint aussi les champs masqués (mise à niveau du format 5).
+  assert.deepEqual(a.valides.meta, [{ cle: 'journee', valeur: { ordre: ['humeur', 'lieu'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [] } }]);
 
   // Champ Humeur : ajouté seulement à des champs masqués déjà réglés, jamais en double.
   const journee = (valeur) => analyserFichiers(json({ ...v3, data: { ...v3.data, meta: [{ cle: 'journee', valeur }] } })).valides.meta[0].valeur;
-  assert.deepEqual(journee({ masques: ['humeur', 'explosions'] }), { masques: ['humeur', 'explosions'] });
-  assert.deepEqual(journee({ masques: [] }), { masques: ['humeur'] });
+  assert.deepEqual(journee({ masques: ['humeur', 'explosions'] }), { masques: ['humeur', 'explosions', 'nuit'] });
+  assert.deepEqual(journee({ masques: [] }), { masques: ['humeur', 'nuit'] });
   assert.deepEqual(journee({ ordre: ['lieu'] }), { ordre: ['lieu'] });
   assert.equal(journee(null), null);
 
@@ -259,8 +262,8 @@ test('v6 : les notes et le lien d\'une question survivent à un export suivi d\'
   const rdv = await a.repo.rdv.creer({ professionnel: 'professionnel:psychiatre', questions: [{ texte: 'Parler de la colère', lien: { store: 'episodes', id: ep.id } }] });
   const [f] = await exporter(a.repo, { versionApp: '6.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 5);
-  assert.equal(contenu.schemaVersion, 5);
+  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.schemaVersion, 6);
   assert.equal(contenu.counts.notes, 1);
   assert.deepEqual(contenu.data.notes, [note]);
   const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
@@ -300,8 +303,8 @@ test('v6 : « Revenir » vers une copie prise avant la v6 garde les notes et rem
   assert.equal(await a.repo.journal.lire('2026-10-01'), null, 'la copie est restaurée');
   assert.deepEqual(await a.repo.notes.tous(), [note]);
   const listes = await a.repo.listes.items();
-  assert.equal(listes.length, 197);
-  for (const id of IDS_V6) assert.ok(listes.some((i) => i.id === id), `${id} remis`);
+  assert.equal(listes.length, 204);
+  for (const id of [...IDS_V6, ...IDS_V8]) assert.ok(listes.some((i) => i.id === id), `${id} remis`);
   assert.equal(listes.find((i) => i.id === 'lieu:bureau').libelle, 'Au bureau');
 });
 
@@ -312,11 +315,25 @@ test('v6 : « Revenir » vers une copie d\'avant la v6 masque le champ Humeur, u
   await repo.meta.ecrire('journee', { masques: [] });
   await poserCopie(repo, copie('2026-09-30T17:00:00.000Z', 3));
   await revenirAvantImport(repo);
-  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur'])[0].valeur, 'copie de la v5 : comme la migration');
+  // v8 : une copie d'avant la v8 masque aussi « Nuit en détail », comme la migration 6.
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur', 'nuit'])[0].valeur, 'copie de la v5 : comme les migrations');
   // En v6, l'utilisateur a pu réafficher Humeur : ce choix n'est pas défait.
   await poserCopie(repo, copie('2026-09-30T18:00:00.000Z', 4));
   await revenirAvantImport(repo);
-  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions'])[0].valeur);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'nuit'])[0].valeur);
+});
+
+test('v8 : « Revenir » vers une copie d\'avant la v8 masque « Nuit en détail », une copie de la v8 garde le choix fait', async () => {
+  const { repo } = nouveauRepo();
+  const journee = (masques) => ({ ordre: ['lieu', 'sommeil'], masques, heuresMoment: [] });
+  const copie = (date, schemaVersion) => ({ id: `avant-import-${date}`, type: 'avant-import', date, schemaVersion, data: { journal: [], listes: [], meta: [{ cle: 'journee', valeur: journee(['explosions', 'humeur']) }] } });
+  await poserCopie(repo, copie('2026-10-20T17:00:00.000Z', 5));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur', 'nuit']), 'copie de la v7 : comme la migration 6');
+  // En v8, l'utilisateur a pu réafficher « Nuit en détail » : ce choix n'est pas défait.
+  await poserCopie(repo, copie('2026-10-26T18:00:00.000Z', 6));
+  await revenirAvantImport(repo);
+  assert.deepEqual(await repo.meta.lire('journee'), journee(['explosions', 'humeur']));
 });
 
 test('v6 : aperçu de l\'import, les notes et les nouveaux réglages ont leurs mots', () => {
@@ -347,8 +364,8 @@ test('v7 : les séances et les émotions survivent à un export suivi d\'un impo
   const hu = await a.repo.humeurs.creer({ date: '2026-09-30', heure: '20:00', emotion: 'roue:colere:irrite', energie: 'energie:moyenne' });
   const [f] = await exporter(a.repo, { versionApp: '7.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 5);
-  assert.equal(contenu.schemaVersion, 5);
+  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.schemaVersion, 6);
   assert.equal(contenu.counts.seances, 2);
   assert.deepEqual(Object.keys(contenu.data), ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios']);
   assert.deepEqual(contenu.data.seances, [s1, s2].sort((x, y) => x.id.localeCompare(y.id)));
@@ -390,7 +407,7 @@ test('v7 : « Revenir » vers une copie prise avant la v7 garde les séances', a
   assert.deepEqual(await a.repo.seances.tous(), [se]);
 });
 
-test('v7 : une sauvegarde au format 4 passe au format 5 (point de vigilance 1) : notes gardées, émotion vide, aucune séance', async () => {
+test('v7 : une sauvegarde au format 4 passe au format courant (point de vigilance 1) : notes gardées, émotion vide, aucune séance', async () => {
   const releves = [
     { id: 'hu_0000000000000001', date: '2026-10-18', heure: '12:00', humeur: 6, energie: 'energie:moyenne', vers: null, faisais: null, createdAt: 'x', updatedAt: 'x' },
     { id: 'hu_0000000000000002', date: '2026-10-19', heure: '01:30', humeur: 4, energie: null, vers: true, faisais: ['activiteMoment:repos'], createdAt: 'x', updatedAt: 'x' },
@@ -407,7 +424,7 @@ test('v7 : une sauvegarde au format 4 passe au format 5 (point de vigilance 1) :
   const avant = structuredClone(v4);
   const a = analyserFichiers(json(v4));
   assert.deepEqual(v4, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
-  assert.equal(a.sauvegarde.formatVersion, 5);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(a.sauvegarde.data.seances, []);
   assert.equal(a.sauvegarde.counts.seances, 0);
   assert.equal(a.resume.seances, 0);
@@ -426,9 +443,7 @@ test('v7 : une sauvegarde au format 4 passe au format 5 (point de vigilance 1) :
   assert.throws(() => analyserFichiers(json({ ...v4, counts: { humeurs: 3 } })), (e) => e.code === 'BACKUP_INCOMPLET');
 });
 
-test('v7 : le format 6 est refusé, un format 5 tronqué aussi, une séance illisible est ignorée', () => {
-  assert.equal(FORMAT_VERSION, 5);
-  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 6, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+test('v7 : un format 5 tronqué est refusé, une séance illisible est ignorée', () => {
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 5, counts: { seances: 2 }, data: { seances: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
   const a = analyserFichiers(json({
     format: 'carnet-sauvegarde', formatVersion: 5, exportedAt: '2026-10-20T19:00:00.000Z', counts: { seances: 3, humeurs: 1 },
@@ -466,4 +481,173 @@ test('v7 : le texte de « Tout effacer » nomme tout ce que toutEffacer efface, 
   };
   assert.deepEqual(Object.keys(NOMS).sort(), [...STORES_DONNEES].sort());
   for (const [store, mots] of Object.entries(NOMS)) for (const m of mots) assert.ok(TEXTE_EFFACER.includes(m), `${store} : « ${m} »`);
+});
+
+// ---- v8 ----
+
+test('v8 : durée de la nuit, séance « Faite » du Programme et définitions corrigées survivent à un export suivi d\'un import', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const nuit = await a.repo.journal.patch('2026-09-30', { sommeilRessenti: 'sommeil:mal', heuresSommeil: 6 });
+  const faite = await a.repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' });
+  const arretee = await a.repo.seances.creer({ date: '2026-09-30', heure: '19:00', exercice: 'scan-corporel', dureeS: 120, origine: 'bien-etre', programme: 'scan-corporel' });
+  const definitions = { 'roue:colere:irrite': 'Agacé par un bruit qui revient.', 'roue:serenite:calme': 'Rien ne presse.' };
+  await a.repo.meta.ecrire('definitionsRoue', definitions);
+  const [f] = await exporter(a.repo, { versionApp: '8.0.0' });
+  const contenu = contenuDe(f);
+  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.schemaVersion, 6);
+  assert.equal(contenu.data.journal.find((j) => j.date === '2026-09-30').heuresSommeil, 6);
+  assert.deepEqual(contenu.data.seances.find((x) => x.id === faite.id), faite);
+  assert.deepEqual([contenu.data.seances.find((x) => x.id === arretee.id).fin, contenu.data.seances.find((x) => x.id === arretee.id).programme], [null, 'scan-corporel']);
+  assert.deepEqual(contenu.data.meta.find((m) => m.cle === 'definitionsRoue'), { cle: 'definitionsRoue', valeur: definitions });
+  assert.equal(contenu.data.listes.filter((i) => i.liste === 'sujetRdv').length, IDS_V8.length, 'les sujets sont dans le fichier');
+
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  const b = nouveauRepo();
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.journal.lire('2026-09-30'), nuit);
+  assert.deepEqual(await b.repo.seances.lire(faite.id), faite);
+  assert.deepEqual(await b.repo.seances.lire(arretee.id), arretee);
+  assert.deepEqual(await b.repo.meta.lire('definitionsRoue'), definitions);
+  const avant = await lireTout(a.repo);
+  const apres = await lireTout(b.repo);
+  for (const s of ['journal', 'seances', 'listes']) assert.deepEqual(apres[s], avant[s], s);
+  // Et un second export redonne les mêmes octets.
+  const [g] = await exporter(b.repo, { versionApp: '8.0.0' });
+  assert.ok(Buffer.from(octetsDe(g)).equals(Buffer.from(octetsDe(f))));
+});
+
+// v8, point de vigilance 1 : une sauvegarde de la v7 (format 5) passe au format 6 sans rien perdre ni inventer.
+test('v8 : une sauvegarde au format 5 passe au format 6 : sujets ajoutés sans écraser, séances sans fin, nuits sans heures', async () => {
+  const v5 = {
+    format: 'carnet-sauvegarde', formatVersion: 5, schemaVersion: 5, exportedAt: '2026-10-23T19:00:00.000Z',
+    counts: { journal: 2, seances: 2, humeurs: 1, listes: 2, meta: 1 },
+    data: {
+      journal: [
+        { date: '2026-10-22', sommeilRessenti: 'sommeil:mal', heureCoucher: '23:40', heureLever: '06:10', reveilsNocturnes: 3 },
+        { date: '2026-10-23', sommeilRessenti: 'sommeil:bien' },
+      ],
+      seances: [
+        { id: 'se_1', date: '2026-10-22', heure: '18:00', exercice: 'respiration-carree', dureeS: 260, origine: 'bien-etre' },
+        { id: 'se_2', date: '2026-10-23', heure: '01:30', exercice: 'coherence', dureeS: 300, origine: 'moment-difficile' },
+      ],
+      humeurs: [{ id: 'hu_1', date: '2026-10-22', heure: '12:00', emotion: 'roue:colere', energie: 'energie:haute' }],
+      listes: [
+        { id: 'lieu:bureau', liste: 'lieu', libelle: 'Au bureau', ordre: 10, archive: false, alias: [] },
+        // Un sujet déjà présent n'est jamais écrasé ni compté deux fois.
+        { id: 'sujetRdv:fatigue', liste: 'sujetRdv', libelle: 'Fatigue du soir', ordre: 40, archive: true, alias: ['Fatigue'] },
+      ],
+      meta: [{ cle: 'monPlan', valeur: { quandCaMonte: 'Je sors' } }],
+    },
+  };
+  const avant = structuredClone(v5);
+  const a = analyserFichiers(json(v5));
+  assert.deepEqual(v5, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
+  assert.equal(a.sauvegarde.formatVersion, 6);
+  assert.deepEqual(a.erreurs, []);
+  assert.equal(a.sauvegarde.counts.listes, 2 + IDS_V8.length - 1);
+  for (const id of IDS_V8) assert.equal(a.sauvegarde.data.listes.filter((i) => i.id === id).length, 1, id);
+  assert.deepEqual(a.valides.listes.find((i) => i.id === 'sujetRdv:fatigue'), v5.data.listes[1]);
+  assert.equal(a.valides.listes.find((i) => i.id === 'sujetRdv:sommeil').createdAt, v5.exportedAt);
+  assert.equal(a.sauvegarde.counts.seances, 2, 'aucune séance ajoutée ni retirée');
+  assert.deepEqual(a.sauvegarde.data.seances, v5.data.seances, 'aucune séance transformée');
+  assert.deepEqual(a.sauvegarde.data.journal, v5.data.journal, 'aucune nuit transformée');
+  assert.deepEqual(a.valides.seances.map((x) => [x.id, x.fin, x.programme]), [['se_1', null, null], ['se_2', null, null]], 'aucune séance v7 « Faite »');
+  assert.deepEqual(a.valides.journal.map((j) => [j.date, j.heuresSommeil, j.heureCoucher, j.heureLever, j.reveilsNocturnes]),
+    [['2026-10-22', null, '23:40', '06:10', 3], ['2026-10-23', null, null, null, null]], 'aucun nombre d\'heures inventé');
+  assert.equal(a.valides.humeurs[0].emotion, 'roue:colere', 'une famille seule de la v7 reste valable');
+  assert.deepEqual(a.valides.meta, v5.data.meta, 'sans réglage du soir, rien n\'est écrit : la valeur par défaut masque « Nuit en détail »');
+  // Des champs masqués déjà réglés gagnent « Nuit en détail », une fois (comme la migration 6) ; sans masques, rien.
+  const journee = (valeur) => analyserFichiers(json({ ...v5, counts: { ...v5.counts, meta: 1 }, data: { ...v5.data, meta: [{ cle: 'journee', valeur }] } })).valides.meta[0].valeur;
+  assert.deepEqual(journee({ ordre: ['lieu'], masques: ['explosions', 'humeur'], heuresMoment: [18] }), { ordre: ['lieu'], masques: ['explosions', 'humeur', 'nuit'], heuresMoment: [18] });
+  assert.deepEqual(journee({ masques: ['nuit', 'explosions'] }), { masques: ['nuit', 'explosions'] });
+  assert.deepEqual(journee({ masques: [] }), { masques: ['nuit'] });
+  assert.deepEqual(journee({ heuresMoment: [9] }), { heuresMoment: [9] });
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  assert.equal((await repo.journal.lire('2026-10-22')).heureLever, '06:10');
+  assert.equal((await repo.seances.tous()).length, 2);
+  assert.equal(await repo.meta.lire('definitionsRoue'), null);
+  // Sans compte des listes, rien n'est inventé ; un fichier tronqué reste refusé.
+  assert.equal(analyserFichiers(json({ ...v5, counts: { journal: 2 } })).sauvegarde.counts.listes, undefined);
+  assert.throws(() => analyserFichiers(json({ ...v5, counts: { ...v5.counts, seances: 3 } })), (e) => e.code === 'BACKUP_INCOMPLET');
+});
+
+test('v8 : le format 7 est refusé, un format 6 tronqué aussi, une nuit ou une séance hors bornes est ignorée', () => {
+  assert.equal(FORMAT_VERSION, 6);
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 7, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 6, counts: { journal: 2 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  const a = analyserFichiers(json({
+    format: 'carnet-sauvegarde', formatVersion: 6, exportedAt: '2026-10-24T19:00:00.000Z', counts: { journal: 3, seances: 3 },
+    data: {
+      journal: [{ date: '2026-10-22', heuresSommeil: 7 }, { date: '2026-10-23', heuresSommeil: 3 }, { date: '2026-10-24', heuresSommeil: '7' }],
+      seances: [
+        { id: 'se_1', date: '2026-10-24', heure: '09:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' },
+        { id: 'se_2', date: '2026-10-24', heure: '10:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', fin: 'oui' },
+        { id: 'se_3', date: '2026-10-24', heure: '11:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', programme: 12 },
+      ],
+    },
+  }));
+  assert.deepEqual(a.valides.journal.map((j) => j.heuresSommeil), [7]);
+  assert.deepEqual(a.valides.seances.map((x) => x.id), ['se_1']);
+  assert.equal(a.erreurs.length, 4);
+  assert.match(a.erreurs.join(' ; '), /journal n° 2 : heuresSommeil : entier de 4 à 10 attendu/);
+  assert.match(a.erreurs.join(' ; '), /seances n° 2 : fin : vrai ou vide attendu/);
+  assert.match(a.erreurs.join(' ; '), /seances n° 3 : programme : texte attendu/);
+});
+
+test('v8 : l\'import remplace les définitions corrigées, l\'aperçu le dit, « Revenir » les remet', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  await a.repo.meta.ecrire('definitionsRoue', { 'roue:joie:curieux': 'Envie d\'en savoir plus.' });
+  const [f] = await exporter(a.repo, { versionApp: '8.0.0' });
+  const sansDefinitions = nouveauRepo();
+  await remplir(sansDefinitions.repo);
+  const [g] = await exporter(sansDefinitions.repo, { versionApp: '8.0.0' });
+
+  const b = nouveauRepo();
+  const ici = { 'roue:colere:irrite': 'Ma définition, écrite ici.' };
+  await b.repo.meta.ecrire('definitionsRoue', ici);
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(metaRemplacee((await lireTout(b.repo)).meta, analyse.valides.meta), ['definitionsRoue']);
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.meta.lire('definitionsRoue'), { 'roue:joie:curieux': 'Envie d\'en savoir plus.' }, 'celles du fichier');
+  await revenirAvantImport(b.repo);
+  assert.deepEqual(await b.repo.meta.lire('definitionsRoue'), ici, '« Revenir » remet celles d\'ici');
+  // Un fichier sans correction : celles d'ici sont retirées, comme toute clé de l'utilisateur absente du fichier.
+  const sans = analyserFichiers([{ nom: g.nom, octets: octetsDe(g) }]);
+  assert.deepEqual(metaRemplacee((await lireTout(b.repo)).meta, sans.valides.meta), ['definitionsRoue']);
+  await remplacer(b.repo, sans);
+  assert.equal(await b.repo.meta.lire('definitionsRoue'), null);
+  // Les mêmes corrections des deux côtés : rien n'est annoncé.
+  assert.deepEqual(metaRemplacee([{ cle: 'definitionsRoue', valeur: ici }], [{ cle: 'definitionsRoue', valeur: ici }]), []);
+});
+
+test('v8 : aperçu de l\'import, les définitions des émotions ont leurs mots et leur accord', () => {
+  assert.equal(phraseMeta(['definitionsRoue']), 'Les définitions des émotions seront remplacées par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan', 'definitionsRoue']), 'Mon plan et les définitions des émotions seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['respiration']), 'Les réglages de la respiration seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan']), 'Mon plan sera remplacé par ce que contient le fichier.');
+  assert.equal(phraseMeta(['inconnue', 'definitionsRoue']), 'Les définitions des émotions seront remplacées par ce que contient le fichier.');
+});
+
+test('v8 : « Revenir » vers une copie prise avant la v8 remet les sujets d\'un rendez-vous, sans écraser ceux de la copie', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  // Copie « avant-import » telle que la v7 l'écrivait : ni sujets, ni champs de la v8.
+  const { audios, ...data } = await lireTout(a.repo);
+  const sujet = { id: 'sujetRdv:sommeil', liste: 'sujetRdv', libelle: 'Mes nuits', ordre: 10, archive: false, alias: ['Sommeil'], origine: 'defaut', createdAt: 'x', updatedAt: 'x' };
+  const copie = {
+    id: 'avant-import-2026-09-30T17:00:00.000Z', type: 'avant-import', date: '2026-09-30T17:00:00.000Z', schemaVersion: 5,
+    data: { ...data, listes: [...data.listes.filter((i) => i.liste !== 'sujetRdv'), sujet] },
+  };
+  await poserCopie(a.repo, copie);
+  await revenirAvantImport(a.repo);
+  const listes = await a.repo.listes.items('sujetRdv');
+  assert.equal(listes.length, IDS_V8.length);
+  for (const id of IDS_V8) assert.equal(listes.filter((i) => i.id === id).length, 1, id);
+  assert.deepEqual(listes.find((i) => i.id === 'sujetRdv:sommeil'), sujet, 'le sujet de la copie est gardé');
+  assert.equal((await a.repo.listes.items()).length, 204);
 });

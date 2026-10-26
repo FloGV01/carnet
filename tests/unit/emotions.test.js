@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CLES_FAMILLES, comptesVides, nombreDeReleves, relevesAEmotion, parFamille, emotionsParJour, famillesParJour, famillesParHeure,
-  famillesParColonnes, apresNuit, autourDe, autourDuBienEtre,
+  famillesParColonnes, apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite, selonSeuilEmotions,
 } from '../../public/js/analyse/emotions.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import { analyze } from '../../public/js/analyse/index.js';
@@ -168,6 +168,45 @@ test('autourDe : 3 heures avant, 3 heures après, en heures calendaires, un rele
   assert.deepEqual(autourDe([{ date: '2026-10-12', heure: '23:00' }], humeurs, { avantH: 4, apresH: 1 }).avant, compte({ colere: 2 }));
 });
 
+// v8 (Q26) : autourDe cherche l'instant voisin par dichotomie. Les comptes restent ceux de la recherche de tous les
+// instants (la version d'avant, gardée ici comme référence), bornes comprises, sur des données tirées au hasard (semées).
+test('autourDe, par dichotomie : les mêmes comptes que la recherche de tous les instants, bornes et instants confondus compris', async () => {
+  const { generateur } = await import('../fixtures/generateur.js');
+  const { diffDays, addDays } = await import('../../public/js/domain/dates.js');
+  const { familleDe } = await import('../../public/js/domain/roue.js');
+  const minutes = (date, heure) => diffDays('2000-01-01', date) * 1440 + Number(heure.slice(0, 2)) * 60 + Number(heure.slice(3, 5));
+  const reference = (instants, humeurs, avantH = 3, apresH = 3) => {
+    const temps = instants.map((i) => minutes(i.date, i.heure));
+    const avant = comptesVides();
+    const apres = comptesVides();
+    for (const h of humeurs) {
+      const m = minutes(h.date, h.heure);
+      if (temps.some((t) => m >= t - avantH * 60 && m < t)) avant[familleDe(h.emotion)] += 1;
+      if (temps.some((t) => m >= t && m <= t + apresH * 60)) apres[familleDe(h.emotion)] += 1;
+    }
+    return { avant, apres };
+  };
+  const alea = generateur(77);
+  const heure = () => `${String(Math.floor(alea() * 24)).padStart(2, '0')}:${['00', '15', '30', '59'][Math.floor(alea() * 4)]}`;
+  const mots = ['roue:colere:irrite', 'roue:peur', 'roue:joie:curieux', 'roue:serenite:calme', 'roue:tristesse:vide'];
+  for (let essai = 0; essai < 20; essai++) {
+    const jour = () => addDays('2026-09-01', Math.floor(alea() * 20));
+    const instants = Array.from({ length: Math.floor(alea() * 12) }, () => ({ date: jour(), heure: heure() }));
+    // Des relevés à 3 h pile avant et après, et à l'instant même : les bornes.
+    const bornes = instants.flatMap((i) => [-180, -181, 0, 180, 181].map((d) => {
+      const m = minutes(i.date, i.heure) + d;
+      const j = Math.floor(m / 1440);
+      const r = m - j * 1440;
+      return releve(addDays('2000-01-01', j), `${String(Math.floor(r / 60)).padStart(2, '0')}:${String(r % 60).padStart(2, '0')}`, mots[(j + r) % 5]);
+    }));
+    const humeurs = [...bornes, ...Array.from({ length: 60 }, (_, k) => releve(jour(), heure(), mots[k % 5]))];
+    for (const [a, p] of [[3, 3], [4, 1]]) {
+      const r = autourDe(instants, humeurs, { avantH: a, apresH: p });
+      assert.deepEqual({ avant: r.avant, apres: r.apres }, reference(instants, humeurs, a, p), `essai ${essai}, ${a} h et ${p} h`);
+    }
+  }
+});
+
 test('autourDe : la nuit du changement d\'heure se compte en heures d\'horloge, comme en UTC', () => {
   // Le 25 octobre 2026 à Paris, 3 h devient 2 h. De 01:00 à 03:30, il y a 2 h 30 sur l'horloge (3 h 30 écoulées) : dedans.
   const r = autourDe([{ date: '2026-10-25', heure: '01:00' }], [releve('2026-10-25', '03:30', 'roue:peur')]);
@@ -288,4 +327,51 @@ test('invariance Paris / UTC : mêmes résultats quel que soit le fuseau du syst
   } finally {
     if (avant === undefined) delete process.env.TZ; else process.env.TZ = avant;
   }
+});
+
+// ---------- v8 · Q18 : émotions selon ce que je faisais ----------
+
+const TRAVAIL = 'activiteMoment:travail';
+const TRAJET = 'activiteMoment:trajet';
+const MONDE = 'activiteMoment:monde';
+
+test('emotionsParActivite (v8) : par activité, les relevés de chaque famille ; un relevé de deux activités compte pour chacune', () => {
+  const humeurs = [
+    releve('2026-10-12', '09:00', 'roue:colere:irrite', { faisais: [TRAVAIL] }),
+    releve('2026-10-12', '10:00', 'roue:colere', { faisais: [TRAVAIL, TRAJET] }), // une famille seule (v7) compte aussi
+    releve('2026-10-12', '18:00', 'roue:serenite:calme', { faisais: [TRAJET, TRAJET], vers: true }), // « vers » compris, une fois
+    releve('2026-10-13', '12:00', 'roue:joie:amuse', { faisais: [MONDE] }),
+    releve('2026-10-13', '13:00', 'roue:joie:amuse', { faisais: [] }), // sans activité : nulle part
+    releve('2026-10-13', '14:00', 'roue:joie:amuse'),
+    { id: 'n', date: '2026-10-13', heure: '15:00', humeur: 6, emotion: null, faisais: [TRAVAIL] }, // ancienne note : pas d'émotion
+    { id: 'e', date: '2026-10-13', heure: '16:00', energie: 'energie:basse', faisais: [TRAVAIL] }, // énergie seule
+  ];
+  const periode = { du: '2026-10-01', au: '2026-10-31' };
+  const items = [{ id: MONDE, liste: 'activiteMoment', ordre: 10 }, { id: TRAVAIL, liste: 'activiteMoment', ordre: 20 }, { id: TRAJET, liste: 'activiteMoment', ordre: 30 }];
+  const r = emotionsParActivite(humeurs, periode, items);
+  assert.deepEqual(Object.keys(r), [MONDE, TRAVAIL, TRAJET], 'dans l\'ordre de la liste');
+  assert.deepEqual(r, {
+    [MONDE]: compte({ joie: 1 }),
+    [TRAVAIL]: compte({ colere: 2 }),
+    [TRAJET]: compte({ colere: 1, serenite: 1 }),
+  });
+  assert.ok(Object.values(r).every((c) => Object.keys(c).join() === CLES_FAMILLES.join()), 'toutes les familles, dans l\'ordre de la roue');
+  // Sans liste : par identifiant. Le seuil compte les relevés, pas les activités : 4 relevés, pas 5.
+  assert.deepEqual(Object.keys(emotionsParActivite(humeurs, periode)), [MONDE, TRAJET, TRAVAIL]);
+  assert.equal(relevesAvecActivite(humeurs, periode).length, 4);
+  assert.equal(selonSeuilEmotions(relevesAvecActivite(humeurs, periode).length), 'insuffisant');
+  assert.deepEqual(emotionsParActivite([], periode), {});
+});
+
+test('emotionsParActivite (v8) : le jour logique fait foi (bascule de 4 h) ; seule la période compte', () => {
+  const humeurs = [
+    releve('2026-10-01', '03:59', 'roue:peur:craintif', { faisais: [TRAVAIL] }), // le 30/09 : avant la période
+    releve('2026-10-01', '04:00', 'roue:peur:craintif', { faisais: [TRAVAIL] }),
+    releve('2026-10-02', '01:00', 'roue:tristesse:vide', { faisais: [TRAVAIL], vers: true }), // encore le 01/10
+    releve('2026-10-02', '04:00', 'roue:joie:amuse', { faisais: [TRAVAIL] }), // le 02/10 : après la période
+  ];
+  const periode = { du: '2026-10-01', au: '2026-10-01' };
+  assert.deepEqual(emotionsParActivite(humeurs, periode), { [TRAVAIL]: compte({ peur: 1, tristesse: 1 }) });
+  assert.deepEqual(relevesAvecActivite(humeurs, periode).map((x) => [x.date, x.famille, x.faisais]),
+    [['2026-10-01', 'peur', [TRAVAIL]], ['2026-10-01', 'tristesse', [TRAVAIL]]]);
 });

@@ -110,6 +110,13 @@
   --h-bande: 64px;
   /* Hauteur de la barre d'onglets, sans la zone du bas de l'iPhone : 1 de filet, 4 de marge, 45 d'onglet. */
   --hauteur-onglets: 50px;
+  /* Zones sûres de l'iPhone (encoche et barre d'accueil), lues ici seulement (v8, Q27) : tout le reste passe par ces
+     variables. Les tests les simulent (47 en haut et 34 en bas, les valeurs de l'iPhone en 390 × 844), et le Diagnostic
+     affiche celles de l'app installée. */
+  --zone-haut: env(safe-area-inset-top, 0px);
+  --zone-bas: env(safe-area-inset-bottom, 0px);
+  --zone-gauche: env(safe-area-inset-left, 0px);
+  --zone-droite: env(safe-area-inset-right, 0px);
 
   /* Durées : 200 ms au plus, supprimées avec « Réduire les animations » */
   --duree: 150ms;

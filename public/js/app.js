@@ -21,6 +21,7 @@ import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
 import { MaJournee } from './ui/ecrans/ma-journee.js';
 import { ReglagesMomentDifficile } from './ui/ecrans/reglages-moment-difficile.js';
 import { ReglagesRessourcer } from './ui/ecrans/reglages-ressourcer.js';
+import { ReglagesEmotions } from './ui/ecrans/reglages-emotions.js';
 import { Sauvegarde } from './ui/ecrans/sauvegarde.js';
 import { Effacer } from './ui/ecrans/effacer.js';
 import { Rappel } from './ui/ecrans/rappel.js';
@@ -36,8 +37,8 @@ import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
-import { BienEtre } from './ui/ecrans/bien-etre.js';
-import { Exercice } from './ui/ecrans/exercice.js';
+import { BienEtre, Coherence } from './ui/ecrans/bien-etre.js';
+import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -51,6 +52,7 @@ const ECRANS = {
   'reglages-journee': () => html`<${MaJournee} />`,
   'reglages-moment-difficile': () => html`<${ReglagesMomentDifficile} />`,
   'reglages-ressourcer': () => html`<${ReglagesRessourcer} />`,
+  'reglages-emotions': () => html`<${ReglagesEmotions} />`,
   episode: (p) => html`<${Episode} key=${p.id === 'nouveau' ? 'nouveau' : 'existant'} id=${p.id} />`,
   historique: () => html`<${Historique} />`,
   soins: () => html`<${Soins} />`,
@@ -71,7 +73,9 @@ const ECRANS = {
   soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
   'bien-etre': () => html`<${BienEtre} />`,
-  exercice: (p) => html`<${Exercice} key=${p.id} id=${p.id} />`,
+  coherence: () => html`<${Coherence} />`,
+  programme: () => html`<${Programme} />`,
+  'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
 };
 
 function useEtatApp() {

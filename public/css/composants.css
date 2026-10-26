@@ -4,8 +4,8 @@
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
 .ecran {
   flex: 1;
-  padding: calc(4px + env(safe-area-inset-top)) calc(var(--marge) + env(safe-area-inset-right))
-           calc(100px + env(safe-area-inset-bottom)) calc(var(--marge) + env(safe-area-inset-left));
+  padding: calc(4px + var(--zone-haut)) calc(var(--marge) + var(--zone-droite))
+           calc(100px + var(--zone-bas)) calc(var(--marge) + var(--zone-gauche));
   display: flex; flex-direction: column;
 }
 .discret { color: var(--text-2); font-size: var(--t-note); }
@@ -14,7 +14,6 @@
   font-size: var(--t-section); letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2);
   font-weight: 600; margin-bottom: 10px;
 }
-.note-carte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); margin: 8px 4px 0; }
 
 /* En-têtes */
 .entete-onglet { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--esp-2); margin-bottom: 14px; }
@@ -50,7 +49,6 @@
 .ligne-carte[disabled] { color: var(--text-2); }
 .ligne-info { display: flex; align-items: center; justify-content: space-between; min-height: var(--cible); padding: 0 16px; font-size: var(--t-sous); }
 .ligne-info > span:last-child { color: var(--text-2); }
-.lien-ligne { color: var(--text); text-decoration: none; }
 
 /* ---------- Boutons ---------- */
 /* Bouton neutre 2b : sans bordure, rayon 12, --surface sur le fond, --surface-2 dans une carte. L'action (Terminer,
@@ -75,7 +73,6 @@
 .btn-lien[disabled] { color: var(--line); cursor: default; }
 .lien-discret { color: var(--text-2); text-decoration: underline; border: 0; background: none; font-size: var(--t-sous); min-height: var(--cible); padding: 0; }
 .lien { color: var(--action); text-decoration: none; min-height: var(--cible); display: inline-flex; align-items: center; font-weight: 600; font-size: var(--t-sous); }
-.lien-bouton { text-decoration: none; }
 .pilule {
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 16px 0 12px;
   border-radius: var(--r-bouton); border: 0; background: var(--fond-choix); color: var(--text);
@@ -107,7 +104,7 @@
 .onglets {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex;
   background: var(--bg); border-top: 1px solid var(--line);
-  padding: 4px calc(2px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(2px + env(safe-area-inset-left));
+  padding: 4px calc(2px + var(--zone-droite)) var(--zone-bas) calc(2px + var(--zone-gauche));
 }
 .onglet {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -123,7 +120,7 @@
 /* ---------- Bandeau de mise à jour, bandeau TEST ---------- */
 .bandeau {
   position: sticky; top: 0; z-index: 20; display: flex; justify-content: center; align-items: center; gap: 2px;
-  min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0;
+  min-height: calc(44px + var(--zone-haut)); padding: var(--zone-haut) 16px 0;
   background: var(--surface); color: var(--text); font-size: var(--t-sous);
   box-shadow: inset 0 -1px 0 var(--line); /* un filet en bas, sans hauteur en plus : le soir tient toujours */
 }
@@ -134,21 +131,27 @@
 .bandeau > span:first-child { flex: 1 0 100%; text-align: center; padding-top: 4px; line-height: 1.25; }
 .bandeau button { border: 0; background: none; color: var(--action); font-weight: 600; font-size: inherit; padding: 0 6px; min-height: var(--cible); }
 .bandeau button[disabled] { color: var(--text-2); }
+/* Le bandeau prend la zone sûre du haut (sous l'encoche) : l'écran qui le suit ne la compte pas une seconde fois (v8,
+   Q27 ; avec 47 px simulés, le soir perdait 47 px sous le bandeau). */
+.bandeau ~ main { --zone-haut: 0px; }
 .bandeau-test { background: var(--surface-2); text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--text-2); padding: 2px; }
 
 /* ---------- Toast ---------- */
 .toast {
-  position: fixed; left: var(--marge); right: var(--marge); bottom: calc(122px + env(safe-area-inset-bottom)); z-index: 45;
+  position: fixed; left: var(--marge); right: var(--marge); bottom: calc(122px + var(--zone-bas)); z-index: 45;
   display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 16px;
   background: var(--text); color: var(--bg); border-radius: var(--r-bouton); font-size: var(--t-sous);
 }
 /* Dans un parcours, en haut, juste sous l'en-tête : les réponses sont en bas, près du pouce (2b). En grand texte,
    l'en-tête grandit (le repère d'étape passe sous le nom) : le toast se cale sur son bas réel, par ancrage CSS (iOS 26),
    et à défaut sous ses 48 px. */
-.toast.en-haut { top: calc(52px + env(safe-area-inset-top)); bottom: auto; }
+.toast.en-haut { top: calc(52px + var(--zone-haut)); bottom: auto; }
 @supports (top: anchor(bottom)) {
-  .toast.en-haut { top: calc(anchor(--tete-parcours bottom, calc(48px + env(safe-area-inset-top))) + 4px); }
+  .toast.en-haut { top: calc(anchor(--tete-parcours bottom, calc(48px + var(--zone-haut))) + 4px); }
 }
+/* Une feuille ou une boîte ouverte (v8, Q29) : le toast passe dessous, même dans un parcours (dont la feuille vit dans son
+   propre plan, sous le toast) : « Épisode enregistré » ne couvre plus « Mon plan ». Il revient à la fermeture. */
+.app:has(.voile) .toast { z-index: 39; }
 .toast-texte { flex: 1; }
 .toast button { border: 0; background: none; color: var(--bg); font-weight: 600; font-size: inherit; min-height: var(--cible); padding: 0 12px; text-decoration: underline; }
 
@@ -294,7 +297,7 @@ button.effacer svg { width: 18px; height: 18px; }
 
 /* Replis */
 /* Un filet plein au-dessus (2b : pas de tirets). */
-.repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + env(safe-area-inset-top)); }
+.repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + var(--zone-haut)); }
 .repli-tete { width: 100%; display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible-grille); border: 0; background: none; padding: 0; text-align: left; color: var(--text); }
 .repli-fleche { display: inline-flex; color: var(--text-2); transition: transform var(--duree); }
 .repli-fleche svg { width: 16px; height: 16px; stroke-width: 2; }
@@ -356,7 +359,7 @@ button.effacer svg { width: 18px; height: 18px; }
 
 /* ---------- Bouton flottant ---------- */
 .fab {
-  position: fixed; right: calc(var(--marge) + env(safe-area-inset-right)); bottom: calc(57px + env(safe-area-inset-bottom)); z-index: 9;
+  position: fixed; right: calc(var(--marge) + var(--zone-droite)); bottom: calc(57px + var(--zone-bas)); z-index: 9;
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 18px 0 14px; border-radius: var(--r-bouton);
   background: var(--action); color: var(--action-on); font-weight: 600; font-size: var(--t-corps); text-decoration: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .16);
@@ -367,11 +370,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours {
   position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column;
   background-color: var(--bg);
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: var(--zone-haut) var(--zone-droite) var(--zone-bas) var(--zone-gauche);
 }
 /* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600) derrière un petit carré à sa couleur,
    et, à droite, le repère d'étapes en points de 9 px, jamais une barre : faites, pleines à la couleur du parcours ;
-   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --surface-2.
+   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --line (v8).
    En grand texte, rien ne se coupe : le nom ne passe pas à la ligne tant qu'il tient seul sur une ligne, et quand les
    trois ne tiennent plus côte à côte, le repère passe dessous, dans une rangée de 28 (flex-wrap). L'ancre
    --tete-parcours cale le toast sous l'en-tête, quelle que soit sa hauteur. */
@@ -384,8 +387,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
 .point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
 .reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
-.reperes i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); }
-.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); }
+/* À venir (v8, Q29) : un contour de 1,5 en --text-2, sans fond (README 2b : « contour (2a) »), au moins 3:1 sur le fond
+   (5,6:1 en clair, 7,3:1 en sombre) ; --surface-2 ne se voyait pas sur le fond clair (1:1), et --line restait sous 3:1
+   (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille. */
+.reperes i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-2); background: none; }
+.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); border-color: var(--c, var(--action)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
 /* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
 .reperes:has(i:nth-child(8)) { gap: 6px; }
@@ -423,74 +429,91 @@ button.effacer svg { width: 18px; height: 18px; }
 .panneau-reponses {
   flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column; gap: 18px;
-  padding: 16px calc(var(--marge) + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(var(--marge) + env(safe-area-inset-left));
+  padding: 16px calc(var(--marge) + var(--zone-droite)) calc(16px + var(--zone-bas)) calc(var(--marge) + var(--zone-gauche));
   background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-feuille) var(--r-feuille) 0 0;
   container: reponses / inline-size;
 }
 .bloc-reponse { display: flex; flex-direction: column; gap: 10px; }
 .tete-reponse { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); min-height: 24px; }
 .titre-reponse { font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.aide-reponse { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-align: right; }
-.panneau-reponses .segmente.energie button { min-height: var(--cible-bouton); font-size: var(--t-corps); }
-.retour-familles { min-height: var(--cible); margin: -10px 0 -10px -6px; padding: 0 6px 0 0; gap: 2px; }
-.retour-familles svg { width: 20px; height: 20px; }
-.titre-famille { display: inline-flex; align-items: center; gap: 8px; color: var(--c-text); }
-/* Le mot choisi, à droite du titre « Émotion » de la vue des familles (une bulle n'y garde que le nom de sa famille). */
-.mot-choisi { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font: 600 var(--t-sous)/1.3 var(--police); color: var(--c-text); text-align: right; }
-.point-famille { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); }
+.retour-energie { min-height: var(--cible); margin: -10px 0 -10px -6px; padding: 0 6px 0 0; gap: 2px; }
+.retour-energie svg { width: 20px; height: 20px; }
+/* « Toute la carte » : un lien discret, en texte secondaire. */
+.toute-la-carte { min-height: var(--cible); margin: -10px 0; padding: 0 0 0 6px; gap: 2px; font-size: var(--t-sous); color: var(--text-2); }
+.toute-la-carte svg { width: 16px; height: 16px; }
 
-/* Bulles de la roue des émotions (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue. Non
-   choisie : -tint-2 et texte -text ; choisie : -fill, -on, 600 et coche, comme tout choix. */
-.bulle {
-  border: 0; background: var(--c-tint-2); color: var(--c-text); font-weight: 500; text-align: center;
+/* Émotion du moment (v8, spec §4) : les six tuiles, sous « plutôt désagréable » et « plutôt agréable ». Une tuile
+   enregistre l'énergie : non choisie, --fond-choix ; choisie, la couleur du parcours (-fill, -on, 600 et coche).
+   Ses mots d'exemple ont la couleur de leur famille (.emo-*), qui ne vaut que pour la roue. */
+.tuiles-emotion { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ecart); }
+.cote-tuiles { padding: 0 4px; font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
+/* Le nom de l'énergie en haut, la coche devant lui une fois choisie ; les mots d'exemple dessous, sur toute la largeur.
+   Le contenu part du haut (contrôle v8) : sur une rangée, les deux noms d'énergie restent alignés, même quand les mots
+   d'exemple d'une tuile passent sur deux lignes et ceux de l'autre sur une. */
+.tuile-emotion {
+  min-height: 4.4rem; padding: 10px 12px 8px; border: 0; border-radius: var(--r-moyen);
+  background: var(--fond-choix); color: var(--text); text-align: left; font-size: var(--t-corps); line-height: 1.2;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: start; row-gap: 3px;
   transition: background var(--duree), color var(--duree);
 }
+.tuile-emotion[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
+.tuile-emotion > .coche { grid-area: 1 / 1; align-self: center; margin-right: 4px; }
+.tuile-emotion > .coche svg { width: 15px; height: 15px; }
+.tuile-emotion > .libelle-choix { grid-area: 1 / 2; }
+.tuile-exemples { grid-area: 2 / 1 / 3 / 3; display: flex; flex-wrap: wrap; column-gap: 8px; font-size: var(--t-note); line-height: 1.3; font-weight: 500; }
+.exemple-tuile { color: var(--c-text); }
+.tuile-emotion[aria-pressed="true"] .exemple-tuile { color: inherit; }
+
+/* La carte : un cadre qui glisse dans les deux sens, de bord à bord du panneau, et dedans les six zones (trois bandes
+   d'énergie, deux côtés), chacune large comme le panneau : ouverte sur une zone, la carte la montre en entier. */
+.carte-cadre {
+  height: clamp(13rem, 44dvh, 26rem); margin: 0 calc(-1 * var(--marge)); overflow: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; animation: apparition-carte var(--duree-anim) ease-out;
+}
+@keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
+.carte-roue {
+  --ecart-cotes: 28px;
+  position: relative; display: grid; grid-template-columns: repeat(2, 100cqi); gap: 26px var(--ecart-cotes); width: max-content;
+  padding: 10px var(--marge) 18px;
+}
+.zone-carte { display: flex; flex-direction: column; gap: 8px; }
+/* La légende d'une zone, rangée contre le centre de la carte, comme ses bulles (relecture finale) : « Toute la carte »
+   s'ouvre au milieu et ne montre que la moitié de chaque zone (et la marge, moins la moitié de l'écart entre les deux
+   côtés). La légende tient dans cette moitié en gardant la marge de la page au bord de l'écran ; sinon, elle passe à la
+   ligne après l'énergie (« Moyenne · » puis « plutôt désagréable »). */
+.legende-zone {
+  max-width: calc(50% - var(--ecart-cotes) / 2);
+  font-size: var(--t-note); line-height: 1.3; color: var(--text-2);
+}
+.legende-zone > span { display: inline-block; }
+.zone-gauche .legende-zone { align-self: flex-end; text-align: right; }
+.zone-droite .legende-zone { align-self: flex-start; text-align: left; }
+.bulles-zone { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; }
+/* À gauche, la carte part du bord gauche (le plus désagréable) ; à droite, du bord droit (le plus agréable). Une ligne
+   incomplète se range contre le centre. */
+.zone-gauche .bulles-zone { justify-content: flex-end; }
+.zone-droite .bulles-zone { flex-direction: row-reverse; justify-content: flex-end; }
+/* Une bulle ronde par mot, à la couleur de sa famille : non choisie, -tint-2 et texte -text ; choisie, -fill, -on,
+   600 et la coche au-dessus du mot. Son diamètre suit son plus long mot (« Non respecté » passe sur deux lignes) ; le
+   libellé garde la largeur de sa version en 600 (coche.js) : choisir ne pousse aucune voisine. La bulle choisie
+   grossit sans bouger ; celle dont un appui long montre le sens est cerclée. */
+.bulle {
+  border: 0; background: var(--c-tint-2); color: var(--c-text); font-weight: 500; text-align: center;
+  transition: background var(--duree), color var(--duree), transform var(--duree);
+}
 .bulle[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
-/* Une vue qui paraît (familles, mots d'une famille) : un fondu de 200 ms, rien avec « Réduire les animations ». */
-.bulles { animation: apparition-bulles var(--duree-anim) ease-out; }
-@keyframes apparition-bulles { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
-/* Les 7 familles, en grappe : des bulles rondes posées dans les creux de la rangée voisine (pas hexagonal, × 0,866).
-   Le diamètre suit la taille du texte (5rem), sans dépasser la largeur du panneau (100cqi : sa largeur utile). Le
-   nom suit la taille du texte jusqu'à ce que la bulle le contienne tout juste. 4 bulles puis 3 (4-3) tant que le nom
-   y tient à --t-sous ; sinon (grand texte, écran étroit), 2-3-2, une rosace de 3 bulles au plus par rangée. */
-.bulles-familles {
-  --pas: min(calc(5rem + var(--ecart)), calc(100cqi / 4));
-  --d: calc(var(--pas) - var(--ecart));
-  display: grid; justify-content: center;
-  grid-template-columns: repeat(8, calc(var(--pas) / 2));
-  grid-template-rows: calc(var(--pas) * .866) var(--d);
+.bulle-carte {
+  position: relative; flex: none; width: min-content; min-width: 4.6rem; aspect-ratio: 1; padding: 0 9px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-size: var(--t-petit); line-height: 1.15; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
 }
-.bulle-famille {
-  position: relative; grid-column-end: span 2; justify-self: center; align-self: start;
-  width: var(--d); height: var(--d); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; padding: 4px;
-  font-size: min(var(--t-sous), calc(var(--d) * .19)); line-height: 1.15;
-}
-.bulle-famille:nth-child(5) { grid-column-start: 2; }
-/* La coche d'une famille choisie se pose au-dessus du nom, sans le déplacer : il reste au milieu, où la bulle est
-   la plus large. */
-.bulle-famille > .coche { position: absolute; top: calc(50% - .575em - 20px); left: calc(50% - 8px); }
-/* Le nom tient à --t-sous dans une bulle de 4,64rem (--t-sous / 0,19). Quatre de ces bulles et leurs écarts
-   (18,6rem + 24 px, soit 20rem à 17 px) ne tiennent plus dans le panneau : rosace 2-3-2, 3 bulles au plus par rangée. */
-@container reponses (max-width: 20rem) {
-  .bulles-familles {
-    --pas: min(calc(5rem + var(--ecart)), calc(100cqi / 3));
-    grid-template-columns: repeat(6, calc(var(--pas) / 2));
-    grid-template-rows: calc(var(--pas) * .866) calc(var(--pas) * .866) var(--d);
-  }
-  .bulle-famille:nth-child(5) { grid-column-start: auto; }
-  .bulle-famille:nth-child(1), .bulle-famille:nth-child(6) { grid-column-start: 2; }
-  .bulle-famille:nth-child(3) { grid-column-start: 1; }
-}
-/* Les mots d'une famille : des bulles à la largeur de leur mot, centrées, sur plusieurs lignes. Choisir ne change
-   pas la largeur d'une bulle (coche.js) : les autres ne bougent pas. */
-.bulles-mots { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--ecart); }
-.bulle-mot {
-  --demi-coche: 10px; min-height: var(--cible); padding: 0 10px; border-radius: calc(var(--cible) / 2);
-  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  font-size: var(--t-sous); line-height: 1.2; white-space: nowrap;
-}
-.bulle-mot:not([aria-pressed="true"]) > .coche + * { margin-inline: var(--demi-coche); }
+.bulle-carte[aria-pressed="true"] { transform: scale(1.12); z-index: 1; }
+.bulle-carte.montree { box-shadow: 0 0 0 2px var(--c); }
+.bulle-carte .coche svg { width: 15px; height: 15px; }
+/* La définition, sous la carte : le mot choisi (ou montré) à la couleur de sa famille, puis son sens. */
+.definition-carte { min-height: calc(2 * 1.35em); font-size: var(--t-sous); line-height: 1.35; color: var(--text); text-wrap: pretty; }
+.mot-definition { font-weight: 600; color: var(--c-text); }
+.aide-definition { color: var(--text-2); }
 
 .ligne-date { padding: 0 var(--marge); flex: none; }
 .ligne-date .btn-lien { color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }

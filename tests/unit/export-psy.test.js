@@ -7,7 +7,7 @@ import { trouverInterdits } from '../aides/mots-interdits.js';
 
 const carte = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V2_AJOUTS }, 'x'));
 const J = (date, o) => ({ date, lieu: null, sommeilRessenti: null, humeur: null, contactHumain: null, sportMouvement: null, explosions: null,
-  traitementPris: null, pointsPositifs: null, heureCoucher: null, heureLever: null, reveilsNocturnes: null, notes: null, ...o });
+  traitementPris: null, pointsPositifs: null, heureCoucher: null, heureLever: null, reveilsNocturnes: null, heuresSommeil: null, notes: null, ...o });
 
 // Données fictives de l'exemple du plan (§7.8).
 const journal = [
@@ -15,12 +15,12 @@ const journal = [
   J('2026-09-16', { humeur: 6, explosions: 1 }), J('2026-09-17', { humeur: 5, explosions: 0 }), J('2026-09-18', { humeur: 6, explosions: 0, lieu: 'lieu:teletravail' }),
   J('2026-09-21', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:mal', reveilsNocturnes: 2, humeur: 5, contactHumain: true, sportMouvement: false, explosions: 1,
     pointsPositifs: "café avec Léo, point projet qui s'est bien passé", notes: "open space très bruyant l'après-midi", traitementPris: 'traitementPris:oui' }),
-  J('2026-09-22', { lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:moyen', humeur: 6, contactHumain: false, sportMouvement: true, explosions: 0, pointsPositifs: 'marche de 40 min au soleil' }),
+  J('2026-09-22', { lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:moyen', heuresSommeil: 6, humeur: 6, contactHumain: false, sportMouvement: true, explosions: 0, pointsPositifs: 'marche de 40 min au soleil' }),
   J('2026-09-23', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:bien', heureCoucher: '23:10', heureLever: '06:40', humeur: 7, contactHumain: true, sportMouvement: false, explosions: 0,
     pointsPositifs: "bloc 7h-9h tenu, déjeuner avec l'équipe" }),
   J('2026-09-25', { lieu: 'lieu:teletravail', sommeilRessenti: 'sommeil:mal', reveilsNocturnes: 3, humeur: 4, contactHumain: false, sportMouvement: false, explosions: 1, pointsPositifs: "j'ai tenu aujourd'hui" }),
-  J('2026-09-26', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:moyen', humeur: 7, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'repas en famille' }),
-  J('2026-09-27', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:bien', humeur: 8, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'vélo, bonne soirée' }),
+  J('2026-09-26', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:moyen', heuresSommeil: 4, humeur: 7, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'repas en famille' }),
+  J('2026-09-27', { lieu: 'lieu:conge_repos', sommeilRessenti: 'sommeil:bien', heuresSommeil: 10, humeur: 8, contactHumain: true, sportMouvement: true, explosions: 0, pointsPositifs: 'vélo, bonne soirée' }),
 ];
 const episodes = [
   { id: 'e1', date: '2026-09-21', heure: '14:30', emotion: 'emotion:colere', intensite: 8, declencheur: 'declencheur:pris_pour_un_con', dessous: 'dessous:injustice',
@@ -48,7 +48,7 @@ JOURS
 lun 21/09 · Bureau · nuit Mal (2 réveils) · humeur du soir 5 · contact oui · sport non · explosions 1
   + café avec Léo, point projet qui s'est bien passé
   note : open space très bruyant l'après-midi
-mar 22/09 · Télétravail · nuit Moyen · humeur du soir 6 · émotions : irrité, calme · contact non · sport oui · explosions 0
+mar 22/09 · Télétravail · nuit Moyen · 6 h · humeur du soir 6 · émotions : irrité, calme · contact non · sport oui · explosions 0
   humeur du moment : 09:10 irrité (énergie basse) · 18:30 calme · 02:15 irrité
   + marche de 40 min au soleil
 mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur du soir 7 · contact oui · sport non · explosions 0
@@ -56,10 +56,10 @@ mer 23/09 · Bureau · nuit Bien · coucher 23:10 lever 06:40 · humeur du soir 
 ven 25/09 · Télétravail · nuit Mal (3 réveils) · humeur du soir 4 · émotions : tristesse · contact non · sport non · explosions 1
   humeur du moment : vers 20 h tristesse (énergie basse)
   + j'ai tenu aujourd'hui
-sam 26/09 · Congé / repos · nuit Moyen · humeur 6 · émotions : amusé · contact oui · sport oui · explosions 0
+sam 26/09 · Congé / repos · nuit Moyen · 4 h ou moins · humeur 6 · émotions : amusé · contact oui · sport oui · explosions 0
   humeur du moment : 10:00 6 · 15:20 amusé (énergie haute)
   + repas en famille
-dim 27/09 · Congé / repos · nuit Bien · humeur du soir 8 · émotions : en sécurité · contact oui · sport oui · explosions 0
+dim 27/09 · Congé / repos · nuit Bien · 10 h ou plus · humeur du soir 8 · émotions : en sécurité · contact oui · sport oui · explosions 0
   humeur du moment : 12:00 en sécurité
   + vélo, bonne soirée
 
@@ -78,7 +78,8 @@ semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1 · ém
 
 PSY : fais-moi le récap de la semaine, format habituel.`;
 
-test('instantané exact de l\'exemple du plan ; v7 : les émotions du jour et par famille, sans « REPÈRES DE L\'APP »', () => {
+// v8 : la nuit en heures (« nuit Moyen · 6 h ») ; les nuits anciennes gardent leurs réveils, leur coucher et leur lever.
+test('instantané exact de l\'exemple du plan ; v7 : les émotions du jour et par famille, sans « REPÈRES DE L\'APP » ; v8 : les heures de la nuit', () => {
   assert.equal(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: '2026-09-27', carte }), ATTENDU);
 });
 
@@ -235,4 +236,19 @@ test('v7 : sans aucune émotion, ni la ligne du jour ni les COMPTEURS ne parlent
   const t = exportEmotions([rel('2026-09-26', '09:00', null, { humeur: 5, energie: 'energie:basse' })]);
   assert.doesNotMatch(t, /émotion/);
   assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · humeur 5');
+});
+
+// v8 (spec §7 bis) : « nuit Mal · 6 h » ; la qualité ou les heures seules ; les réveils et le coucher ne restent que pour une
+// nuit ancienne qui en a, jamais inventés.
+test('v8 : la nuit dit sa qualité et ses heures, « nuit Mal · 6 h » ; une nuit ancienne garde ses réveils et ses heures de coucher', () => {
+  const ligne = (o) => exportPsy({ journal: [J('2026-09-27', o)], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte }).split('\n')[3];
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 6 }), 'dim 27/09 · nuit Mal · 6 h');
+  assert.equal(ligne({ heuresSommeil: 7 }), 'dim 27/09 · nuit 7 h');
+  assert.equal(ligne({ heuresSommeil: 4 }), 'dim 27/09 · nuit 4 h ou moins');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:bien', heuresSommeil: 10 }), 'dim 27/09 · nuit Bien · 10 h ou plus');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:moyen' }), 'dim 27/09 · nuit Moyen');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', reveilsNocturnes: 1, heureCoucher: '23:40', heureLever: '06:50' }), 'dim 27/09 · nuit Mal (1 réveil) · coucher 23:40 lever 06:50');
+  assert.equal(ligne({ reveilsNocturnes: 5 }), 'dim 27/09 · nuit · (5 réveils ou plus)');
+  // Une valeur hors bornes (fichier abîmé) ne s'écrit pas.
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 12 }), 'dim 27/09 · nuit Mal');
 });

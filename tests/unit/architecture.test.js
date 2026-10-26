@@ -39,8 +39,12 @@ test('aucun script ni style en ligne dans index.html', () => {
   assert.ok(!/\son[a-z]+=/.test(html), 'gestionnaire en ligne');
 });
 
-test('pas de toISOString().slice(0, 10) pour fabriquer une date du jour', () => {
-  for (const f of js) assert.ok(!/toISOString\(\)\s*\.\s*(slice|substring|substr)\(\s*0\s*,\s*10\s*\)/.test(lire(f)), rel(f));
+// Les tests et les scripts aussi (relecture v8 : CLAUDE.md fait tout passer par domain/dates.js). Ce fichier, qui écrit la
+// règle, est le seul à part.
+const AUSSI = [...lister(join(RACINE, 'tests'), (p) => p.endsWith('.js') && !p.endsWith('architecture.test.js')),
+  ...lister(join(RACINE, 'scripts'), (p) => /\.m?js$/.test(p))];
+test('pas de toISOString().slice(0, 10) pour fabriquer une date du jour, ni dans l\'app, ni dans les tests et les scripts', () => {
+  for (const f of [...js, ...AUSSI]) assert.ok(!/toISOString\(\)\s*\.\s*(slice|substring|substr)\(\s*0\s*,\s*10\s*\)/.test(lire(f)), rel(f));
 });
 
 test('pas d\'eval ni de new Function dans le code de l\'app', () => {

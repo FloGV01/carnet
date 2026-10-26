@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { RACINE, lister, rel, lire, chainesJs } from '../aides/fichiers.js';
 import { trouverInterdits, normaliser } from '../aides/mots-interdits.js';
-import { SEED_V2_AJOUTS, SEED_V4_AJOUTS } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS } from '../../public/js/domain/vocabulaire.js';
 import { LISTES } from '../../public/js/domain/listes-def.js';
 
 // Les libellés des listes (vocabulaire clinique) sont exemptés : ils ne se lissent pas.
@@ -34,6 +34,13 @@ test('aucune formulation interdite dans les listes de la v6', () => {
   assert.equal(textes.length, 27);
   const fautes = textes.map((t) => [t, trouverInterdits(t)]).filter(([, f]) => f.length);
   assert.deepEqual(fautes, []);
+});
+
+// La liste de la v8 (sujets d'un rendez-vous) et son titre : mêmes règles.
+test('aucune formulation interdite dans la liste de la v8', () => {
+  const textes = [...SEED_V6_AJOUTS.sujetRdv.map(([, libelle]) => libelle), LISTES.sujetRdv.libelle];
+  assert.equal(textes.length, 8);
+  assert.deepEqual(textes.map((t) => [t, trouverInterdits(t)]).filter(([, f]) => f.length), []);
 });
 
 test('aucune formulation interdite dans le pas-à-pas du rappel', () => {

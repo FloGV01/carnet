@@ -34,7 +34,19 @@ export const CONTACT = { avec: T.refs('contactAvec'), effet: T.ref('contactEffet
 // D'où une séance a été lancée (v7) : l'onglet Bien-être, Moment difficile ou la carte « Pour récupérer, je… ».
 export const ORIGINES_SEANCE = Object.freeze(['bien-etre', 'moment-difficile', 'ressourcer']);
 
+// Durée de la nuit (v8) : un nombre d'heures entier, de « 4 h ou moins » à « 10 h ou plus » (spec v8 §7 bis).
+export const HEURES_SOMMEIL = Object.freeze({ min: 4, max: 10 });
+// « 4 h ou moins », « 6 h », « 10 h ou plus » ; null pour une valeur hors de la liste.
+export function texteHeuresSommeil(h) {
+  if (!Number.isInteger(h) || h < HEURES_SOMMEIL.min || h > HEURES_SOMMEIL.max) return null;
+  if (h === HEURES_SOMMEIL.min) return `${h} h ou moins`;
+  if (h === HEURES_SOMMEIL.max) return `${h} h ou plus`;
+  return `${h} h`;
+}
+
 // cles : champs techniques. saisis : champs que l'utilisateur renseigne.
+// heuresSommeil (v8) : la durée de la nuit qui précède le jour, comme sommeilRessenti ; 4 veut dire
+// « 4 h ou moins » et 10 « 10 h ou plus ». Coucher, lever et réveils restent pour les nuits déjà notées.
 export const SCHEMAS = {
   journal: {
     cles: { date: T.date },
@@ -43,6 +55,7 @@ export const SCHEMAS = {
       sportMouvement: T.bool, explosions: T.int(0, 5), traitementPris: T.ref('traitementPris'), pointsPositifs: T.texte,
       heureCoucher: T.heure, heureLever: T.heure, reveilsNocturnes: T.int(0, 5), notes: T.texte,
       activites: T.lignes(ACTIVITE), contacts: T.lignes(CONTACT), pese: T.refs('pese'), recharge: T.refs('recharge'),
+      heuresSommeil: T.int(HEURES_SOMMEIL.min, HEURES_SOMMEIL.max),
     },
   },
   episodes: {
@@ -86,9 +99,11 @@ export const SCHEMAS = {
   // Date calendaire réelle et heure, rattachées au jour par jourEvenement, comme l'humeur du moment.
   // exercice : `coherence` ou l'identifiant d'un exercice, posé par l'app, donc obligatoire (spec v7 §6.3) :
   // une séance sans exercice est refusée. origine : l'écran d'où elle a été lancée.
+  // v8, posés par l'app : fin vaut true pour une séance menée jusqu'au bout, et rien sinon (une séance de la
+  // v7 n'en a pas) ; programme est l'id de la séance du Programme d'où elle a été lancée, et rien ailleurs.
   seances: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure, exercice: T.texte },
-    saisis: { dureeS: T.int(0, 86400), origine: T.choix(ORIGINES_SEANCE) },
+    saisis: { dureeS: T.int(0, 86400), origine: T.choix(ORIGINES_SEANCE), fin: T.vrai, programme: T.texte },
   },
 };
 export const STORES_SAISIE = Object.keys(SCHEMAS);

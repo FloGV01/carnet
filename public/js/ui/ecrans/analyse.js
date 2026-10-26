@@ -2,7 +2,8 @@
 // tuiles (dont « Tes émotions ») ; puis, selon la période : Mes jours, ta journée heure par heure, contacts et
 // mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les chiffres. v7 : plus aucune
 // phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de ressemblance).
-// Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache jusqu'à la prochaine écriture.
+// Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache jusqu'à la prochaine écriture, et la
+// base n'est pas relue avant (v8).
 import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -20,27 +21,20 @@ import { JOURS, jourSemaine, formaterPlage } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
 import { ONGLETS as PORTES_COMPRENDRE } from './comprendre.js';
 import { versHash } from '../../routeur.js';
+import { pourAffichage } from '../../domain/typographie.js';
+import { lireSiChange, lireBase } from '../lecture.js';
 
 const FENETRES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }, { valeur: '90', libelle: '3 mois' }, { valeur: 'tout', libelle: 'Tout' }];
 // Les plus fréquents : l'émotion du moment (les mots de la roue), puis les listes des épisodes, symptômes et traitements.
 const NOMS_CLASSEMENT = { emotionMoment: 'Émotion du moment', declencheur: 'Déclencheur', dessous: 'En dessous', emotion: 'Émotion (épisodes)', reaction: 'Réaction', symptome: 'Symptôme', effetSecondaire: 'Effet secondaire' };
 
-let cache = null;
-
-export async function calculerAnalyse() {
-  const [journal, episodes, symptomes, traitements, humeurs, seances, items, ecriture, zeroDepuis] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.humeurs.tous(), repo.seances.tous(),
-    repo.listes.items(), repo.meta.lire('derniereEcriture'), repo.meta.lire('explosionsDepuis'),
-  ]);
-  const aujourdhui = repo.aujourdhui();
-  const cle = `${ecriture}|${aujourdhui}|${zeroDepuis}`;
-  if (cache && cache.cle === cle) return cache.valeur;
+// Le calcul, et avant lui la lecture de la base, ne se refont que si la base a changé (v8, Q26, ui/lecture.js).
+export const calculerAnalyse = () => lireSiChange('analyse', async () => {
+  const { journal, episodes, symptomes, traitements, humeurs, seances, items, explosionsDepuis: zeroDepuis } = await lireBase();
   await new Promise((ok) => setTimeout(ok, 0));
-  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs, seances }, { aujourdhui, items, zeroDepuis });
-  const valeur = { resultat, items, carte: carteLibelles(items), zeroDepuis };
-  cache = { cle, valeur };
-  return valeur;
-}
+  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs, seances }, { aujourdhui: repo.aujourdhui(), items, zeroDepuis });
+  return { resultat, items, carte: carteLibelles(items), zeroDepuis };
+});
 
 // En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
 // avec le carré de sa couleur (deux touchers pour chaque onglet, v6.1). Elles passent à la ligne en grand texte.
@@ -160,6 +154,8 @@ function DetailsBarres({ f, items, carte }) {
 const jours = (n) => `${n} jour${n > 1 ? 's' : ''}`;
 
 // Tous les chiffres : les anciennes tuiles de l'humeur (moyenne, journées à 7 ou plus, à 4 ou moins) sont retirées (v7).
+// v8 : la durée de nuit vient aussi des heures notées le soir ; Réveils, Coucher et Lever, qui ne se notent plus le soir, ne
+// gardent leur tuile que pour une période qui en a.
 function Tuiles({ f, carte }) {
   const lib = (id) => carte.get(id) || id;
   const r = f.nuits.reveils;
@@ -167,9 +163,9 @@ function Tuiles({ f, carte }) {
     <${Tuile} rubrique="expl" titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />
     <${Tuile} rubrique="sommeil" titre=${`Nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'}
       detail=${f.nuits.n ? `${lib('sommeil:moyen')} ${f.nuits.moyen} · ${lib('sommeil:bien')} ${f.nuits.bien}` : ''} />
-    <${Tuile} rubrique="sommeil" titre="Réveils" valeur=${r.n ? moyenneReveils(r) : '·'} detail=${r.n ? 'moyenne' : ''} fragile=${r.n > 0 && r.fragile} />
-    <${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />
-    <${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />
+    ${r.n > 0 && html`<${Tuile} rubrique="sommeil" titre="Réveils" valeur=${moyenneReveils(r)} detail="moyenne" fragile=${r.fragile} />`}
+    ${f.nuits.nCoucher > 0 && html`<${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />`}
+    ${f.nuits.nLever > 0 && html`<${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />`}
     <${Tuile} rubrique="sommeil" titre="Durée de nuit" valeur=${f.nuits.duree ? duree(f.nuits.duree) : '·'} detail=${f.nuits.duree ? 'médiane' : ''} />
     <${Tuile} rubrique="contact" titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} detail=${detailJours(f.contactDetail.avec, lib)} />
     ${f.contactDetail.effet.jours > 0 && html`<${Tuile} rubrique="contact" titre="Comment c'était" valeur=${jours(f.contactDetail.effet.jours)} detail=${detailJours(f.contactDetail.effet, lib)} />`}
@@ -187,7 +183,7 @@ const detailJours = (d, lib) => d.par.slice(0, 3).map((x) => `${lib(x.id)} ${x.n
 
 function Chiffres({ f, nEmotions }) {
   const lignes = [
-    ['Émotions du moment', nEmotions], ['Explosions', f.explosions.n], ['Nuits', f.nuits.n], ['Réveils', f.nuits.reveils.n],
+    ['Émotions du moment', nEmotions], ['Explosions', f.explosions.n], ['Nuits', f.nuits.n], ['Durée de nuit', f.nuits.nDuree], ['Réveils', f.nuits.reveils.n],
     ['Coucher', f.nuits.nCoucher], ['Lever', f.nuits.nLever], ['Contact humain', f.contact.n], ['Lieu', f.lieux.n],
     ['Sport / mouvement', f.sport.n], ['Traitement pris', f.traitement.n], ['Intensité des épisodes', f.episodes.nIntensite],
   ];
@@ -234,7 +230,7 @@ export function Analyse() {
       <section class="section-analyse">
         <h2 class="titre-section">Les plus fréquents</h2>
         <ul class="liste carte carte-groupe classements">${Object.entries(NOMS_CLASSEMENT).map(([liste, nom]) => html`<li class="ligne-classement">
-          <span class="nom-classement">${nom}</span><span>${phraseClassement(liste, cl[liste], carte, liste === 'emotionMoment' ? libRoue : undefined)}</span></li>`)}</ul>
+          <span class="nom-classement">${nom}</span><span>${pourAffichage(phraseClassement(liste, cl[liste], carte, liste === 'emotionMoment' ? libRoue : undefined))}</span></li>`)}</ul>
       </section>
 
       <${Repli} cle="tous-chiffres" titre="Tous les chiffres" memoriser=${false}>

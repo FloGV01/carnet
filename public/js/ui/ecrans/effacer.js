@@ -6,6 +6,7 @@ import { toutEffacer } from '../../db/sauvegarde.js';
 import { afficherToast } from '../composants/toast.js';
 import { useSauvegarde } from '../sauvegarde.js';
 import { reinitialiserHistorique } from './historique.js';
+import { oublierLectures } from '../lecture.js';
 
 // Ce que « Tout effacer » efface (toutEffacer, db/sauvegarde.js) : chaque store de données y est nommé.
 export const TEXTE_EFFACER = 'Toutes les journées, épisodes, symptômes, relevés d\'émotion du moment, notes, séances de Bien-être, '
@@ -21,6 +22,7 @@ export function Effacer() {
     await toutEffacer(repo);
     try { Object.keys(localStorage).filter((k) => k.startsWith('carnet:')).forEach((k) => localStorage.removeItem(k)); } catch { /* indisponible */ }
     reinitialiserHistorique();
+    oublierLectures();
     afficherToast('Tout est effacé.', null, 3000);
     location.hash = '#/aujourdhui';
   };

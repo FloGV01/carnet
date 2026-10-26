@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems, normLabel } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems, normLabel } from '../../public/js/domain/vocabulaire.js';
 import { LISTES, NOMS_LISTES } from '../../public/js/domain/listes-def.js';
 import { RACINE } from '../aides/fichiers.js';
 
@@ -13,7 +13,7 @@ test('97 éléments, ids uniques et bien préfixés, 12 listes', () => {
   assert.equal(items.length, 97);
   assert.equal(new Set(items.map((i) => i.id)).size, 97);
   for (const it of items) assert.ok(it.id.startsWith(`${it.liste}:`), it.id);
-  assert.deepEqual([...Object.keys(SEED_V1), ...Object.keys(SEED_V2_AJOUTS), ...Object.keys(SEED_V4_AJOUTS)].sort(), [...NOMS_LISTES].sort());
+  assert.deepEqual([...Object.keys(SEED_V1), ...Object.keys(SEED_V2_AJOUTS), ...Object.keys(SEED_V4_AJOUTS), ...Object.keys(SEED_V6_AJOUTS)].sort(), [...NOMS_LISTES].sort());
 });
 
 test('ajouts v4 : ids uniques, listes nouvelles, aucun recouvrement avec SEED_V1', () => {
@@ -64,6 +64,21 @@ test('ajouts v6 : les trois listes sont modifiables (sans sens figé) et nommée
   assert.equal(LISTES.recharge.libelle, 'Ce qui a rechargé');
   assert.equal(LISTES.activiteMoment.libelle, 'Ce que je faisais');
   for (const nom of ['pese', 'recharge', 'activiteMoment']) assert.ok(!LISTES[nom].sensFixe, nom);
+});
+
+// SEED_V6_AJOUTS (DB_VERSION 6, app v8) : les sujets d'un rendez-vous (spec v8 §7, Q22), écrits en dur.
+test('ajouts v8 : les sept sujets d\'un rendez-vous, dans l\'ordre, ids figés, une liste nouvelle et modifiable', () => {
+  const v6 = seedItems(SEED_V6_AJOUTS, 'x');
+  assert.deepEqual(v6.map((i) => i.id), ['sujetRdv:sommeil', 'sujetRdv:traitement', 'sujetRdv:explosions', 'sujetRdv:fatigue',
+    'sujetRdv:travail', 'sujetRdv:emotions', 'sujetRdv:autre']);
+  assert.deepEqual(v6.map((i) => i.libelle), ['Sommeil', 'Traitement', 'Explosions', 'Fatigue', 'Travail', 'Émotions', 'Autre chose']);
+  assert.deepEqual(v6.map((i) => i.ordre), [10, 20, 30, 40, 50, 60, 70]);
+  assert.ok(v6.every((i) => i.liste === 'sujetRdv' && !i.exclusif && !i.horsClassement && !i.agreable && !i.archive && i.origine === 'defaut'));
+  assert.deepEqual(Object.keys(SEED_V6_AJOUTS), ['sujetRdv']);
+  for (const seed of [SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS]) assert.ok(!('sujetRdv' in seed));
+  assert.ok(Object.isFrozen(SEED_V6_AJOUTS));
+  assert.equal(LISTES.sujetRdv.libelle, "Sujets d'un rendez-vous");
+  assert.ok(!LISTES.sujetRdv.sensFixe, 'on peut ajouter, renommer, réordonner et archiver un sujet');
 });
 
 test('instantané des ids : SEED_V1 est figé', () => {

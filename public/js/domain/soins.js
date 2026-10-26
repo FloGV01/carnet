@@ -2,6 +2,7 @@
 // date future, du jour ou absente = à venir.
 import { addDays, jourEvenement, formaterJourCourt, formaterJourMois, formaterHeure } from './dates.js';
 import { libelle } from './libelles.js';
+import { minusculeInitiale } from './phrase.js';
 
 export function statutRdv(rdv, aujourdhui) {
   return rdv.date && rdv.date < aujourdhui ? 'passe' : 'a-venir';
@@ -54,6 +55,33 @@ export function reprendreQuestion(rdvCible, question) {
   const questions = rdvCible.questions || [];
   if (dejaPosee(questions, question.texte)) return questions;
   return [...questions, { texte: question.texte, abordee: false, ...(question.lien ? { lien: { ...question.lien } } : {}) }];
+}
+
+// Sujets d'un rendez-vous (v8, Q22) : un toucher sur « Sommeil » pose la question « Parler de : sommeil » (l'initiale
+// en minuscule, sauf un sigle). Le sujet paraît choisi tant que sa question est là telle quelle ; un second toucher
+// la retire, sauf cochée « abordée » : basculerSujet renvoie alors null et rien ne change (relecture : la coche nourrit
+// « La dernière fois » et l'A4 des soignants, et la pastille ne se présente pas comme une suppression ; le ✕ de la
+// question la retire). Une question modifiée ensuite est à l'utilisateur : le sujet ne la touche plus (un toucher en
+// repose une). L'app n'écrit rien sur le fond : le sujet seulement.
+export const questionSujet = (libelleSujet) => `Parler de : ${minusculeInitiale(String(libelleSujet).trim())}`;
+export const sujetsPoses = (questions, sujets) => sujets.filter((s) => dejaPosee(questions, questionSujet(s.libelle))).map((s) => s.id);
+export function basculerSujet(questions, libelleSujet) {
+  const liste = questions || [];
+  const texte = questionSujet(libelleSujet);
+  const posees = liste.filter((q) => q.texte.trim() === texte);
+  if (posees.some((q) => q.abordee)) return null;
+  if (posees.length > 0) return liste.filter((q) => q.texte.trim() !== texte);
+  return [...liste, { texte, abordee: false }];
+}
+
+// Modifier une question sur place (v8) : le texte sur une ligne, sans espaces autour ; la case et le lien restent.
+// Renvoie null si rien ne change : texte vide (on retire une question par ✕), identique, ou déjà posé par une autre.
+export function modifierQuestion(questions, i, texte) {
+  const liste = questions || [];
+  const t = String(texte ?? '').replace(/\s+/g, ' ').trim();
+  if (!liste[i] || !t || t === liste[i].texte) return null;
+  if (dejaPosee(liste.filter((_, k) => k !== i), t)) return null;
+  return liste.map((q, k) => (k === i ? { ...q, texte: t } : q));
 }
 
 const couper = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);

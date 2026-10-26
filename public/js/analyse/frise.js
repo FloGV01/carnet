@@ -78,7 +78,7 @@ export function frise({ journal = [], episodes = [], humeurs = [], seances = [] 
       };
       // Un jour se touche dès qu'il porte une saisie que le détail sait montrer (sans rangée oui / non).
       col.aDonnee = col.humeur != null || col.emotions.length > 0 || col.nuit != null || col.explosions > 0 || col.autres > 0 || col.energieBasse === true
-        || col.bienEtre || Boolean(j && (j.reveilsNocturnes != null || j.lieu || (j.contacts || []).length || (j.activites || []).length));
+        || col.bienEtre || Boolean(j && (j.reveilsNocturnes != null || j.heuresSommeil != null || j.lieu || (j.contacts || []).length || (j.activites || []).length));
       colonnes.push(col);
     }
     return { pas, colonnes, ...avec(colonnes) };

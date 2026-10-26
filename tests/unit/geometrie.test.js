@@ -167,8 +167,19 @@ test('v7 · Mes jours, rangée Bien-être : le même repère pour chaque colonne
   assert.deepEqual(bie.libelle, ['Bien-être']);
   assert.equal(g.rangees.at(-1).cle, 'bienEtre', 'la dernière rangée, sous l\'énergie basse');
   assert.deepEqual(g.bienEtre.map((m) => m.cle), ['2026-10-01', '2026-10-04']);
-  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && !('n' in m)), 'la même marque, sans nombre');
+  assert.ok(g.bienEtre.every((m) => m.y === bie.y && m.h === bie.h && m.r === g.bienEtre[0].r && !('n' in m)), 'la même marque, sans nombre');
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Relecture finale : un losange plein (le contour arrondi se lisait « 0 » sur 30 jours), dans sa rangée, et deux
+  // colonnes voisines gardent un écart, à 7 colonnes comme à 30 ou à 60 (par mois).
+  for (const n of [7, 30, 60]) {
+    const cols = Array.from({ length: n }, (_, i) => jour(`2026-${String(1 + Math.floor(i / 28)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`, { bienEtre: true, aDonnee: true }));
+    const gn = geometrieMesJours({ pas: 'jour', colonnes: cols, avecBienEtre: true });
+    const r = gn.bienEtre[0].r;
+    assert.equal(gn.bienEtre.length, n);
+    assert.ok(r >= 1.5 && r <= gn.bienEtre[0].h / 2, `${n} colonnes : r = ${r}`);
+    assert.ok(2 * r <= gn.largeurColonne - 1, `${n} colonnes : ${2 * r} pour une colonne de ${gn.largeurColonne}`);
+    assert.ok(gn.bienEtre.every((m) => m.x - m.r >= DIM_MES_JOURS.gauche - 1e-9 && m.x + m.r <= gn.dim.largeur), `${n} colonnes : dans le cadre`);
+  }
   // Par semaine : un repère, qu'il y ait une séance ou dix dans la semaine.
   const semaines = geometrieMesJours({ pas: 'semaine', colonnes: [{ cle: '2026-09-28', bienEtre: true, aDonnee: true }, { cle: '2026-10-05', bienEtre: false }], avecBienEtre: true });
   assert.equal(semaines.bienEtre.length, 1);
@@ -329,40 +340,6 @@ test('v6 · Comprendre, colonnes par lieu : étiquettes sur deux rangs quand les
   assert.equal(g4.hauteur, d.hauteur);
 });
 
-const nuit = (cle, n, coucher, lever) => ({ cle, n, fragile: n < 3, coucher: n ? coucher : null, lever: n ? lever : null });
-
-test('v6 · Comprendre, nuits : axe de 20 h en haut à 12 h en bas, trait plein à 3 nuits, pointillé à 1 ou 2, absent sans nuit', async () => {
-  const { geometrieNuits, DIM_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  const colonnes = [nuit(0, 5, 1380, 1860), nuit(1, 2, 1440, 1920), nuit(2, 0), nuit(3, 3, 1200, 2160), nuit(4, 1, 1530, 1950), nuit(5, 0), nuit(6, 4, 1410, 1890)];
-  const g = geometrieNuits(colonnes);
-  const y = (m) => r1(d.haut + ((m - 1200) / 960) * (d.bas - d.haut));
-  assert.deepEqual(g.graduations.map((t) => [t.texte, t.y]), [['20 h', d.haut], ['0 h', y(1440)], ['4 h', y(1680)], ['8 h', y(1920)], ['12 h', d.bas]]);
-  assert.deepEqual(g.traits.map((t) => t.cle), [0, 1, 3, 4, 6], 'absent sans nuit');
-  assert.deepEqual(g.traits.map((t) => t.plein), [true, false, true, false, true]);
-  assert.deepEqual([g.traits[0].y1, g.traits[0].y2], [y(1380), y(1860)], 'du coucher (en haut) au lever (en bas)');
-  assert.deepEqual([g.traits[2].y1, g.traits[2].y2, g.traits[2].horsAxe], [d.haut, d.bas, false], 'sur les bords, pas hors de l\'axe');
-  assert.deepEqual(g.marques, []);
-  assert.deepEqual(g.etiquettes.map((e) => e.cle), [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
-});
-
-test('v6 · Comprendre, nuits : une médiane hors de l\'axe est ramenée au bord, avec horsAxe et une marque', async () => {
-  const { geometrieNuits, DIM_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
-  // Coucher à 18:30 (avant 20 h), lever à 13:30 (après 12 h), et les deux à la fois.
-  const colonnes = [nuit(0, 4, 1110, 1860), nuit(1, 3, 1380, 2250), nuit(2, 1, 900, 2400), nuit(3, 0), nuit(4, 0), nuit(5, 0), nuit(6, 0)];
-  const g = geometrieNuits(colonnes);
-  assert.deepEqual(g.traits.map((t) => [t.cle, t.horsAxe]), [[0, true], [1, true], [2, true]]);
-  assert.equal(g.traits[0].y1, d.haut);
-  assert.equal(g.traits[1].y2, d.bas);
-  assert.deepEqual([g.traits[2].y1, g.traits[2].y2], [d.haut, d.bas]);
-  assert.deepEqual(g.marques.map((m) => [m.cle, m.sens]), [[0, 'haut'], [1, 'bas'], [2, 'haut'], [2, 'bas']]);
-  for (const m of g.marques) {
-    assert.equal(m.x, g.traits.find((t) => t.cle === m.cle).x);
-    assert.ok(m.sens === 'haut' ? m.yPointe < m.yBase && m.yBase <= d.haut : m.yPointe > m.yBase && m.yBase >= d.bas, 'la marque pointe hors de l\'axe');
-  }
-  assert.deepEqual(horsCadre(g, d.largeur, d.hauteur), []);
-});
-
 test('v6 · Comprendre, activités : une barre par activité, longue comme ses relevés, découpée en énergie basse, moyenne et haute', async () => {
   const { geometrieActivites, DIM_BARRES: d } = await import('../../public/js/ui/graphes/geometrie.js');
   const g = geometrieActivites([
@@ -411,8 +388,8 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
   assert.equal(libelleAutres({ oui: 0, n: 0, peu: true }), null);
   const carte = new Map([['sommeil:mal', 'Mal'], ['energie:basse', 'Basse']]);
   const lib = (id) => carte.get(id) || id;
-  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'nuits', 'activites', 'peseRecharge',
-    'apresNuit', 'autourExplosions', 'autourBienEtre']);
+  assert.deepEqual(GRAPHES, ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau', 'semaine', 'lieu', 'mois', 'mesNuits', 'activites',
+    'peseRecharge', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']);
   const phrases = new Set();
   for (const graphe of GRAPHES) {
     for (const mesure of ['emotions', 'nuitMal', 'explosion', 'energieBasse']) {
@@ -423,12 +400,18 @@ test('v6 · Comprendre, textes : « 6 sur 10 », « · (peu de valeurs) », rien
         assert.match(p, /« Voir en tableau »\.$/);
         phrases.add(p);
       }
+      // v8 · Mes nuits a sa propre fenêtre, quelle que soit la période choisie.
+      if (graphe === 'mesNuits') {
+        assert.equal(p3, pt);
+        assert.match(pt, /^Mes nuits, sur les quatre dernières semaines : /);
+        continue;
+      }
       assert.match(p3, /sur les trois derniers mois/);
       assert.match(pt, /sur tout ce que tu as noté/);
     }
   }
-  // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas.
-  assert.equal(phrases.size, 2 * (10 + 3 * 4));
+  // Les colonnes disent leur mesure ; les autres graphiques n'en ont pas ; Mes nuits ne dit pas la période.
+  assert.equal(phrases.size, 2 * (10 + 3 * 4) + 1);
   assert.match(phraseAria('semaine', 'tout', lib, 'nuitMal'), /nuits notées Mal/);
 });
 
@@ -458,9 +441,12 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   }
   // Les nombres sont ceux de seuils.js.
   for (const g of ['explosionsAvant', 'explosionsApres', 'energieAvant', 'retoursBureau']) assert.match(R[g], new RegExp(`au moins ${S.minEvenements} `), g);
-  for (const g of ['semaine', 'lieu', 'mois', 'nuits']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
+  for (const g of ['semaine', 'lieu', 'mois']) assert.match(R[g], new RegExp(`au moins ${S.minColonnes} .* au moins ${S.minValeurs} `), g);
   assert.match(R.activites, new RegExp(`${S.minActivite} relevés`));
-  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  for (const g of ['emotions', 'emotionsLieu', 'apresNuit', 'autourExplosions', 'autourBienEtre', 'emotionsActivites']) assert.match(R[g], new RegExp(`au moins ${SEUILS.emotions.minReleves} émotions du moment`), g);
+  // v8 · Mes nuits : sa fenêtre vient de SEUILS.comprendre ; Q18 nomme la liste « Ce que je faisais ».
+  assert.match(R.mesNuits, new RegExp(`les ${S.nuitsSemaines} dernières semaines`));
+  assert.match(R.emotionsActivites, /« Ce que je faisais »/);
   for (const g of ['autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`), g);
   // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit.
   assert.match(R.autourBienEtre, /séance lancée depuis Bien-être/);
@@ -471,6 +457,37 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   assert.doesNotMatch(bloc, /\d/);
   // Pas de libellé de liste modifiable (« basse ») dans une règle : il peut être renommé dans Réglages › Listes.
   assert.doesNotMatch(R.energieAvant, /«/);
+});
+
+test('v8 · Comprendre, Mes nuits : une ligne par nuit notée, une barre longue comme ses heures à la teinte de sa qualité, aucune sans durée', async () => {
+  const { geometrieMesNuits, DIM_MES_NUITS: d } = await import('../../public/js/ui/graphes/geometrie.js');
+  const nuits = [
+    { date: '2026-10-01', heures: 6, qualite: 'sommeil:mal' },
+    { date: '2026-10-02', heures: 12, qualite: 'sommeil:moyen' },
+    { date: '2026-10-03', heures: null, qualite: 'sommeil:bien' },
+    { date: '2026-10-05', heures: 4, qualite: null },
+  ];
+  const g = geometrieMesNuits(nuits);
+  assert.equal(g.lignes.length, 4, 'une ligne par nuit notée, rien pour le 04');
+  assert.deepEqual(g.lignes.map((l) => l.date), nuits.map((n) => n.date));
+  assert.deepEqual(g.lignes.map((l) => l.barre && l.barre.classe), ['sommeil-1', 'sommeil-2', null, 'creuse']);
+  // L'axe va de 0 à 12 h : 12 h remplit la piste, 6 h la moitié, 4 h le tiers ; toutes les barres partent de 0 h.
+  assert.equal(g.max, 12);
+  assert.deepEqual(g.graduations.map((t) => t.texte), ['0 h', '4 h', '8 h', '12 h']);
+  const piste = g.lignes[1].barre.l;
+  assert.equal(r1(g.lignes[0].barre.l), r1(piste / 2));
+  assert.equal(r1(g.lignes[3].barre.l), r1(piste / 3));
+  assert.ok(g.lignes.every((l) => !l.barre || l.barre.x === d.barreX));
+  assert.equal(g.graduations[0].x, d.barreX);
+  assert.ok(g.lignes.every((l, i) => i === 0 || l.y > g.lignes[i - 1].y), 'de haut en bas, dans l\'ordre des jours');
+  // Le texte, à droite, ne chevauche pas la piste.
+  assert.ok(d.barreX + piste <= g.texteX - d.texteL);
+  assert.deepEqual(horsCadre(g, d.largeur, g.hauteur), []);
+  // Une nuit ancienne de 14 h : l'axe va jusqu'à 16 h, et rien ne sort du cadre.
+  const longue = geometrieMesNuits([...nuits, { date: '2026-10-06', heures: 14, qualite: null }]);
+  assert.equal(longue.max, 16);
+  assert.deepEqual(longue.graduations.map((t) => t.texte), ['0 h', '4 h', '8 h', '12 h', '16 h']);
+  assert.deepEqual(horsCadre(longue, d.largeur, longue.hauteur), []);
 });
 
 // ---------- v6 · repères de traitement (spec §3) ----------

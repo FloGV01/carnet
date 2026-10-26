@@ -1,5 +1,5 @@
 // Écran d'ouverture : l'entrée du jour, saisie en quelques touchers, sans bouton « Enregistrer ».
-import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
+import { html, useEffect, useLayoutEffect, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useEtatApp, useIndicateur, ecrireAvecEssais, lireLocal, ecrireLocal } from '../hooks.js';
 import { addDays, JOURS, jourSemaine, jourEvenement, estAvantBascule, formaterJour, formaterVers } from '../../domain/dates.js';
@@ -19,20 +19,30 @@ import { TeteRubrique } from '../composants/rubrique.js';
 import { sensGlissement, departIgnore } from '../glissement.js';
 import { phraseResume, minusculeInitiale } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
-import { normaliserJournee, champsAffiches, repliAffiche, NOM_PESE_RECHARGE } from '../../domain/journee.js';
+import { normaliserJournee, champsAffiches, repliAffiche, repliNuitAffiche, NOM_PESE_RECHARGE, NOM_NUIT } from '../../domain/journee.js';
+import { HEURES_SOMMEIL, texteHeuresSommeil } from '../../domain/champs.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { familleDe } from '../../domain/roue.js';
 import { texteReleve, famillesDuJour } from '../../domain/releves.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
-import { resumeContacts } from '../../domain/contacts.js';
 import { prochainRdv } from '../../domain/soins.js';
 import { libelleRdv } from './soins.js';
+import { noterMargeSoir } from '../mesures.js';
 
 const HUMEURS = Array.from({ length: 10 }, (_, i) => ({ valeur: i + 1, libelle: String(i + 1) }));
 const EXPLOSIONS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: String(i) }));
 const REVEILS = Array.from({ length: 6 }, (_, i) => ({ valeur: i, libelle: i === 5 ? '5 ou plus' : String(i) }));
+// Durée de la nuit (v8, spec §7 bis) : « 4 h ou moins · 5 h · … · 10 h ou plus ». « ou moins » et « ou plus » passent sous
+// le nombre, en petit (la précision d'une pastille) ; VoiceOver lit le libellé entier.
+const HEURES = Array.from({ length: HEURES_SOMMEIL.max - HEURES_SOMMEIL.min + 1 }, (_, i) => {
+  const h = HEURES_SOMMEIL.min + i;
+  const texte = texteHeuresSommeil(h);
+  return { valeur: h, libelle: texte.replace(/ (ou \w+)$/, ' ($1)'), aria: texte };
+});
+// Les textes que prend « Durée › » : ouvert, il garde la largeur du plus long.
+const TEXTES_LIEN_DUREE = ['Durée', ...HEURES.map((h) => h.aria)];
 
 // actuel : la valeur choisie, ou les valeurs d'un choix multiple. Un élément archivé encore choisi
 // reste proposé (en dernier) pour pouvoir être vu et retiré.
@@ -43,12 +53,6 @@ export function options(items, liste, actuel) {
     .sort((a, b) => Number(a.archive) - Number(b.archive) || a.ordre - b.ordre)
     .map((i) => ({ valeur: i.id, libelle: i.libelle }));
 }
-
-// Détails du soir (v4) : « Marche 30 à 60 min · Vélo » ; « Famille, Collègues · Coûteux ».
-function resumeSport(e, carte) {
-  return (e.activites || []).map((a) => [a.type && libelle(carte, a.type), a.duree && libelle(carte, a.duree)].filter(Boolean).join(' ')).filter(Boolean).join(' · ');
-}
-const resumeContact = (e, carte) => resumeContacts(e.contacts, (id) => libelle(carte, id));
 
 // Plusieurs contacts (v5) : une ligne par contact (avec qui, comment c'était), comme les activités.
 function DetailContact({ entree, items, surChanger }) {
@@ -148,7 +152,6 @@ function useGlissementJour(surGlisser) {
 // Le dernier jour atteint en glissant, et de quel côté : sa page entre de ce côté (un petit déplacement de 200 ms au
 // plus, supprimé avec « Réduire les animations »), le temps de l'animation.
 let dernierGlissement = null;
-const DUREE_ENTREE_MS = 400;
 
 // depuisHistorique (v6.1) : le jour a été ouvert depuis l'Historique. « ‹ Retour » y ramène, à la même position,
 // et ‹ › changent de jour sans quitter l'onglet Historique. « Revenir à aujourd'hui » reste, comme ouvert autrement.
@@ -161,6 +164,15 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   const [entree, setEntree] = useState(null);
   const [generation, setGeneration] = useState(0);
   const [confirmerEffacer, setConfirmerEffacer] = useState(false);
+  // Détails ouverts depuis le lien d'une carte (v8, Q5) : « Durée › » du Sommeil, « Détail › » du Sport et du Contact.
+  // Fermés au départ, à chaque ouverture de l'écran et à chaque changement de jour ; jamais ouverts seuls.
+  const [details, setDetails] = useState({ date, ouverts: [] });
+  const ouverts = details.date === date ? details.ouverts : [];
+  useEffect(() => { setDetails((d) => (d.date === date ? d : { date, ouverts: [] })); }, [date]);
+  const basculerDetail = (cle) => () => setDetails((d) => {
+    const avant = d.date === date ? d.ouverts : [];
+    return { date, ouverts: avant.includes(cle) ? avant.filter((c) => c !== cle) : [...avant, cle] };
+  });
   // « J'ai fini pour ce soir » (v5) : préférence d'affichage de cet appareil, jamais une donnée
   // (rien n'est compté ni marqué ailleurs). La page repliée montre la phrase du jour.
   const cleFini = `carnet:fini:${date}`;
@@ -208,16 +220,48 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     if (d) dernierGlissement = { date: d, sens };
   });
   const glisse = dernierGlissement && dernierGlissement.date === date ? dernierGlissement.sens : null;
+  const charge = Boolean(donnees && entree && entree.date === date);
+  const refPage = useRef(null);
+  // L'entrée finit avec les animations du jour arrivé (v8, Q31), et non plus avec une minuterie de 400 ms lancée avant
+  // l'arrivée de ses données : quand elles tardaient, la minuterie finissait d'abord, et le jour entrait sans glisser (ou
+  // à moitié). Sans animation (« Réduire les animations »), elle finit tout de suite. Un nouveau glissement pendant
+  // l'entrée coupe ses animations : leur fin ne touche pas à l'entrée du jour suivant.
   useEffect(() => {
-    if (!glisse) return undefined;
-    const t = setTimeout(() => { dernierGlissement = null; rafraichir(); }, DUREE_ENTREE_MS);
-    return () => clearTimeout(t);
-  }, [glisse, date]);
+    if (!glisse || !charge) return undefined;
+    const cetteEntree = dernierGlissement;
+    let fini = false;
+    const finir = () => {
+      if (fini || dernierGlissement !== cetteEntree) return;
+      fini = true;
+      dernierGlissement = null;
+      rafraichir();
+    };
+    const page = refPage.current;
+    const entrees = page && page.getAnimations
+      ? page.getAnimations({ subtree: true }).filter((a) => String(a.animationName || '').startsWith('entree-')) : [];
+    if (entrees.length) Promise.all(entrees.map((a) => a.finished)).then(finir, finir);
+    else finir();
+    return () => { fini = true; };
+  }, [glisse, charge, date]);
   useEffect(() => () => { dernierGlissement = null; }, []);
   const classeEcran = `ecran aujourdhui${glisse ? ` entree-${glisse === 'precedent' ? 'veille' : 'lendemain'}` : ''}`;
+  // Le Diagnostic (v8, Q27) : la marge du soir, reprise à chaque affichage et quand la fenêtre change de taille. Celle du
+  // soir d'aujourd'hui seulement : un autre jour (glissé, ou ouvert depuis l'Historique) a « Revenir à aujourd'hui » ou
+  // « ‹ Retour » en plus, et sa marge n'est pas celle du soir à saisir (relecture : 36 px d'écart). Et détails fermés
+  // seulement (relecture finale) : la durée se note par « Durée › », qui reste ouverte après le choix ; ouverte, elle (ou
+  // le détail du Sport, du Contact) allonge le soir, et le Diagnostic disait « le soir défile » d'un soir qui tient.
+  const soirDuJour = date === aujourdhui && !depuisHistorique;
+  const aMesurer = soirDuJour && ouverts.length === 0;
+  useLayoutEffect(() => { if (aMesurer) noterMargeSoir(refPage.current); });
+  useEffect(() => {
+    if (!aMesurer) return undefined;
+    const surTaille = () => noterMargeSoir(refPage.current);
+    window.addEventListener('resize', surTaille);
+    return () => window.removeEventListener('resize', surTaille);
+  }, [aMesurer]);
 
-  if (!donnees || !entree || entree.date !== date) {
-    return html`<main class=${classeEcran}><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;
+  if (!charge) {
+    return html`<main class=${classeEcran} ref=${refPage}><${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur="repos" surRetour=${retour} /></main>`;
   }
 
   const { items, baseVide, journee } = donnees;
@@ -263,37 +307,60 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     return ecrireAvecEssais(() => repo.journal.patch(date, changements), signaler);
   };
   // Une rubrique du soir (2b) : une carte, en tête le carré à sa couleur et son titre, puis ses choix.
-  const carteChamp = (teinte, tete, contenu) => html`<div class=${`champ-jour carte-champ teinte-${teinte}`}>${tete}${contenu}</div>`;
+  const carteChamp = (cle, teinte, tete, ...contenu) => html`<div key=${cle} class=${`champ-jour carte-champ teinte-${teinte}`}>${tete}${contenu}</div>`;
+  // Le lien d'une carte vers son détail (v8, Q5).
+  const lien = (cle, nom, texte, reserve) => ({ texte, nom, ouvert: ouverts.includes(cle), controle: `detail-${cle}`, surToucher: basculerDetail(cle), reserve });
+  const heures = texteHeuresSommeil(entree.heuresSommeil);
   const CHAMPS = {
-    lieu: () => carteChamp('lieu', html`<${TeteRubrique} icone="lieu" libelle="Lieu" />`,
+    lieu: () => carteChamp('lieu', 'lieu', html`<${TeteRubrique} icone="lieu" libelle="Lieu" />`,
       html`<${Pastilles} etiquette="Lieu" options=${options(items, 'lieu', entree.lieu)} valeur=${entree.lieu} surChoix=${ecrire('lieu')} colonnes=${3} teinte="lieu" />`),
-    sommeil: () => carteChamp('sommeil', html`<${TeteRubrique} icone="sommeil" libelle="Sommeil" sous="nuit dernière" />`,
-      html`<${Segmente} etiquette="Sommeil" options=${options(items, 'sommeil', entree.sommeilRessenti)} valeur=${entree.sommeilRessenti} surChoix=${ecrire('sommeilRessenti')} teinte="sommeil" />`),
-    humeur: () => carteChamp('humeur', html`<${TeteRubrique} icone="humeur" libelle="Humeur" />`,
+    // Sommeil (v8, spec §7 bis) : la qualité, puis la durée de la nuit. Le soir ne tiendrait plus sans défiler avec les deux
+    // rangées (docs/decisions.md) : la Durée s'ouvre par « Durée › », qui dit la durée notée (« 6 h › ») et, ouvert, garde
+    // la largeur de la plus longue (en grand texte, noter une durée ne fait pas passer le titre à la ligne).
+    sommeil: () => carteChamp('sommeil', 'sommeil', html`<${TeteRubrique} icone="sommeil" libelle="Sommeil" sous="nuit dernière"
+        lien=${lien('duree', heures ? `Durée de la nuit : ${heures}` : 'Durée de la nuit', heures || 'Durée', TEXTES_LIEN_DUREE)} />`,
+      html`<${Segmente} etiquette="Sommeil" options=${options(items, 'sommeil', entree.sommeilRessenti)} valeur=${entree.sommeilRessenti} surChoix=${ecrire('sommeilRessenti')} teinte="sommeil" />`,
+      ouverts.includes('duree') && html`<div class="detail-duree" id="detail-duree">
+        <${Pastilles} etiquette="Durée de la nuit" options=${HEURES} valeur=${entree.heuresSommeil ?? null} surChoix=${ecrire('heuresSommeil')} classe="heures-sommeil" teinte="sommeil" />
+      </div>`),
+    humeur: () => carteChamp('humeur', 'humeur', html`<${TeteRubrique} icone="humeur" libelle="Humeur" />`,
       html`<${Pastilles} etiquette="Humeur" ariaPrefixe="Humeur" options=${HUMEURS} valeur=${entree.humeur} surChoix=${ecrire('humeur')} colonnes=${5} classe="chiffres" teinte="humeur" />`),
-    contact: () => carteChamp('contact', html`<${TeteRubrique} icone="contact" libelle="Contact humain" />`,
+    contact: () => carteChamp('contact', 'contact', html`<${TeteRubrique} icone="contact" libelle="Contact humain" lien=${lien('contact', 'Contact en détail', 'Détail')} />`,
       html`<${OuiNon} etiquette="Contact humain" valeur=${entree.contactHumain} surChoix=${ecrire('contactHumain')} teinte="contact" />`),
-    sport: () => carteChamp('sport', html`<${TeteRubrique} icone="sport" libelle="Sport / mouvement" />`,
+    sport: () => carteChamp('sport', 'sport', html`<${TeteRubrique} icone="sport" libelle="Sport / mouvement" lien=${lien('sport', 'Sport en détail', 'Détail')} />`,
       html`<${OuiNon} etiquette="Sport / mouvement" valeur=${entree.sportMouvement} surChoix=${ecrire('sportMouvement')} teinte="sport" />`),
-    explosions: () => carteChamp('expl', html`<${TeteRubrique} icone="explosions" libelle="Explosions" />`,
+    explosions: () => carteChamp('explosions', 'expl', html`<${TeteRubrique} icone="explosions" libelle="Explosions" />`,
       html`<${Pastilles} etiquette="Explosions" ariaPrefixe="Explosions" options=${EXPLOSIONS} valeur=${entree.explosions} surChoix=${ecrire('explosions')} colonnes=${6} classe="chiffres" teinte="expl" />`),
-    traitement: () => carteChamp('trt', html`<${TeteRubrique} icone="traitement" libelle="Traitement pris" />`,
+    traitement: () => carteChamp('traitement', 'trt', html`<${TeteRubrique} icone="traitement" libelle="Traitement pris" />`,
       html`<${Segmente} etiquette="Traitement pris" options=${options(items, 'traitementPris', entree.traitementPris)} valeur=${entree.traitementPris} surChoix=${ecrire('traitementPris')} teinte="trt" />`),
-    positifs: () => carteChamp('pos', html`<${TeteRubrique} icone="positifs" libelle="Mes points positifs" />`,
+    positifs: () => carteChamp('positifs', 'pos', html`<${TeteRubrique} icone="positifs" libelle="Mes points positifs" />`,
       html`<${ChampTexte} key=${`${date}-pp-${generation}`} id="points-positifs" etiquette=${null} ariaLabel="Mes points positifs" valeur=${entree.pointsPositifs}
         placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
         cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />`),
   };
-  // Champs dans l'ordre choisi ; Contact et Sport côte à côte quand ils se suivent.
+  // Le détail du Sport et du Contact (v8, Q5) : une carte en pleine largeur, sous la paire (ou sous sa carte), ouverte par
+  // le lien « Détail › » de sa carte. Leurs replis ont quitté la liste.
+  const DETAILS = {
+    contact: () => html`<div key="detail-contact" id="detail-contact" class="champ-jour carte-champ carte-detail teinte-contact">
+      <${TeteRubrique} icone="contact" libelle="Contact en détail" />
+      <${DetailContact} entree=${entree} items=${items} surChanger=${ecrireContacts} />
+    </div>`,
+    sport: () => html`<div key="detail-sport" id="detail-sport" class="champ-jour carte-champ carte-detail teinte-sport">
+      <${TeteRubrique} icone="sport" libelle="Sport en détail" />
+      <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
+    </div>`,
+  };
+  const detailsDe = (champs) => champs.filter((c) => DETAILS[c] && ouverts.includes(c)).map((c) => DETAILS[c]());
+  // Champs dans l'ordre choisi ; Contact et Sport côte à côte quand ils se suivent, leurs détails ouverts dessous.
   const rendreChamps = () => {
     const blocs = [];
     for (let i = 0; i < visibles.length; i++) {
       const c = visibles[i];
       const suivant = visibles[i + 1];
       if ((c === 'contact' && suivant === 'sport') || (c === 'sport' && suivant === 'contact')) {
-        blocs.push(html`<div class="deux-colonnes">${CHAMPS[c]()}${CHAMPS[suivant]()}</div>`);
+        blocs.push(html`<div key="paire" class="deux-colonnes">${CHAMPS[c]()}${CHAMPS[suivant]()}</div>`, ...detailsDe([c, suivant]));
         i += 1;
-      } else blocs.push(CHAMPS[c]());
+      } else blocs.push(CHAMPS[c](), ...detailsDe([c]));
     }
     return blocs;
   };
@@ -337,7 +404,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     ? html`<button type="button" class="btn-lien action fini-bouton" onClick=${() => terminer(true)}>${Icones.replierSoiree({ trait: 2 })}J'ai fini pour ce soir</button>`
     : null;
 
-  return html`<main class=${classeEcran}>
+  return html`<main class=${classeEcran} ref=${refPage}>
     <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} familles=${familles} surRetour=${retour}
       veille=${enVeille ? `Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.` : null} />
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
@@ -353,7 +420,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
       <span>Après coup (TCC) · tes épisodes récents</span>${Icones.chevron({ trait: 2 })}</a>`}
 
     ${!replie && html`<div class="replis carte carte-groupe">
-      ${(visibles.includes('sommeil') || resumeNuit(entree)) && html`<${Repli} cle="nuit" titre="Nuit en détail" resume=${resumeNuit(entree)} icone="sommeil" teinte="sommeil" resumeSous=${true}>
+      ${repliNuitAffiche(journee, entree) && html`<${Repli} cle="nuit" titre=${NOM_NUIT} resume=${resumeNuit(entree)} icone="sommeil" teinte="sommeil" resumeSous=${true}>
         <${ChampHeure} id="coucher" etiquette="Coucher" sous="la veille" valeur=${entree.heureCoucher} surChoix=${ecrire('heureCoucher')} />
         <${ChampHeure} id="lever" etiquette="Lever" valeur=${entree.heureLever} surChoix=${ecrire('heureLever')} />
         <div class="champ-jour">
@@ -370,12 +437,6 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
           <span class="etiquette">Ce qui a rechargé</span>
           <${PastillesMultiples} etiquette="Ce qui a rechargé" options=${options(items, 'recharge', entree.recharge)} valeurs=${entree.recharge} surChoix=${ecrire('recharge')} classe="colonnes-2 grille-choix pese-recharge" />
         </div>
-      </${Repli}>`}
-      ${visibles.includes('sport') && html`<${Repli} cle="sport" titre="Sport en détail" resume=${resumeSport(entree, carte)} memoriser=${false} icone="sport" teinte="sport" resumeSous=${true}>
-        <${DetailSport} entree=${entree} items=${items} surChanger=${ecrireActivites} />
-      </${Repli}>`}
-      ${visibles.includes('contact') && html`<${Repli} cle="contact" titre="Contact en détail" resume=${resumeContact(entree, carte)} memoriser=${false} icone="contact" teinte="contact" resumeSous=${true}>
-        <${DetailContact} entree=${entree} items=${items} surChanger=${ecrireContacts} />
       </${Repli}>`}
       <${Repli} cle="notes" titre="Notes libres" resume=${entree.notes ? entree.notes.slice(0, 40) : null} icone="note" resumeSous=${true}>
         <${ChampTexte} key=${`${date}-notes-${generation}`} id="notes" etiquette=${null} ariaLabel="Notes libres" valeur=${entree.notes} lignes=${3}

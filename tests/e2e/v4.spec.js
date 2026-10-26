@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, entreeDuJour, viderBase, aller } from '../aides/saisie.js';
+import { tuile, mot } from '../aides/emotion.js';
 
 // v4 : humeur du moment (émotion du moment en v7), détails du soir, Mon plan, Après coup, Ma journée, Analyse.
 const repo = (page, f, arg) => page.evaluate(f, arg);
@@ -10,18 +11,18 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('émotion du moment (v7) : famille et énergie, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
+test('émotion du moment (v8) : une tuile et un mot, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
   const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
-  await vue.getByRole('group', { name: 'Émotion' }).getByRole('button', { name: 'Sérénité' }).click();
-  await vue.getByRole('group', { name: 'Énergie' }).getByRole('button', { name: 'Moyenne' }).click();
+  await tuile(vue, 'Moyenne', 'agréable').click();
+  await mot(vue, 'Calme', 'Sérénité').click();
   await expect(page.getByText('Émotion du moment notée')).toBeVisible();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   const releves = () => repo(page, () => window.__carnet.repo.humeurs.tous());
-  await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', emotion: 'roue:serenite', humeur: null, energie: 'energie:moyenne' }]);
+  await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', emotion: 'roue:serenite:calme', humeur: null, energie: 'energie:moyenne' }]);
   // Une nouvelle ouverture crée un nouveau relevé ; la liste du jour montre les précédents.
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
-  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 Sérénité · énergie moyenne');
+  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 Calme · énergie moyenne');
   await vue.getByRole('button', { name: 'Supprimer le relevé de 18:42' }).click();
   await expect.poll(async () => (await releves()).length).toBe(0);
   await page.getByRole('button', { name: 'Annuler' }).click();
@@ -107,14 +108,14 @@ test('après coup (v5 : tout épisode) : étapes passables, « Je ne sais pas »
 test('Réglages › Le soir : afficher le compteur et l\'humeur du soir, changer l\'ordre ; Aujourd\'hui suit', async ({ page }) => {
   await page.evaluate(() => { location.hash = '#/reglages/journee'; });
   await page.getByRole('switch', { name: 'Afficher Explosions (compteur du soir)' }).click();
-  // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici.
+  // v6 : l'Humeur du soir est masquée par défaut, elle se réaffiche ici (« Nuit en détail », masqué depuis la v8, le reste).
   await page.getByRole('switch', { name: 'Afficher Humeur' }).click();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
   await expect(page.getByRole('button', { name: 'Monter Humeur' })).toBeFocused();
   await page.getByRole('button', { name: 'Monter Humeur' }).click();
   await expect(page.getByRole('button', { name: 'Monter Humeur' })).toHaveAttribute('aria-disabled', 'true');
   await expect.poll(async () => { const j = await repo(page, () => window.__carnet.repo.meta.lire('journee')); return [j.masques, j.ordre.slice(0, 3)]; })
-    .toEqual([[], ['humeur', 'lieu', 'sommeil']]);
+    .toEqual([['nuit'], ['humeur', 'lieu', 'sommeil']]);
   await page.evaluate(() => { location.hash = '#/aujourdhui'; });
   await expect(groupe(page, 'Explosions')).toHaveCount(1);
   const groupes = await page.locator('.ecran.aujourdhui [role="group"]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));

@@ -1,22 +1,25 @@
 // Comprendre (v6, spec §2) : les calculs de l'écran. Les facteurs de chaque jour logique et le graphique
 // aligné : des jours repères (explosions, jours à énergie basse, retours au bureau), lus à quelques jours de
-// décalage. Puis les colonnes (jour de la semaine, lieu, mois), les nuits selon le soir du coucher, l'énergie
-// selon ce que je faisais, et ce qui a pesé ou rechargé. Des comptes seulement, rassemblés : jamais une cause,
-// jamais une phrase calculée. v7 : la note de 1 à 10 n'est plus une mesure ; les colonnes comptent les émotions du
-// moment par famille (emotions.js). La date du jour arrive par la période, qui finit aujourd'hui. Pur.
-import { addDays, jourEvenement, jourSemaine, JOURS } from '../domain/dates.js';
+// décalage. Puis les colonnes (jour de la semaine, lieu, mois), l'énergie selon ce que je faisais, et ce qui a pesé ou
+// rechargé. Des comptes seulement, rassemblés : jamais une cause, jamais une phrase calculée. v7 : la note de 1 à 10
+// n'est plus une mesure ; les colonnes comptent les émotions du moment par famille (emotions.js). v8 : Mes nuits (Q15),
+// nuit par nuit ; l'énergie haute et l'hyperfocus avant les jours à énergie basse (Q17). « Tes nuits selon le jour »
+// (les nuits selon le soir du coucher) est retiré le 26/10 : le soir ne propose plus le coucher et le lever, Mes nuits
+// le remplace. La date du jour arrive par la période, qui finit aujourd'hui. Pur.
+import { addDays, jourEvenement, JOURS } from '../domain/dates.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
-import { energieBasseParJour } from './energie-jour.js';
+import { energieBasseParJour, energieHauteParJour } from './energie-jour.js';
 import { famillesParJour, famillesParColonnes } from './emotions.js';
 import { ordreDeListe, clesDeColonnes, colonneDe } from './colonnes.js';
-import { bornesFenetre, dureeNuit, coucherAjuste, enMinutes, versHeure } from './fenetres.js';
-import { mediane } from './stats.js';
+import { bornesFenetre, dureeNuit } from './fenetres.js';
 import { SEUILS } from './seuils.js';
 
 const S = SEUILS.comprendre;
 const NUIT_MAL = 'sommeil:mal';
 const BUREAU = 'lieu:bureau';
 const COUTEUX = 'contactEffet:couteux';
+const HYPERFOCUS = 'symptome:hyperfocus';
+const QUALITES = new Set(['sommeil:mal', 'sommeil:moyen', 'sommeil:bien']);
 
 // « 3 mois · Tout » (§2.1) : « 3 mois » est la fenêtre « 90 » de l'Analyse ; « Tout » par défaut.
 export const PERIODES = ['3mois', 'tout'];
@@ -42,17 +45,35 @@ function contactCouteux(j) {
   return null;
 }
 
+// Hyperfocus (v8, Q17) : le symptôme noté ce jour-là. Map date → true dès une fiche Hyperfocus, false si les fiches du
+// jour sont d'autres symptômes. L'id fait foi, quel que soit son libellé, même archivé.
+function hyperfocusParJour(symptomes) {
+  const res = new Map();
+  for (const s of symptomes || []) {
+    if (!s || typeof s.date !== 'string') continue;
+    res.set(s.date, res.get(s.date) === true || s.symptome === HYPERFOCUS);
+  }
+  return res;
+}
+
 // Les facteurs de chaque jour logique, rangés par date. Chaque jour garde aussi son lieu (pour les colonnes) et
 // les familles de ses émotions du moment, une par relevé (v7). Un jour a une entrée dès qu'il porte une saisie du
-// soir, un relevé d'énergie ou d'émotion, ou un épisode d'explosion.
-export function facteursParJour({ journal = [], humeurs = [], episodes = [], zeroDepuis = null } = {}) {
+// soir, un relevé d'énergie ou d'émotion, un épisode d'explosion, ou (v8) une fiche de symptôme.
+// v8 (Q17) : energieHaute comme energieBasse (oui dès un relevé « haute », non avec des relevés d'énergie sans « haute »,
+// inconnue sans relevé) ; hyperfocus oui le jour d'une fiche Hyperfocus, non un jour qui a une saisie du soir ou une
+// autre fiche de symptôme (on aurait pu le noter), inconnu sinon : comme les explosions, un jour de relevés seuls ne
+// vaut jamais « non ».
+export function facteursParJour({ journal = [], humeurs = [], episodes = [], symptomes = [], zeroDepuis = null } = {}) {
   // Comme l'Analyse (analyse/index.js) : les explosions. Un jour qui n'a que des relevés n'a pas de saisie du soir :
   // il ne vaut jamais 0 explosion.
-  const entrees = journalAvecExplosions(journal, episodes, { zeroDepuis, jourNote: saisieDuSoir(journal) });
+  const soir = saisieDuSoir(journal);
+  const entrees = journalAvecExplosions(journal, episodes, { zeroDepuis, jourNote: soir });
   const energie = energieBasseParJour(humeurs);
+  const haute = energieHauteParJour(humeurs);
+  const hyperfocus = hyperfocusParJour(symptomes);
   const familles = famillesParJour(humeurs, '0000-01-01', '9999-12-31');
   const presentes = new Set(entrees.map((j) => j.date));
-  for (const date of [...energie.keys(), ...familles.keys()]) if (!presentes.has(date)) { entrees.push({ date }); presentes.add(date); }
+  for (const date of [...energie.keys(), ...familles.keys(), ...hyperfocus.keys()]) if (!presentes.has(date)) { entrees.push({ date }); presentes.add(date); }
   entrees.sort((a, b) => a.date.localeCompare(b.date));
   return new Map(entrees.map((j) => [j.date, {
     date: j.date,
@@ -60,6 +81,8 @@ export function facteursParJour({ journal = [], humeurs = [], episodes = [], zer
     familles: familles.get(j.date) || [],
     nuitMal: selon(j.sommeilRessenti, NUIT_MAL),
     energieBasse: energie.has(j.date) ? energie.get(j.date) : null,
+    energieHaute: haute.has(j.date) ? haute.get(j.date) : null,
+    hyperfocus: hyperfocus.has(j.date) ? hyperfocus.get(j.date) : soir(j) ? false : null,
     contactCouteux: contactCouteux(j),
     bureau: selon(j.lieu, BUREAU),
     explosion: j.explosions == null ? null : j.explosions >= 1,
@@ -156,12 +179,13 @@ export function explosionsApres(jours, periode, items = []) {
 }
 
 // Avant les jours à énergie basse (§2.4). Autres jours : énergie notée sans « basse », sans exclusion
-// de fenêtre (des jours bas fréquents rendraient sinon la comparaison impossible).
+// de fenêtre (des jours bas fréquents rendraient sinon la comparaison impossible). v8 (Q17) : l'énergie haute notée et
+// l'hyperfocus, après les facteurs de la v6.
 export function energieAvant(jours, periode, items = []) {
   return graphe(jours, periode, {
     evenements: joursOu(jours, periode.au, (j) => j.energieBasse === true),
     decalages: AVANT,
-    facteurs: [...fixes('nuitMal', 'contactCouteux', 'bureau', 'explosion'),
+    facteurs: [...fixes('nuitMal', 'contactCouteux', 'bureau', 'explosion', 'energieHaute', 'hyperfocus'),
       ...elements(jours, periode, 'pese', items), ...elements(jours, periode, 'recharge', items)],
     autres: joursDeLaPeriode(jours, periode, (j) => j.energieBasse === false),
   });
@@ -223,30 +247,24 @@ export function parColonnes(jours, periode, { cle: pas, mesure: quoi }, items = 
   return selonSeuil([...parCle].map(([c, js]) => colonneOuiNon(c, js, quoi, motDe[pas](c))));
 }
 
-// ---------- Tes nuits selon le jour (§2.5, graphique 4) ----------
+// ---------- Mes nuits (v8, Q15 et §7 bis) ----------
 
-const LENDEMAIN = 1440; // le lever est le lendemain du coucher, en minutes
-const heureExacte = (m) => (m == null ? null : versHeure(m));
+// Les 4 dernières semaines (SEUILS.comprendre.nuitsSemaines), aujourd'hui compris : la nuit notée aujourd'hui est celle
+// qui vient de passer. Sur l'A4 des soignants, `semaines` peut descendre à 2.
+export function periodeMesNuits(aujourdhui, semaines = S.nuitsSemaines) {
+  return { du: addDays(aujourdhui, -(7 * semaines - 1)), au: aujourdhui };
+}
 
-// Une colonne par soir de coucher, du lundi (0) au dimanche. La nuit notée le jour D (celle qui précède D)
-// est celle du soir D−1 ; la période porte sur D. Une nuit compte si le coucher et le lever sont notés et
-// que dureeNuit n'est pas nul, comme dans l'Analyse. `coucher` et `lever` : médianes en minutes depuis minuit
-// du jour du coucher (un coucher avant 12:00 compte après minuit, donc au-delà de 1440 ; le lever est le
-// lendemain, + 1440) ; heureCoucher et heureLever : les mêmes, en heure exacte, pour le tableau. n === 0 :
-// aucune nuit, tout est null et il n'y a rien à tracer ; à tester avant `fragile` (aussi vrai à n = 0, même
-// règle « moins de 3 valeurs » que `peu` dans aligne()).
-export function nuitsParSoir(journal, periode) {
+// Les nuits notées de la période, dans l'ordre des jours : { date (le jour qui suit la nuit), heures, qualite }. heures :
+// dureeNuit (le nombre d'heures noté le soir, sinon, pour une nuit ancienne, du coucher au lever), ou null ; qualite :
+// l'identifiant Mal · Moyen · Bien, ou null. Une nuit qui n'a ni l'un ni l'autre n'est pas notée : elle n'y est pas. Rien
+// sur l'heure du coucher ni sur la régularité.
+export function mesNuits(journal, periode) {
   const ici = dans(periode);
-  const soirs = Array.from({ length: 7 }, () => []);
-  for (const j of journal || []) {
-    if (!j || !ici(j.date) || dureeNuit(j.heureCoucher, j.heureLever) == null) continue;
-    soirs[jourSemaine(addDays(j.date, -1))].push(j);
-  }
-  return selonSeuil(soirs.map((nuits, cle) => {
-    const coucher = mediane(nuits.map((j) => coucherAjuste(j.heureCoucher)));
-    const lever = mediane(nuits.map((j) => enMinutes(j.heureLever) + LENDEMAIN));
-    return { cle, n: nuits.length, fragile: nuits.length < S.minValeurs, coucher, lever, heureCoucher: heureExacte(coucher), heureLever: heureExacte(lever) };
-  }));
+  return (journal || []).filter((j) => j && typeof j.date === 'string' && ici(j.date))
+    .map((j) => ({ date: j.date, heures: dureeNuit(j), qualite: QUALITES.has(j.sommeilRessenti) ? j.sommeilRessenti : null }))
+    .filter((n) => n.heures != null || n.qualite != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 // ---------- Selon ce que je faisais (§2.4, graphique 3) ----------

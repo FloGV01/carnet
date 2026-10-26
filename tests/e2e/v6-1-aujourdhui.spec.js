@@ -51,7 +51,10 @@ test('ordre : les champs, « Mémo vocal » et « J\'ai fini » sur une ligne, A
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
 });
 
-test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis visible sans défiler à 390 × 844, en clair et en sombre', async ({ page }) => {
+// Au-dessus de la bande du bas, sans défiler, avec les zones sûres de l'iPhone : P3 dans tests/e2e/v7-aujourdhui.spec.js
+// (v8, relecture de la tâche 8 : décision ouverte, docs/decisions.md). Ici, aux tailles de la v6 sans zones sûres, il ne
+// reste que sa présence et sa place.
+test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis présent, en clair et en sombre', async ({ page }) => {
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
@@ -59,11 +62,8 @@ test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis visibl
     await expect(page.getByRole('button', { name: 'Mémo vocal' })).toBeVisible();
     await expect(fini).toHaveCount(0);
     await toucher(page, 'Lieu', 'Bureau');
-    await expect(fini).toBeInViewport({ ratio: 1 });
+    await expect(fini).toBeVisible();
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
-    const bouton = await fini.boundingBox();
-    const bande = await boite(page, '.actions-flottantes');
-    expect(bouton.y + bouton.height).toBeLessThanOrEqual(bande.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
   // Avec un mémo du soir, sa puce passe au-dessus : « J'ai fini » reste sur la ligne du bouton.

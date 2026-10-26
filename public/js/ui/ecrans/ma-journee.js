@@ -6,15 +6,18 @@ import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
-import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE } from '../../domain/journee.js';
+import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, MASQUE_NUIT, NOM_NUIT } from '../../domain/journee.js';
 import { CarreIcone } from '../composants/rubrique.js';
 
 // Le carré de chaque champ (2b) : l'icône et la couleur de sa rubrique, comme ses cartes sur Aujourd'hui.
 const CARRES = {
   lieu: ['lieu', 'lieu'], sommeil: ['sommeil', 'sommeil'], humeur: ['humeur', 'humeur'], contact: ['contact', 'contact'],
   sport: ['sport', 'sport'], explosions: ['explosions', 'expl'], traitement: ['traitement', 'trt'], positifs: ['positifs', 'pos'],
-  [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'],
+  [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'], [MASQUE_NUIT]: ['sommeil', 'sommeil'],
 };
+// Les replis qui se masquent comme un champ, sans place dans l'ordre : « Nuit en détail » (coucher, lever, réveils ;
+// masqué par défaut depuis la v8) et « Ce qui a pesé · ce qui a rechargé ».
+const REPLIS = [[MASQUE_NUIT, NOM_NUIT, 'coucher, lever, réveils'], [MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, null]];
 const Carre = ({ champ }) => (CARRES[champ] ? html`<${CarreIcone} icone=${CARRES[champ][0]} teinte=${CARRES[champ][1]} />` : null);
 
 // meta.journee, lue puis changée par « Le soir » et par Rappels : chaque changement passe par une file
@@ -61,11 +64,11 @@ export function MaJournee() {
       <${Interrupteur} etiquette=${`Afficher ${NOMS_CHAMPS[c]}`} actif=${!j.masques.includes(c)}
         surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== c) : [...x.masques, c] }))} />
     </li>`)}
-      <li class="ligne-champ-reglage">
-        <${Carre} champ=${MASQUE_PESE_RECHARGE} /><span class="ligne-libelle">${NOM_PESE_RECHARGE}</span>
-        <${Interrupteur} etiquette=${`Afficher ${NOM_PESE_RECHARGE}`} actif=${!j.masques.includes(MASQUE_PESE_RECHARGE)}
-          surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== MASQUE_PESE_RECHARGE) : [...x.masques, MASQUE_PESE_RECHARGE] }))} />
-      </li>
+      ${REPLIS.map(([cle, nom, sous]) => html`<li class="ligne-champ-reglage" key=${cle}>
+        <${Carre} champ=${cle} /><span class="ligne-libelle">${nom}${sous && html`<span class="ligne-sous">${sous}</span>`}</span>
+        <${Interrupteur} etiquette=${`Afficher ${nom}`} actif=${!j.masques.includes(cle)}
+          surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== cle) : [...x.masques, cle] }))} />
+      </li>`)}
     </ul>
   </main>`;
 }

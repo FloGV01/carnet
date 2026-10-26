@@ -1,55 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../public/js/analyse/stats.js';
+import { generateur } from '../fixtures/generateur.js';
 
-const proche = (a, b, eps = 1e-3) => assert.ok(Math.abs(a - b) < eps, `${a} ≠ ${b}`);
-
-test('Wilson et Newcombe (exemple de Newcombe 1998 : 56/70 contre 48/80)', () => {
-  const [l, u] = S.wilson(81, 263);
-  proche(l, 0.2553, 1e-3); proche(u, 0.3662, 1e-3);
-  const [a, b] = S.newcombe(56, 70, 48, 80);
-  proche(a, 0.0524, 1e-3); proche(b, 0.3339, 1e-3);
+// v8 (Q32) : stats.js ne garde que la moyenne et la médiane, les seules utilisées par l'app.
+test('stats.js n\'exporte que la moyenne et la médiane', () => {
+  assert.deepEqual(Object.keys(S).sort(), ['mediane', 'moyenne']);
 });
 
-test('Fisher exact bilatéral (tea tasting : 3,1,1,3)', () => {
-  proche(S.fisher(3, 1, 1, 3), 0.4857, 1e-3);
-  proche(S.fisher(10, 0, 0, 10), 1.0825e-5, 1e-6);
-});
-
-test('Benjamini-Hochberg', () => {
-  const q = S.benjaminiHochberg([0.01, 0.04, 0.03, 0.20]);
-  q.forEach((x, i) => proche(x, [0.04, 0.0533, 0.0533, 0.2][i]));
-});
-
-test('Spearman et Spearman partielle', () => {
-  proche(S.spearman([1, 2, 3, 4, 5], [5, 6, 7, 8, 7]), 0.8208);
-  assert.equal(S.spearman([1, 1, 1], [1, 2, 3]), null);
-  const x = [1, 2, 3, 4, 5, 6, 7, 8]; const z = [2, 1, 4, 3, 6, 5, 8, 7]; const y = z.map((v) => v * 2);
-  proche(S.spearmanPartielle(x, y, z), 0, 1e-9);
-});
-
-test('même graine, même p ; permutation par blocs conserve les valeurs', () => {
-  const serie = Array.from({ length: 50 }, (_, i) => i % 3);
-  const perm = S.permuterBlocs(serie, 7, S.generateur(5));
-  assert.deepEqual([...perm].sort(), [...serie].sort());
-  const stat = (s) => Math.abs(S.moyenne(s.slice(0, 25)) - S.moyenne(s.slice(25)));
-  const o = { permutations: 199, blocJours: 7, seed: 1234 };
-  assert.equal(S.testPermutation(serie, stat, o).p, S.testPermutation(serie, stat, o).p);
-});
-
-test('médiane, quantile, écart-type', () => {
+test('moyenne et médiane', () => {
+  assert.equal(S.moyenne([]), null);
+  assert.equal(S.moyenne([2, 4, 9]), 5);
+  assert.equal(S.mediane([]), null);
   assert.equal(S.mediane([3, 1, 2, 10]), 2.5);
-  assert.equal(S.quantile([1, 2, 3, 4, 5], 0.5), 3);
-  proche(S.ecartType([2, 4, 4, 4, 5, 5, 7, 9]), 2.138);
+  assert.equal(S.mediane([5, 1, 3]), 3);
 });
 
-test('versions rapides identiques aux versions de référence', () => {
-  const xs = [0, 2, 1, 1, 2, 0, 2, 1, 0, 2]; const ys = [3, 8, 5, 6, 9, 2, 7, 6, 4, 8];
-  const rx = S.rangsEntiers(Int32Array.from(xs), xs.length, 2, new Float64Array(10));
-  assert.deepEqual(Array.from(rx), S.rangs(xs));
-  const ry = S.rangsEntiers(Int32Array.from(ys), ys.length, 10, new Float64Array(10));
-  proche(S.pearsonTableaux(rx, ry, 10), S.spearman(xs, ys), 1e-12);
-  const serie = Float64Array.from({ length: 30 }, (_, i) => i);
-  const dst = S.creerPermuteur(30, 7)(serie, new Float64Array(30), S.generateur(3));
-  assert.deepEqual([...dst].sort((a, b) => a - b), [...serie]);
+test('générateur des données inventées : même graine, même suite, entre 0 et 1', () => {
+  const a = generateur(5);
+  const b = generateur(5);
+  const xs = Array.from({ length: 50 }, () => a());
+  assert.deepEqual(xs, Array.from({ length: 50 }, () => b()));
+  assert.ok(xs.every((x) => x >= 0 && x < 1));
+  assert.notDeepEqual(xs, Array.from({ length: 50 }, generateur(6)));
 });

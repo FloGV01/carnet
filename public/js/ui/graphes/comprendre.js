@@ -4,14 +4,20 @@
 // familles, et rien d'autre) ; une phrase d'accessibilité fixe, qui dit ce qui est montré et sur quelle période, sans
 // valeur ; « Voir en tableau », qui donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des
 // causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
+// v8 : Mes nuits (Q15), nuit par nuit sur 4 semaines ; Émotions selon ce que je faisais (Q18) ; l'énergie haute et
+// l'hyperfocus dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le jour » est retiré le 26/10 : Mes nuits
+// le remplace.
 import { html, useState } from '../lib.js';
-import { Cadre, LegendeFamilles, LegendeEnergie, famillesPresentes, texteFamilles } from './graphes.js';
+import { Cadre, LegendeFamilles, LegendeEnergie, LegendeNuits, famillesPresentes, texteFamilles } from './graphes.js';
 import { Pourquoi } from '../composants/pourquoi.js';
-import { DIM_ALIGNE, DIM_BARRES, DIM_COLONNES, DIM_NUITS, geometrieActivites, geometrieAligne, geometrieBarres, geometrieColonnes, geometrieNuits } from './geometrie.js';
-import { PIED_EXPLOSIONS, REGLES_COMPRENDRE } from '../../analyse/textes.js';
+import {
+  DIM_ALIGNE, DIM_BARRES, DIM_COLONNES, DIM_MES_NUITS, geometrieActivites, geometrieAligne, geometrieBarres, geometrieColonnes, geometrieMesNuits,
+} from './geometrie.js';
+import { PIED_EXPLOSIONS, REGLES_COMPRENDRE, texteHeuresNuit, texteNuit } from '../../analyse/textes.js';
+import { SEUILS } from '../../analyse/seuils.js';
 import { nombreDeReleves } from '../../analyse/emotions.js';
 import { FAMILLES } from '../../domain/roue.js';
-import { formaterJour, JOURS, JOURS_COURTS, MOIS, MOIS_COURTS } from '../../domain/dates.js';
+import { formaterJour, formaterJourCourt, JOURS, JOURS_COURTS, MOIS, MOIS_COURTS } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
 
 // Le même pied que « Tes moments » dans l'Analyse.
@@ -61,8 +67,9 @@ const G = {
   semaine: { titre: 'Selon le jour de la semaine', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque jour de la semaine` },
   lieu: { titre: 'Selon le lieu', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque lieu` },
   mois: { titre: 'Selon le mois', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque mois` },
-  nuits: { titre: 'Tes nuits selon le jour', rubrique: 'sommeil',
-    montre: () => 'pour chaque soir de la semaine, un trait du coucher au lever, en heures médianes, de vingt heures en haut à midi en bas' },
+  // v8 · Mes nuits : toujours les 4 dernières semaines (SEUILS.comprendre.nuitsSemaines), quelle que soit la période choisie.
+  mesNuits: { titre: 'Mes nuits', rubrique: 'sommeil', sur: 'sur les quatre dernières semaines',
+    montre: () => 'une ligne par nuit notée, avec une barre longue comme les heures dormies, à la teinte de la qualité de la nuit' },
   activites: { titre: 'Selon ce que tu faisais', rubrique: 'energie',
     montre: () => "pour chaque activité, une barre découpée en relevés d'énergie basse, moyenne et haute" },
   peseRecharge: { titre: 'Ce qui a pesé, ce qui a rechargé', rubrique: 'energie',
@@ -74,14 +81,18 @@ const G = {
     montre: () => 'une barre des émotions du moment notées dans les heures avant une explosion, une autre dans les heures après, découpées par famille' },
   autourBienEtre: { titre: 'Autour du Bien-être',
     montre: () => 'une barre des émotions du moment notées dans les heures avant une séance lancée depuis Bien-être, une autre dans les heures après, découpées par famille' },
+  // v8 · Q18
+  emotionsActivites: { titre: 'Émotions selon ce que je faisais',
+    montre: () => 'pour chaque activité de « Ce que je faisais », une barre des émotions du moment notées, découpée par famille, longue comme le nombre de relevés' },
 };
 export const GRAPHES = Object.keys(G);
 
 // La phrase d'accessibilité : fixe, sans valeur, sans classement ni comparaison. `periode` est la clé du
-// sélecteur (« 3mois » ou « tout », PERIODES) : toute autre valeur est une erreur, jamais « Tout » en silence.
+// sélecteur (« 3mois » ou « tout », PERIODES) : toute autre valeur est une erreur, jamais « Tout » en silence. Un
+// graphique qui a sa propre fenêtre (Mes nuits, `sur`) la dit à la place de la période.
 export function phraseAria(graphe, periode, lib, mesure = 'emotions') {
   if (typeof periode !== 'string' || !Object.hasOwn(SUR, periode)) throw new Error(`Période inconnue : ${periode}`);
-  return `${G[graphe].titre}, ${SUR[periode]} : ${G[graphe].montre(lib, mesure)}. Les valeurs sont dans « Voir en tableau ».`;
+  return `${G[graphe].titre}, ${G[graphe].sur || SUR[periode]} : ${G[graphe].montre(lib, mesure)}. Les valeurs sont dans « Voir en tableau ».`;
 }
 
 // Sous un seuil (spec §2.1) : la carte du graphique, son titre, « Pas encore assez de données pour le dire. »
@@ -110,6 +121,9 @@ const FACTEURS = {
   contactCouteux: (lib) => `Contact ${lib('contactEffet:couteux').toLowerCase()}`,
   bureau: () => 'Journée au bureau',
   explosion: () => 'Explosion',
+  // v8 (Q17) : les libellés des listes, s'ils sont renommés.
+  energieHaute: (lib) => `Énergie ${lib('energie:haute').toLowerCase()} notée`,
+  hyperfocus: (lib) => lib('symptome:hyperfocus'),
 };
 function nomBloc(b, lib) {
   if (b.liste) return `${b.liste === 'pese' ? 'A pesé' : 'A rechargé'} : ${lib(b.cle)}`;
@@ -238,27 +252,29 @@ export function GrapheFamilles({ graphe, entete = '', lignes, periode, carte, me
   </${Cadre}>`;
 }
 
-// ---------- Tes nuits selon le jour (spec §2.5, graphique 4) ----------
+// ---------- Mes nuits (v8, Q15 et §7 bis) ----------
 
-export function GrapheNuits({ resultat, periode }) {
-  const { colonnes } = resultat;
-  const g = geometrieNuits(colonnes);
-  const d = DIM_NUITS;
-  const nuits = (c) => `${c.n}${c.fragile ? ` ${PEU}` : ''}`;
-  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Soir</th><th scope="col">Coucher</th><th scope="col">Lever</th><th scope="col">Nuits</th></tr></thead>
-    <tbody>${colonnes.filter((c) => c.n > 0).map((c) => html`<tr><td>${JOURS[c.cle]}</td><td>${c.heureCoucher}</td><td>${c.heureLever}</td><td>${nuits(c)}</td></tr>`)}</tbody></table>`;
+// nuits : mesNuits (analyse/comprendre.js), au moins une avec sa durée. Une ligne par nuit notée ; le texte de chaque
+// ligne dit la qualité et la durée, la teinte et la longueur de la barre les montrent. Rien d'autre : ni phrase, ni
+// moyenne, ni régularité. La barre « Mal », le pas clair de la rampe, a un contour au pas suivant (g-mes-nuits, dans
+// ecrans.css) : sa longueur se lit, en clair comme en sombre, sans toucher aux jetons 2b.
+export function GrapheMesNuits({ nuits, periode, carte }) {
+  const lib = (id) => carte.get(id) || id;
+  const g = geometrieMesNuits(nuits);
+  const d = DIM_MES_NUITS;
+  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Jour</th><th scope="col">Qualité</th><th scope="col">Durée</th></tr></thead>
+    <tbody>${nuits.map((n) => html`<tr><td>${formaterJour(n.date)}</td><td>${n.qualite ? lib(n.qualite) : ''}</td><td>${texteHeuresNuit(n.heures) || ''}</td></tr>`)}</tbody></table>`;
   const legende = html`<p class="legende-graphe legende-frise">
-    <span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-nuit" x1="6" x2="6" y1="3" y2="9" /></svg>du coucher au lever, heures médianes</span>
-    ${g.traits.some((t) => !t.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-nuit g-pointille" x1="6" x2="6" y1="2" y2="11" /></svg>une ou deux nuits</span>`}
-    ${g.marques.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><polygon class="g-marque" points="2,9 10,9 6,3" /></svg>au-delà de l'axe : l'heure est dans le tableau</span>`}
+    <${LegendeNuits} lib=${lib} />
+    ${g.lignes.some((l) => l.barre && l.barre.classe === 'creuse') && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre-creuse" x="1" y="3" width="10" height="6" rx="2" /></svg>qualité non notée</span>`}
   </p>`;
-  return html`<${Cadre} titre=${G.nuits.titre} rubrique=${G.nuits.rubrique} droite="soir du coucher" tableau=${tableau} legende=${legende}
-    dim=${d} aria=${phraseAria('nuits', periode)} pied=${PIED}>
-    ${g.graduations.map((t) => html`<text class="g-axe g-graduation" x="0" y=${t.y}>${t.texte}</text>`)}
-    ${g.filets.map((f) => html`<line class="g-filet" x1=${f.x1} x2=${f.x2} y1=${f.y} y2=${f.y} />`)}
-    ${g.traits.map((t) => html`<line class=${t.plein ? 'g-nuit' : 'g-nuit g-pointille'} x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
-    ${g.marques.map((m) => html`<polygon class="g-marque" points=${`${m.x - 4},${m.yBase} ${m.x + 4},${m.yBase} ${m.x},${m.yPointe}`} />`)}
-    ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${e.y} text-anchor="middle">${JOURS_COURTS[e.cle]}</text>`)}
+  return html`<${Cadre} titre=${G.mesNuits.titre} rubrique=${G.mesNuits.rubrique} classe="g-mes-nuits" droite=${`${SEUILS.comprendre.nuitsSemaines} dernières semaines`}
+    tableau=${tableau} legende=${legende} dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria('mesNuits', periode, lib)} pied=${PIED}>
+    ${g.filets.map((f) => html`<line class="g-filet" x1=${f.x} x2=${f.x} y1=${f.y1} y2=${f.y2} />`)}
+    ${g.graduations.map((t) => html`<text class="g-axe" x=${t.x} y=${t.y} text-anchor="middle">${t.texte}</text>`)}
+    ${g.lignes.map((l, i) => html`<text class="g-axe g-graduation" x="0" y=${l.y}>${formaterJourCourt(l.date)}</text>
+      ${l.barre && html`<rect class=${l.barre.classe === 'creuse' ? 'g-barre-creuse' : `g-${l.barre.classe}`} x=${l.barre.x} y=${l.barre.y} width=${l.barre.l} height=${l.barre.h} rx="2" />`}
+      <text class="g-axe g-graduation" x=${g.texteX} y=${l.y} text-anchor="end">${texteNuit(nuits[i], lib)}</text>`)}
   </${Cadre}>`;
 }
 

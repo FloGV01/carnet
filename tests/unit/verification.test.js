@@ -166,3 +166,26 @@ test('l\'instantané lu n\'est pas modifié', async () => {
   verifierDonnees(instantane);
   assert.deepEqual(instantane, copie);
 });
+
+// v8 : la durée de la nuit et les champs d'une séance du Programme sont vérifiés comme les autres.
+test('v8 : une nuit hors bornes ou une séance au « fin » ou au « programme » mal formés sont illisibles', async () => {
+  const { repo } = nouveauRepo();
+  await repo.journal.patch('2026-09-30', { sommeilRessenti: 'sommeil:moyen', heuresSommeil: 7 });
+  await repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' });
+  await repo.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé.' });
+  const saine = await lireTout(repo);
+  assert.equal(verifierDonnees(saine).fichesIllisibles, 0);
+  const res = verifierDonnees({
+    ...saine,
+    journal: [...saine.journal, { date: '2026-10-01', heuresSommeil: 3 }, { date: '2026-10-02', heuresSommeil: 11 }, { date: '2026-10-03', heuresSommeil: 6.5 }],
+    seances: [
+      ...saine.seances,
+      { id: 'se_2', date: '2026-10-01', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', fin: 'oui' },
+      { id: 'se_3', date: '2026-10-01', heure: '10:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', programme: ['x'] },
+      { id: 'se_4', date: '2026-10-01', heure: '11:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', fin: false },
+    ],
+  });
+  assert.equal(res.fichesIllisibles, 5, 'trois nuits et deux séances ; fin: false se lit « rien »');
+  assert.equal(res.parTable.journal, 4);
+  assert.equal(res.parTable.seances, 4);
+});

@@ -42,8 +42,23 @@ export const CASE_EMOTION = { l: 4.2, h: 2.6, ecart: 1, apres: 3.2, taille: 6.5 
 const LIGNE_INDICATEUR = 3.9;
 const INTERLIGNE_LISTE = 7 * PT * 1.1;
 const largeurTexte = (t, taille) => t.length * taille * PT * LARGEUR_CAR;
+// Nuit par nuit (v8, Q15) : les nuits en 4 colonnes, de haut en bas puis de gauche à droite, dans l'ordre des jours. Chaque
+// nuit : son jour, une barre longue comme ses heures (de 0 à 12 h, plus si une nuit ancienne a duré davantage), à la teinte
+// de sa qualité (la rampe de la frise, creuse sans qualité), puis son texte (« Mal · 6 h »).
+export const NUIT_PAR_NUIT = { colonnes: 4, jourL: 11, barreL: 12, ecart: 1, ligne: 3, barreH: 1.6, taille: 6.5, axeMin: 12, axePas: 4 };
 
+// La page, avec « Nuit par nuit » sur 4 semaines ; si elle dépasse 273 mm, sur 2 semaines ; si elle dépasse encore, sans
+// cette section (le reste de la page ne change jamais). `nuitsSemaines` : la fenêtre retenue (0 sans la section).
 export function mettreEnPage(m) {
+  let page = null;
+  for (const nuits of [...(m.nuits || []), null]) {
+    page = { ...composer(m, nuits), nuitsSemaines: nuits ? nuits.semaines : 0 };
+    if (page.hauteur <= A4.hauteurMax) break;
+  }
+  return page;
+}
+
+function composer(m, nuits) {
   const ops = [];
   const x0 = A4.marge;
   const largeur = A4.largeur - 2 * A4.marge;
@@ -124,6 +139,38 @@ export function mettreEnPage(m) {
     m.frise.reperes && m.frise.reperes.length && 'trait numéroté : changement de traitement (voir Traitement)',
   ].filter(Boolean);
   texte(`${legende.join(' · ')}.`, { taille: 6.5, couleur: 'secondaire' });
+
+  // Nuit par nuit (v8) : la légende au bout de la ligne du titre (ou dessous si elle n'y tient pas), puis les nuits.
+  function nuitParNuit({ semaines, nuits: liste }) {
+    const N = NUIT_PAR_NUIT;
+    const plusLongue = Math.max(0, ...liste.map((n) => n.heures ?? 0));
+    const max = Math.max(N.axeMin, Math.ceil(plusLongue / N.axePas) * N.axePas);
+    const note = `barre : heures dormies, de 0 à ${max} h · date : le jour qui suit la nuit`;
+    titreSection(`Nuit par nuit (${semaines} semaines)`, (yLigne, xMin) => {
+      let x = x0 + largeur - largeurTexte(note, N.taille);
+      if (x < xMin) { y += N.taille * PT * 1.6; yLigne = y; x = x0; }
+      ops.push({ type: 'texte', x, y: yLigne, taille: N.taille, texte: note, couleur: 'secondaire' });
+    });
+    const lColonne = largeur / N.colonnes;
+    const rangs = Math.ceil(liste.length / N.colonnes);
+    const haut = y + 0.4;
+    liste.forEach((n, i) => {
+      const x = x0 + Math.floor(i / rangs) * lColonne;
+      const yy = haut + ((i % rangs) + 1) * N.ligne;
+      const xBarre = x + N.jourL;
+      ops.push({ type: 'texte', x, y: yy, taille: N.taille, texte: n.jour, couleur: 'secondaire', maxLargeur: N.jourL - 0.6 });
+      if (n.heures != null) ops.push({ type: 'nuit', x: xBarre, y: yy - N.barreH - 0.2, l: Math.max(0.4, (n.heures / max) * N.barreL), h: N.barreH, qualite: n.qualite });
+      const xTexte = xBarre + N.barreL + N.ecart;
+      ops.push({ type: 'texte', x: xTexte, y: yy, taille: N.taille, texte: n.texte, couleur: 'texte', maxLargeur: x + lColonne - xTexte - 1.5 });
+    });
+    // Le 0 h des barres de chaque colonne : un filet.
+    for (let c = 0; c * rangs < liste.length; c += 1) {
+      const xBase = x0 + c * lColonne + N.jourL;
+      ops.push({ type: 'ligne', x1: xBase, y1: haut + 0.4, x2: xBase, y2: haut + rangs * N.ligne + 0.6, fin: true });
+    }
+    y = haut + rangs * N.ligne + 1;
+  }
+  if (nuits) nuitParNuit(nuits);
 
   titreSection('Ce qui revient le plus (30 jours)');
   const lc = largeur / 3;

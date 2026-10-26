@@ -1,23 +1,30 @@
 // Bien-être (v7, spec §6.2 et §6.3) : les 8 exercices (identifiants figés, durées de la spec, textes selon les règles
-// d'écriture, repris dans docs/decisions.md pour être relus) et la règle qui crée une séance.
+// d'écriture, repris dans docs/decisions.md pour être relus) et la règle qui crée une séance. v8 (spec §6 et §12.4) : les
+// 8 séances nouvelles du Programme, à la fin, avec les blocs « Arriver » et « Revenir » et les précautions de l'annexe.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { EXERCICES, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT } from '../../public/js/domain/exercices.js';
+import { EXERCICES, BLOCS, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT } from '../../public/js/domain/exercices.js';
 import { doitEnregistrer, nouvelleSeance, dureeSeance, SEANCE_MIN_S } from '../../public/js/domain/seances.js';
 import { normaliser } from '../../public/js/domain/champs.js';
+import { seanceCoherence } from '../../public/js/domain/respiration.js';
+import { seanceProgramme } from '../../public/js/domain/programme.js';
 import { trouverInterdits, normaliser as sansAccents } from '../aides/mots-interdits.js';
 import { RACINE, lire } from '../aides/fichiers.js';
 
-// Les durées de la spec §6.2, dans l'ordre de la liste.
+// Les durées de la spec §6.2, dans l'ordre de la liste ; puis les séances nouvelles du Programme (v8, annexe
+// programme-sophro.md §5), arrondies à la minute.
 const DUREES = {
   'respiration-abdominale': 3, 'respiration-carree': 3, epaules: 5, 'tension-detente': 8,
   'scan-corporel': 10, 'lieu-ressource': 8, 'ancrage-54321': 3, 'pause-une-minute': 1,
+  'les-sons': 5, 'cinq-zones': 6, 'mouvements-lents': 4, 'point-corps': 3, 'marche-lente': 5, 'bon-moment-passe': 6,
+  'moment-a-venir': 6, 'ce-qui-compte': 6,
 };
+const NOUVELLES = Object.keys(DUREES).slice(8);
 const textes = (x) => [x.titre, x.description, ...x.etapes.map((e) => e.texte)];
 
-test('8 exercices, leurs identifiants dans l\'ordre de la spec, figés', () => {
-  assert.equal(EXERCICES.length, 8);
+test('16 exercices (8 de la v7, puis 8 du Programme), leurs identifiants dans l\'ordre de la spec, figés', () => {
+  assert.equal(EXERCICES.length, 16);
   assert.deepEqual(EXERCICES.map((x) => x.id), Object.keys(DUREES));
   assert.ok(Object.isFrozen(EXERCICES));
   for (const x of EXERCICES) {
@@ -57,7 +64,7 @@ test('textes : titre et description sur une ligne, aucun mot interdit, tutoiemen
     for (const e of x.etapes) assert.match(e.texte, /[.?]$/, `une consigne finit par un point : ${e.texte}`);
   }
   // Les titres ne se répètent pas.
-  assert.equal(new Set(EXERCICES.map((x) => x.titre)).size, 8);
+  assert.equal(new Set(EXERCICES.map((x) => x.titre)).size, 16);
 });
 
 // Ni promesse d'effet, ni conseil de santé, ni émotion à atteindre (spec §6.2) ; jamais « positive » ou « négative ».
@@ -73,6 +80,47 @@ test('textes : aucune promesse d\'effet ni conseil de santé', () => {
       assert.deepEqual(PROMESSES.filter((re) => re.test(n)).map(String), [], t);
     }
   }
+});
+
+// Les précautions de l'annexe (§1.6), reprises par la spec §6 : chaque séance nouvelle rappelle qu'on peut s'arrêter ;
+// aucune n'impose de retenir son souffle ni n'a de rythme écrit (ni disque ni souffle) ; rien sur le cœur ; les yeux
+// ouverts sont permis ; les souvenirs ont une sortie écrite. Aucun nom déposé.
+test('v8 · séances nouvelles : les précautions de l\'annexe', () => {
+  const arreter = 'Tu peux t\'arrêter à tout moment.';
+  for (const id of NOUVELLES) {
+    const x = exerciceDe(id);
+    const tout = x.etapes.map((e) => e.texte).join(' ');
+    assert.ok(tout.includes(arreter), `${id} : « ${arreter} »`);
+    assert.ok(x.etapes.every((e) => !e.souffle), `${id} : aucun rythme écrit`);
+    const n = sansAccents(tout);
+    assert.doesNotMatch(n, /\bretien|\bretenir|\bbloque/, `${id} : aucune rétention`);
+    assert.doesNotMatch(n, /\bc(oe|œ)ur\b|battement|pouls/, `${id} : rien sur le cœur`);
+    assert.doesNotMatch(sansAccents(textes(x).join(' ')), /caycedo|sophronis|\brdc\b/, `${id} : aucun nom déposé`);
+    assert.ok(x.posture && x.description, id);
+  }
+  // Les yeux ouverts sont permis : dans le bloc « Arriver », ou dans la séance.
+  for (const id of NOUVELLES) {
+    const n = sansAccents(exerciceDe(id).etapes.map((e) => e.texte).join(' '));
+    assert.ok(/yeux ouverts|garde les yeux|debout|marche/.test(n), `${id} : les yeux ouverts permis`);
+  }
+  // Les souvenirs (un moment passé) ont une sortie écrite.
+  assert.ok(exerciceDe('bon-moment-passe').etapes.some((e) => /ouvre les yeux.*arrêter/.test(e.texte)));
+});
+
+test('v8 · les blocs « Arriver » (60 s) et « Revenir » (55 s) ouvrent et ferment cinq séances nouvelles, tels quels', () => {
+  const duree = (l) => l.reduce((n, e) => n + e.dureeS, 0);
+  assert.equal(duree(BLOCS.arriver), 60);
+  assert.equal(duree(BLOCS.revenir), 55);
+  assert.ok(Object.isFrozen(BLOCS) && Object.isFrozen(BLOCS.arriver) && Object.isFrozen(BLOCS.revenir));
+  const avecBlocs = NOUVELLES.filter((id) => exerciceDe(id).etapes[0] === BLOCS.arriver[0]);
+  assert.deepEqual(avecBlocs, ['les-sons', 'cinq-zones', 'bon-moment-passe', 'moment-a-venir', 'ce-qui-compte']);
+  for (const id of avecBlocs) {
+    const { etapes } = exerciceDe(id);
+    assert.deepEqual(etapes.slice(0, 4), [...BLOCS.arriver], id);
+    assert.deepEqual(etapes.slice(-4), [...BLOCS.revenir], id);
+  }
+  // Les huit exercices de la v7 n'ont pas changé de texte (spec §6) : ils ne prennent aucun bloc.
+  for (const x of EXERCICES.slice(0, 8)) assert.ok(!x.etapes.some((e) => BLOCS.arriver.includes(e) || BLOCS.revenir.includes(e)), x.id);
 });
 
 test('les titres et les étapes sont repris dans docs/decisions.md, pour être relus par l\'utilisateur, avec leurs durées', () => {
@@ -123,6 +171,32 @@ test('exerciceMeneAuBout : la dernière étape atteinte après la moitié de la 
   const seance = (ex, derniereAtteinte, dureeS) => doitEnregistrer({ dureeS, terminee: exerciceMeneAuBout(ex, { derniereAtteinte, dureeS }) });
   assert.deepEqual([seance(pause, true, 5), seance(pause, true, 35), seance(pause, false, 35), seance(scan, true, 50), seance(scan, false, 61)],
     [false, true, false, false, true]);
+});
+
+test('exerciceMeneAuBout : une séance d\'une seule étape (la cohérence cardiaque) n\'est menée au bout qu\'au bout de tout son temps', () => {
+  // Sur sa dernière étape dès le début : « Terminer » après la moitié du temps est un arrêt en route, qui ne date rien
+  // dans le Programme (spec §6 et §12.2), comme dans Moment difficile.
+  const programme = seanceProgramme('coherence', { duree: 2, rythme: '4-6' });
+  assert.equal(programme.etapes.length, 1);
+  assert.equal(dureeExerciceS(programme), 300);
+  for (const dureeS of [0, 150, 151, 299.9]) {
+    assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS }), false, `${dureeS} s sur 300`);
+  }
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 300 }), true);
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 300.2 }), true);
+  assert.equal(exerciceMeneAuBout(programme, { derniereAtteinte: false, dureeS: 300 }), false);
+  // La carte de Bien-être, de 2 min : « Terminer » à 61 s, gardée (60 s au moins) mais pas menée au bout ; à 59 s, rien.
+  const carte = seanceCoherence({ duree: 2, rythme: '5-5' });
+  assert.equal(dureeExerciceS(carte), 120);
+  assert.equal(exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 61 }), false);
+  assert.equal(doitEnregistrer({ dureeS: 59, terminee: exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 59 }) }), false);
+  assert.equal(exerciceMeneAuBout(carte, { derniereAtteinte: true, dureeS: 120 }), true);
+  // Arrêtée à 151 s, elle reste une séance (règle des 60 s), sans `fin`.
+  assert.equal(doitEnregistrer({ dureeS: 151, terminee: exerciceMeneAuBout(programme, { derniereAtteinte: true, dureeS: 151 }) }), true);
+  // Les séances de plusieurs étapes gardent la règle de la moitié (annexe programme-sophro.md, §6.8).
+  for (const ex of EXERCICES) assert.ok(ex.etapes.length > 1, ex.id);
+  const abdo = exerciceDe('respiration-abdominale');
+  assert.equal(exerciceMeneAuBout(abdo, { derniereAtteinte: true, dureeS: dureeExerciceS(abdo) / 2 }), true);
 });
 
 test('doitEnregistrer : une séance menée au bout, ou arrêtée après 60 s au moins', () => {

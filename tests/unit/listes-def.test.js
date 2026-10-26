@@ -26,3 +26,9 @@ test('v6.1 · index des listes : une liste qui sert à plusieurs écrans va sous
   assert.equal(ecranDe('duree'), 'Symptôme');
   assert.equal(ecranDe('effetRessenti'), 'Soins');
 });
+
+// v8 : la liste des sujets d'un rendez-vous se règle sous Soins, en tête : l'onglet Rendez-vous vient avant le Traitement.
+test('v8 · index des listes : les sujets d\'un rendez-vous en tête de Soins', () => {
+  assert.deepEqual(GROUPES_LISTES.find((g) => g.ecran === 'Soins').listes, ['sujetRdv', 'effetSecondaire', 'effetRessenti']);
+  assert.ok(NOMS_LISTES.includes('sujetRdv'));
+});

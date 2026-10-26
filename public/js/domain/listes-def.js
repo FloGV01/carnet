@@ -1,4 +1,4 @@
-// Les listes de l'app (12 en v1, 13 de plus en v4, 3 de plus en v6). sensFixe : on peut renommer,
+// Les listes de l'app (12 en v1, 13 de plus en v4, 3 de plus en v6, 1 de plus en v8). sensFixe : on peut renommer,
 // mais pas compléter, archiver ni réordonner.
 export const LISTES = {
   lieu: { libelle: 'Lieu' },
@@ -31,6 +31,8 @@ export const LISTES = {
   pese: { libelle: 'Ce qui a pesé' },
   recharge: { libelle: 'Ce qui a rechargé' },
   activiteMoment: { libelle: 'Ce que je faisais' },
+  // v8
+  sujetRdv: { libelle: "Sujets d'un rendez-vous" },
 };
 export const NOMS_LISTES = Object.keys(LISTES);
 
@@ -38,14 +40,15 @@ export const NOMS_LISTES = Object.keys(LISTES);
 // Une liste qui sert à plusieurs écrans va sous le premier : Déclencheur sous Épisode (puis Après coup),
 // Professionnel sous Épisode aussi, en dernier : on le choisit d'abord dans « En parler au rendez-vous », au
 // récapitulatif d'un épisode (puis d'un symptôme, d'un Après coup, d'un traitement), avant le rendez-vous et la
-// Vue soignants de Soins. Toutes les listes y sont, une seule fois.
+// Vue soignants de Soins. Les sujets d'un rendez-vous (v8) viennent en tête de Soins : l'onglet Rendez-vous
+// s'ouvre avant celui du traitement. Toutes les listes y sont, une seule fois.
 export const GROUPES_LISTES = [
   { ecran: 'Le soir', listes: ['lieu', 'sommeil', 'contactAvec', 'contactEffet', 'typeSport', 'dureeSport', 'traitementPris', 'pese', 'recharge'] },
   { ecran: 'Émotion du moment', listes: ['energie', 'activiteMoment'] },
   { ecran: 'Épisode', listes: ['declencheur', 'emotion', 'dessous', 'reaction', 'professionnel'] },
   { ecran: 'Après coup', listes: ['typeExplosion', 'fragilite', 'signe', 'piegePensee', 'sourceSurcharge', 'besoin', 'consequenceCourt', 'consequenceLong'] },
   { ecran: 'Symptôme', listes: ['symptome', 'duree'] },
-  { ecran: 'Soins', listes: ['effetSecondaire', 'effetRessenti'] },
+  { ecran: 'Soins', listes: ['sujetRdv', 'effetSecondaire', 'effetRessenti'] },
 ];
 export const estListe = (nom) => Object.prototype.hasOwnProperty.call(LISTES, nom);
 export const listeDe = (id) => (typeof id === 'string' && id.includes(':') ? id.slice(0, id.indexOf(':')) : null);

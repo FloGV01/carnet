@@ -173,3 +173,46 @@ test('v7 · la frise dessine les familles empilées dans l\'ordre de la roue, de
   const g = geometriePage(op);
   assert.ok(Math.abs(g.dim.largeur / g.dim.hauteur - op.largeur / op.hauteur) < 0.01);
 });
+
+// ---------- v8 : Nuit par nuit sur la page dessinée ----------
+
+test('v8 · Nuit par nuit : une barre par nuit qui a sa durée, à la teinte imprimée de sa qualité (celle de la frise), creuse sans qualité', async () => {
+  const { dessinerPage, COULEURS_SOMMEIL, TAILLE_PX } = await import('../../public/js/ui/graphes/dessin-canvas.js');
+  const { mettreEnPage, A4 } = await import('../../public/js/export/page-a4.js');
+  const { modeleSoignants } = await import('../../public/js/export/soignants.js');
+  const { analyze } = await import('../../public/js/analyse/index.js');
+  const { SEED_V1, seedItems } = await import('../../public/js/domain/vocabulaire.js');
+  const { carteLibelles } = await import('../../public/js/domain/libelles.js');
+  const items = seedItems(SEED_V1, 'x');
+  const journal = [
+    { date: '2026-10-10', sommeilRessenti: 'sommeil:mal', heuresSommeil: 5 },
+    { date: '2026-10-11', sommeilRessenti: 'sommeil:moyen', heuresSommeil: 7 },
+    { date: '2026-10-12', sommeilRessenti: 'sommeil:bien', heuresSommeil: 10 },
+    { date: '2026-10-13', heuresSommeil: 6 },
+    { date: '2026-10-14', sommeilRessenti: 'sommeil:bien' },
+  ];
+  const data = { journal, episodes: [], symptomes: [], traitements: [], humeurs: [] };
+  const aujourdhui = '2026-10-14';
+  const m = modeleSoignants(data, { aujourdhui, carte: carteLibelles(items), analyse: analyze(data, { aujourdhui, items }), professionnel: null, prenom: '' });
+  const page = mettreEnPage(m);
+  assert.equal(page.nuitsSemaines, 4);
+  const { toile, appels } = toileNotee();
+  dessinerPage(toile, page);
+  const k = TAILLE_PX.largeur / A4.largeur;
+  const ops = page.ops.filter((o) => o.type === 'nuit');
+  assert.equal(ops.length, 4);
+  // Les barres pleines : à leur place, dans l'ordre des jours, Mal, Moyen puis Bien.
+  const pleines = appels.filter((a) => a.nom === 'fillRect' && COULEURS_SOMMEIL.includes(a.fill) && ops.some((o) => Math.abs(o.x * k - a.args[0]) < 1e-6 && Math.abs(o.y * k - a.args[1]) < 1e-6));
+  assert.deepEqual(pleines.map((a) => COULEURS_SOMMEIL.indexOf(a.fill)), [0, 1, 2]);
+  assert.ok(pleines[2].args[2] > pleines[1].args[2] && pleines[1].args[2] > pleines[0].args[2], 'longues comme les heures');
+  // La nuit sans qualité : un contour, pas un aplat.
+  const creuse = appels.filter((a) => a.nom === 'strokeRect');
+  assert.equal(creuse.length, 1);
+  assert.ok(Math.abs(creuse[0].args[0] - ops[3].x * k) < 1e-6);
+  // Tout dans la page.
+  for (const a of [...pleines, ...creuse]) {
+    assert.ok(a.args[0] >= 0 && a.args[0] + a.args[2] <= TAILLE_PX.largeur && a.args[1] >= 0 && a.args[1] + a.args[3] <= TAILLE_PX.hauteur);
+  }
+  // La nuit qui n'a que sa qualité : son texte, sans barre.
+  assert.ok(appels.some((a) => a.nom === 'fillText' && a.args[0] === 'Bien'));
+});

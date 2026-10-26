@@ -42,7 +42,7 @@ function placerNumeros(reperes, centre, largeur) {
 // par semaine ou par mois, une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de
 // relevés), Humeur (notes) seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait
 // du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté), Bien-être
-// (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une). Les
+// (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une ; un losange plein). Les
 // repères de traitement : leurs numéros sous les noms de colonnes, leurs traits à travers les rangées. Une colonne vide ne
 // dessine rien. La Vue soignants (PDF) dessine la même frise par semaine ou par mois, aux dimensions DIM_MES_JOURS_PDF (sa
 // largeur suit le cadre de la page), sans la rangée d'énergie (avecEnergie faux) ni celle du Bien-être. Pure.
@@ -128,6 +128,8 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));
   const joursBas = (c) => (c.energieBasse === true ? 1 : c.energieBasse || 0);
   const maxEnergie = Math.max(1, ...colonnes.map(joursBas));
+  // Le losange Bien-être : la hauteur de sa rangée au plus, et 2 px entre deux colonnes voisines (1 px au moins).
+  const rLosange = bie ? r1(Math.min(bie.h / 2, Math.max(1.5, (l - 2) / 2))) : 0;
   colonnes.forEach((c, i) => {
     const x = r1(centre(i));
     const xb = r1(x - larg / 2);
@@ -172,8 +174,11 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
       const h = pas === 'jour' ? ene.h : r1(Math.max(3, (jours / maxEnergie) * ene.h));
       energieBasse.push({ x: xb, y: r1(ene.y + ene.h - h), l: larg, h, n: jours });
     }
-    // Un repère de la même taille pour chaque colonne qui a une séance : ni hauteur ni nombre.
-    if (bie && c.bienEtre) bienEtre.push({ x: xb, y: bie.y, l: larg, h: bie.h, cle: c.cle });
+    // Un repère de la même taille pour chaque colonne qui a une séance : ni hauteur ni nombre. Un losange plein, centré
+    // en x sur la colonne et au milieu de la rangée (y, h), de demi-diagonale r. Une barre pleine se confondait en sombre
+    // avec « nuit bien » (1:1 entre les deux bleus), et le contour arrondi qui l'a remplacée (v8, Q29) se lisait « 0 »
+    // sur 30 jours (relecture finale) : la forme les distingue, les teintes ne changent pas.
+    if (bie && c.bienEtre) bienEtre.push({ x, y: bie.y, h: bie.h, r: rLosange, cle: c.cle });
     if (c.aDonnee) zones.push({ x: r1(d.gauche + l * i), l: r1(l), cle: c.cle, i });
   });
   // Le trait d'un repère part sous son numéro et traverse toutes les rangées.
@@ -329,34 +334,30 @@ export function geometrieColonnes({ pas, colonnes }, d = DIM_COLONNES) {
   };
 }
 
-// Tes nuits selon le jour (spec §2.5, graphique 4) : une colonne par soir de coucher, du lundi au dimanche.
-// Axe en minutes depuis minuit du soir du coucher, de 20 h (1200, en haut) à 12 h le lendemain (2160, en bas).
-// Un trait de la médiane du coucher à celle du lever, plein à partir de 3 nuits, en pointillé avec 1 ou 2.
-// Une médiane hors de l'axe est ramenée au bord, avec horsAxe et une marque qui pointe vers l'extérieur.
-export const DIM_NUITS = { largeur: 326, gauche: 30, droite: 6, haut: 12, bas: 140, axeY: 160, hauteur: 164 };
-export const AXE_NUITS = { debut: 1200, fin: 2160 };
+// Mes nuits (v8, Q15 et §7 bis) : une ligne par nuit notée, dans l'ordre des jours. Le jour à gauche ; une barre longue
+// comme les heures dormies, à la teinte de sa qualité (la rampe du sommeil, comme Mes jours ; creuse sans qualité) ; le
+// texte de la nuit à droite (« Mal · 6 h »), qui dit aussi la qualité d'une nuit sans durée, laquelle n'a pas de barre.
+// Une seule échelle, de 0 à 12 h, gradué toutes les 4 h en haut ; plus loin seulement si une nuit ancienne a duré
+// davantage. Ni ligne pour une nuit non notée, ni rien sur l'heure du coucher ou la régularité.
+export const DIM_MES_NUITS = { largeur: 326, barreX: 58, texteL: 104, ecart: 10, haut: 18, ligneH: 16, barreH: 8 };
+export const AXE_MES_NUITS = { min: 12, pas: 4 };
 
-export function geometrieNuits(colonnes, d = DIM_NUITS) {
-  const { debut, fin } = AXE_NUITS;
-  const n = Math.max(1, colonnes.length);
-  const l = (d.largeur - d.gauche - d.droite) / n;
-  const centre = (i) => r1(d.gauche + l * (i + 0.5));
-  const y = (m) => r1(d.haut + ((Math.min(fin, Math.max(debut, m)) - debut) / (fin - debut)) * (d.bas - d.haut));
-  const hors = (m) => (m < debut ? 'haut' : m > fin ? 'bas' : null);
-  const traits = [];
-  const marques = [];
-  colonnes.forEach((c, i) => {
-    if (!c.n) return;
-    const x = centre(i);
-    const sens = [hors(c.coucher), hors(c.lever)].filter(Boolean);
-    traits.push({ x, y1: y(Math.min(c.coucher, c.lever)), y2: y(Math.max(c.coucher, c.lever)), plein: !c.fragile, horsAxe: sens.length > 0, cle: c.cle });
-    for (const s of new Set(sens)) {
-      marques.push(s === 'haut' ? { x, yBase: d.haut - 5, yPointe: d.haut - 10, sens: s, cle: c.cle } : { x, yBase: d.bas + 5, yPointe: d.bas + 10, sens: s, cle: c.cle });
-    }
+export function geometrieMesNuits(nuits, d = DIM_MES_NUITS) {
+  const { min, pas } = AXE_MES_NUITS;
+  const plusLongue = Math.max(0, ...nuits.map((n) => n.heures ?? 0));
+  const max = Math.max(min, Math.ceil(plusLongue / pas) * pas);
+  const L = d.largeur - d.barreX - d.texteL - d.ecart;
+  const x = (h) => r1(d.barreX + (Math.max(0, h) / max) * L);
+  const lignes = nuits.map((n, i) => {
+    const y = d.haut + i * d.ligneH;
+    const barre = n.heures == null ? null
+      : { x: d.barreX, y: r1(y + (d.ligneH - d.barreH) / 2), l: r1(Math.max(2, x(n.heures) - d.barreX)), h: d.barreH, classe: CLASSE_NUIT[n.qualite] || 'creuse' };
+    return { date: n.date, y: r1(y + d.ligneH / 2), barre };
   });
-  const graduations = [debut, 1440, 1680, 1920, fin].map((m) => ({ m, y: y(m), texte: `${(m / 60) % 24} h` }));
-  const etiquettes = colonnes.map((c, i) => ({ x: centre(i), y: d.axeY, cle: c.cle }));
-  return { traits, marques, graduations, etiquettes, filets: graduations.map((g) => ({ x1: d.gauche, x2: d.largeur, y: g.y })) };
+  const bas = r1(d.haut + nuits.length * d.ligneH);
+  const graduations = [];
+  for (let h = 0; h <= max; h += pas) graduations.push({ heures: h, x: x(h), y: 8, texte: `${h} h` });
+  return { lignes, graduations, filets: graduations.map((g) => ({ x: g.x, y1: d.haut - 4, y2: bas })), texteX: d.largeur, hauteur: r1(bas + 2), max };
 }
 
 // Barres horizontales empilées (spec §2.4) : des groupes (titrés ou non), une ligne par élément : son nom et

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../../public/js/analyse/index.js';
-import { indicateurs, dureeNuit } from '../../public/js/analyse/fenetres.js';
+import { indicateurs, dureeNuit, minutesCoucherLever } from '../../public/js/analyse/fenetres.js';
 import { classer } from '../../public/js/analyse/classements.js';
 import { profilJournee } from '../../public/js/analyse/moments.js';
 import { humeursDuJour } from '../../public/js/analyse/humeur-jour.js';
@@ -34,10 +34,50 @@ test('indicateurs : champ vide = inconnu, aucun indicateur « jours notés »', 
 });
 
 test('horaires : coucher avant midi = après minuit, durée bornée', () => {
-  assert.equal(dureeNuit('23:30', '07:00'), 450);
-  assert.equal(dureeNuit('00:30', '07:00'), 390);
-  assert.equal(dureeNuit('12:30', '07:00'), null);
-  assert.equal(dureeNuit('05:30', '06:00'), null);
+  assert.equal(minutesCoucherLever('23:30', '07:00'), 450);
+  assert.equal(minutesCoucherLever('00:30', '07:00'), 390);
+  assert.equal(minutesCoucherLever('12:30', '07:00'), null);
+  assert.equal(minutesCoucherLever('05:30', '06:00'), null);
+});
+
+// v8 (spec §7 bis) : la durée d'une nuit vient du nombre d'heures noté le soir, sinon, pour une nuit ancienne, du coucher
+// et du lever avec la même règle (2 h à 16 h). Rien d'inventé : une nuit sans durée vaut null.
+test('dureeNuit : heures saisies, nuit ancienne, valeurs hors bornes', () => {
+  assert.equal(dureeNuit({ date: '2026-10-20', heuresSommeil: 6 }), 6);
+  assert.equal(dureeNuit({ heuresSommeil: 4 }), 4, '« 4 h ou moins » compte 4');
+  assert.equal(dureeNuit({ heuresSommeil: 10 }), 10, '« 10 h ou plus » compte 10');
+  // Les heures notées l'emportent sur le coucher et le lever d'une même nuit.
+  assert.equal(dureeNuit({ heuresSommeil: 7, heureCoucher: '23:30', heureLever: '05:00' }), 7);
+  // Nuit ancienne : du coucher au lever, en heures.
+  assert.equal(dureeNuit({ heureCoucher: '23:30', heureLever: '07:00' }), 7.5);
+  assert.equal(dureeNuit({ heureCoucher: '00:30', heureLever: '07:00' }), 6.5);
+  assert.equal(dureeNuit({ heureCoucher: '23:30', heureLever: null }), null, 'sans lever, pas de durée');
+  assert.equal(dureeNuit({ heureCoucher: '05:30', heureLever: '06:00' }), null, 'moins de 2 h : saisie incohérente');
+  assert.equal(dureeNuit({ heureCoucher: '12:30', heureLever: '07:00' }), null, 'plus de 16 h : saisie incohérente');
+  // Hors bornes ou abîmé : ignoré, et la nuit retombe sur son coucher et son lever s'il y en a.
+  for (const h of [3, 11, 6.5, '6', -1, 0]) assert.equal(dureeNuit({ heuresSommeil: h }), null, String(h));
+  assert.equal(dureeNuit({ heuresSommeil: 12, heureCoucher: '23:00', heureLever: '07:00' }), 8);
+  assert.equal(dureeNuit({ sommeilRessenti: 'sommeil:mal' }), null);
+  assert.equal(dureeNuit({}), null);
+  assert.equal(dureeNuit(null), null);
+  assert.equal(dureeNuit(undefined), null);
+});
+
+test('durée médiane (v8) : des heures notées, ou du coucher et du lever des nuits anciennes ; coucher et lever médians seulement s\'il y en a', () => {
+  const d = (date, o) => ({ date, ...o });
+  // Trois nuits en heures seulement : une durée médiane, ni coucher ni lever.
+  const heures = indicateurs({ journal: [d('2026-10-01', { heuresSommeil: 6 }), d('2026-10-02', { heuresSommeil: 8 }), d('2026-10-03', { heuresSommeil: 7 })], ...vide }, '2026-10-01', '2026-10-07');
+  assert.equal(heures.nuits.duree, 420);
+  assert.deepEqual([heures.nuits.nDuree, heures.nuits.nCoucher, heures.nuits.nLever, heures.nuits.coucher, heures.nuits.lever], [3, 0, 0, null, null]);
+  // Un mélange : une nuit ancienne (7 h 30) et deux nuits en heures (5 et 10 h ou plus).
+  const melange = indicateurs({ journal: [
+    d('2026-10-01', { heureCoucher: '23:30', heureLever: '07:00' }), d('2026-10-02', { heuresSommeil: 5 }), d('2026-10-03', { heuresSommeil: 10 }),
+  ], ...vide }, '2026-10-01', '2026-10-07');
+  assert.equal(melange.nuits.duree, 450);
+  assert.deepEqual([melange.nuits.nDuree, melange.nuits.nCoucher], [3, 1]);
+  assert.equal(melange.nuits.coucher, null, 'moins de 3 couchers : pas de médiane');
+  // Moins de 3 durées : pas de médiane.
+  assert.equal(indicateurs({ journal: [d('2026-10-01', { heuresSommeil: 6 }), d('2026-10-02', { heuresSommeil: 8 })], ...vide }, '2026-10-01', '2026-10-07').nuits.duree, null);
 });
 
 test('classements : hors classement, égalité, seuils', () => {

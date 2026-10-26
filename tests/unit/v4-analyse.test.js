@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { profilJournee } from '../../public/js/analyse/moments.js';
-import { avantExplosions } from '../../public/js/analyse/avant-explosions.js';
+import { tesMoments } from '../../public/js/analyse/avant-explosions.js';
 import { analyze } from '../../public/js/analyse/index.js';
 import { exportPsy } from '../../public/js/export/psy.js';
 import { SEED_V1, SEED_V2_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
@@ -25,6 +25,10 @@ test('profil de journée : créneaux de 2 h, au moins 3 jours, rattachement au j
   assert.equal(profilJournee(notes, '2026-10-01', '2026-10-03').statut, 'insuffisant');
   assert.equal(profilJournee([], '2026-10-01', '2026-10-03').statut, 'insuffisant');
 });
+
+// v8 (Q32) : l'ancien `avantExplosions` (v4), qui ne servait qu'à ce test, est retiré ; le groupe des explosions de
+// « Tes moments » le remplace.
+const avantExplosions = (episodes, du, au, items) => tesMoments(episodes, du, au, items).groupes[0];
 
 test('avant tes explosions : 3 au moins, notes réunies, ce qui a aidé les autres fois', () => {
   const ex = (date, ac, extra = {}) => ({ id: date, date, heure: '18:00', reaction: 'reaction:explosion', declencheur: 'declencheur:conflit', apresCoup: ac, ...extra });

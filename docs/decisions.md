@@ -337,8 +337,8 @@ Inspirer, retenir, expirer, retenir : quatre temps chacun.
 4. Retiens l'air en comptant jusqu'à quatre. *(9 s)*
 5. Expire par la bouche en comptant jusqu'à quatre. *(9 s)*
 6. Garde les poumons vides en comptant jusqu'à quatre. *(9 s)*
-7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(52 s)*
-8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(52 s)*
+7. Recommence ces quatre temps, à ton rythme. Si retenir te gêne, compte jusqu'à deux. *(48 s)*
+8. Inspire, quatre. Retiens, quatre. Expire, quatre. Retiens, quatre. *(48 s)*
 9. Laisse ta respiration redevenir libre. *(15 s)*
 
 Les étapes 3 à 6 durent 9 s : voix allumée, la consigne se dit en 2 à 2,5 s, puis il faut environ 4 s pour compter jusqu'à quatre avant que l'étape suivante soit lue.
@@ -445,3 +445,554 @@ Un arrêt bref, là où tu es.
 4. Expire plus longuement, par la bouche. *(10 s)*
 5. Encore une fois : inspire, puis expire. *(15 s)*
 6. Reprends quand tu veux. *(5 s)*
+
+## 2026-10-26 : v8.0.0, émotion en carte, Bien-être en lecteur, programme
+
+Source : les retours d'usage de l'utilisateur sur la v7 et ses réponses du 23 au 25/10, et les recherches du 24/10 (annexes `hwf-placement.md`, `programme-sophro.md` et `propositions.md`). Spec : `docs/superpowers/specs/2026-10-24-carnet-v8-design.md`, qui fait foi, avec son §7 bis (le sommeil, décision du 25/10) et son §12 (précisions après relecture). Plan : `docs/superpowers/plans/2026-10-25-carnet-v8.md`, en 9 tâches, une par commit, chacune relue puis corrigée. Version 8.0.0, publiée en une fois.
+
+La base passe à `DB_VERSION` 6 (liste `sujetRdv`, `MIGRATIONS[6]`, copie avant migration) et la sauvegarde au `FORMAT_VERSION` 6 (`docs/format-sauvegarde.md`). Les sauvegardes des formats 1 à 5 restent importables, et rien n'y est transformé : une nuit ancienne garde son coucher, son lever et ses réveils, et une séance de la v7 n'est pas « Faite ».
+
+### Décisions de l'utilisateur (spec §2, du 23 au 25/10)
+
+- **Émotion du moment** : la carte de How We Feel. D'abord une tuile (l'énergie, sous « plutôt désagréable » ou « plutôt agréable »), puis un mot sur une carte de bulles, les mots agréables à droite. L'énergie est celle de la tuile, jamais devinée d'après le mot. La place des mots suit How We Feel, et l'utilisateur ne la relit pas.
+- **Définitions** : une par mot, écrite par Carnet et corrigeable par l'utilisateur. Un appui long sur une bulle montre la définition sans choisir le mot.
+- **Fermeture** : l'écran se ferme seul une fois rempli, et « Ce que je faisais » est replié à chaque ouverture.
+- **Lecteur de Bien-être**, à la Petit BamBou :
+  - un anneau qui montre le temps de tout l'exercice ;
+  - des étapes qui avancent seules ;
+  - un souffle continu pour respirer ;
+  - à la fin, le lecteur se ferme seul et le message « Noter mon émotion » reste 6 s.
+- **Son** : « Repères + souffle » au départ. En mode silencieux, il se tait par défaut, et un réglage permet de le forcer.
+- **Programme** : 8 étapes et 17 séances. Une séance menée au bout porte une coche et « Faite le 12/10 ». Il n'y a pas de marquage à la main, et les étapes ne montrent que leur titre. L'onglet Bien-être ne garde que le Programme et la cohérence cardiaque ; Moment difficile garde sa cohérence cardiaque.
+- **Sommeil** (25/10) : le nombre d'heures et la qualité. Coucher, lever et réveils ne se saisissent plus le soir, et Q16 (le temps d'endormissement) est abandonné.
+- **Pistes retenues** :
+  - Q5 : le détail du sport et du contact dans leur carte ;
+  - Q15 : Mes nuits, aussi sur l'A4 des soignants ;
+  - Q17 : l'énergie haute et l'hyperfocus avant la fatigue ;
+  - Q18 : les émotions selon ce que je faisais ;
+  - Q20 : l'Après coup quand la honte reste ;
+  - Q22 : les sujets d'un rendez-vous.
+- **Textes** : les 79 définitions et les séances nouvelles sont relues après la publication, dans l'app (voir « Textes à relire », plus bas).
+- **Hors champ** : le petit modèle d'IA local. L'assistant IA reste prévu pour la V3.
+
+### Règles levées à sa demande, et seulement là
+
+- **Écran Émotion** : la carte range les mots en « plutôt agréable » et « plutôt désagréable ».
+  - La position n'est ni enregistrée ni calculée, et l'Analyse ne parle jamais de côté ni de proportion.
+  - « positif », « négatif », « bon » et « mauvais » n'apparaissent jamais, et il n'y a aucun score d'agréabilité.
+- **Programme** : le suivi « Faite le 12/10 » existe, mais sans aucun compteur.
+  - Il n'y a ni total, ni pourcentage, ni barre, ni anneau de progression.
+  - Il n'y a ni série, ni date de départ, ni « semaine 3 », ni « en retard ».
+  - Une séance pas faite n'affiche rien.
+
+### Appels du concepteur, à vérifier (spec §10 et §12)
+
+- Les mots qui ont un équivalent clair dans How We Feel en prennent le quadrant. Les autres gardent le tableau §9 de l'annexe. La correspondance retenue est plus bas (tâche 2). Le Mood Meter RULER n'a donné aucune carte lisible en texte.
+- Les définitions se corrigent dans Réglages › Émotions.
+- Le son du lecteur vaut « Repères + souffle » au départ, et seulement pour le lecteur de Bien-être (Programme et cohérence cardiaque de l'onglet). Moment difficile et « Respirer » gardent leur réglage : éteint au départ, avec les deux notes de la v7. Rien ne joue seul en pleine crise.
+- Le lecteur se ferme 6 s après la fin.
+- La séance qui vient suit la dernière faite. Après la dernière, on revient à la première.
+- Une séance arrêtée en route compte pour Mes jours, mais pas dans le Programme. Seule une séance lancée depuis le Programme et menée au bout y porte une date.
+- Respiration abdominale ouvre le Programme à la place de « Premiers pas », qui n'est pas écrite : il y a donc 8 séances nouvelles, et non 9.
+- Q5 ne vaut plus que pour Sport et Contact. « Nuit en détail » est masqué, et se réaffiche dans Réglages › Le soir.
+- Sur l'A4, Mes nuits passe de 4 à 2 semaines si la page ne tient pas, puis disparaît dans le cas extrême (tâche 6).
+- Les chantiers de fiabilité du §8 sont inclus (tâche 8).
+
+### Données (tâche 1)
+
+- **`journal.heuresSommeil`** : un entier de 4 (« 4 h ou moins ») à 10 (« 10 h ou plus »). Il porte sur la nuit qui précède le jour, comme la qualité.
+- **`seances.fin`** (menée au bout) et **`seances.programme`** (l'identifiant de la séance du Programme) : l'app les pose, l'utilisateur ne les saisit pas.
+- **La liste `sujetRdv`** se règle dans Réglages › Listes, en tête de Soins, sous « Sujets d'un rendez-vous ».
+- **La méta `definitionsRoue`** est sauvegardée et importée comme les autres clés de l'utilisateur.
+- **Un témoin au format 5**, écrit par la v7.0.0, rejoint ceux des formats 1 à 4.
+
+### Émotion du moment en carte (tâche 2)
+
+**Placement des mots** (spec §4 et §12.5), dans `domain/carte-roue.js` : une colonne de 1 (le plus désagréable) à 6 (le plus agréable) et un rang d'énergie de 1 à 6 par mot. Les rangs 5-6 font la bande Haute, 3-4 la Moyenne, 1-2 la Basse.
+- **Sources consultées le 24/10, en lecture seule** :
+  - la liste de How We Feel en quatre zones de 36 mots (un paquet de cartes « How We Feel » en ligne, tenu par un utilisateur : High Unpleasant, Low Unpleasant, High Pleasant, Low Pleasant). Elle atteste le **quadrant** d'un mot : son côté, et la moitié haute ou basse. Elle ne donne pas sa place dans le quadrant : lire l'ordre du paquet comme la grille 6 × 6 de la zone reste une hypothèse ;
+  - le Mood Meter RULER (Yale) : aucune carte complète lisible en texte (les grilles officielles sont des images). Une page de présentation (vhtc.org) confirme les zones et les coins (Enraged en haut à gauche, At ease en haut du vert, Serene en bas à droite) : elle sert de recoupement, sans placer de mot.
+- **Règle retenue** (spec §12.5 : « sans source vérifiable, c'est le tableau §9 ») :
+  - la colonne et le rang de chaque mot sont ceux du tableau §9 de l'annexe `hwf-placement.md` (« annexe ») ;
+  - un mot qui a un équivalent clair dans la liste de How We Feel garde le quadrant de cette liste. L'annexe le lui donne déjà pour 31 des 33 ;
+  - si l'annexe le met dans l'autre moitié, il prend le rang de son quadrant le plus proche de l'annexe : **Dégoût** (« disgusted », moitié basse) passe du rang 4 au rang 3, **Perplexe** (« confused », moitié haute) du rang 3 au rang 4. Tous deux restent dans la bande Moyenne ;
+  - la bande d'énergie, qui décide sous quelle tuile on trouve un mot, est donc celle de l'annexe pour les 79 mots.
+- **Relecture de la tâche 2** : une première version prenait aussi le rang et la colonne de l'ordre du paquet. Elle changeait de bande 10 mots par rapport à cette règle (Jaloux, Irrité, Fautif, Vulnérable, Espiègle, Optimiste, Curieux, Perplexe, Exclus, Calme). Écartée : la hauteur dans le quadrant n'est attestée par aucune source vérifiable, et l'utilisateur ne relit pas ces places (spec §2).
+- **Les 33 mots qui ont un équivalent clair** :
+
+| Mot | Famille | How We Feel | Quadrant de la liste | Carte (colonne, rang) | Bande |
+|---|---|---|---|---|---|
+| Embarrassé | Colère | embarrassed | haut gauche | 2, 4 | Moyenne |
+| Insécurisé | Colère | insecure | bas gauche | 2, 3 | Moyenne |
+| Jaloux | Colère | jealous | haut gauche | 2, 4 | Moyenne |
+| Furieux | Colère | furious | haut gauche | 1, 6 | Haute |
+| Enragé | Colère | enraged | haut gauche | 1, 6 | Haute |
+| Irrité | Colère | irritated | haut gauche | 2, 4 | Moyenne |
+| Répugnant | Dégoût | repulsed | haut gauche | 1, 4 | Moyenne |
+| Dégoût | Dégoût | disgusted | bas gauche | 1, 3 (annexe : 1, 4) | Moyenne |
+| Fautif | Tristesse | guilty | bas gauche | 2, 3 | Moyenne |
+| Honteux | Tristesse | ashamed | bas gauche | 1, 3 | Moyenne |
+| Impuissant | Tristesse | helpless | bas gauche | 1, 2 | Basse |
+| Vulnérable | Tristesse | vulnerable | bas gauche | 2, 3 | Moyenne |
+| Inspiré | Joie | inspired | haut droite | 5, 5 | Haute |
+| Espiègle | Joie | playful | haut droite | 5, 5 | Haute |
+| Optimiste | Joie | optimistic | haut droite | 5, 4 | Moyenne |
+| Accompli | Joie | accomplished | haut droite | 6, 4 | Moyenne |
+| Respecté | Joie | respected | bas droite | 5, 3 | Moyenne |
+| Curieux | Joie | curious | haut droite | 4, 4 | Moyenne |
+| Extasié | Joie | ecstatic | haut droite | 6, 6 | Haute |
+| Confiant | Joie | confident | haut droite | 5, 4 | Moyenne |
+| Énergique | Surprise | energized | haut droite | 5, 6 | Haute |
+| Avide | Surprise | eager | haut droite | 4, 5 | Haute |
+| Effrayé | Surprise | frightened | haut gauche | 2, 5 | Haute |
+| Perplexe | Surprise | confused | haut gauche | 3, 4 (annexe : 3, 3) | Moyenne |
+| Choqué | Surprise | shocked | haut gauche | 2, 5 | Haute |
+| Terrifié | Peur | terrified | haut gauche | 1, 6 | Haute |
+| Préoccupé | Peur | worried | haut gauche | 3, 4 | Moyenne |
+| Exclus | Peur | excluded | bas gauche | 1, 3 | Moyenne |
+| Calme | Sérénité | calm | bas droite | 5, 2 | Basse |
+| Détendu | Sérénité | relaxed | bas droite | 5, 2 | Basse |
+| Tranquille | Sérénité | tranquil | bas droite | 5, 1 | Basse |
+| Serein | Sérénité | serene | bas droite | 6, 2 | Basse |
+| En sécurité | Sérénité | safe | bas droite | 5, 2 | Basse |
+
+- **Les 46 autres n'ont pas d'équivalent clair** et gardent l'annexe telle quelle : Dévasté, Amer, Défiant, Provocateur, Hostile, Mécontent, Retiré, Suspect, Sceptique, Sarcastique, Jugé, Aversion, Révolté, Détestable, Hésitant, Ignoré, Replié, Minable, Vide, Abandonné, Isolé, Amorphe, Indifférent, Ouvert, Sensible, Aimant, Provocant, Courageux, Important, Amusé, Libéré, Abasourdi, Désillusionné, Consterné, Craintif, Accablé (« overwhelmed » ou « écrasé », le plus ambigu), Incapable, Inférieur, Sans valeur, Inadéquat, Insignifiant, Non respecté, Ridiculisé, Apaisé, Reposé, Posé.
+- **Les zones** comptent 9 et 8 mots (Haute), 27 et 12 (Moyenne), 17 et 6 (Basse), à gauche puis à droite : les comptes du §9.1 de l'annexe.
+
+**Choix faits pendant la construction**
+- **La carte** : six zones, celles des six tuiles (trois bandes, deux côtés), chacune large comme le panneau ; une tuile ouvre la carte sur sa zone entière. Dans une zone, les mots vont du plus haut au plus bas et du bord vers le centre, ceux d'une même famille côte à côte. Bulles rondes à la couleur de leur famille (`-tint-2` et `-text`, AA), d'un diamètre qui suit leur plus long mot (« Non respecté » sur deux lignes), 4 par ligne environ. Une petite légende (« Haute · plutôt désagréable ») en tête de chaque zone, en texte secondaire. « Toute la carte », un lien discret en texte secondaire au-dessus des tuiles, ouvre la carte au milieu : la bande Moyenne, de part et d'autre du centre.
+- **Les tuiles** : le nom de l'énergie vient de la liste Énergie (il se renomme dans Réglages › Listes) ; deux ou trois mots d'exemple de la zone, de familles différentes quand elle en a, et **vus dès l'ouverture de la carte** : les zones Moyenne et Basse, plus hautes que le cadre, s'ouvrent sur leur haut, leurs exemples sont donc pris parmi leurs premiers mots (Préoccupé et Jugé ; Vide et Dévasté), vérifié à 390 × 844. Retoucher la tuile choisie efface l'énergie, comme tout choix ; l'autre tuile de la même énergie ne change que le côté, rien n'est écrit.
+- **La fermeture** : 1,5 s après un mot. Un autre mot, un appui long, un doigt posé ou un glissement sur la carte relance le délai ; « ‹ Énergie » l'annule. Ouvrir « Maintenant ▾ » le suspend (l'écran ne se ferme pas sous la liste des heures) ; une heure choisie, ou la liste refermée, le relance. Supprimer un relevé du jour l'annule : l'écran reste, et « Relevé supprimé · Annuler » n'est pas remplacé par « Émotion du moment notée » ; un nouveau mot le réarme. Une tuile touchée quand un mot est déjà choisi rouvre la carte, et l'écran se ferme 1,5 s plus tard. « Fermer » dit « Émotion du moment notée » (avec « Annuler ») dès qu'un relevé existe, l'énergie seule comprise.
+- **« Ce que je faisais » ouvert une fois pendant la saisie** suffit : l'écran ne se ferme plus seul, même replié ensuite. Ce repli et « C'était vers… » sont repliés à chaque ouverture ; les anciennes clés de l'iPhone (`carnet:moment:faisais`, `carnet:moment:vers`) ne sont plus lues.
+- **Appui long** : 0,5 s ; la bulle montrée est cerclée à la couleur de sa famille, la définition s'affiche, rien n'est choisi. Seul le clic de pointeur qui suit l'appui est ignoré : un appui long levé hors de la bulle n'avale ni le clic suivant ni une activation au clavier. La garde de 350 ms vaut pour toute la vue (tuiles, carte, « ‹ Énergie », « Toute la carte »).
+- **VoiceOver** : chaque zone est un groupe nommé par sa légende (« Basse · plutôt agréable »). Ouverte depuis une tuile, la carte met le focus sur la zone touchée, et ses mots viennent juste après ; depuis « Toute la carte », sur le titre « Émotion ».
+- **La définition** s'affiche sous la carte : « Irrité : agacé par… », le mot à la couleur de sa famille. Les 79 textes sont dans `domain/definitions-roue.js` (figés) ; leur liste est plus bas, dans « Textes à relire ».
+- **Réglages › Émotions** : dans « Ma saisie », après Listes, carré neutre comme ses voisins. Une carte par famille ; un toucher ouvre le champ du mot (le champ de texte de l'app, avec `aLaSortie` : il n'enregistre qu'à la sortie du champ, ou si l'app passe en arrière-plan, et la frappe reste dans le brouillon local ; vider le champ pour le réécrire ne retire donc pas la correction, et « Revenir au texte de Carnet » ne disparaît pas sous le doigt). Un champ vidé, ou remis au texte de Carnet, retire la correction. « Revenir au texte de Carnet » suit chaque mot corrigé.
+- **La roue en familles de la v7** (`ui/composants/bulles.js`) est retirée avec ses styles.
+
+### Lecteur de Bien-être (tâche 3)
+
+**Choix faits pendant la construction**
+- **Un seul lecteur** (`ui/composants/lecteur.js`) pour les séances du Programme et la cohérence cardiaque de l'onglet, plein écran, sans onglets. Avant : la durée et la posture, la description, un gros bouton lecture dans l'anneau, et les réglages du son dans une liste groupée dessous. Pendant : la consigne en grand en haut, l'anneau du temps de tout l'exercice et le bouton pause au milieu, « il reste 6:40 » dessous, puis Précédent, Suivant et « Terminer » en lien discret, près du pouce. Aucun repère « 3 sur 8 ».
+- **Les sons sont fabriqués dans l'app** (`ui/composants/sons.js`, Web Audio), sans fichier ni réseau, et calés sur l'horloge audio : un bol de début d'environ 4 s, un bol d'étape plus court et plus doux, joué avant la voix, trois bols de fin à 1,2 s d'écart. Le souffle est un bruit rose filtré qui monte à l'inspiration et redescend à l'expiration ; il se tait pendant « Retiens ». Le son ne naît que dans un toucher (« Commencer », « Reprendre », le bouton lecture d'une carte).
+- **Les réglages du lecteur** sont gardés sur l'iPhone (comme la voix en v7) : « Son : Aucun · Repères · Repères + souffle », « Jouer même en mode silencieux » (éteint : le son se tait en silencieux et se mêle à la musique ; allumé : il joue, et la musique se met en pause) et la lecture à voix haute, qui n'apparaît qu'avec une voix française. Ils ne valent que pour ce lecteur.
+- **Pause, écran verrouillé, autre app ou sortie** coupent la voix et les sons et rendent le verrou d'écran ; « Reprendre » repart de l'étape, le souffle d'un début de cycle. Une seule séance par lecture.
+- **La carte de la cohérence cardiaque** de Bien-être garde ses puces de durée et de rythme, réglées au même endroit que Moment difficile, et un bouton lecture qui la lance d'un toucher (`#/bien-etre/coherence`).
+
+**Relecture de la tâche 3**
+- **Une étape rythmée dure un nombre entier de cycles.** Les deux étapes rythmées de la respiration carrée passent de 52 à 48 s, soit trois cycles de 16 s ; leurs textes ne changent pas, et l'exercice dure 2:52 au lieu de 3:00. À 52 s, la première finissait sur une inspiration et la seconde repartait d'une inspiration : 8 s d'« Inspire » d'affilée.
+- **Deux étapes rythmées au même rythme gardent le même cycle** : après une pause au milieu de la première (la reprise repart d'une inspiration), la seconde continue le cycle au lieu de repartir, et le souffle reste calé sur l'horloge audio d'une étape à l'autre.
+- **En pause, l'écran garde la mise en page de la lecture** : « Reprendre » est à la place exacte de « Pause », et un second toucher au même endroit reprend. Les réglages du lecteur viennent sous l'écran de lecture : on les atteint en défilant.
+- **La fin n'affiche que « Fin de l'exercice. »**, sans anneau : menée au bout ou non, rien ne dit ce qui a été fait.
+- **Les textes de la cohérence cardiaque suivent les mots affichés**, pas le disque, qui ne bouge pas avec « Réduire les animations » : « Respire au rythme des mots, sans forcer. » et « Inspirer sur « Inspire », expirer sur « Expire ». ».
+
+### Programme (tâche 4)
+
+**Les étapes** (`domain/programme.js`, identifiants figés), dans l'ordre de l'annexe `programme-sophro.md` (§3), avec la spec §12.4 : Respiration abdominale ouvre le Programme à la place de « Premiers pas », qui n'est pas écrite. 8 étapes, 17 séances. L'écran ne montre que le titre des étapes, sans numéro.
+
+| Étape (`id`) | Séances |
+|---|---|
+| Respirer (`respirer`) | Respiration abdominale · Pause d'une minute |
+| Autour de toi (`autour-de-toi`) | Les sons · Ancrage 5-4-3-2-1 |
+| Les cinq zones (`cinq-zones`) | Les cinq zones · Respiration carrée |
+| Tendre et relâcher (`tendre-relacher`) | Relaxation dynamique des épaules · Mouvements lents |
+| Zone par zone (`zone-par-zone`) | Tension et détente · Faire le point avec mon corps |
+| Marcher, respirer en rythme (`marcher-rythme`) | Marche lente · Cohérence cardiaque (5 min) |
+| Un lieu, un souvenir (`lieu-souvenir`) | Lieu ressource · Un bon moment passé · Un moment à venir |
+| Le corps entier, ce qui compte (`corps-entier`) | Scan corporel · Ce qui compte pour moi |
+
+**La présentation**, écrite une fois en tête de l'écran Programme : « Inspiré de la sophrologie et de la pleine conscience, de la respiration au corps entier. » et « Une façon de faire : une étape par semaine, une ou deux séances, si tu veux. Tu peux aller plus vite, plus lentement, sauter une étape ou revenir en arrière. » Ce rythme n'est jamais mesuré ni comparé.
+
+**Choix faits pendant la construction**
+- **8 séances nouvelles, et non 9** : la spec §6 en compte 9 avec « Premiers pas », que le §12.4 retire. Elles sont ajoutées à la fin de `domain/exercices.js`, avec les deux blocs « Arriver » (60 s) et « Revenir » (55 s), qui ouvrent et ferment Les sons, Les cinq zones, Un bon moment passé, Un moment à venir et Ce qui compte pour moi. Aucune n'a de rythme écrit : ni disque ni souffle.
+- **Les exercices ne se lancent plus que depuis le Programme** (spec §2 et §3, « pas de séance hors du Programme, sauf la cohérence cardiaque ») : l'adresse `#/bien-etre/exercice/<id>` et son écran sont retirés, remplacés par `#/bien-etre/programme/<id>`. Une séance inconnue ramène au Programme.
+- **« Faite le 12/10 »** : seule compte une séance lancée depuis le Programme et menée au bout (`programme` et `fin: true`, spec §12.2). La date est le jour de la séance (avant 4 h, la veille, comme partout), la plus récente ; l'année ne s'écrit que si ce n'est pas celle du jour (« Faite le 12/10/2025 »). Une coche à la couleur de Bien-être et le texte en secondaire, sous la durée. Une séance pas faite n'affiche rien.
+- **`fin: true`** est posé sur toute séance menée au bout, d'où qu'elle vienne (Moment difficile, « Respirer », la carte de la cohérence) : le champ dit seulement « menée au bout ». Sans `programme`, elle ne date rien dans le Programme. Une séance notée en pause (après 60 s), puis reprise et menée au bout, reste une seule séance et prend `fin` à la fin.
+- **La séance qui vient** : celle qui suit, dans l'ordre du Programme, la dernière séance faite (la plus récente, à l'heure près) ; au tout début, Respiration abdominale ; après Ce qui compte pour moi, de nouveau Respiration abdominale. Une séance sautée n'est jamais signalée.
+- **La carte Programme de Bien-être** : un lien vers l'écran Programme (le carré à la feuille de Bien-être, « Programme › », la séance qui vient et « 5 min · assis ») et, à droite, le bouton lecture de 64, qui la lance d'un toucher ; le lecteur revient alors à Bien-être. Depuis l'écran Programme, un toucher sur une séance ouvre le lecteur, qui attend « Commencer », et revient au Programme : 1 toucher pour reprendre, 3 pour une séance au choix (la carte, la séance, lecture), comme dans l'annexe des propositions.
+- **La cohérence cardiaque du Programme** dure 5 min, au rythme réglé dans Réglages › Moment difficile. Celle de la carte de Bien-être, de Moment difficile et de « Respirer » ne compte pas.
+- **Les textes de l'annexe, retouchés** pour les règles de l'app : « Garde l'attention sur… » devient « Continue de remarquer tes pieds. » et « remarque ta respiration » ; « Pense à… » devient « Cherche… » et « Imagine… » ; « Tu n'as pas besoin de les nommer » devient « Pas besoin de les nommer » ; « Tu vas passer par cinq zones » devient « Cinq zones du corps, l'une après l'autre ». « Tu peux t'arrêter à tout moment. » est ajouté à chaque séance nouvelle (à la fin du bloc « Arriver », sinon dans la première étape), comme le demande la spec §6 : la première étape de Faire le point avec mon corps passe de 10 à 15 s pour le dire.
+- **Le son dans « Les sons »** (question 11 de l'annexe, non tranchée) : le bol d'étape, comme ailleurs ; « Son : Aucun » le coupe.
+
+**Relecture de la tâche 4**
+- **Une séance d'une seule étape n'est menée au bout qu'au bout de tout son temps.** La cohérence cardiaque est sur sa dernière étape dès le début : avec la règle de la moitié, « Terminer » à 2:31 sur 5:00 la disait menée au bout, et le Programme affichait « Faite le 15/10 ». Elle ne l'est plus qu'une fois ses 5 min écoulées, comme dans Moment difficile ; arrêtée en route après 60 s, elle reste une séance pour Mes jours, sans `fin`. Les séances de plusieurs étapes gardent la règle de la moitié (annexe `programme-sophro.md`, §6.8). La carte de la cohérence de Bien-être suit la même règle, comme en v7.
+- **Le titre « Programme » de la carte de Bien-être est un titre de niveau 2**, comme celui de la carte de la cohérence, et reste dans le lien : le rotor « Titres » de VoiceOver passe par les deux cartes. L'apparence ne change pas.
+
+### Sommeil en heures, détails dans les cartes (tâche 5)
+
+**Écart à la spec §7 bis : la Durée s'ouvre par « Durée › »** (prévu par la spec et le plan quand le soir ne tient plus). Mesuré dans WebKit à 390 × 797, la rangée Durée (4 + 44 px au moins) ne tient pas :
+- avec le bandeau « Nouvelle version prête », la carte des points positifs n'a que 5,6 px de marge au-dessus de la bande du bas ;
+- à 390 × 844, « J'ai fini pour ce soir » en a 6,6 avec le bandeau (P3), et la ligne Après coup 11,3 sans lui (P2).
+
+Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Sommeil garde donc Mal · Moyen · Bien, et la Durée s'ouvre par le lien « Durée › » de sa tête, fermé au départ, à chaque ouverture de l'écran et à chaque changement de jour. Il ne s'ouvre jamais seul, même quand une durée est notée. La durée se note en 2 touchers au lieu d'un.
+
+**Choix faits pendant la construction**
+- **Le lien « Durée › »** dit la durée notée (« 6 h › », « 4 h ou moins › »). VoiceOver lit « Durée de la nuit : 6 h ». Ouverte, la rangée reste ouverte après un choix, pour qu'une erreur se corrige tout de suite (comme les rubriques du lot 2b). Elle se referme par le lien. Ouvert, le lien garde la largeur de la plus longue durée (« 4 h ou moins », par une copie invisible et muette) : en grand texte (21 px et plus), le titre passe sous le lien dès l'ouverture, et noter une durée ne le fait plus passer à la ligne (relecture : la carte grandissait de 26 à 34 px sous le doigt, et la rangée des durées descendait d'autant). Fermé, il n'a que sa largeur.
+- **Les sept durées** sont sur deux rangées pleine largeur : 4 h ou moins à 7 h, puis 8 h à 10 h ou plus. Sept choix sur une rangée feraient 43 px de large. « ou moins » et « ou plus » passent en petit sous le nombre, en gris secondaire (--text-2), à la couleur du choix une fois choisi.
+- **Un choix de durée ne change pas la mise en page**, à toutes les tailles de texte (relecture). Avec la coche devant les deux lignes, « 4 h ou moins » choisi passait sur trois lignes (« 4 h / ou / moins ») : la première rangée passait de 44 à 49,8 px et tout ce qui suit sautait au toucher. La correction proposée (coche plus serrée, « ou moins » sans retour à la ligne) faisait déborder le choix à 375 de large et en grand texte (19 à 25 px). La coche se met donc devant le nombre seul, qui passe en 600, et la précision garde toute la largeur du choix et sa graisse (400), choisi ou non : en 600, « ou moins » passait encore à la ligne au choix à 23 px. Elle passe à la ligne au besoin, choisie ou non, de la même façon.
+- **En très grand texte**, quand la carte n'a plus 13,5 em (dès 26 px à 390 de large, 24 px à 375), les sept durées passent sur deux colonnes égales, comme Lieu (relecture : la grille de 12 gardait ses places de 3 et de 4, et les durées s'empilaient une par ligne, de deux largeurs).
+- **« Détail › » et « Durée › »** sont en couleur action, 13/600, au bout de la première ligne du titre de la carte. Le titre passe dessous au besoin : « Contact / humain » et « Sport / mouvement » restent sur deux lignes, comme en v7. Le lien ne prend aucune hauteur. Sa cible fait 45 px de haut, mesurée par ce qu'on touche vraiment (elementFromPoint sur chaque point, au texte par défaut et de 21 à 28 px) : elle déborde sur les marges de la carte, 6 px plus haut que bas, et passe devant le titre. Relecture : centrée et derrière le titre, la boîte mesurait 44 mais « Bien » en prenait le bas (10 % de la cible de « Durée › ») et la 2e ligne de « Sport / mouvement », peinte après le lien flottant, 14 % de celle du Sport. Son bas reste au-dessus des choix de la carte, et son haut sous ceux de la carte du dessus : elle ne prend rien à aucun choix.
+- **Le détail du Sport et du Contact** est une carte de rubrique (« Sport en détail », « Contact en détail », à leur couleur) en pleine largeur sous la paire, ou sous la carte quand Contact et Sport ne se suivent pas. Les deux peuvent être ouverts ensemble, dans l'ordre de la paire. Leurs replis quittent la liste, qui garde « Ce qui a pesé · ce qui a rechargé », « Notes libres » et, pour une nuit déjà notée, « Nuit en détail ». Les résumés de ces deux replis (« Marche 30 à 60 min ») ne sont plus affichés sur le soir. Ils restent dans l'Historique, la page d'un jour et l'Export PSY.
+- **« Nuit en détail » masqué par défaut** : il se réaffiche dans Réglages › Le soir (« Nuit en détail · coucher, lever, réveils », sous les champs). Comme l'Humeur du soir en v6, le masque s'ajoute aux champs masqués déjà réglés par la migration 6 de la base, la mise à niveau du format 5 et « Revenir » vers une copie d'avant la v8. Sans réglage, la valeur par défaut s'applique à la lecture. **La migration 6, figée à la tâche 1, est donc modifiée** (empreinte du verrou mise à jour) : elle n'a jamais été publiée (la v8 n'est pas en ligne, et le site n'a pas de déploiement de branche). Elle relit la méta avant de l'écrire, pour qu'une base de la v5 (version 3), migrée d'un coup, garde aussi l'Humeur masquée par la migration 4 (vérifié dans WebKit et dans les tests unitaires). Une nuit qui a un coucher, un lever ou des réveils garde son repli, masqué ou non, carte Sommeil masquée comprise.
+- **La durée de la nuit se lit partout où se lit la qualité** : « nuit moyen · 6 h » dans le résumé du jour, les puces de l'Historique et le détail d'un jour de Mes jours ; « nuit Mal · 6 h » dans l'Export PSY.
+- **`dureeNuit(entree)`** (`analyse/fenetres.js`) rend la durée en heures : celle notée le soir, sinon celle du coucher au lever d'une nuit ancienne (de 2 à 16 h, comme avant), sinon rien. La durée médiane (Analyse, Vue soignants) en vient. L'ancien calcul en minutes s'appelle `minutesCoucherLever` : `dureeNuit` s'en sert pour les nuits anciennes (« Tes nuits selon le jour » le gardait aussi, jusqu'à son retrait le 26/10).
+- **Analyse › Tous les chiffres** : Réveils, Coucher et Lever n'ont leur tuile que pour une période qui en a. « Durée de nuit » reste, et le tableau des chiffres gagne sa ligne.
+- **Vue soignants** : la ligne s'appelle « Durée de nuit (médiane) » tant qu'aucune colonne n'a de coucher ni de lever médians. Sinon elle reste « Coucher · lever · durée (médianes) », et une colonne sans coucher ni lever n'y donne que sa durée. La page garde le même nombre de lignes.
+
+**Le format de l'Export PSY change (v8, à signaler)** : la nuit dit ses heures, « nuit Mal · 6 h » (« nuit 6 h » sans la qualité, « 4 h ou moins », « 10 h ou plus »). Les réveils (« nuit Mal (2 réveils) ») et « coucher 23:10 lever 06:40 » ne restent que pour les nuits anciennes qui en ont.
+
+### Comprendre et A4 (tâche 6)
+
+**Écart à la spec §7 : sur l'A4, « Nuit par nuit » peut disparaître.** La page essaie 4 semaines, puis 2 (spec), puis aucune : la règle des 273 mm passe avant. Dans le cas extrême des tests (8 médicaments, 6 longues questions, une longue prochaine étape, les émotions à 4 chiffres), la page fait déjà 266 mm sans la section, et son seul titre en prend 7. Le reste de la page ne change jamais d'un trait, avec ou sans la section. Avec des données ordinaires, les 4 semaines tiennent (270 mm au plus dans les tests).
+
+**Choix faits pendant la construction**
+- **Mes nuits** (Comprendre › Rythmes, entre « Autour d'un retour au bureau » et « Après une nuit » ; d'abord au-dessus de « Tes nuits selon le jour », retiré le 26/10) : une ligne par nuit notée (qualité ou durée), dans l'ordre des jours. Le jour à gauche (« lun 12/10 », le jour qui suit la nuit, comme partout), une barre de 0 à 12 h (plus loin si une nuit ancienne a duré davantage), le texte de la nuit à droite (« Mal · 6 h », « Bien », « 7 h 40 »). La barre prend la rampe du sommeil de Mes jours (README 2b : une teinte, trois pas) ; sans qualité, elle est creuse ; une nuit sans durée n'a que son texte. Toujours les 4 dernières semaines (`SEUILS.comprendre.nuitsSemaines`), quelle que soit la période choisie : le titre le dit à droite. Le graphique apparaît dès qu'une nuit de la fenêtre a sa durée.
+- **Contraste de la rampe** : le pas clair (Mal) n'a que 1,5:1 sur la carte en clair (1,8:1 en sombre), sous le plancher de 2:1 du contrôle des rampes (skill dataviz). Les jetons 2b ne changent pas : dans Mes nuits, la barre « Mal » et sa case de légende ont un contour de 1 px au pas « Moyen » (`.g-mes-nuits`, 2,9:1 en clair, 3,8:1 en sombre), et leur longueur se lit. La barre creuse (qualité non notée) reste vide, avec son contour plus épais à la couleur de la rubrique : les deux ne se confondent pas. Chaque ligne écrit aussi sa qualité et sa durée, et « Voir en tableau » les reprend. Tous les textes ont au moins 4,5:1, le contour au moins 2:1 (test e2e, en clair et en sombre). Mes jours garde la rampe 2b telle quelle.
+- **Nuit par nuit, sur l'A4** : entre l'évolution et « Ce qui revient le plus », en 4 colonnes lues de haut en bas, une nuit par ligne (jour, barre, texte), à la rampe imprimée de la frise. La légende, au bout du titre : « barre : heures dormies, de 0 à 12 h · date : le jour qui suit la nuit ». Rien sans durée sur la fenêtre.
+- **Q17** : « Énergie haute notée » suit la règle de l'énergie basse (oui dès un relevé « haute », non avec des relevés d'énergie sans « haute », inconnue sans relevé). « Hyperfocus » (le symptôme, son id fait foi) est oui le jour d'une fiche Hyperfocus, non un jour qui a une saisie du soir ou une autre fiche de symptôme, inconnu sinon : comme les explosions, un jour de relevés seuls ne vaut jamais « non ». Les deux viennent après les facteurs de la v6, avant ce qui a pesé et rechargé.
+- **Q18 · « Émotions selon ce que je faisais »** : dans Comprendre › Énergie, juste après l'énergie selon ce que je faisais. Une ligne par activité, dans l'ordre de sa liste, découpée par famille, en nombres de relevés (le graphique des autres vues d'émotions). Un relevé de deux activités compte pour chacune. Le seuil (5 relevés) compte les relevés qui ont une émotion et une activité, une fois chacun.
+
+### Après coup et rendez-vous (tâche 7)
+
+- **Q20** : « Une autre façon de voir » vient aussi quand Honte ou Regret est touché dans « Plus tard », quel que soit le type, juste après « Ce que ça a donné ».
+- **Q22** : dans la fiche d'un rendez-vous, sous « Une question pour ce rendez-vous… », les sujets de la liste `sujetRdv`.
+  - Un toucher pose « Parler de : sommeil », un second la retire.
+  - Une question cochée « abordée » reste : le toucher le dit (« Question déjà abordée : elle reste »), et seul son ✕ la retire.
+  - Une question se modifie sur place.
+
+### Fiabilité (tâche 8)
+
+**À trancher sur l'iPhone : le soir avec les zones sûres.** Les tests simulent celles de l'iPhone en 390 × 844 (spec §12.7) : 47 px en haut, 34 en bas, soit 763 px de hauteur utile. Mesuré dans WebKit, en clair comme en sombre, à 21 h comme à 01:30 :
+- le soir tient : 28,3 px entre la carte des points positifs et la bande du bas ;
+- « J'ai fini pour ce soir » passe 19,7 px sous la bande (P3), et la ligne Après coup 69,7 px (P2) ;
+- avec le bandeau « Nouvelle version prête » (114 px, dont les 47 de la zone), le soir passe 28,4 px sous la bande (point de vigilance 3), et « J'ai fini » 74,4 px.
+
+Les tests de la v7 restaient aux tailles d'avant (844 sans zones, 797), qui laissent 34 px de plus que l'iPhone : verts, ils ne protégeaient rien. Ils tournent maintenant avec les zones, et les quatre attentes qui ne tiennent pas sont marquées `test.fail()` (`v7-aujourdhui.spec.js` : P2, P3, « J'ai fini » avec le bandeau ; `v8-sommeil.spec.js` : vigilance 3 avec le bandeau). Une marque qui passe fait échouer la suite : on la retire quand la mise en page change.
+
+Le Diagnostic donne les deux marges réelles, « Marge du soir » et « Marge de « J'ai fini » », prises sur le soir d'aujourd'hui seulement (un autre jour a « Revenir à aujourd'hui » en plus), détails fermés (relecture finale : voir plus bas).
+
+Pistes à proposer, aucune appliquée :
+- un bandeau d'une seule rangée de 44 px sur Aujourd'hui : environ 23 px de gagnés (67 sous la zone aujourd'hui), il resterait 5 px à trouver pour le soir avec le bandeau ;
+- « Mémo vocal » et « J'ai fini » plus serrés, ou ailleurs : les cartes ne peuvent plus se resserrer sans cibles de moins de 44 ;
+- ou garder le défilement pour ce qui suit la dernière carte (« J'ai fini », Après coup) : le soir lui-même tient.
+
+**Étapes à venir d'un parcours** : un contour de 1,5 px en --text-2, sans fond (README 2b : « contour (2a) »), à 5,6:1 sur le fond en clair et 7,3:1 en sombre. En --line, elles restaient sous le 3:1 des éléments graphiques (1,45:1 en clair).
+
+### Contrôle global (tâche 9)
+
+- **Captures de tous les écrans**, à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, au texte par défaut et à 23 px. Elles sont comparées au système 2b et gardées hors du dépôt.
+- **Corrigé : les tuiles de l'écran Émotion.** Leur contenu part maintenant du haut. Centré, il décalait de 8 px les deux noms d'énergie d'une rangée quand les mots d'exemple d'une tuile tenaient sur deux lignes et ceux de l'autre sur une : en Haute, « Extasié Énergique / Amusé » face à « Furieux Terrifié Choqué ». Le test est dans `v8-emotion.spec.js`, au texte par défaut, à 21 et à 23 px, tuile choisie comprise.
+- **Le test de contrôle** (`v7-controle.spec.js`) passe maintenant aussi par les écrans de la v8 :
+  - la Durée et le détail du Sport, ouverts dans leurs cartes ;
+  - la carte de l'Émotion : une zone et un mot, puis toute la carte et un sens montré par un appui long ;
+  - le Programme et ses « Faite le » ;
+  - le lecteur : avant de commencer, une étape rythmée, la pause et la fin ;
+  - la cohérence cardiaque de l'onglet, avant et pendant ;
+  - Mes nuits, en graphique et en tableau, avec une nuit sans qualité et une nuit sans durée ;
+  - « Émotions selon ce que je faisais » (Q18), en graphique et en tableau : les relevés d'émotion versés ont maintenant ce que je faisais, une ou deux activités (relecture : sans eux, la carte restait sur « Pas encore assez de données », sans graphique à mesurer) ;
+  - Réglages › Émotions, avec un sens corrigé ouvert dans son champ.
+
+  Il compte 49 écrans, contre 41. Tout texte visible a au moins 4,5:1 sur son fond, aucun cadre n'est en tirets, et tout choix fait a sa coche. À 390 px, au texte par défaut et à 23 px, rien ne sort de l'écran de côté.
+- **Un test instable stabilisé** : « deux touchers rapides » (point de vigilance 5) a échoué une fois sous la charge de `npm test`. Entre les deux touchers, à 120 ms d'écart sur l'horloge de la page, le temps réel s'ajoutait, et la garde de 350 ms expirait. L'horloge de la page est maintenant arrêtée pendant les deux touchers, puis relancée. Le test passe dans `npm test`, et il échoue toujours avec une garde de 100 ms.
+- **Vu et laissé tel quel** :
+  - le séparateur « · » des messages (« Fin de l'exercice. · Noter mon émotion »), au milieu de la place libre : c'est le message commun de l'app depuis la v6 ;
+  - dans les graphiques, le texte des SVG ne grandit pas avec le grand texte, comme ailleurs dans Comprendre ;
+  - le lecteur en très grand texte. Les 17 séances ont été mesurées étape par étape, avec les zones sûres. Au texte par défaut et à 19 px, rien ne défile. À 21 px, une étape défile de 2 px. À 23 px, 8 étapes de 6 séances défilent, de 6 à 72 px. Avec les consignes les plus longues, le bas de l'anneau et « il reste » passent alors sous Précédent et Suivant. La consigne reste entière en haut, la voix et les bols ne changent pas, et l'anneau revient en défilant. Réduire la consigne ou l'anneau en grand texte irait contre le grand texte, et c'est à juger sur l'iPhone (« À essayer sur l'iPhone »).
+
+### Relecture finale
+
+- **La marge du soir du Diagnostic est celle du soir, détails fermés.** Elle était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait « −71,7 px (le soir défile) » d'un soir qui tient (28,3 px fermé, dans WebKit avec les zones). Elle n'est plus prise, ni quand la fenêtre change de taille, tant que « Durée › » ou le « Détail › » du Sport ou du Contact est ouvert ; refermés, la mesure reprend. Test : `v8-fiabilite.spec.js` (Q27, détails fermés).
+- **Le repère Bien-être de Mes jours est un losange plein.** Le contour arrondi de la v8 (Q29) faisait, sur 30 jours, un ovale de 5 × 8 px qui se lisait « 0 » : la rangée disait « 0  00 00 », comme un compteur à zéro. Le losange est plein, à la couleur de Bien-être (3,9:1 sur la carte en clair, 8,3:1 en sombre), de 8 px sur 7 jours et de 6 sur 30, avec 2 px entre deux jours voisins (1 au moins, par mois sur 5 ans). Il ne se confond ni avec « nuit bien », une barre du même bleu en sombre, ni avec un chiffre. Toujours le même repère, sans nombre.
+- **Les légendes de la carte de l'Émotion sont rangées contre le centre**, comme les bulles : celle de gauche alignée à droite, celle de droite à gauche. « Toute la carte » s'ouvre au milieu et ne montre que la moitié de chaque zone Moyenne : les deux légendes étaient hors du cadre, et rien ne disait quel côté était désagréable et lequel agréable. Elles tiennent maintenant dans cette moitié, à la marge de la page du bord de l'écran. Quand la place manque, la légende passe à la ligne après l'énergie (« Moyenne · », puis « plutôt désagréable ») : à 390 de large au texte par défaut, seule « Moyenne · plutôt désagréable » le fait ; à 375, les trois de gauche ; en grand texte, davantage. La légende ne change pas de place entre « Toute la carte » et une tuile. Test : `v8-emotion.spec.js`, à 390 et 375 de large, au texte par défaut et à 23 px.
+- **Un test instable stabilisé** : « la Vue soignants ouverte à froid lit la base une seule fois » (Q26) a échoué une fois dans une suite complète, avec deux lectures des rendez-vous. Aujourd'hui, ouvert au rechargement, lit les rendez-vous (le prochain) ; sous charge, sa lecture tombait après la pose des compteurs. Le test attend maintenant Aujourd'hui avant d'ouvrir la Vue soignants, comme son voisin.
+
+### Le format de l'Export PSY change (v8, à signaler)
+
+Si l'assistant PSY de l'utilisateur lit la nuit d'un jour, ses consignes sont à mettre à jour :
+- la nuit dit ses heures : « nuit Mal · 6 h », « nuit 6 h » sans la qualité, « 4 h ou moins », « 10 h ou plus » ;
+- les réveils (« nuit Mal (2 réveils) ») et « coucher 23:10 lever 06:40 » ne restent que pour les nuits anciennes qui en ont ;
+- le Programme et le Bien-être n'y paraissent toujours pas.
+
+### En attente de l'utilisateur
+
+- **Le soir avec les zones sûres** (tâche 8). À 390 × 844, « J'ai fini pour ce soir » et la ligne Après coup passent sous la bande du bas, comme le soir avec le bandeau de mise à jour (point de vigilance 3). Les pistes sont plus haut. Les attentes sont marquées `test.fail()` en attendant la marge réelle de l'iPhone.
+- **La Durée en deux touchers** : « Durée › » (tâche 5), un écart prévu par la spec.
+- **Nuit par nuit sur l'A4** peut disparaître dans le cas extrême (tâche 6).
+- **Les textes à relire** : les 79 définitions et les 8 séances nouvelles (plus bas), dans l'app, après la publication.
+- **Deux titres voisins dans Comprendre › Énergie** : « Selon ce que tu faisais » (v6), puis « Émotions selon ce que je faisais » (le titre de la spec, Q18).
+  - Ils se suivent avec deux personnes différentes. Le titre de la spec est gardé ; « Avant mes jours à énergie basse » et « Mes nuits » disent aussi « mes ».
+  - À harmoniser si l'utilisateur le veut.
+- **Les points en attente de la v7 restent ouverts** : le pire cas du soir à 8 rubriques, « Effacer définitivement » en rouge, la rubrique du soir « Humeur ». Seule la ligne de CLAUDE.md sur le vocabulaire de la roue a été ajoutée, le 22/10.
+
+### Retiré à la demande de l'utilisateur (26/10)
+
+- **« Tes nuits selon le jour »** (Comprendre › Rythmes) est retiré : « Mes nuits » le remplace. Ce graphique ne comptait que les nuits qui ont un coucher et un lever (`nuitsParSoir`, par `minutesCoucherLever`). Depuis la v8, le soir ne les propose plus (le sommeil se note en heures et en qualité, « Nuit en détail » est masqué par défaut) : seules les nuits anciennes l'alimentaient, et en « 3 mois » il aurait toujours fini sur « Pas encore assez de données pour le dire ». Des trois choix laissés à la relecture finale (le garder, le masquer sans nuit, le retirer), l'utilisateur a pris le dernier.
+  - Retirés avec lui : `nuitsParSoir` (`analyse/comprendre.js`), `GrapheNuits` et sa géométrie (`geometrieNuits`, `DIM_NUITS`, `AXE_NUITS`), sa règle « Pourquoi ? » (`REGLES_COMPRENDRE.nuits`), ses classes (`.g-nuit`, `.g-pointille`, `.g-marque`) et ses tests.
+  - Restent : `minutesCoucherLever`, dont `dureeNuit` tire la durée des nuits anciennes (Mes nuits, Analyse, Vue soignants) ; les seuils `minValeurs` et `minColonnes`, qui servent aux colonnes. Les nuits anciennes gardent leur coucher et leur lever, que l'Analyse et l'Export PSY lisent toujours.
+  - Rythmes montre désormais, dans l'ordre : selon le jour de la semaine, selon le lieu, autour d'un retour au bureau, Mes nuits, après une nuit, selon le mois.
+  - Tests : `v6-comprendre.spec.js` (la carte n'est plus là ; les nuits anciennes des 180 jours paraissent dans Mes nuits) et `v8-comprendre.spec.js` (Mes nuits entre « Autour d'un retour au bureau » et « Après une nuit »).
+
+### À essayer sur l'iPhone
+
+- **Les sons en mode silencieux.**
+  - « Jouer même en mode silencieux » éteint : le lecteur se tait en silencieux et se mêle à la musique.
+  - Allumé : il joue, et la musique se met en pause.
+  - Moment difficile et « Respirer » restent muets au départ.
+- **Le souffle** : un bruit doux qui monte pendant l'inspiration et redescend à l'expiration, calé sur le disque. À essayer : son volume, sa douceur, et les bols de début, d'étape et de fin.
+- **La marge réelle du soir.** Le Diagnostic (appui long sur la version, dans Réglages) donne la hauteur utile, les zones sûres, la « Marge du soir » et la « Marge de « J'ai fini » » de l'app installée. Elles sont prises sur le soir d'aujourd'hui, détails fermés : « Durée › » ouverte, le soir défile, et ce n'est pas sa marge. Elles sont à comparer aux valeurs simulées : 28,3 px et −19,7 px (tâche 8).
+- **La carte de l'Émotion sous le pouce** : le glissement, l'appui long (0,5 s) à côté du défilement, la taille des bulles.
+- **Le lecteur écran verrouillé**, la voix française du système, et le grand texte d'iOS sur la carte, le lecteur et le Programme.
+
+### Textes à relire après la publication
+
+Écrits pour Carnet (spec §4 et §6) : des phrases courtes, au tutoiement pour les séances, sans jugement, sans promesse d'effet ni conseil de santé. L'utilisateur les relit dans l'app, après la publication (spec §2).
+
+**Les 79 définitions** (`public/js/domain/definitions-roue.js`, figées comme la roue). L'app les affiche après le mot et les deux-points, en minuscule (« Irrité : agacé par… »). Une définition se corrige dans Réglages › Émotions ; « Revenir au texte de Carnet » retire la correction. Le texte de Carnet ne change que par une nouvelle version.
+
+#### Colère (16)
+
+- **Embarrassé** : Gêné devant les autres, au point d'en rougir.
+- **Dévasté** : Bouleversé, comme si tout s'était effondré d'un coup.
+- **Insécurisé** : Pas sûr de soi ni de sa place, sur le qui-vive.
+- **Jaloux** : Contrarié de voir un autre avoir ce qu'on voudrait, ou de craindre de perdre quelqu'un.
+- **Amer** : Plein de rancœur après une déception ou une injustice.
+- **Défiant** : Qui tient tête, prêt à s'opposer.
+- **Furieux** : En très grande colère, avec du mal à se contenir.
+- **Enragé** : Submergé par la colère, au point de ne plus penser à autre chose.
+- **Provocateur** : Qui cherche à piquer les autres ou à les faire réagir.
+- **Hostile** : Fermé, prêt à se défendre ou à attaquer face à quelqu'un.
+- **Mécontent** : Pas satisfait de ce qui se passe ou de ce qu'on a reçu.
+- **Irrité** : Agacé par quelque chose qui gêne ou qui se répète.
+- **Retiré** : En retrait, à distance des autres.
+- **Suspect** : Soupçonneux, sur ses gardes, on doute des intentions des autres.
+- **Sceptique** : Qui doute, pas convaincu par ce qu'on entend.
+- **Sarcastique** : Qui se moque avec des mots piquants, souvent pour dire un agacement.
+
+#### Dégoût (7)
+
+- **Jugé** : Regardé et évalué par les autres, comme sous un examen.
+- **Aversion** : Une forte envie de s'éloigner de quelque chose ou de quelqu'un.
+- **Répugnant** : Écœuré par quelque chose qui repousse.
+- **Révolté** : Choqué par ce qui paraît injuste, au point de vouloir s'y opposer.
+- **Dégoût** : Un écœurement, l'envie de se détourner de quelque chose.
+- **Détestable** : On se trouve, ou on trouve une chose, difficile à supporter.
+- **Hésitant** : Partagé entre plusieurs choix, du mal à se décider.
+
+#### Tristesse (12)
+
+- **Fautif** : Avec le sentiment d'avoir fait du tort ou d'être responsable de ce qui arrive.
+- **Honteux** : L'envie de se cacher, de disparaître du regard des autres.
+- **Ignoré** : Ni vu ni entendu par les autres, comme si on n'était pas là.
+- **Replié** : Refermé sur soi, sans envie d'aller vers les autres.
+- **Impuissant** : Sans prise sur ce qui arrive, rien ne semble possible.
+- **Vulnérable** : Exposé, à découvert, facile à blesser.
+- **Minable** : Petit et piteux à ses propres yeux.
+- **Vide** : Plus rien à l'intérieur, comme engourdi.
+- **Abandonné** : Laissé seul par quelqu'un sur qui on comptait.
+- **Isolé** : Seul, à l'écart, loin des autres.
+- **Amorphe** : Sans élan, le corps et l'esprit au ralenti.
+- **Indifférent** : Rien ne touche ni n'intéresse vraiment, pour le moment.
+
+#### Joie (16)
+
+- **Inspiré** : Plein d'idées et d'élan, l'envie de créer ou d'agir.
+- **Ouvert** : Disponible, prêt à accueillir les autres et ce qui vient.
+- **Espiègle** : D'humeur joueuse, l'envie de taquiner gentiment.
+- **Sensible** : Touché, réceptif à ce qui se passe et aux autres.
+- **Optimiste** : Confiant dans la suite de ce qui se passe.
+- **Aimant** : Plein d'affection pour quelqu'un.
+- **Provocant** : Audacieux et taquin, qui ose.
+- **Courageux** : Prêt à faire face à quelque chose de difficile.
+- **Accompli** : Satisfait d'avoir mené quelque chose au bout.
+- **Respecté** : Pris au sérieux et considéré par les autres.
+- **Important** : Compter pour les autres, avoir sa place.
+- **Curieux** : L'envie de découvrir, de comprendre, d'en savoir plus.
+- **Amusé** : Quelque chose fait sourire ou rire.
+- **Extasié** : Émerveillé, transporté de joie.
+- **Libéré** : Soulagé d'un poids, plus léger.
+- **Confiant** : Sûr de soi ou des autres, on peut compter dessus.
+
+#### Surprise (8)
+
+- **Énergique** : Plein d'élan, le corps prêt à bouger.
+- **Avide** : Impatient, plein d'envie pour ce qui arrive.
+- **Effrayé** : Saisi d'un coup, le sursaut de la peur.
+- **Abasourdi** : Sonné par une nouvelle inattendue, sans voix.
+- **Perplexe** : Sans savoir quoi penser, les idées s'embrouillent.
+- **Désillusionné** : Ce qu'on espérait ne s'est pas réalisé, l'élan retombe.
+- **Consterné** : Abattu et sans voix devant ce qui arrive.
+- **Choqué** : Secoué par quelque chose de brutal ou d'inattendu.
+
+#### Peur (12)
+
+- **Terrifié** : Envahi par une peur très forte.
+- **Craintif** : Inquiet de ce qui pourrait arriver, sur la réserve.
+- **Accablé** : Écrasé par trop de choses à la fois.
+- **Préoccupé** : L'esprit pris par un souci qui revient.
+- **Incapable** : Avec l'impression de ne pas pouvoir y arriver.
+- **Inférieur** : Moins que les autres, à ses propres yeux.
+- **Sans valeur** : Avec l'impression de ne compter pour rien.
+- **Inadéquat** : Pas à la hauteur de ce qui est attendu.
+- **Insignifiant** : Tout petit, comme si on ne comptait pas.
+- **Exclus** : Laissé en dehors d'un groupe ou de ce qui se fait.
+- **Non respecté** : Pas considéré : ses limites ou sa parole sont mises de côté.
+- **Ridiculisé** : Moqué devant les autres, rendu ridicule.
+
+#### Sérénité (8)
+
+- **Calme** : Rien ne s'agite, ni dedans ni autour.
+- **Apaisé** : La tension est retombée, le corps se relâche.
+- **Détendu** : Les muscles et l'esprit relâchés.
+- **Reposé** : Le corps a récupéré, l'énergie est revenue.
+- **Tranquille** : Sans souci pour l'instant, rien ne presse.
+- **Serein** : En paix avec ce qui est, sans inquiétude.
+- **Posé** : Stable et réfléchi, on prend son temps.
+- **En sécurité** : À l'abri, rien ne menace.
+
+**Les 8 séances nouvelles** (titres et étapes, avec la durée de chaque étape). Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas. Les blocs communs « Arriver » et « Revenir » y sont recopiés. Les 8 séances de la v7 gardent leurs textes (« Exercices à relire », à l'entrée v7).
+
+#### Les sons (5 min, `les-sons`)
+
+Écouter les sons proches, puis plus loin, sans les nommer. Posture : assis.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Écoute les sons proches : dans la pièce, sur toi, ta respiration. *(40 s)*
+6. Écoute les sons plus loin : le bâtiment, la rue, dehors. *(40 s)*
+7. Pas besoin de les nommer. Remarque quand un son commence et quand il s'arrête. *(45 s)*
+8. Si un son te gêne, tu peux te boucher les oreilles, changer de pièce ou t'arrêter. *(15 s)*
+9. Remarque les moments plus calmes entre deux sons, s'il y en a. *(30 s)*
+10. Écoute tous les sons à la fois, sans en choisir un. *(30 s)*
+11. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+12. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+13. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+14. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Les cinq zones (6 min, `cinq-zones`)
+
+Passer par cinq zones du corps, puis le corps entier. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Cinq zones du corps, l'une après l'autre. Dans chacune, remarque ce qui est là, ou rien. *(15 s)*
+6. La tête et le visage : le front, les yeux, la mâchoire. *(30 s)*
+7. Si la mâchoire est serrée, laisse les dents se séparer un peu. *(15 s)*
+8. Le cou, les épaules, les bras, jusqu'aux mains. *(35 s)*
+9. La poitrine et le dos. Remarque le dos contre son appui, s'il y en a un. *(35 s)*
+10. Le ventre, qui bouge avec la respiration. *(30 s)*
+11. Le bassin, les jambes, jusqu'aux pieds. *(35 s)*
+12. Le corps entier, d'un coup, tel qu'il est maintenant. *(30 s)*
+13. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+14. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+15. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+16. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Mouvements lents (4 min, `mouvements-lents`)
+
+Tourner la tête et le buste, hausser les épaules, lentement. Posture : debout ou assis.
+
+1. Mets-toi debout, les pieds écartés, les genoux souples. Assis, c'est possible aussi. Tu peux t'arrêter à tout moment. *(20 s)*
+2. Tourne lentement la tête vers la droite, puis vers la gauche, sans forcer. Trois fois. *(30 s)*
+3. Remets la tête au milieu. Remarque ce que tu sens dans le cou. *(20 s)*
+4. Laisse les bras pendre. Tourne doucement le haut du corps à droite, puis à gauche. Les bras suivent sans effort. *(45 s)*
+5. Arrête-toi au milieu. Remarque ce que tu sens dans le dos et les bras. *(20 s)*
+6. Inspire et monte les épaules. Expire et laisse-les retomber. Trois fois, à ton rythme. *(40 s)*
+7. Laisse les bras le long du corps. Remarque les épaules et les mains. *(25 s)*
+8. Fais quelques pas sur place. Sens le poids passer d'un pied à l'autre. *(30 s)*
+9. Reste immobile. Respire comme d'habitude. *(20 s)*
+10. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Faire le point avec mon corps (3 min, `point-corps`)
+
+Une question à la fois : faim, soif, chaud ou froid, fatigue. Posture : là où tu es.
+
+1. Fais une pause là où tu es, les yeux ouverts si tu veux. Tu peux t'arrêter à tout moment. *(15 s)*
+2. As-tu faim ? Un peu, beaucoup, pas du tout ou « je ne sais pas » : tout se vaut. *(20 s)*
+3. As-tu soif ? *(15 s)*
+4. As-tu besoin d'aller aux toilettes ? *(15 s)*
+5. As-tu chaud, froid, ou ni l'un ni l'autre ? *(15 s)*
+6. Y a-t-il un endroit tendu ou douloureux : la mâchoire, les épaules, le ventre ? *(25 s)*
+7. Es-tu fatigué ? *(15 s)*
+8. Y a-t-il trop de bruit, de lumière ou de monde autour de toi ? *(20 s)*
+9. Si quelque chose est apparu, tu peux t'en occuper maintenant : boire, manger, te couvrir, sortir. *(25 s)*
+10. Reprends quand tu veux. *(10 s)*
+
+#### Marche lente (5 min, `marche-lente`)
+
+Marcher lentement, en remarquant chaque pas. Posture : en marchant.
+
+1. Trouve un endroit pour faire quelques pas : un couloir, une pièce, un chemin calme. Tu peux t'arrêter à tout moment. *(20 s)*
+2. Debout, sens le poids du corps sur tes deux pieds. *(20 s)*
+3. Marche plus lentement que d'habitude. Les bras comme tu veux. *(30 s)*
+4. Remarque le talon qui touche le sol, puis la plante du pied, puis les orteils. *(60 s)*
+5. Au bout de l'espace, arrête-toi, puis fais demi-tour. *(15 s)*
+6. Remarque le pied qui se lève, avance, puis se pose. *(60 s)*
+7. Si ton esprit part ailleurs, reviens aux pieds, sans te juger. *(20 s)*
+8. Si marcher lentement te gêne, marche à ton pas habituel. Continue de remarquer tes pieds. *(60 s)*
+9. Arrête-toi. Sens tes deux pieds sur le sol. *(20 s)*
+10. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Un bon moment passé (6 min, `bon-moment-passe`)
+
+Retrouver un moment passé, même petit, par les sens et les gestes. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Choisis un moment passé qui s'est bien passé, même petit : un repas, un trajet, une conversation. *(40 s)*
+6. Si rien ne vient, prends un moment neutre et récent : ce matin, un café, une douche. *(15 s)*
+7. Où étais-tu ? Regarde le lieu : les formes, les couleurs, la lumière. *(45 s)*
+8. Écoute les sons de ce moment. Remarque les odeurs, la température. *(45 s)*
+9. Que faisais-tu ? Repasse les gestes, un par un. *(45 s)*
+10. Si un souvenir pénible arrive, ouvre les yeux et regarde autour de toi. Tu peux t'arrêter là. *(15 s)*
+11. Remarque ton corps maintenant : les épaules, le ventre, la respiration. Il peut y avoir quelque chose, ou rien. *(40 s)*
+12. Laisse ce moment. Reviens aux appuis de ton corps. *(20 s)*
+13. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+14. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+15. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+16. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Un moment à venir (6 min, `moment-a-venir`)
+
+Imaginer un moment simple des prochains jours, par les sens. Posture : assis ou allongé.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Choisis un moment simple des prochains jours : un repas, une promenade, un moment seul. *(40 s)*
+6. Prends un moment qui ne t'inquiète pas. Si celui-ci te tend, choisis-en un plus petit. *(15 s)*
+7. Où seras-tu ? Regarde le lieu : les formes, les couleurs, la lumière. *(45 s)*
+8. Qu'y aura-t-il autour de toi : les objets, les sons, la température ? *(45 s)*
+9. Que feras-tu ? Repasse les gestes, un par un. *(45 s)*
+10. Remarque ton corps maintenant, pendant que tu y penses : les épaules, le ventre, la respiration. *(40 s)*
+11. Laisse ce moment. Reviens aux appuis de ton corps. *(20 s)*
+12. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+15. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Ce qui compte pour moi (6 min, `ce-qui-compte`)
+
+Choisir un mot qui compte pour toi, et une chose qui va avec. Posture : assis.
+
+1. Installe-toi assis, les pieds à plat. Debout ou allongé, c'est possible aussi. *(15 s)*
+2. Garde les yeux ouverts, posés sur un point, ou ferme-les. Les deux vont. *(10 s)*
+3. Sens les endroits où ton corps touche le siège, le sol ou le lit. *(20 s)*
+4. Laisse ta respiration comme elle est, sans rien changer. Tu peux t'arrêter à tout moment. *(15 s)*
+5. Voici des mots : calme, honnêteté, curiosité, justice, liberté, ordre, création, lien. Choisis-en un, ou un autre à toi. *(40 s)*
+6. Si aucun mot ne vient, remarque ta respiration jusqu'à la fin. *(15 s)*
+7. Cherche une chose faite ces derniers jours qui va avec ce mot, même petite. *(45 s)*
+8. Où étais-tu ? Que faisais-tu, geste par geste ? *(45 s)*
+9. Remarque ton corps en y pensant : les épaules, le ventre, la respiration. *(40 s)*
+10. Imagine une petite chose des prochains jours qui irait avec ce mot. Tu n'as rien à décider. *(40 s)*
+11. Laisse le mot. Reviens aux appuis de ton corps. *(20 s)*
+12. Inspire un peu plus fort. Bouge les doigts et les orteils. *(15 s)*
+13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
+14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
+15. Reprends ce que tu faisais quand tu veux. *(10 s)*

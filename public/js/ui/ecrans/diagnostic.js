@@ -1,5 +1,8 @@
 // Écran de diagnostic (appui long sur la version, dans Réglages) : vérifie sur l'iPhone
-// ce qu'aucune source ne garantit (partage, impression, presse-papier, micro, dictée).
+// ce qu'aucune source ne garantit (partage, impression, presse-papier, micro, dictée). v8 (Q27) : l'écran aussi, la
+// fenêtre, les zones sûres (encoche, barre d'accueil), la hauteur utile entre elles, la marge du soir (entre la
+// dernière carte du soir et la bande du bas, prise au dernier affichage du soir d'aujourd'hui, détails fermés) et celle
+// de « J'ai fini pour ce soir » : des chiffres techniques, rien sur l'usage.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { VERSION, VERSION_APP } from '../../version.js';
@@ -14,8 +17,28 @@ import { lireTout } from '../../db/sauvegarde.js';
 import { verifierDonnees } from '../../domain/verification.js';
 import { repo } from '../../donnees.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
+import { zonesSures, hauteurUtile, lireMargeSoir, lireMargeFini } from '../mesures.js';
 
 const enc = new TextEncoder();
+// « 28,3 px », « −12 px » : une décimale au plus, à la française.
+const px = (n) => `${String(n).replace('-', '−').replace('.', ',')} px`;
+
+// L'écran, relu à l'ouverture et quand la fenêtre change de taille (rotation, clavier, bandeau de Safari).
+function useEcran() {
+  const lire = () => { const zones = zonesSures(); return { zones, ...hauteurUtile(zones), marge: lireMargeSoir(), fini: lireMargeFini() }; };
+  const [ecran, setEcran] = useState(null);
+  useEffect(() => {
+    const maj = () => setEcran(lire());
+    maj();
+    window.addEventListener('resize', maj);
+    return () => window.removeEventListener('resize', maj);
+  }, []);
+  return ecran;
+}
+const texteZones = (z) => `haut ${z.haut} · bas ${z.bas} · gauche ${z.gauche} · droite ${z.droite}`;
+const texteMarge = (m) => (m == null ? '· (ouvre le soir d\'aujourd\'hui)' : `${px(m)}${m < 0 ? ' (le soir défile)' : ''}`);
+// « J'ai fini pour ce soir » n'est là qu'après un premier choix du soir.
+const texteFini = (m) => (m == null ? '·' : `${px(m)}${m < 0 ? ' (sous la bande)' : ''}`);
 
 async function fabriquerPdfTest() {
   const canvas = document.createElement('canvas');
@@ -38,6 +61,7 @@ export function Diagnostic() {
   const [micro, setMicro] = useState({ etat: 'repos' });
   const [verif, setVerif] = useState({ etat: 'repos' });
   const zoneDicter = useRef(null);
+  const ecran = useEcran();
   const noter = (test, resultat) => setJournal((j) => [...j, `${test} : ${resultat}`]);
 
   useEffect(() => {
@@ -107,6 +131,7 @@ export function Diagnostic() {
   const rapport = () => [
     `Carnet ${infos.version} · ${new Date().toLocaleString('fr-FR')}`,
     `Mode : ${infos.mode} · SW : ${infos.sw}`,
+    ...(ecran ? [`Écran : ${ecran.largeur} × ${ecran.fenetre} · zones sûres ${texteZones(ecran.zones)} · hauteur utile ${px(ecran.utile)} · marge du soir ${texteMarge(ecran.marge)} · marge de « J'ai fini » ${texteFini(ecran.fini)}`] : []),
     `Stockage protégé : ${infos.persiste} · utilisé ${infos.utilise} / quota ${infos.quota}`,
     `canShare JSON : ${fichiers.jsonVariantes ? fichiers.jsonVariantes.map((f) => `${f.type}=${peutPartager(f)}`).join(', ') : '·'}`,
     `canShare ZIP : ${fichiers.zip ? peutPartager(fichiers.zip) : '·'} · PDF : ${fichiers.pdf ? peutPartager(fichiers.pdf) : '·'}`,
@@ -124,6 +149,11 @@ export function Diagnostic() {
         <dt>Service worker</dt><dd>${infos.sw || '·'}</dd>
         <dt>Stockage protégé</dt><dd>${String(infos.persiste ?? '·')}</dd>
         <dt>Utilisé / quota</dt><dd>${infos.utilise || '·'} / ${infos.quota || '·'}</dd>
+        <dt>Fenêtre</dt><dd>${ecran ? `${ecran.largeur} × ${ecran.fenetre}` : '·'}</dd>
+        <dt>Zones sûres</dt><dd>${ecran ? texteZones(ecran.zones) : '·'}</dd>
+        <dt>Hauteur utile</dt><dd>${ecran ? px(ecran.utile) : '·'}</dd>
+        <dt>Marge du soir</dt><dd>${ecran ? texteMarge(ecran.marge) : '·'}</dd>
+        <dt>Marge de « J'ai fini »</dt><dd>${ecran ? texteFini(ecran.fini) : '·'}</dd>
         <dt>Formats micro</dt><dd>${infos.formats ? Object.entries(infos.formats).map(([k, v]) => `${k} ${v ? 'oui' : 'non'}`).join(' · ') : '·'}</dd>
         <dt>canShare</dt><dd>JSON ${fichiers.json ? 'oui' : 'non'} · ZIP ${fichiers.zip && peutPartager(fichiers.zip) ? 'oui' : 'non'} · PDF ${fichiers.pdf && peutPartager(fichiers.pdf) ? 'oui' : 'non'}</dd>
       </dl>

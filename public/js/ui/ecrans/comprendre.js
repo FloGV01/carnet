@@ -3,7 +3,11 @@
 // d'analyse/emotions.js ; sous un seuil, chaque graphique dit « Pas encore assez de données pour le dire. ». La période
 // et la mesure sont gardées d'une ouverture à l'autre ; l'onglet vient de la porte touchée dans l'Analyse (v6.1).
 // v7 : la mesure « Humeur » devient « Émotions » (les familles), avec « Après une nuit » et « Autour de tes explosions » ;
-// « Autour du Bien-être » (spec §6.4) ferme l'onglet Énergie.
+// « Autour du Bien-être » (spec §6.4) ferme l'onglet Énergie. v8 : « Mes nuits » (Q15) ouvre les nuits de Rythmes, sur les 4
+// dernières semaines quelle que soit la période ; « Émotions selon ce que je faisais » (Q18) suit l'énergie selon ce que je
+// faisais ; l'énergie haute et l'hyperfocus entrent dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le
+// jour » est retiré le 26/10, à la demande de l'utilisateur : il lisait le coucher et le lever, que le soir ne propose plus
+// depuis la v8 ; Mes nuits le remplace.
 import { html, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -13,16 +17,17 @@ import { carteLibelles } from '../../domain/libelles.js';
 import { premiereDate } from '../../analyse/fenetres.js';
 import {
   PERIODES, MESURES, periodeComprendre, facteursParJour, explosionsAvant, explosionsApres, energieAvant, retoursBureau,
-  parColonnes, nuitsParSoir, energieParActivite, peseRecharge,
+  parColonnes, energieParActivite, peseRecharge, mesNuits, periodeMesNuits,
 } from '../../analyse/comprendre.js';
-import { apresNuit, autourDe, autourDuBienEtre } from '../../analyse/emotions.js';
+import { apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite, selonSeuilEmotions } from '../../analyse/emotions.js';
 import { SEUILS } from '../../analyse/seuils.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { jourEvenement } from '../../domain/dates.js';
 import {
-  GrapheAligne, GrapheColonnes, GrapheNuits, GrapheActivites, GraphePeseRecharge, GrapheFamilles, GrapheFamillesColonnes, PasAssez, nomMesure,
+  GrapheAligne, GrapheColonnes, GrapheMesNuits, GrapheActivites, GraphePeseRecharge, GrapheFamilles, GrapheFamillesColonnes, PasAssez, nomMesure,
 } from '../graphes/comprendre.js';
 import { versHash } from '../../routeur.js';
+import { lireSiChange, lireBase } from '../lecture.js';
 
 const CLE_PERIODE = 'carnet:comprendre:periode';
 const CLE_MESURE = 'carnet:comprendre:mesure';
@@ -36,16 +41,15 @@ const COTES = [{ valeur: 'avant', libelle: 'Avant' }, { valeur: 'apres', libelle
 // Un choix gardé, relu seulement s'il est encore valable.
 const lireChoix = (cle, valeurs, defaut) => { const v = lireLocal(cle); return valeurs.includes(v) ? v : defaut; };
 
-async function charger() {
-  const [journal, episodes, humeurs, seances, items, zeroDepuis] = await Promise.all([
-    repo.journal.tous(), repo.episodes.tous(), repo.humeurs.tous(), repo.seances.tous(), repo.listes.items(), repo.meta.lire('explosionsDepuis'),
-  ]);
+// La base n'est relue, et les jours recalculés, que si elle a changé depuis la dernière ouverture (v8, Q26).
+const charger = () => lireSiChange('comprendre', async () => {
+  const { journal, episodes, humeurs, seances, symptomes, items, explosionsDepuis: zeroDepuis } = await lireBase();
   const aujourdhui = repo.aujourdhui();
-  const jours = facteursParJour({ journal, humeurs, episodes, zeroDepuis });
-  // « Tout » part du premier jour qui porte une donnée lue ici : un soir, un relevé, une explosion.
+  const jours = facteursParJour({ journal, humeurs, episodes, symptomes, zeroDepuis });
+  // « Tout » part du premier jour qui porte une donnée lue ici : un soir, un relevé, une explosion, (v8) une fiche de symptôme.
   const premier = premiereDate({ journal: [...jours.values()] }, aujourdhui);
   return { journal, humeurs, episodes, seances, items, jours, premier, aujourdhui, carte: carteLibelles(items) };
-}
+});
 
 // periode : { du, au }, pour les calculs ; choixPeriode : la clé du sélecteur (« 3mois » ou « tout »), pour la
 // phrase des graphiques. Sous son seuil, un graphique laisse sa place à PasAssez. Les graphiques alignés ont une
@@ -84,13 +88,30 @@ function Explosions({ d, periode, choixPeriode, cote, choisirCote }) {
     <${AutourExplosions} d=${d} periode=${periode} choixPeriode=${choixPeriode} />`;
 }
 
+// Émotions selon ce que je faisais (v8, Q18) : une ligne par activité, découpée par famille, en nombres de relevés ; à
+// partir de 5 relevés qui ont une émotion et une activité, comme les autres vues d'émotions.
+function EmotionsActivites({ d, periode, choixPeriode }) {
+  const lib = (id) => d.carte.get(id) || id;
+  if (selonSeuilEmotions(relevesAvecActivite(d.humeurs, periode).length) !== 'ok') return html`<${PasAssez} graphe="emotionsActivites" />`;
+  const lignes = Object.entries(emotionsParActivite(d.humeurs, periode, d.items)).map(([id, compte]) => ({ cle: id, nom: lib(id), compte }));
+  return html`<${GrapheFamilles} graphe="emotionsActivites" entete="Activité" periode=${choixPeriode} carte=${d.carte} lignes=${lignes} />`;
+}
+
 function Energie({ d, periode, choixPeriode }) {
   const pr = peseRecharge(d.journal, periode, d.items);
   const activites = energieParActivite(d.humeurs, periode, d.items);
   return html`${pr.statut === 'ok' ? html`<${GraphePeseRecharge} resultat=${pr} periode=${choixPeriode} carte=${d.carte} />` : html`<${PasAssez} graphe="peseRecharge" />`}
     <${Aligne} graphe="energieAvant" resultat=${energieAvant(d.jours, periode, d.items)} d=${d} choixPeriode=${choixPeriode} />
     ${activites.statut === 'ok' ? html`<${GrapheActivites} resultat=${activites} periode=${choixPeriode} carte=${d.carte} />` : html`<${PasAssez} graphe="activites" />`}
+    <${EmotionsActivites} d=${d} periode=${periode} choixPeriode=${choixPeriode} />
     <${AutourBienEtre} d=${d} periode=${periode} choixPeriode=${choixPeriode} />`;
+}
+
+// Mes nuits (v8, Q15) : les nuits notées des 4 dernières semaines, dès qu'une a sa durée.
+function MesNuits({ d, choixPeriode }) {
+  const nuits = mesNuits(d.journal, periodeMesNuits(d.aujourdhui));
+  if (!nuits.some((n) => n.heures != null)) return html`<${PasAssez} graphe="mesNuits" />`;
+  return html`<${GrapheMesNuits} nuits=${nuits} periode=${choixPeriode} carte=${d.carte} />`;
 }
 
 // Après une nuit (v7) : les émotions du jour selon la nuit notée ce jour-là.
@@ -112,13 +133,12 @@ function Rythmes({ d, periode, choixPeriode, mesure, choisirMesure }) {
     return mesure === 'emotions' ? html`<${GrapheFamillesColonnes} pas=${pas} resultat=${r} periode=${choixPeriode} carte=${d.carte} />`
       : html`<${GrapheColonnes} pas=${pas} mesure=${mesure} resultat=${r} periode=${choixPeriode} carte=${d.carte} />`;
   };
-  const nuits = nuitsParSoir(d.journal, periode);
   return html`<${Segmente} etiquette="Mesure" options=${MESURES.map((m) => ({ valeur: m, libelle: nomMesure(m, lib) }))}
       valeur=${mesure} surChoix=${choisirMesure} classe="petit" sansVide=${true} />
     ${colonnes('semaine')}
     ${colonnes('lieu')}
     <${Aligne} graphe="retoursBureau" resultat=${retoursBureau(d.jours, periode)} d=${d} choixPeriode=${choixPeriode} />
-    ${nuits.statut === 'ok' ? html`<${GrapheNuits} resultat=${nuits} periode=${choixPeriode} />` : html`<${PasAssez} graphe="nuits" />`}
+    <${MesNuits} d=${d} choixPeriode=${choixPeriode} />
     <${ApresNuit} d=${d} periode=${periode} choixPeriode=${choixPeriode} />
     ${colonnes('mois')}`;
 }
