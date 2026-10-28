@@ -1,0 +1,1255 @@
+{
+  "source_principale": "https://howwefeel.org/resources/how-we-feel-mood-meter-poster.pdf",
+  "description": "Grille 12 x 12 de la carte How We Feel, relevée case par case sur l'affiche officielle (PDF publié par How We Feel, texte vectorisé, lu à l'image). Ligne 1 = énergie la plus haute, colonne 1 = le plus désagréable. Les mots anglais sont ceux de How We Feel ; le champ fr est une proposition de traduction écrite pour Carnet, non vérifiée, à valider.",
+  "convention": {
+    "ligne": "1 = haut (énergie max) ... 12 = bas",
+    "colonne": "1 = gauche (le plus désagréable) ... 12 = droite (le plus agréable)",
+    "quadrants": {
+      "haute-desagreable": "lignes 1-6, colonnes 1-6 (rouge)",
+      "haute-agreable": "lignes 1-6, colonnes 7-12 (jaune)",
+      "basse-desagreable": "lignes 7-12, colonnes 1-6 (bleu)",
+      "basse-agreable": "lignes 7-12, colonnes 7-12 (vert)"
+    }
+  },
+  "total_cases": 144,
+  "mots_distincts": 143,
+  "doublons_sur_l_affiche": [
+    "Balanced"
+  ],
+  "doublons_fr": [
+    "Équilibré"
+  ],
+  "grille": [
+    [
+      "Enraged",
+      "Terrified",
+      "Panicked",
+      "Shocked",
+      "Impassioned",
+      "Hyper",
+      "Surprised",
+      "In Awe",
+      "Exhilarated",
+      "Thrilled",
+      "Elated",
+      "Ecstatic"
+    ],
+    [
+      "Livid",
+      "Irate",
+      "Overwhelmed",
+      "Stressed",
+      "Annoyed",
+      "Pressured",
+      "Excited",
+      "Determined",
+      "Successful",
+      "Amazed",
+      "Inspired",
+      "Empowered"
+    ],
+    [
+      "Furious",
+      "Frightened",
+      "Anxious",
+      "Apprehensive",
+      "Irritated",
+      "Restless",
+      "Energized",
+      "Eager",
+      "Enthusiastic",
+      "Joyful",
+      "Productive",
+      "Proud"
+    ],
+    [
+      "Jealous",
+      "Scared",
+      "Angry",
+      "Jittery",
+      "Fomo",
+      "Confused",
+      "Cheerful",
+      "Curious",
+      "Upbeat",
+      "Happy",
+      "Motivated",
+      "Optimistic"
+    ],
+    [
+      "Envious",
+      "Repulsed",
+      "Frustrated",
+      "Embarrassed",
+      "Concerned",
+      "Tense",
+      "Pleasant",
+      "Focused",
+      "Alive",
+      "Confident",
+      "Engaged",
+      "Challenged"
+    ],
+    [
+      "Contempt",
+      "Troubled",
+      "Worried",
+      "Nervous",
+      "Peeved",
+      "Uneasy",
+      "Pleased",
+      "Playful",
+      "Delighted",
+      "Hopeful",
+      "Competent",
+      "Accomplished"
+    ],
+    [
+      "Disgusted",
+      "Trapped",
+      "Insecure",
+      "Disheartened",
+      "Down",
+      "Bored",
+      "Calm",
+      "At Ease",
+      "Understood",
+      "Respected",
+      "Fulfilled",
+      "Blissful"
+    ],
+    [
+      "Humiliated",
+      "Ashamed",
+      "Lost",
+      "Disappointed",
+      "Meh",
+      "Tired",
+      "Good",
+      "Thoughtful",
+      "Appreciated",
+      "Supported",
+      "Loved",
+      "Balanced"
+    ],
+    [
+      "Pessimistic",
+      "Vulnerable",
+      "Disconnected",
+      "Forlorn",
+      "Sad",
+      "Fatigued",
+      "Relaxed",
+      "Chill",
+      "Compassionate",
+      "Included",
+      "Valued",
+      "Grateful"
+    ],
+    [
+      "Morose",
+      "Despondent",
+      "Excluded",
+      "Spent",
+      "Discouraged",
+      "Disengaged",
+      "Sympathetic",
+      "Comfortable",
+      "Heard",
+      "Content",
+      "Accepted",
+      "Moved"
+    ],
+    [
+      "Depressed",
+      "Hopeless",
+      "Alienated",
+      "Isolated",
+      "Lonely",
+      "Apathetic",
+      "Mellow",
+      "Peaceful",
+      "Balanced",
+      "Safe",
+      "Secure",
+      "Blessed"
+    ],
+    [
+      "Miserable",
+      "Despair",
+      "Glum",
+      "Burned Out",
+      "Exhausted",
+      "Helpless",
+      "Carefree",
+      "Tranquil",
+      "Thankful",
+      "Relieved",
+      "Satisfied",
+      "Serene"
+    ]
+  ],
+  "mots": [
+    {
+      "en": "Enraged",
+      "fr": "Enragé",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 1
+    },
+    {
+      "en": "Terrified",
+      "fr": "Terrifié",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 2
+    },
+    {
+      "en": "Panicked",
+      "fr": "Paniqué",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 3
+    },
+    {
+      "en": "Shocked",
+      "fr": "Choqué",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 4
+    },
+    {
+      "en": "Impassioned",
+      "fr": "Enflammé",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 5
+    },
+    {
+      "en": "Hyper",
+      "fr": "Survolté",
+      "quadrant": "haute-desagreable",
+      "ligne": 1,
+      "colonne": 6
+    },
+    {
+      "en": "Surprised",
+      "fr": "Surpris",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 7
+    },
+    {
+      "en": "In Awe",
+      "fr": "Émerveillé",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 8
+    },
+    {
+      "en": "Exhilarated",
+      "fr": "Exalté",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 9
+    },
+    {
+      "en": "Thrilled",
+      "fr": "Transporté",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 10
+    },
+    {
+      "en": "Elated",
+      "fr": "Aux anges",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 11
+    },
+    {
+      "en": "Ecstatic",
+      "fr": "Extasié",
+      "quadrant": "haute-agreable",
+      "ligne": 1,
+      "colonne": 12
+    },
+    {
+      "en": "Livid",
+      "fr": "Hors de moi",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 1
+    },
+    {
+      "en": "Irate",
+      "fr": "Courroucé",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 2
+    },
+    {
+      "en": "Overwhelmed",
+      "fr": "Submergé",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 3
+    },
+    {
+      "en": "Stressed",
+      "fr": "Stressé",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 4
+    },
+    {
+      "en": "Annoyed",
+      "fr": "Agacé",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 5
+    },
+    {
+      "en": "Pressured",
+      "fr": "Sous pression",
+      "quadrant": "haute-desagreable",
+      "ligne": 2,
+      "colonne": 6
+    },
+    {
+      "en": "Excited",
+      "fr": "Emballé",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 7
+    },
+    {
+      "en": "Determined",
+      "fr": "Déterminé",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 8
+    },
+    {
+      "en": "Successful",
+      "fr": "En réussite",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 9
+    },
+    {
+      "en": "Amazed",
+      "fr": "Ébahi",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 10
+    },
+    {
+      "en": "Inspired",
+      "fr": "Inspiré",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 11
+    },
+    {
+      "en": "Empowered",
+      "fr": "Fort",
+      "quadrant": "haute-agreable",
+      "ligne": 2,
+      "colonne": 12
+    },
+    {
+      "en": "Furious",
+      "fr": "Furieux",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 1
+    },
+    {
+      "en": "Frightened",
+      "fr": "Effrayé",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 2
+    },
+    {
+      "en": "Anxious",
+      "fr": "Anxieux",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 3
+    },
+    {
+      "en": "Apprehensive",
+      "fr": "Appréhensif",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 4
+    },
+    {
+      "en": "Irritated",
+      "fr": "Irrité",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 5
+    },
+    {
+      "en": "Restless",
+      "fr": "Agité",
+      "quadrant": "haute-desagreable",
+      "ligne": 3,
+      "colonne": 6
+    },
+    {
+      "en": "Energized",
+      "fr": "Énergique",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 7
+    },
+    {
+      "en": "Eager",
+      "fr": "Avide",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 8
+    },
+    {
+      "en": "Enthusiastic",
+      "fr": "Enthousiaste",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 9
+    },
+    {
+      "en": "Joyful",
+      "fr": "Joyeux",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 10
+    },
+    {
+      "en": "Productive",
+      "fr": "Productif",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 11
+    },
+    {
+      "en": "Proud",
+      "fr": "Fier",
+      "quadrant": "haute-agreable",
+      "ligne": 3,
+      "colonne": 12
+    },
+    {
+      "en": "Jealous",
+      "fr": "Jaloux",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 1
+    },
+    {
+      "en": "Scared",
+      "fr": "Apeuré",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 2
+    },
+    {
+      "en": "Angry",
+      "fr": "En colère",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 3
+    },
+    {
+      "en": "Jittery",
+      "fr": "Fébrile",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 4
+    },
+    {
+      "en": "Fomo",
+      "fr": "Peur de rater",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 5
+    },
+    {
+      "en": "Confused",
+      "fr": "Confus",
+      "quadrant": "haute-desagreable",
+      "ligne": 4,
+      "colonne": 6
+    },
+    {
+      "en": "Cheerful",
+      "fr": "Gai",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 7
+    },
+    {
+      "en": "Curious",
+      "fr": "Curieux",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 8
+    },
+    {
+      "en": "Upbeat",
+      "fr": "Plein d'entrain",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 9
+    },
+    {
+      "en": "Happy",
+      "fr": "Heureux",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 10
+    },
+    {
+      "en": "Motivated",
+      "fr": "Motivé",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 11
+    },
+    {
+      "en": "Optimistic",
+      "fr": "Optimiste",
+      "quadrant": "haute-agreable",
+      "ligne": 4,
+      "colonne": 12
+    },
+    {
+      "en": "Envious",
+      "fr": "Envieux",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 1
+    },
+    {
+      "en": "Repulsed",
+      "fr": "Révulsé",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 2
+    },
+    {
+      "en": "Frustrated",
+      "fr": "Frustré",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 3
+    },
+    {
+      "en": "Embarrassed",
+      "fr": "Gêné",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 4
+    },
+    {
+      "en": "Concerned",
+      "fr": "Préoccupé",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 5
+    },
+    {
+      "en": "Tense",
+      "fr": "Tendu",
+      "quadrant": "haute-desagreable",
+      "ligne": 5,
+      "colonne": 6
+    },
+    {
+      "en": "Pleasant",
+      "fr": "De bonne humeur",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 7
+    },
+    {
+      "en": "Focused",
+      "fr": "Concentré",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 8
+    },
+    {
+      "en": "Alive",
+      "fr": "Vivant",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 9
+    },
+    {
+      "en": "Confident",
+      "fr": "Confiant",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 10
+    },
+    {
+      "en": "Engaged",
+      "fr": "Investi",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 11
+    },
+    {
+      "en": "Challenged",
+      "fr": "Stimulé",
+      "quadrant": "haute-agreable",
+      "ligne": 5,
+      "colonne": 12
+    },
+    {
+      "en": "Contempt",
+      "fr": "Méprisant",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 1
+    },
+    {
+      "en": "Troubled",
+      "fr": "Troublé",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 2
+    },
+    {
+      "en": "Worried",
+      "fr": "Inquiet",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 3
+    },
+    {
+      "en": "Nervous",
+      "fr": "Nerveux",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 4
+    },
+    {
+      "en": "Peeved",
+      "fr": "Contrarié",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 5
+    },
+    {
+      "en": "Uneasy",
+      "fr": "Mal à l'aise",
+      "quadrant": "haute-desagreable",
+      "ligne": 6,
+      "colonne": 6
+    },
+    {
+      "en": "Pleased",
+      "fr": "Ravi",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 7
+    },
+    {
+      "en": "Playful",
+      "fr": "Espiègle",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 8
+    },
+    {
+      "en": "Delighted",
+      "fr": "Enchanté",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 9
+    },
+    {
+      "en": "Hopeful",
+      "fr": "Plein d'espoir",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 10
+    },
+    {
+      "en": "Competent",
+      "fr": "Compétent",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 11
+    },
+    {
+      "en": "Accomplished",
+      "fr": "Accompli",
+      "quadrant": "haute-agreable",
+      "ligne": 6,
+      "colonne": 12
+    },
+    {
+      "en": "Disgusted",
+      "fr": "Dégoûté",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 1
+    },
+    {
+      "en": "Trapped",
+      "fr": "Pris au piège",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 2
+    },
+    {
+      "en": "Insecure",
+      "fr": "Insécurisé",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 3
+    },
+    {
+      "en": "Disheartened",
+      "fr": "Démoralisé",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 4
+    },
+    {
+      "en": "Down",
+      "fr": "Cafardeux",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 5
+    },
+    {
+      "en": "Bored",
+      "fr": "Ennuyé",
+      "quadrant": "basse-desagreable",
+      "ligne": 7,
+      "colonne": 6
+    },
+    {
+      "en": "Calm",
+      "fr": "Calme",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 7
+    },
+    {
+      "en": "At Ease",
+      "fr": "À l'aise",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 8
+    },
+    {
+      "en": "Understood",
+      "fr": "Compris",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 9
+    },
+    {
+      "en": "Respected",
+      "fr": "Respecté",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 10
+    },
+    {
+      "en": "Fulfilled",
+      "fr": "Épanoui",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 11
+    },
+    {
+      "en": "Blissful",
+      "fr": "Comblé",
+      "quadrant": "basse-agreable",
+      "ligne": 7,
+      "colonne": 12
+    },
+    {
+      "en": "Humiliated",
+      "fr": "Humilié",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 1
+    },
+    {
+      "en": "Ashamed",
+      "fr": "Honteux",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 2
+    },
+    {
+      "en": "Lost",
+      "fr": "Perdu",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 3
+    },
+    {
+      "en": "Disappointed",
+      "fr": "Déçu",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 4
+    },
+    {
+      "en": "Meh",
+      "fr": "Bof",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 5
+    },
+    {
+      "en": "Tired",
+      "fr": "Fatigué",
+      "quadrant": "basse-desagreable",
+      "ligne": 8,
+      "colonne": 6
+    },
+    {
+      "en": "Good",
+      "fr": "Bien",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 7
+    },
+    {
+      "en": "Thoughtful",
+      "fr": "Pensif",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 8
+    },
+    {
+      "en": "Appreciated",
+      "fr": "Apprécié",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 9
+    },
+    {
+      "en": "Supported",
+      "fr": "Soutenu",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 10
+    },
+    {
+      "en": "Loved",
+      "fr": "Aimé",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 11
+    },
+    {
+      "en": "Balanced",
+      "fr": "Équilibré",
+      "quadrant": "basse-agreable",
+      "ligne": 8,
+      "colonne": 12
+    },
+    {
+      "en": "Pessimistic",
+      "fr": "Pessimiste",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 1
+    },
+    {
+      "en": "Vulnerable",
+      "fr": "Vulnérable",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 2
+    },
+    {
+      "en": "Disconnected",
+      "fr": "Déconnecté",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 3
+    },
+    {
+      "en": "Forlorn",
+      "fr": "Délaissé",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 4
+    },
+    {
+      "en": "Sad",
+      "fr": "Triste",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 5
+    },
+    {
+      "en": "Fatigued",
+      "fr": "Las",
+      "quadrant": "basse-desagreable",
+      "ligne": 9,
+      "colonne": 6
+    },
+    {
+      "en": "Relaxed",
+      "fr": "Détendu",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 7
+    },
+    {
+      "en": "Chill",
+      "fr": "Cool",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 8
+    },
+    {
+      "en": "Compassionate",
+      "fr": "Compatissant",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 9
+    },
+    {
+      "en": "Included",
+      "fr": "Inclus",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 10
+    },
+    {
+      "en": "Valued",
+      "fr": "Valorisé",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 11
+    },
+    {
+      "en": "Grateful",
+      "fr": "Reconnaissant",
+      "quadrant": "basse-agreable",
+      "ligne": 9,
+      "colonne": 12
+    },
+    {
+      "en": "Morose",
+      "fr": "Morose",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 1
+    },
+    {
+      "en": "Despondent",
+      "fr": "Abattu",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 2
+    },
+    {
+      "en": "Excluded",
+      "fr": "Exclu",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 3
+    },
+    {
+      "en": "Spent",
+      "fr": "Vidé",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 4
+    },
+    {
+      "en": "Discouraged",
+      "fr": "Découragé",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 5
+    },
+    {
+      "en": "Disengaged",
+      "fr": "Détaché",
+      "quadrant": "basse-desagreable",
+      "ligne": 10,
+      "colonne": 6
+    },
+    {
+      "en": "Sympathetic",
+      "fr": "Compréhensif",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 7
+    },
+    {
+      "en": "Comfortable",
+      "fr": "Bien installé",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 8
+    },
+    {
+      "en": "Heard",
+      "fr": "Écouté",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 9
+    },
+    {
+      "en": "Content",
+      "fr": "Content",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 10
+    },
+    {
+      "en": "Accepted",
+      "fr": "Accepté",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 11
+    },
+    {
+      "en": "Moved",
+      "fr": "Ému",
+      "quadrant": "basse-agreable",
+      "ligne": 10,
+      "colonne": 12
+    },
+    {
+      "en": "Depressed",
+      "fr": "Déprimé",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 1
+    },
+    {
+      "en": "Hopeless",
+      "fr": "Sans espoir",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 2
+    },
+    {
+      "en": "Alienated",
+      "fr": "Coupé des autres",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 3
+    },
+    {
+      "en": "Isolated",
+      "fr": "Isolé",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 4
+    },
+    {
+      "en": "Lonely",
+      "fr": "Seul",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 5
+    },
+    {
+      "en": "Apathetic",
+      "fr": "Apathique",
+      "quadrant": "basse-desagreable",
+      "ligne": 11,
+      "colonne": 6
+    },
+    {
+      "en": "Mellow",
+      "fr": "Posé",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 7
+    },
+    {
+      "en": "Peaceful",
+      "fr": "Paisible",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 8
+    },
+    {
+      "en": "Balanced",
+      "fr": "Équilibré",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 9
+    },
+    {
+      "en": "Safe",
+      "fr": "En sécurité",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 10
+    },
+    {
+      "en": "Secure",
+      "fr": "En confiance",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 11
+    },
+    {
+      "en": "Blessed",
+      "fr": "Béni",
+      "quadrant": "basse-agreable",
+      "ligne": 11,
+      "colonne": 12
+    },
+    {
+      "en": "Miserable",
+      "fr": "Malheureux",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 1
+    },
+    {
+      "en": "Despair",
+      "fr": "Désespéré",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 2
+    },
+    {
+      "en": "Glum",
+      "fr": "Maussade",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 3
+    },
+    {
+      "en": "Burned Out",
+      "fr": "À bout",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 4
+    },
+    {
+      "en": "Exhausted",
+      "fr": "Épuisé",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 5
+    },
+    {
+      "en": "Helpless",
+      "fr": "Impuissant",
+      "quadrant": "basse-desagreable",
+      "ligne": 12,
+      "colonne": 6
+    },
+    {
+      "en": "Carefree",
+      "fr": "Insouciant",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 7
+    },
+    {
+      "en": "Tranquil",
+      "fr": "Tranquille",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 8
+    },
+    {
+      "en": "Thankful",
+      "fr": "Plein de gratitude",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 9
+    },
+    {
+      "en": "Relieved",
+      "fr": "Soulagé",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 10
+    },
+    {
+      "en": "Satisfied",
+      "fr": "Satisfait",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 11
+    },
+    {
+      "en": "Serene",
+      "fr": "Serein",
+      "quadrant": "basse-agreable",
+      "ligne": 12,
+      "colonne": 12
+    }
+  ],
+  "variantes_vues_dans_l_app": [
+    {
+      "case": [
+        8,
+        12
+      ],
+      "affiche": "Balanced",
+      "app": "Connected",
+      "source": "https://howwefeel.org/assets/relationships-moodmeter.17cdeddc.png",
+      "certitude": "mot lu en entier"
+    },
+    {
+      "case": [
+        10,
+        9
+      ],
+      "affiche": "Heard",
+      "app": "Empathetic (lu « Empath… » et « …hetic »)",
+      "source": "https://howwefeel.org/assets/therapists-moodmeter.89d66341.png ; https://howwefeel.org/assets/relationships-moodmeter.17cdeddc.png",
+      "certitude": "mot coupé dans les deux captures, reconstitution probable"
+    },
+    {
+      "case": [
+        6,
+        10
+      ],
+      "affiche": "Hopeful",
+      "app": "Wishful",
+      "source": "https://howwefeel.org/assets/relationships-moodmeter.17cdeddc.png",
+      "certitude": "mot lu en entier"
+    },
+    {
+      "case": [
+        6,
+        11
+      ],
+      "affiche": "Competent",
+      "app": "Hopeful",
+      "source": "https://howwefeel.org/assets/relationships-moodmeter.17cdeddc.png",
+      "certitude": "mot lu en entier"
+    },
+    {
+      "case": [
+        6,
+        9
+      ],
+      "affiche": "Delighted",
+      "app": "…nted (mot coupé, illisible)",
+      "source": "https://howwefeel.org/assets/relationships-moodmeter.17cdeddc.png",
+      "certitude": "inconnu ; une autre capture (friends-moodmeter) montre bien Delighted à cette case"
+    }
+  ],
+  "agitated": "Absent de l'affiche et des quatre captures officielles. Le « Agitated (partiel) » des captures de l'utilisateur est probablement « …itated » = Irritated (ligne 3, colonne 5), dont seule la fin dépasse au bord gauche de l'écran dans l'app. Non vérifié."
+}
