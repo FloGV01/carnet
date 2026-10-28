@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
+import { noter, continuer } from '../aides/emotion.js';
 import { espionnerAudio, audio, notes } from '../aides/audio.js';
 import {
   installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ, bols, frequencesBols, souffles, horloge,
@@ -483,9 +484,7 @@ test('« Jouer même en mode silencieux » : session « playback » pendant la l
   await expect.poll(async () => (await audio(page)).session).toBe('ambient');
 });
 
-test.fixme('point de vigilance 4 : après le lecteur, « Respirer » de « Pour récupérer, je… » reste muet par défaut (écran 3, tâche 5 du plan v9)', () => {});
-
-test('point de vigilance 4 : après le lecteur (« Repères + souffle », mode silencieux forcé), Moment difficile reste muet par défaut', async ({ page }) => {
+test('point de vigilance 4 : après le lecteur (« Repères + souffle », mode silencieux forcé), Moment difficile et « Respirer » restent muets par défaut', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('carnet:lecteur:silencieux', 'true'));
   await espionnerAudio(page, { session: true });
   const v = await ouvrir(page, 'Pause d\'une minute');
@@ -503,8 +502,22 @@ test('point de vigilance 4 : après le lecteur (« Repères + souffle », mode s
   await page.clock.runFor(30000);
   await expect(md.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
   await md.getByRole('button', { name: 'Arrêter' }).click();
-  // « Respirer », dans la carte « Pour récupérer, je… » : TRANSITOIRE (v9, 4/8), la carte passe à l'écran 3 de l'émotion
-  // (tâche 5 du plan v9), qui reprend cette partie (version de la v8 : git show febc289:tests/e2e/v8-lecteur.spec.js).
+  // « Respirer », dans la carte « Pour récupérer, je… » (v9 : en tête de l'écran 3 de l'émotion, après la flèche).
+  await page.evaluate(async () => {
+    const m = window.__carnet.repo.meta;
+    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
+    await m.ecrire('ressourcer', { energieBasse: true });
+  });
+  await aller(page, '#/moment');
+  const emo = vue(page, 'Émotion du moment');
+  await noter(emo, 'bleu', 'Vide');
+  await continuer(emo).click();
+  const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
+  await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
+  // Le toucher prépare le contexte en session « ambiante » (jamais celle du lecteur), puis la respiration le rendort.
+  await expect.poll(async () => (await audio(page)).session).toBe('ambient');
+  await page.clock.runFor(20000);
+  await expect(carte.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
   const fin = await audio(page);
   expect(fin.notes).toHaveLength(apresLecteur.notes.length);
   expect(fin.oscillateurs).toHaveLength(apresLecteur.oscillateurs.length);

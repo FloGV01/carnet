@@ -316,12 +316,12 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
       };
     }));
     expect(lignes, schema).toEqual([
-      { heure: '09:05', texte: 'Irrité · énergie basse', lien: false, point: rgb(t['c-zone-rouge']) },
-      { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: false, point: `creux ${rgb(t['text-2'])}` },
+      { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge']) },
+      { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, point: `creux ${rgb(t['text-2'])}` },
       { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['c-episode']) },
-      { heure: 'vers 14 h', texte: 'Furieux', lien: false, point: rgb(t['c-zone-rouge']) },
-      { heure: '18:30', texte: 'Sérénité', lien: false, point: `creux ${rgb(t['text-2'])}` },
-      { heure: '01:10', texte: 'Craintif', lien: false, point: rgb(t['c-zone-rouge']) },
+      { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge']) },
+      { heure: '18:30', texte: 'Sérénité', lien: true, point: `creux ${rgb(t['text-2'])}` },
+      { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge']) },
     ]);
     // Colonne d'heures fixe de 70, textes alignés ; AA du texte et de l'heure sur la carte.
     const colonnes = await page.locator('.liste-evenements > li').evaluateAll((els) => els.map((li) => {

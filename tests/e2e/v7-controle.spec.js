@@ -17,7 +17,8 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 // carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur (avant, étape rythmée, pause,
 // fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), « Émotions selon ce que je faisais »
 // (graphique et tableau), Réglages › Émotions (un sens corrigé). v9 (4/8) : les écrans noirs de l'émotion (les quatre
-// bulles, la carte, un mot choisi et sa carte du bas) remplacent ceux de la v8.
+// bulles, la carte, un mot choisi et sa carte du bas) remplacent ceux de la v8 ; v9 (5/8) : l'écran 3 (« Ce que je
+// faisais », une activité choisie) et un relevé rouvert depuis Ma journée.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -201,6 +202,14 @@ const ECRANS = (ids) => [
     await p.getByRole('group', { name: 'Émotion', exact: true }).getByRole('button', { name: 'Irrité', exact: true }).click();
     await expect(p.locator('.definition-carte-du-bas')).toHaveText('Agacé par ce qui se répète, et ça dure.');
   }, '.bulle-mot.choisi'],
+  ['Émotion du moment, Ce que je faisais', async (p) => {
+    await p.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await p.getByRole('group', { name: 'Ce que je faisais', exact: true }).getByRole('button', { name: 'Travail', exact: true }).click();
+  }, '.choix-faisais .pastille[aria-pressed="true"]'],
+  ['Émotion du moment, un relevé rouvert', async (p) => {
+    await p.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await p.locator('.liste-evenements a.releve').first().click();
+  }, '.ecran-faisais .supprimer-releve'],
   ['Épisode, étape 1', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/episode/nouveau'); }, '.titre-question'],
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],

@@ -798,6 +798,46 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   flex: 0 0 76px; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #000;
   display: grid; place-items: center;
 }
+/* Écran 3, « Ce que je faisais » (spec §4.3 et §13.1 ; visuel §5, le style des autres écrans de How We Feel) : ✕ en
+   haut ; le corps, qui défile en hauteur sous lui ; « Terminer » en bas, une capsule blanche au texte noir, sous la
+   flèche de l'écran 2 (la garde de 350 ms l'y protège d'un second toucher). Tout est centré, comme l'écran 1 : le mot en
+   rappel, en New York grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie comme dans la carte du
+   bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone ; « Aucun mot » en gris ; « Ce que je faisais » en titre serif, ses pastilles sur
+   #2c2c2e (la surface de la carte du bas), un choix fait à la couleur de la zone du mot (.zone-* : -fill et -on, les
+   mêmes dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090. */
+.ecran-faisais {
+  position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; --c-mot: var(--c-fill, #fff);
+  animation: apparition-carte var(--duree-anim) ease-out;
+}
+.corps-faisais {
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  margin-top: calc(var(--zone-haut) + 52px);
+  padding: 16px calc(16px + var(--zone-droite)) 24px calc(16px + var(--zone-gauche));
+  display: flex; flex-direction: column; gap: 28px;
+}
+.rappel-faisais { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.mot-rappel {
+  max-width: 358px; color: var(--c-mot); font: 700 2rem/2.353rem var(--police-serif); letter-spacing: -0.01em;
+  overflow-wrap: anywhere; text-wrap: balance;
+}
+.mot-rappel.sans-mot { color: #909090; }
+.detail-rappel { max-width: 358px; color: #909090; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
+.changer-mot { margin-top: 2px; font-weight: 600; }
+.faisais { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.titre-faisais {
+  display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 358px; text-align: center;
+  color: #fff; font: 700 1.294rem/1.647rem var(--police-serif); letter-spacing: -0.01em;
+}
+.titre-faisais svg { flex: none; width: 20px; height: 20px; color: #909090; }
+.choix-faisais { width: 100%; max-width: 358px; }
+.choix-faisais .pastilles { justify-content: center; }
+.supprimer-releve { align-self: center; }
+.pied-faisais { flex: none; padding: 12px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
+.terminer-releve {
+  display: block; width: 100%; max-width: 358px; min-height: 56px; margin: 0 auto; padding: 8px 20px; border: 0; border-radius: 28px;
+  background: #fff; color: #000; font: 600 1.059rem/1.25 var(--police);
+}
+.terminer-releve:focus-visible, .changer-mot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 /* Analyse v4 : Avant tes explosions */
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }

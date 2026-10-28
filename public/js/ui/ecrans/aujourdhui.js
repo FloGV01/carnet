@@ -376,15 +376,17 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     <span class="resume">${texte}</span>
     ${memo && html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`}
     ${Icones.chevron({ trait: 2 })}</a></li>`;
-  // Un relevé n'a ni lien ni chevron : il s'efface dans l'écran Émotion du moment. « Irrité · énergie moyenne », au point
-  // de la zone de son mot (v9 ; de sa famille en v7 et v8) ; un relevé sans zone (ancienne note, énergie seule, famille
-  // seule de la v7) a un point creux, le même pour tous.
+  // Un relevé : « Irrité · énergie moyenne », au point de la zone de son mot (v9 ; de sa famille en v7 et v8) ; un relevé
+  // sans zone (ancienne note, énergie seule, famille seule de la v7) a un point creux, le même pour tous. v9 (spec §13.1) :
+  // il se rouvre d'un toucher, quel que soit le jour, sur l'écran 3 de l'Émotion du moment (son mot, « Ce que je
+  // faisais », « Supprimer ce relevé ») ; il a donc son lien et son chevron, comme un épisode.
   const ligneReleve = (h) => {
     const zone = zoneDe(h.emotion, evenements.perso);
-    return html`<li key=${h.id}><div class="ligne-evenement releve">
+    return html`<li key=${h.id}><a class="ligne-evenement releve" href=${versHash('moment-releve', { id: h.id })}>
       <span class="heure">${h.vers ? formaterVers(h.heure) : h.heure}</span>
       <span class=${zone ? `point-evenement point-releve zone-${zone}` : 'point-evenement point-releve point-creux'} aria-hidden="true"></span>
-      <span class="resume">${texteReleve(h, evenements.carte, evenements.perso)}</span></div></li>`;
+      <span class="resume">${texteReleve(h, evenements.carte, evenements.perso)}</span>
+      ${Icones.chevron({ trait: 2 })}</a></li>`;
   };
   // Ma journée (v6.1) : relevés du moment et épisodes du jour logique rangés par heure ; puis ce qui n'a pas
   // d'heure, les épisodes notés depuis la page d'un jour passé, et enfin les symptômes. Rien pour un jour sans rien.

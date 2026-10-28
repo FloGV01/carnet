@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
-import { vueMoment, bulle, mot, carteDuBas, continuer } from '../aides/emotion.js';
+import { vueMoment, bulle, mot, carteDuBas, finir } from '../aides/emotion.js';
 import { FAMILLES, MOTS_SANS_FAMILLE } from '../../public/js/domain/roue.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
 
@@ -68,13 +68,14 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await page.clock.runFor(300);
   expect(await lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
 
-  // Sur la carte (v9), le texte corrigé : Irrité touché, sa carte du bas le montre ; la flèche ferme, avec le relevé.
+  // Sur la carte (v9), le texte corrigé : Irrité touché, sa carte du bas le montre ; la flèche, puis Terminer, ferment,
+  // avec le relevé.
   await aller(page, '#/moment');
   const vue = vueMoment(page);
   await bulle(vue, 'rouge').click();
   await mot(vue, 'Irrité').click();
   await expect(carteDuBas(vue).locator('.definition-carte-du-bas')).toHaveText('Agacé par un bruit qui revient.');
-  await continuer(vue).click();
+  await finir(vue);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 
   // « Revenir au texte de Carnet » retire la correction ; la carte reprend le texte de Carnet.

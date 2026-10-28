@@ -1,15 +1,20 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.js';
 import { contraste } from '../aides/couleurs.js';
-import { vueMoment, bulles, bulle, carte, mot, retour, fermer, continuer, carteDuBas, noter, NOMS_BULLES, NOTEE } from '../aides/emotion.js';
+import {
+  vueMoment, bulles, bulle, carte, mot, retour, fermer, continuer, carteDuBas, noter, finir, faisais, activite, terminer, changerMot,
+  supprimerReleve, NOMS_BULLES, NOTEE, SUPPRIME,
+} from '../aides/emotion.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
 import { energieDe } from '../../public/js/domain/carte-roue.js';
 
 // v9 (4/8) · L'émotion comme How We Feel, en plein écran (spec §4.1, §4.2, §5 et §7 ; visuel-hwf.md §1, §2 et §4) :
 // l'écran 1 (quatre bulles, « Maintenant ▾ ») et l'écran 2 (la carte de 144 mots, la carte du bas, la flèche). Toucher
 // une couleur n'écrit rien ; toucher un mot écrit le relevé (le mot et l'énergie de sa case) ; le retoucher l'efface.
-// Points de vigilance 2 (très grand texte), 3 (relevé interrompu) et 5 (deux touchers rapides). Avant la tâche 5, la
-// flèche ferme l'écran comme ✕. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
+// Points de vigilance 2 (très grand texte), 3 (relevé interrompu) et 5 (deux touchers rapides). v9 (5/8) : la flèche
+// mène à l'écran 3, « Ce que je faisais », et « Terminer » ferme ; un relevé rouvert (#/moment/ID) s'ouvre sur l'écran 3
+// (tests en fin de fichier, point de vigilance 1 compris). Données inventées. Horloge : jeudi 15 octobre 2026, 21:00
+// (390 × 844).
 const releves = (page) => () => page.evaluate(() => window.__carnet.repo.humeurs.tous());
 const ouvrir = async (page) => {
   await aller(page, '#/moment');
@@ -29,7 +34,7 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('une couleur n\'écrit rien ; le mot écrit le relevé, avec l\'énergie de sa case ; la carte du bas dit son sens ; la flèche ferme', async ({ page }) => {
+test('une couleur n\'écrit rien ; le mot écrit le relevé, avec l\'énergie de sa case ; la carte du bas dit son sens ; la flèche, puis Terminer, ferment', async ({ page }) => {
   const vue = await ouvrir(page);
   await expect(vue.getByRole('heading', { name: 'Touche la couleur la plus proche de ce moment', level: 1 })).toBeVisible();
   expect(await bulles(vue).getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')))).toEqual(Object.values(NOMS_BULLES));
@@ -50,8 +55,11 @@ test('une couleur n\'écrit rien ; le mot écrit le relevé, avec l\'énergie de
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(1);
   await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Vide');
   await expect(carteDuBas(vue).locator('.definition-carte-du-bas')).toHaveText(DEFINITIONS['roue:tristesse:vide']);
-  // La flèche : l'écran se ferme, le relevé est noté ; « Annuler » le retire.
+  // La flèche : l'écran 3, le mot en rappel ; « Terminer » ferme, le relevé est noté ; « Annuler » le retire.
   await continuer(vue).click();
+  await expect(vue.getByRole('heading', { name: 'Vide', level: 1 })).toBeFocused();
+  await expect(page).toHaveURL(/#\/moment$/);
+  await terminer(vue).click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(page.getByText(NOTEE)).toBeVisible();
   await page.getByRole('button', { name: 'Annuler' }).click();
@@ -114,7 +122,7 @@ test('revenir aux couleurs puis ✕ gardent le relevé, et la carte le montre en
   expect(await releves(page)()).toMatchObject([{ emotion: 'roue:joie:curieux', energie: 'energie:haute' }]);
 });
 
-test('la flèche touchée deux fois pendant l\'écriture : l\'écran attend la fin de l\'écriture, le relevé porte le dernier mot, « Émotion du moment notée » une seule fois', async ({ page }) => {
+test('la flèche, puis « Terminer » touché deux fois pendant l\'écriture : l\'écran attend la fin de l\'écriture, le relevé porte le dernier mot, « Émotion du moment notée » une seule fois', async ({ page }) => {
   const vue = await ouvrir(page);
   await noter(vue, 'vert', 'Calme');
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:serenite:calme' }]);
@@ -129,7 +137,8 @@ test('la flèche touchée deux fois pendant l\'écriture : l\'écran attend la f
   });
   await mot(vue, 'Serein').click();
   await continuer(vue).click();
-  await continuer(vue).click();
+  await terminer(vue).click();
+  await terminer(vue).click();
   await page.clock.runFor(300);
   await expect(page).toHaveURL(/#\/moment$/);
   await page.evaluate(() => window.__ouvrirEcriture());
@@ -140,7 +149,7 @@ test('la flèche touchée deux fois pendant l\'écriture : l\'écran attend la f
   expect(await releves(page)()).toMatchObject([{ emotion: 'roue:serenite:serein', energie: 'energie:basse' }]);
 });
 
-test('plein écran, fond noir en clair comme en sombre : ni barre d\'onglets ni en-tête de Carnet ; la carte défile dans son cadre, la page jamais de côté ; aucune violation de CSP', async ({ page }) => {
+test('plein écran, fond noir en clair comme en sombre, des bulles à l\'écran 3 : ni barre d\'onglets ni en-tête de Carnet ; la carte défile dans son cadre, la page jamais de côté ; aucune violation de CSP', async ({ page }) => {
   await page.addInitScript(() => {
     window.__csp = [];
     document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile || ''}`));
@@ -175,6 +184,9 @@ test('plein écran, fond noir en clair comme en sombre : ni barre d\'onglets ni 
     expect(cadre).toEqual({ bouge: true, glisse: [true, true] });
     expect(await etat(), `${schema}, carte glissée`).toEqual(attendu);
     await continuer(vue).click();
+    await expect(faisais(vue)).toBeVisible();
+    expect(await etat(), `${schema}, écran 3`).toEqual(attendu);
+    await terminer(vue).click();
     await expect(page.locator('nav.onglets')).toBeVisible();
   }
   expect(await page.evaluate(() => window.__csp)).toEqual([]);
@@ -307,12 +319,12 @@ test('le mot choisi : la double capsule de 156 au milieu de l\'écran, ses voisi
     expect(forme.autre).toEqual([12, '700', 'rgb(0, 0, 0)', true]);
     expect(forme.choisi).toEqual(forme.autre);
     expect(forme.hauteur).toBe(1.5);
-    await continuer(vue).click();
+    await finir(vue);
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
-test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\'écran 1, dégradé compris, et les 144 de la carte) ; le mot et la définition de la carte du bas', async ({ page }) => {
+test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\'écran 1, dégradé compris, et les 144 de la carte) ; le mot et la définition de la carte du bas ; l\'écran 3', async ({ page }) => {
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
     const vue = await ouvrir(page);
@@ -346,13 +358,34 @@ test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\
       expect(contraste(motCouleur, fond), `${schema} ${n}`).toBeGreaterThanOrEqual(4.5);
       expect(def).toBe('rgb(255, 255, 255)');
     }
+    // L'écran 3 : le mot en rappel (Calme, une case claire), le titre, une activité choisie (à la couleur de la zone), une
+    // autre non, « Terminer » ; chacun sur son fond rendu, le noir de l'écran pour les textes posés dessus.
     await continuer(vue).click();
+    await activite(vue, 'Repos').click();
+    await expect(activite(vue, 'Repos')).toHaveAttribute('aria-pressed', 'true');
+    // La couleur de la zone verte, une fois la transition finie.
+    await expect(activite(vue, 'Repos')).toHaveCSS('background-color', 'rgb(76, 227, 155)');
+    await finMouvements(page);
+    const textes = await page.evaluate(() => {
+      const de = (sel, fond) => { const e = document.querySelector(sel); return [getComputedStyle(e).color, fond ? getComputedStyle(fond(e)).backgroundColor : 'rgb(0, 0, 0)']; };
+      const soi = (e) => e;
+      const pastille = (n) => [...document.querySelectorAll('.choix-faisais .pastille')].find((b) => b.textContent.includes(n));
+      return {
+        mot: de('.mot-rappel'), titre: de('.titre-faisais'),
+        choisie: [getComputedStyle(pastille('Repos')).color, getComputedStyle(pastille('Repos')).backgroundColor],
+        autre: [getComputedStyle(pastille('Travail')).color, getComputedStyle(pastille('Travail')).backgroundColor],
+        terminer: de('.terminer-releve', soi),
+      };
+    });
+    for (const [nom, [texte, fond]] of Object.entries(textes)) expect(contraste(texte, fond), `${schema} écran 3, ${nom}`).toBeGreaterThanOrEqual(4.5);
+    await terminer(vue).click();
   }
 });
 
 // Ce qui sort de sa place en très grand texte : la page qui défile de côté ; une ligne d'un libellé hors du disque de sa
 // bulle (le mot choisi, plus large que son libellé, à part) ; le titre hors de l'écran ; la carte du bas hors de l'écran,
-// ou sa définition coupée.
+// ou sa définition coupée ; à l'écran 3, un texte ou un bouton hors de l'écran, une ligne hors de sa pastille, le corps
+// qui défile de côté, « Terminer » hors de l'écran.
 const debordements = (page) => page.evaluate(() => {
   const fautes = [];
   if (document.documentElement.scrollWidth > innerWidth + 0.5) fautes.push(`page : ${document.documentElement.scrollWidth} px`);
@@ -380,10 +413,22 @@ const debordements = (page) => page.evaluate(() => {
       for (const q of lignes(p)) if (q.bottom > r.bottom || q.right > carte.querySelector('.continuer').getBoundingClientRect().left) fautes.push(`${p.className} : hors de la carte`);
     }
   }
+  const ecran3 = document.querySelector('.ecran-faisais');
+  if (ecran3) {
+    const corps = ecran3.querySelector('.corps-faisais');
+    if (corps.scrollWidth > corps.clientWidth + 0.5) fautes.push('écran 3 : défile de côté');
+    for (const e of ecran3.querySelectorAll('h1, h2, p, button')) {
+      const r = e.getBoundingClientRect();
+      if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`${e.textContent.trim().slice(0, 24)} : hors de l'écran`);
+      for (const q of lignes(e)) if (q.left < r.left - 0.5 || q.right > r.right + 0.5) fautes.push(`${e.textContent.trim().slice(0, 24)} : hors de sa boîte`);
+    }
+    const fin = ecran3.querySelector('.terminer-releve').getBoundingClientRect();
+    if (fin.top < 0 || fin.bottom > innerHeight) fautes.push('Terminer hors de l\'écran');
+  }
   return [...new Set(fautes)];
 });
 
-test('point de vigilance 2 : en très grand texte (17, 19, 21, 23), chaque libellé reste dans sa bulle, rien ne déborde de côté, la carte du bas grandit au lieu de couper la définition', async ({ page }) => {
+test('point de vigilance 2 : en très grand texte (17, 19, 21, 23), chaque libellé reste dans sa bulle, rien ne déborde de côté, la carte du bas grandit au lieu de couper la définition ; l\'écran 3 tient en largeur', async ({ page }) => {
   test.setTimeout(90000);
   for (const taille of [17, 19, 21, 23]) {
     await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
@@ -404,6 +449,11 @@ test('point de vigilance 2 : en très grand texte (17, 19, 21, 23), chaque libel
     const hauteur = await carteDuBas(vue).evaluate((e) => e.getBoundingClientRect().height);
     if (taille === 23) expect(hauteur, 'la carte du bas a grandi').toBeGreaterThan(100);
     await continuer(vue).click();
+    await activite(vue, 'Courses / démarches').click();
+    await expect(activite(vue, 'Courses / démarches')).toHaveAttribute('aria-pressed', 'true');
+    await finMouvements(page);
+    expect(await debordements(page), `écran 3, ${taille} px`).toEqual([]);
+    await terminer(vue).click();
     await expect(page).toHaveURL(/#\/aujourdhui$/);
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
@@ -537,7 +587,7 @@ test('deux touchers rapides au même endroit sur un mot loin du milieu : le prem
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
-test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot ; avec « Réduire les animations », tout est figé, les halos à leurs décalages mesurés', async ({ page }) => {
+test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot, l\'écran 3 paraît en fondu ; avec « Réduire les animations », tout est figé, les halos à leurs décalages mesurés', async ({ page }) => {
   let vue = await ouvrir(page);
   const halos = () => vue.locator('.bulle-zone .halo').evaluateAll((hs) => hs.map((h) => h.getAnimations().map((a) => a.animationName)));
   expect(await halos()).toEqual(Array(12).fill(['orbite']));
@@ -545,7 +595,11 @@ test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot
   expect(parseFloat(await carte(vue).locator('.bulle-mot').first().evaluate((b) => getComputedStyle(b).transitionDuration))).toBeGreaterThan(0);
   await mot(vue, 'Serein').click();
   await expect(carteDuBas(vue)).toBeVisible();
+  // L'écran 3 paraît en fondu.
   await continuer(vue).click();
+  const fondu = () => vue.locator('.ecran-faisais').evaluate((e) => [getComputedStyle(e).animationName, parseFloat(getComputedStyle(e).animationDuration) > 0]);
+  expect(await fondu()).toEqual(['apparition-carte', true]);
+  await terminer(vue).click();
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   vue = await ouvrir(page);
@@ -564,7 +618,12 @@ test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot
       animations: document.getAnimations().length, transition: getComputedStyle(b).transitionDuration, carte: Boolean(document.querySelector('.carte-du-bas')) };
   });
   expect(fige).toEqual({ centre: [195, 422], largeur: 156, animations: 0, transition: '0s', carte: true });
+  // L'écran 3, d'un coup.
   await continuer(vue).click();
+  await expect(faisais(vue)).toBeVisible();
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  expect((await fondu())[0]).toBe('none');
+  await terminer(vue).click();
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
@@ -591,4 +650,301 @@ test('un mot à soi est sur la carte, hors du carré du côté de sa zone, à la
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' }]);
   await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Flottant');
   await expect(carteDuBas(vue).locator('.definition-carte-du-bas')).toHaveText('Un peu ailleurs, sans attache.');
+});
+
+// ---------- v9 (5/8) · L'écran 3, « Ce que je faisais » ; un relevé rouvert (spec §4.3 et §13.1) ----------
+
+const ACTIVITES = ['Travail', 'Trajet', 'Courses / démarches', 'Chez moi', 'Avec du monde', 'Repos'];
+// La ligne d'un relevé dans Ma journée (un lien vers son écran 3), par son heure ou son texte.
+const ligneReleve = (page, texte) => page.locator('.liste-evenements a.releve').filter({ hasText: texte });
+// Des relevés inventés, versés dans la base ; renvoie leurs identifiants, dans l'ordre.
+const creer = (page, liste) => page.evaluate(async (l) => {
+  const ids = [];
+  for (const h of l) ids.push((await window.__carnet.repo.humeurs.creer(h)).id);
+  return ids;
+}, liste);
+const lire = (page, id) => page.evaluate((i) => window.__carnet.repo.humeurs.lire(i), id);
+const rappel = (vue, nom) => vue.getByRole('heading', { name: nom, level: 1, exact: true });
+const details = (vue) => vue.locator('.detail-rappel');
+// Ce qu'un relevé neuf, venant d'être noté, n'a pas : « Changer le mot », « Supprimer ce relevé », « Maintenant ▾ ».
+const PROPRES_AU_ROUVERT = (vue) => [changerMot(vue), supprimerReleve(vue), vue.locator('.puce-quand'), details(vue)];
+
+test('parcours complet : couleur, mot, flèche, puis « Ce que je faisais » écrit au toucher, et Terminer ; ✕ fait de même ; un relevé neuf à chaque ouverture', async ({ page }) => {
+  let vue = await ouvrir(page);
+  await noter(vue, 'rouge', 'Irrité');
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', energie: 'energie:haute', faisais: null }]);
+  const couleur = await carteDuBas(vue).locator('.mot-carte-du-bas').evaluate((e) => getComputedStyle(e).color);
+  await continuer(vue).click();
+  // L'écran 3 : le mot en rappel, à la couleur qu'il a dans la carte du bas, le focus sur lui ; les activités, aucune
+  // choisie ; rien de ce qui est propre à un relevé rouvert.
+  await expect(rappel(vue, 'Irrité')).toBeFocused();
+  expect(await rappel(vue, 'Irrité').evaluate((e) => getComputedStyle(e).color)).toBe(couleur);
+  await expect(vue.getByRole('heading', { name: 'Ce que je faisais', level: 2 })).toBeVisible();
+  await expect(faisais(vue).getByRole('button')).toHaveText(ACTIVITES);
+  await expect(faisais(vue).getByRole('button', { pressed: true })).toHaveCount(0);
+  for (const x of PROPRES_AU_ROUVERT(vue)) await expect(x).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/moment$/);
+
+  // Chaque activité est écrite au toucher, dans le même relevé ; retouchée, elle s'en va.
+  await activite(vue, 'Travail').click();
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', faisais: ['activiteMoment:travail'] }]);
+  await activite(vue, 'Trajet').click();
+  await expect.poll(releves(page)).toMatchObject([{ faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
+  await activite(vue, 'Travail').click();
+  await expect.poll(releves(page)).toMatchObject([{ faisais: ['activiteMoment:trajet'] }]);
+  // Une activité choisie a sa coche, et la couleur de la zone du mot (le rouge).
+  await expect(activite(vue, 'Trajet')).toHaveAttribute('aria-pressed', 'true');
+  await expect(activite(vue, 'Trajet').locator('.coche svg')).toBeVisible();
+  await expect(activite(vue, 'Trajet')).toHaveCSS('background-color', 'rgb(254, 76, 64)');
+  await terminer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+  expect(await releves(page)()).toMatchObject([{ date: '2026-10-15', heure: '21:00', vers: null, emotion: 'roue:colere:irrite', energie: 'energie:haute', faisais: ['activiteMoment:trajet'] }]);
+  await expect(ligneReleve(page, 'Irrité')).toHaveCount(1);
+
+  // ✕ à l'écran 3 : la même fermeture. La nouvelle ouverture repart de rien : « Maintenant », aucune activité.
+  vue = await ouvrir(page);
+  await expect(vue.locator('.puce-quand')).toHaveText('Maintenant');
+  await noter(vue, 'vert', 'Calme');
+  await continuer(vue).click();
+  await expect(faisais(vue).getByRole('button', { pressed: true })).toHaveCount(0);
+  await activite(vue, 'Repos').click();
+  await expect.poll(async () => (await releves(page)()).find((h) => h.emotion === 'roue:serenite:calme')).toMatchObject({ faisais: ['activiteMoment:repos'] });
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+  // « Annuler » retire ce relevé, activité comprise ; le premier reste.
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', faisais: ['activiteMoment:trajet'] }]);
+});
+
+// Point de vigilance 5, sous la flèche : l'écran 3 paraît, et « Terminer » est là où était la flèche.
+test('deux touchers rapides sur la flèche : le second, qui tombe sur « Terminer », est ignoré (la garde), l\'écran 3 reste (avec ou sans « Réduire les animations »)', async ({ page }) => {
+  test.setTimeout(60000);
+  for (const mouvement of ['no-preference', 'reduce']) {
+    await page.emulateMedia({ reducedMotion: mouvement });
+    const vue = await ouvrir(page);
+    await noter(vue, 'bleu', 'Vide');
+    await finGarde(continuer(vue));
+    await finMouvements(page);
+    const b = await continuer(vue).boundingBox();
+    const point = [b.x + b.width / 2, b.y + b.height / 2];
+    await toucherDeuxFois(page, point, point);
+    await page.clock.runFor(400);
+    await page.clock.resume();
+    await expect(faisais(vue), mouvement).toBeVisible();
+    await expect(page).toHaveURL(/#\/moment$/);
+    await expect(page.getByText(NOTEE)).toHaveCount(0);
+    // C'est bien « Terminer » qui est sous ce point : la garde passée, le même toucher ferme l'écran.
+    expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y).closest('.terminer-releve')), point), mouvement).toBe(true);
+    await finGarde(terminer(vue));
+    await page.touchscreen.tap(...point);
+    await expect(page).toHaveURL(/#\/aujourdhui$/);
+    await expect(page.getByText(NOTEE)).toBeVisible();
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+});
+
+test('un relevé rouvert depuis Ma journée s\'ouvre sur l\'écran 3 : son mot, son heure, ses activités ; « Changer le mot » ouvre la carte, ← et la flèche y ramènent ; ✕ revient à Ma journée, et Annuler le remet tel qu\'il était', async ({ page }) => {
+  const [id] = await creer(page, [{ date: '2026-10-15', heure: '09:10', emotion: 'roue:joie:curieux', energie: 'energie:haute', faisais: ['activiteMoment:travail'] }]);
+  const avant = await lire(page, id);
+  await page.reload();
+  await appPrete(page);
+  // La ligne a son point de zone et son chevron ; elle mène à l'écran 3.
+  await expect(ligneReleve(page, 'Curieux').locator('.point-evenement')).toHaveClass(/zone-jaune/);
+  await expect(ligneReleve(page, 'Curieux').locator('svg')).toHaveCount(1);
+  await ligneReleve(page, 'Curieux').click();
+  await expect(page).toHaveURL(new RegExp(`#/moment/${id}$`));
+  const vue = vueMoment(page);
+  await expect(rappel(vue, 'Curieux')).toBeFocused();
+  await expect(details(vue)).toHaveText(['Aujourd\'hui · 09:10']);
+  await expect(faisais(vue).getByRole('button', { pressed: true })).toHaveText(['Travail']);
+  await expect(changerMot(vue)).toBeVisible();
+  await expect(supprimerReleve(vue)).toBeVisible();
+  // Ni les bulles, ni « Maintenant ▾ » : son heure ne change pas. Ni barre d'onglets.
+  await expect(bulles(vue)).toHaveCount(0);
+  await expect(vue.locator('.puce-quand')).toHaveCount(0);
+  await expect(page.locator('nav.onglets')).toHaveCount(0);
+  // Une activité de plus, écrite au toucher dans ce relevé.
+  await activite(vue, 'Avec du monde').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, faisais: ['activiteMoment:travail', 'activiteMoment:monde'] }]);
+
+  // « Changer le mot » : la carte, le mot choisi au milieu de l'écran, avec sa carte du bas ; ← ramène à l'écran 3.
+  await changerMot(vue).click();
+  await expect(mot(vue, 'Curieux')).toHaveAttribute('aria-pressed', 'true');
+  await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Curieux');
+  await expect.poll(async () => {
+    const c = await mot(vue, 'Curieux').boundingBox();
+    return Math.abs(c.x + c.width / 2 - 195) <= 1 && Math.abs(c.y + c.height / 2 - 422) <= 1;
+  }).toBe(true);
+  await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
+  await expect(rappel(vue, 'Curieux')).toBeFocused();
+  // Un autre mot : écrit tout de suite, avec l'énergie de sa case, à la même heure ; la flèche ramène à l'écran 3.
+  await changerMot(vue).click();
+  await mot(vue, 'Préoccupé').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-15', heure: '09:10', vers: null, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne',
+    faisais: ['activiteMoment:travail', 'activiteMoment:monde'] }]);
+  await continuer(vue).click();
+  await expect(rappel(vue, 'Préoccupé')).toBeFocused();
+  await expect(page).toHaveURL(new RegExp(`#/moment/${id}$`));
+
+  // ✕ : retour à Ma journée, avec « Émotion du moment notée » ; Annuler le remet tel qu'à l'ouverture.
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+  await expect(ligneReleve(page, 'Préoccupé')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(releves(page)).toEqual([avant]);
+  await expect(ligneReleve(page, 'Curieux')).toHaveCount(1);
+});
+
+test('un relevé se rouvre depuis n\'importe quel jour, Historique compris, et y ramène', async ({ page }) => {
+  await creer(page, [
+    { date: '2026-10-12', heure: '18:00', emotion: 'roue:serenite:calme', energie: 'energie:moyenne' },
+    // 01:20 le 15 : le jour logique du 14, « Hier ».
+    { date: '2026-10-15', heure: '01:20', vers: true, emotion: 'roue:tristesse:vide', energie: 'energie:basse' },
+  ]);
+  const vue = vueMoment(page);
+  await aller(page, '#/jour/2026-10-12');
+  await ligneReleve(page, 'Calme').click();
+  await expect(details(vue)).toHaveText(['Lundi 12 octobre · 18:00']);
+  await terminer(vue).click();
+  await expect(page).toHaveURL(/#\/jour\/2026-10-12$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+
+  await aller(page, '#/jour/2026-10-14');
+  await ligneReleve(page, 'Vide').click();
+  await expect(details(vue)).toHaveText(['Hier · vers 1 h']);
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
+
+  // Depuis l'Historique : son jour, puis le relevé ; on revient au jour de l'Historique.
+  await aller(page, '#/historique');
+  await page.getByRole('link', { name: /lundi 12 oct\./ }).click();
+  await expect(page).toHaveURL(/#\/historique\/jour\/2026-10-12$/);
+  await ligneReleve(page, 'Calme').click();
+  await expect(rappel(vue, 'Calme')).toBeVisible();
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/historique\/jour\/2026-10-12$/);
+});
+
+test('point de vigilance 1 : un ancien relevé (énergie seule de la v8, famille seule de la v7, note de la v6) se rouvre sur « Aucun mot », sans erreur ; un mot choisi remplace son énergie et lui donne sa zone', async ({ page }) => {
+  const ids = await creer(page, [
+    { date: '2026-10-15', heure: '08:00', energie: 'energie:basse' },
+    { date: '2026-10-15', heure: '10:00', emotion: 'roue:colere', energie: 'energie:moyenne' },
+    { date: '2026-10-15', heure: '12:00', vers: true, humeur: 6, energie: 'energie:basse', faisais: ['activiteMoment:repos'] },
+  ]);
+  await page.reload();
+  await appPrete(page);
+  const vue = vueMoment(page);
+  const cas = [
+    ['08:00', ['Aujourd\'hui · 08:00', 'énergie basse'], []],
+    ['10:00', ['Aujourd\'hui · 10:00', 'Colère · énergie moyenne'], []],
+    ['vers 12 h', ['Aujourd\'hui · vers 12 h', 'humeur 6 · énergie basse'], ['Repos']],
+  ];
+  for (const [i, [heure, textes, choisies]] of cas.entries()) {
+    await expect(ligneReleve(page, heure).locator('.point-evenement')).toHaveClass(/point-creux/);
+    await ligneReleve(page, heure).click();
+    await expect(page).toHaveURL(new RegExp(`#/moment/${ids[i]}$`));
+    await expect(rappel(vue, 'Aucun mot')).toBeFocused();
+    await expect(details(vue)).toHaveText(textes);
+    await expect(faisais(vue).getByRole('button', { pressed: true })).toHaveText(choisies);
+    await expect(changerMot(vue)).toBeVisible();
+    await expect(vue).not.toContainText(/NaN|undefined|null|roue:/);
+    await fermer(vue).click();
+    await expect(page).toHaveURL(/#\/aujourdhui$/);
+  }
+
+  // La famille seule (v7) : « Changer le mot » ouvre la carte sans mot choisi ; Furieux remplace la famille et l'énergie.
+  await ligneReleve(page, '10:00').click();
+  await changerMot(vue).click();
+  await expect(carte(vue).getByRole('button')).toHaveCount(144);
+  await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(0);
+  await expect(carteDuBas(vue)).toHaveCount(0);
+  await mot(vue, 'Furieux').click();
+  await expect.poll(() => lire(page, ids[1])).toMatchObject({ date: '2026-10-15', heure: '10:00', emotion: 'roue:colere:furieux', energie: 'energie:haute' });
+  await continuer(vue).click();
+  await expect(rappel(vue, 'Furieux')).toBeFocused();
+  await expect(details(vue)).toHaveText(['Aujourd\'hui · 10:00']);
+  await terminer(vue).click();
+  await expect(ligneReleve(page, 'Furieux').locator('.point-evenement')).toHaveClass(/zone-rouge/);
+
+  // La note de la v6 : Calme remplace l'énergie, la note et l'heure « vers » restent ; effacé, la note garde le relevé.
+  await ligneReleve(page, 'vers 12 h').click();
+  await changerMot(vue).click();
+  await mot(vue, 'Calme').click();
+  await expect.poll(() => lire(page, ids[2])).toMatchObject({ heure: '12:00', vers: true, humeur: 6, emotion: 'roue:serenite:calme', energie: 'energie:moyenne', faisais: ['activiteMoment:repos'] });
+  await finGarde(carte(vue));
+  await mot(vue, 'Calme').click();
+  await expect.poll(() => lire(page, ids[2])).toMatchObject({ heure: '12:00', vers: true, humeur: 6, emotion: null, energie: null, faisais: ['activiteMoment:repos'] });
+  await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
+  await expect(rappel(vue, 'Aucun mot')).toBeFocused();
+  await expect(details(vue)).toHaveText(['Aujourd\'hui · vers 12 h', 'humeur 6']);
+  await terminer(vue).click();
+  await expect(ligneReleve(page, 'vers 12 h')).toHaveText(/humeur 6/);
+});
+
+test('« Supprimer ce relevé » : une confirmation ; confirmé, retour à Ma journée et « Relevé supprimé », dont Annuler remet le relevé tel quel', async ({ page }) => {
+  const [id] = await creer(page, [{ date: '2026-10-15', heure: '18:10', emotion: 'roue:peur:anxieux', energie: 'energie:haute', faisais: ['activiteMoment:trajet'] }]);
+  const avant = await lire(page, id);
+  await page.reload();
+  await appPrete(page);
+  await ligneReleve(page, 'Anxieux').click();
+  const vue = vueMoment(page);
+  const boite = page.getByRole('alertdialog', { name: 'Supprimer ce relevé ?' });
+  // Annuler dans la boîte : rien ne change.
+  await supprimerReleve(vue).click();
+  await expect(boite).toBeVisible();
+  await expect(boite.getByRole('button', { name: 'Annuler' })).toBeFocused();
+  await boite.getByRole('button', { name: 'Annuler' }).click();
+  await expect(boite).toHaveCount(0);
+  expect(await releves(page)()).toEqual([avant]);
+  // Confirmé : l'écran se ferme sur Ma journée, sans la ligne ; « Annuler » du message la remet.
+  await supprimerReleve(vue).click();
+  await boite.getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(SUPPRIME)).toBeVisible();
+  await expect(page.getByText(NOTEE)).toHaveCount(0);
+  await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  await expect(ligneReleve(page, 'Anxieux')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(releves(page)).toEqual([avant]);
+  await expect(ligneReleve(page, 'Anxieux')).toHaveCount(1);
+});
+
+test('un relevé rouvert vidé de tout (mot effacé, plus d\'activité) part ; une activité le fait revenir, sous son id et à son heure ; fermé vide, « Relevé supprimé » et Annuler le remet', async ({ page }) => {
+  const [id] = await creer(page, [{ date: '2026-10-15', heure: '07:45', emotion: 'roue:serenite:calme', energie: 'energie:moyenne' }]);
+  const avant = await lire(page, id);
+  await page.reload();
+  await appPrete(page);
+  await ligneReleve(page, 'Calme').click();
+  const vue = vueMoment(page);
+  await changerMot(vue).click();
+  await mot(vue, 'Calme').click();
+  await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  await expect(carteDuBas(vue)).toHaveCount(0);
+  await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
+  await expect(rappel(vue, 'Aucun mot')).toBeFocused();
+  // Une activité : le relevé revient, même id, même jour et même heure.
+  await activite(vue, 'Chez moi').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-15', heure: '07:45', vers: null, emotion: null, energie: null, faisais: ['activiteMoment:maison'] }]);
+  // Retirée, il repart ; fermé ainsi, « Relevé supprimé », et Annuler le remet tel qu'à l'ouverture.
+  await activite(vue, 'Chez moi').click();
+  await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  await terminer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(SUPPRIME)).toBeVisible();
+  await expect(page.getByText(NOTEE)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(releves(page)).toEqual([avant]);
+});
+
+test('un id inconnu (#/moment/ID) renvoie sur Aujourd\'hui, comme #/moment/ seul', async ({ page }) => {
+  await aller(page, '#/moment/hu_0000000000000000');
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(vueMoment(page)).toHaveCount(0);
+  await expect(page.locator('nav.onglets')).toBeVisible();
+  await aller(page, '#/moment/');
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(vueMoment(page)).toHaveCount(0);
 });

@@ -1,6 +1,7 @@
 // « Me ressourcer » (v6) : « Pour récupérer, je… » tel que l'utilisateur l'a écrit dans Mon plan, avec
-// « Respirer », dans la carte de l'Émotion du moment (la règle). L'écran « Me ressourcer » est parti en v6.1 :
-// son contenu est dans Mon plan, sur Moment difficile. Rien n'y est calculé ni compté.
+// « Respirer », dans la carte de l'Émotion du moment (la règle ; v9 : en tête de l'écran 3, « Ce que je faisais »).
+// L'écran « Me ressourcer » est parti en v6.1 : son contenu est dans Mon plan, sur Moment difficile. Rien n'y est
+// calculé ni compté.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { normaliserRessourcer, TITRE_RECUPERER } from '../../domain/ressourcer.js';
@@ -20,13 +21,13 @@ function Respirer() {
   return html`<button type="button" class="btn btn-plein" onClick=${() => { preparerSon(); setAffichee(true); }}>${Icones.respiration()}Respirer</button>`;
 }
 
-// La carte paraît au-dessus du panneau des réponses (v7) : quand elle paraît, et quand elle grandit (la respiration
-// s'y ouvre), le corps de l'écran défile juste assez pour la montrer, en douceur, ou d'un saut avec « Réduire les
-// animations ». Trop haute, on en montre le haut (la liste) ; la respiration ouverte, le bas (le cercle, « Inspire »
-// et « Arrêter »).
+// La carte paraît au-dessus du panneau des réponses (v7 ; v9 : en tête de l'écran 3) : quand elle paraît, et quand elle
+// grandit (la respiration s'y ouvre), le corps de l'écran défile juste assez pour la montrer, en douceur, ou d'un saut
+// avec « Réduire les animations ». Trop haute, on en montre le haut (la liste) ; la respiration ouverte, le bas (le
+// cercle, « Inspire » et « Arrêter »).
 const MARGE_CARTE = 12;
 function montrer(carte) {
-  const corps = carte && carte.closest('.parcours-corps');
+  const corps = carte && carte.closest('.parcours-corps, .corps-faisais');
   if (!corps) return;
   const [c, z] = [carte.getBoundingClientRect(), corps.getBoundingClientRect()];
   const versLeBas = c.bottom + MARGE_CARTE - z.bottom;
