@@ -286,7 +286,8 @@ test('boutons à coche faits à la main, en clair et en sombre : « C\'était ve
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
     await page.emulateMedia({ colorScheme: schema });
-    // « C'était vers… », en couleur Humeur ; « Maintenant » est choisi tant qu'aucune heure ne l'est.
+    // « C'était vers… », en couleur Humeur ; « Maintenant » est choisi tant qu'aucune heure ne l'est. v9 : sur l'écran noir
+    // de l'émotion, dans les deux thèmes, un choix non fait a le --surface du thème sombre (tokens.css, .ecran-noir).
     await aller(page, '#/moment');
     const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
     const bouton = vue.locator('.ligne-date > .btn-lien');
@@ -295,7 +296,7 @@ test('boutons à coche faits à la main, en clair et en sombre : « C\'était ve
     verifierChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), attendu(t, 'humeur'), `${schema} vers Maintenant`);
     await vers.getByRole('button', { name: '12 h', exact: true }).click();
     verifierChoisi(await styleDe(vers.getByRole('button', { name: '12 h', exact: true })), attendu(t, 'humeur'), `${schema} vers 12 h`);
-    verifierNonChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), rgb(t.surface), `${schema} vers Maintenant non choisi`);
+    verifierNonChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), rgb(sombre.surface), `${schema} vers Maintenant non choisi`);
     await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
 
     // Rappels : sans teinte, couleur action.

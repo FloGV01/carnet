@@ -522,8 +522,6 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   background: var(--bg);
 }
 .ligne-date-fixe { color: var(--text-2); font-size: var(--t-sous); min-height: var(--cible); display: flex; align-items: center; }
-/* Émotion du moment (v6, v7) : les heures de « C'était vers… » sous la barre, que « Maintenant ▾ » ouvre. */
-.choix-vers { padding-bottom: var(--esp-2); }
 
 /* Réglages */
 .reglages { gap: 10px; }
@@ -672,19 +670,134 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-apres-coup { min-height: 52px; padding: 8px 10px 8px 16px; font-size: var(--t-sous); line-height: 1.3; font-variant-numeric: tabular-nums; }
 .bloc-etape { display: flex; flex-direction: column; gap: 8px; }
 .sous-titre-etape { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
-/* Émotion du moment (v7, 2b) : « Ce que je faisais » en carte, puis les relevés du jour ; la carte « Pour récupérer,
-   je… » se pose en dernier, juste au-dessus du panneau des réponses. */
-.moment-corps { padding: 0 var(--marge) 16px; display: flex; flex-direction: column; gap: 14px; }
-.moments-du-jour { display: flex; flex-direction: column; gap: 6px; }
-/* Une rangée : l'heure dans une colonne fixe d'environ 70 (« vers 12 h » y tient, comme dans « Ma journée »), le point
-   de la zone du mot (v9 ; un rond creux, neutre, pour un relevé sans zone), le texte, puis ✕. Filets décalés comme en 2b. */
-.moments-du-jour .liste.carte-groupe { padding-left: 14px; }
-.ligne-releve { display: flex; align-items: center; min-height: 48px; font-size: var(--t-corps); }
-.heure-moment { display: inline-block; min-width: 4.4em; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text-2); margin-right: 6px; }
-.ligne-releve .heure-moment { flex: none; min-width: 4.8em; margin-right: 0; font-size: var(--t-sous); }
-.point-releve-moment { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); margin-right: 10px; }
-.point-releve-moment.point-creux { background: none; border: 1.5px solid var(--text-2); }
-.texte-releve { flex: 1; min-width: 0; padding: 6px 0; line-height: 1.3; font-weight: 500; color: var(--text); }
+/* ---------- Émotion du moment (v9, spec §4 et §5 ; visuel-hwf.md) ----------
+   Comme How We Feel : plein écran, fond noir dans les deux thèmes (les jetons de base y prennent leurs valeurs sombres,
+   tokens.css, .ecran-noir), sans barre d'onglets. Mesures en pt de l'iPhone (1 px CSS = 1 pt). */
+.moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: #000; color: #fff; }
+/* Les boutons en verre, en haut (visuel §1.2 et §2.9) : capsules de 48 × 44, à 16 du bord, juste sous la barre d'état ;
+   « verre » sombre, un liseré clair et une ombre intérieure. Sur la carte, translucide et flouté. */
+.verre {
+  position: absolute; z-index: 3; top: calc(var(--zone-haut) + 0.3px); width: 48px; height: 44px; padding: 0; border: 0;
+  border-radius: 22px; display: grid; place-items: center; background: #1b1b1b; color: #f2f2f2;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, .14), inset 0 0 3px rgba(0, 0, 0, .35);
+}
+.verre.gauche { left: calc(16px + var(--zone-gauche)); }
+.verre svg { display: block; }
+.verre:focus-visible, .bulle-zone:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.ecran-carte .verre { background: rgba(32, 32, 32, .85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+
+/* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en New York grasse), les quatre bulles (haut à 306), puis
+   « Maintenant ▾ ». Il défile en hauteur s'il manque de place (grand texte) ; l'espace au-dessus des bulles cède d'abord. */
+.ecran-bulles {
+  position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; align-items: center;
+  padding: calc(var(--zone-haut) + 74px) calc(16px + var(--zone-droite)) calc(24px + var(--zone-bas)) calc(16px + var(--zone-gauche));
+}
+.titre-bulles { flex: none; max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police-serif); letter-spacing: -0.01em; text-wrap: balance; }
+.espace-bulles { flex: 0 1 121px; min-height: 28px; }
+/* Les bulles : une grille 2 × 2 de disques de 145, 21,5 d'écart. Dans une bulle, trois halos de la couleur médiane à 80 %,
+   sous la face ; une bulle se dessine au-dessus des précédentes (rouge, jaune, bleu, vert : l'ordre du code). */
+.quatre-bulles { flex: none; display: grid; grid-template-columns: repeat(2, 145px); gap: 21.5px 21.4px; }
+.bulle-zone {
+  position: relative; width: 145px; height: 145px; padding: 0; border: 0; border-radius: 50%; background: none; color: #000;
+  -webkit-touch-callout: none; user-select: none; transition: transform .15s ease-out;
+}
+.bulle-zone:active { transform: scale(.96); }
+.bulle-zone .halo {
+  position: absolute; inset: -0.4px; border-radius: 50%; background: var(--mediane); opacity: .8;
+  transform: translate(var(--dx), var(--dy)); animation: orbite var(--t) linear infinite;
+}
+/* Chaque halo tourne sur une orbite de 12 pt (7, 9,5 et 12 s, le 2ᵉ à rebours), parti de son décalage mesuré (visuel §1.5
+   et §4) ; avec « Réduire les animations », il reste à ce décalage (base.css coupe l'animation). */
+.bulle-zone .halo:nth-child(1) { --t: 7s; }
+.bulle-zone .halo:nth-child(2) { --t: 9.5s; animation-direction: reverse; }
+.bulle-zone .halo:nth-child(3) { --t: 12s; }
+@keyframes orbite { from { transform: rotate(0deg) translateX(12px); } to { transform: rotate(360deg) translateX(12px); } }
+.bulle-rouge { --haut: #ff8040; --mediane: #fe4c40; --bas: #f3375f; }
+.bulle-rouge .halo:nth-child(1) { --dx: -13px; --dy: -13.1px; animation-delay: -4.38s; }
+.bulle-rouge .halo:nth-child(2) { --dx: -10.5px; --dy: 10px; animation-delay: -5.9s; }
+.bulle-rouge .halo:nth-child(3) { --dx: 13.2px; --dy: -4.6px; animation-delay: -11.36s; }
+.bulle-jaune { --haut: #f9e46d; --mediane: #ffd04c; --bas: #ffb219; }
+.bulle-jaune .halo:nth-child(1) { --dx: -13.5px; --dy: -13.5px; animation-delay: -4.38s; }
+.bulle-jaune .halo:nth-child(2) { --dx: 9.8px; --dy: 2.8px; animation-delay: -9.08s; }
+.bulle-jaune .halo:nth-child(3) { --dx: -3px; --dy: 2.2px; animation-delay: -4.79s; }
+.bulle-bleu { --haut: #87c3fa; --mediane: #789fff; --bas: #717fff; }
+.bulle-bleu .halo:nth-child(1) { --dx: -9px; --dy: 8.8px; animation-delay: -2.64s; }
+.bulle-bleu .halo:nth-child(2) { --dx: 8.3px; --dy: -10.7px; animation-delay: -1.38s; }
+.bulle-bleu .halo:nth-child(3) { --dx: 7px; --dy: 8.8px; animation-delay: -1.72s; }
+.bulle-vert { --haut: #8bf0a4; --mediane: #4ce39b; --bas: #40c785; }
+.bulle-vert .halo:nth-child(1) { --dx: 5.7px; --dy: 11.3px; animation-delay: -1.23s; }
+.bulle-vert .halo:nth-child(2) { --dx: 5.1px; --dy: -11.2px; animation-delay: -1.73s; }
+.bulle-vert .halo:nth-child(3) { --dx: -6.2px; --dy: 5.7px; animation-delay: -4.58s; }
+/* La face : un dégradé vertical à trois arrêts (visuel §1.6) ; sa couleur médiane en fond, sous le dégradé. Le libellé
+   noir sur deux lignes, 16,5/19 en New York grasse. How We Feel y garde 110 pt utiles ; « Énergie haute » en demande
+   120 : 126 (87 % du disque, encore loin de son bord à cette hauteur). En très grand texte, une ligne passe à la ligne
+   et un mot trop long réduit son corps (ui/mesures.js). */
+.bulle-zone .face {
+  position: absolute; inset: 0; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background-color: var(--mediane); background-image: linear-gradient(180deg, var(--haut) 0%, var(--mediane) 50%, var(--bas) 100%);
+}
+.etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.118rem var(--police-serif); letter-spacing: -0.01em; overflow-wrap: normal; }
+.ligne-bulle { display: block; }
+/* « Maintenant ▾ » sous les bulles, en petit, et les heures de « C'était vers… » dessous (à la couleur Humeur, v6). */
+.moment-plein .puce-quand { flex: none; margin-top: 30px; padding: 0; }
+.moment-plein .puce-quand > .btn-lien { width: auto; min-height: var(--cible); padding: 0 10px; gap: 6px; }
+.moment-plein .choix-vers { flex: none; justify-content: center; max-width: 358px; margin-top: 6px; }
+
+/* Écran 2 (visuel §2) : la carte plein écran, qui défile dans les deux sens sous un voile noir en haut. */
+.ecran-carte { position: absolute; inset: 0; animation: apparition-carte var(--duree-anim) ease-out; }
+@keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
+.carte-defile {
+  position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.carte-defile::-webkit-scrollbar { display: none; }
+.carte-plan { position: relative; }
+/* Une bulle : 96 pt, faite de deux moitiés à la couleur de sa case (--c). Choisie, chaque moitié devient une capsule de
+   78 × 156 (rayon 24, × 1,625), la « double capsule » de How We Feel, encoche noire en haut et en bas (visuel §2.4).
+   Place et taille par transform (carte-emotions.js) ; le libellé dans la moitié gauche, que la droite ne couvre pas. */
+.bulle-mot {
+  position: absolute; left: 0; top: 0; width: 96px; height: 96px; padding: 0; border: 0; border-radius: 50%; background: none; color: #000;
+  transform-origin: 48px 48px; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+}
+.bulle-mot.choisi { z-index: 2; border-radius: 24px; }
+.bulle-mot .demi { position: absolute; top: 0; width: 48.5px; height: 96px; background: var(--c); transition: border-radius .45s cubic-bezier(.2, .8, .2, 1); }
+.bulle-mot .demi.gauche { left: 0; border-radius: 48px 0 0 48px / 48px 0 0 48px; }
+.bulle-mot .demi.droite { right: 0; border-radius: 0 48px 48px 0 / 0 48px 48px 0; }
+.bulle-mot.choisi .demi { border-radius: 24px; }
+/* Le libellé : 12 pt (le diamètre / 8, visuel §2.6) en New York grasse, noir, 78 pt utiles (80 %) ; un mot trop long
+   réduit son corps (ui/mesures.js), plusieurs mots passent à la ligne. Choisi, il passe à 18 pt (× 1,625 × 0,923). */
+.etiquette-mot {
+  position: absolute; left: 48px; top: 48px; width: 78px; transform: translate(-50%, -50%); text-align: center; pointer-events: none;
+  font: 700 0.706rem/1.12 var(--police-serif); letter-spacing: -0.01em; overflow-wrap: normal; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+}
+.bulle-mot.choisi .etiquette-mot { transform: translate(-50%, -50%) scale(.923); }
+/* Le voile noir du haut (visuel §2.7) : 0,6 sous la barre d'état, puis plus rien à 84 pt sous elle. */
+.carte-fondu {
+  position: absolute; z-index: 2; inset: 0 0 auto 0; height: calc(var(--zone-haut) + 83px); pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .6) 0, rgba(0, 0, 0, .6) 30.8%, rgba(0, 0, 0, .44) 51.5%, rgba(0, 0, 0, .28) 64.6%,
+    rgba(0, 0, 0, .12) 77.7%, rgba(0, 0, 0, .04) 90.8%, rgba(0, 0, 0, 0) 100%);
+}
+/* La carte du bas (visuel §2.8) : une capsule de 365 × 100 au moins, à 12,7 des bords et 8 au-dessus de la zone du bas,
+   en #2c2c2e ; le texte à 40 du bord, le rond blanc de 76 à droite. Elle grandit avec le texte (grand texte compris). */
+.carte-du-bas-zone {
+  position: absolute; z-index: 3; left: calc(12.7px + var(--zone-gauche)); right: calc(12.7px + var(--zone-droite));
+  bottom: calc(8px + var(--zone-bas)); pointer-events: none;
+}
+.carte-du-bas {
+  pointer-events: auto; min-height: 100px; border-radius: 50px; background: #2c2c2e; box-shadow: 0 3px 16px rgba(0, 0, 0, .5);
+  display: flex; align-items: center; gap: 16px; padding: 12px 12px 12px 40px;
+  animation: arrivee-carte-du-bas .3s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes arrivee-carte-du-bas { from { transform: translateY(130%); opacity: 0; } to { transform: none; opacity: 1; } }
+.texte-carte-du-bas { flex: 1; min-width: 0; }
+.mot-carte-du-bas { font: 400 1rem/1.2 var(--police); color: var(--c); overflow-wrap: anywhere; }
+.definition-carte-du-bas { margin-top: 3px; font: 400 0.912rem/1.3 var(--police); color: #fff; text-wrap: pretty; }
+.continuer {
+  flex: 0 0 76px; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #000;
+  display: grid; place-items: center;
+}
 /* Analyse v4 : Avant tes explosions */
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }

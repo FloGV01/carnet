@@ -413,121 +413,20 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-pied .btn-lien { padding: 0 6px; gap: 2px; font-weight: 600; }
 .parcours-pied .btn-lien svg { width: 20px; height: 20px; stroke-width: 2; }
 .parcours-pied .terminer { flex: 1; margin: 4px 6px; }
-/* Parcours 2b (v7, Émotion du moment) : une puce à droite de « Fermer », le titre en grand (25/600) avec l'icône dans
-   un carré de 34 à la couleur du parcours, et le panneau des réponses collé en bas, près du pouce. */
-.parcours-droite { margin-left: auto; display: flex; align-items: center; padding-right: 6px; }
+/* Le titre en grand d'un parcours (v7 ; v9 : le lecteur de Bien-être seul) : 25/600, avec l'icône dans un carré de 34
+   à la couleur du parcours. */
 .titre-parcours {
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
   font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty;
 }
 .carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c); color: var(--c-on); display: grid; place-items: center; }
 .carre-titre svg { width: 20px; height: 20px; }
-/* Le panneau descend jusqu'au bord de l'écran, zone du bas de l'iPhone comprise. Le corps défile au-dessus ; en grand
-   texte, s'il manque de place, le panneau défile à son tour, le corps gardant au moins 96 px. */
-.parcours.avec-panneau { padding-bottom: 0; }
-.avec-panneau .parcours-corps { flex: 1 1 0; min-height: 96px; }
-.panneau-reponses {
-  flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
-  display: flex; flex-direction: column; gap: 18px;
-  padding: 16px calc(var(--marge) + var(--zone-droite)) calc(16px + var(--zone-bas)) calc(var(--marge) + var(--zone-gauche));
-  background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-feuille) var(--r-feuille) 0 0;
-  container: reponses / inline-size;
-}
-.bloc-reponse { display: flex; flex-direction: column; gap: 10px; }
-.tete-reponse { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); min-height: 24px; }
-.titre-reponse { font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.retour-energie { min-height: var(--cible); margin: -10px 0 -10px -6px; padding: 0 6px 0 0; gap: 2px; }
-.retour-energie svg { width: 20px; height: 20px; }
-/* « Toute la carte » : un lien discret, en texte secondaire. */
-.toute-la-carte { min-height: var(--cible); margin: -10px 0; padding: 0 0 0 6px; gap: 2px; font-size: var(--t-sous); color: var(--text-2); }
-.toute-la-carte svg { width: 16px; height: 16px; }
-
-/* Émotion du moment (v8, spec §4) : les six tuiles, sous « plutôt désagréable » et « plutôt agréable ». Une tuile
-   enregistre l'énergie : non choisie, --fond-choix ; choisie, la couleur du parcours (-fill, -on, 600 et coche).
-   Ses mots d'exemple ont la couleur de leur famille (.emo-*), qui ne vaut que pour la roue. */
-.tuiles-emotion { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ecart); }
-.cote-tuiles { padding: 0 4px; font-size: var(--t-note); line-height: 1.3; color: var(--text-2); }
-/* Le nom de l'énergie en haut, la coche devant lui une fois choisie ; les mots d'exemple dessous, sur toute la largeur.
-   Le contenu part du haut (contrôle v8) : sur une rangée, les deux noms d'énergie restent alignés, même quand les mots
-   d'exemple d'une tuile passent sur deux lignes et ceux de l'autre sur une. */
-.tuile-emotion {
-  min-height: 4.4rem; padding: 10px 12px 8px; border: 0; border-radius: var(--r-moyen);
-  background: var(--fond-choix); color: var(--text); text-align: left; font-size: var(--t-corps); line-height: 1.2;
-  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: start; row-gap: 3px;
-  transition: background var(--duree), color var(--duree);
-}
-.tuile-emotion[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
-.tuile-emotion > .coche { grid-area: 1 / 1; align-self: center; margin-right: 4px; }
-.tuile-emotion > .coche svg { width: 15px; height: 15px; }
-.tuile-emotion > .libelle-choix { grid-area: 1 / 2; }
-.tuile-exemples { grid-area: 2 / 1 / 3 / 3; display: flex; flex-wrap: wrap; column-gap: 8px; font-size: var(--t-note); line-height: 1.3; font-weight: 500; }
-.exemple-tuile { color: var(--c-text); }
-.tuile-emotion[aria-pressed="true"] .exemple-tuile { color: inherit; }
-
-/* La carte : un cadre qui glisse dans les deux sens, de bord à bord du panneau, et dedans les six zones (trois bandes
-   d'énergie, deux côtés), chacune large comme le panneau : ouverte sur une zone, la carte la montre en entier. */
-.carte-cadre {
-  height: clamp(13rem, 44dvh, 26rem); margin: 0 calc(-1 * var(--marge)); overflow: auto; overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch; animation: apparition-carte var(--duree-anim) ease-out;
-}
-@keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
-.carte-roue {
-  --ecart-cotes: 28px;
-  position: relative; display: grid; grid-template-columns: repeat(2, 100cqi); gap: 26px var(--ecart-cotes); width: max-content;
-  padding: 10px var(--marge) 18px;
-}
-.zone-carte { display: flex; flex-direction: column; gap: 8px; }
-/* La légende d'une zone, rangée contre le centre de la carte, comme ses bulles (relecture finale) : « Toute la carte »
-   s'ouvre au milieu et ne montre que la moitié de chaque zone (et la marge, moins la moitié de l'écart entre les deux
-   côtés). La légende tient dans cette moitié en gardant la marge de la page au bord de l'écran ; sinon, elle passe à la
-   ligne après l'énergie (« Moyenne · » puis « plutôt désagréable »). */
-.legende-zone {
-  max-width: calc(50% - var(--ecart-cotes) / 2);
-  font-size: var(--t-note); line-height: 1.3; color: var(--text-2);
-}
-.legende-zone > span { display: inline-block; }
-.zone-gauche .legende-zone { align-self: flex-end; text-align: right; }
-.zone-droite .legende-zone { align-self: flex-start; text-align: left; }
-.bulles-zone { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; }
-/* À gauche, la carte part du bord gauche (le plus désagréable) ; à droite, du bord droit (le plus agréable). Une ligne
-   incomplète se range contre le centre. */
-.zone-gauche .bulles-zone { justify-content: flex-end; }
-.zone-droite .bulles-zone { flex-direction: row-reverse; justify-content: flex-end; }
-/* Une bulle ronde par mot, à la couleur de sa famille : non choisie, -tint-2 et texte -text ; choisie, -fill, -on,
-   600 et la coche au-dessus du mot. Son diamètre suit son plus long mot (« Non respecté » passe sur deux lignes) ; le
-   libellé garde la largeur de sa version en 600 (coche.js) : choisir ne pousse aucune voisine. La bulle choisie
-   grossit sans bouger ; celle dont un appui long montre le sens est cerclée. */
-.bulle {
-  border: 0; background: var(--c-tint-2); color: var(--c-text); font-weight: 500; text-align: center;
-  transition: background var(--duree), color var(--duree), transform var(--duree);
-}
-.bulle[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); font-weight: 600; }
-.bulle-carte {
-  position: relative; flex: none; width: min-content; min-width: 4.6rem; aspect-ratio: 1; padding: 0 9px; border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  font-size: var(--t-petit); line-height: 1.15; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-}
-.bulle-carte[aria-pressed="true"] { transform: scale(1.12); z-index: 1; }
-.bulle-carte.montree { box-shadow: 0 0 0 2px var(--c); }
-.bulle-carte .coche svg { width: 15px; height: 15px; }
-/* La définition, sous la carte : le mot choisi (ou montré) à la couleur de sa famille, puis son sens. */
-.definition-carte { min-height: calc(2 * 1.35em); font-size: var(--t-sous); line-height: 1.35; color: var(--text); text-wrap: pretty; }
-.mot-definition { font-weight: 600; color: var(--c-text); }
-.aide-definition { color: var(--text-2); }
 
 .ligne-date { padding: 0 var(--marge); flex: none; }
 .ligne-date .btn-lien { color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
 /* La ligne de date se touche sur toute sa largeur (v6). */
 .ligne-date > .btn-lien { width: 100%; }
 .ligne-date .btn-lien svg { width: 16px; height: 16px; stroke-width: 2; }
-/* « Maintenant ▾ » en puce, à droite de « Fermer » (2b) ; « Maintenant » seul, avant 6 h, reste un texte. */
-.ligne-date.puce-quand { padding: 0; }
-.puce-quand > .btn-lien {
-  width: auto; min-height: var(--cible); padding: 0 12px 0 14px; gap: 8px; border-radius: var(--r-bouton);
-  background: var(--surface); color: var(--text); font-size: var(--t-corps); font-weight: 500;
-}
-.puce-quand > .btn-lien svg { color: var(--text-2); }
-.parcours > .choix-vers { flex: none; padding: 2px var(--marge) var(--esp-2); }
 /* Épisode, symptôme (2b) : la date à gauche, « Mon plan » à droite, sur une ligne ; sur une fiche rouverte, « Mon plan ·
    Après coup · En parler » passent sur une ligne à eux, sous la date. La date et l'heure s'ouvrent dessous. */
 .ligne-date-plan { flex: none; display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; padding: 0 var(--marge); }

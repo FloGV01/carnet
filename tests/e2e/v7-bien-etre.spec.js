@@ -1,6 +1,5 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
-import { tuile, mot } from '../aides/emotion.js';
 import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
 // v7 · Bien-être (spec §6) : l'onglet (v8 : le Programme, la cohérence cardiaque, la ligne fixe), un exercice une
@@ -450,14 +449,13 @@ test('respiration : un tic de la minuterie entre « Arrêter » et le nettoyage 
   expect(await seances(page)).toHaveLength(1);
 });
 
-// Les rectangles de la ligne de « Cohérence cardiaque » et de la durée, dans le texte de la phase.
-const lignesPhase = (phase) => phase.evaluate((p) => {
-  const lignes = (n) => { const r = document.createRange(); r.selectNodeContents(n); return [...r.getClientRects()]; };
-  const duree = p.querySelector('.duree-respiration');
-  return { nom: Math.max(...lignes(p.firstChild).map((x) => x.bottom)), duree: duree.getBoundingClientRect().top, lignesDuree: lignes(duree).length };
-});
+// TRANSITOIRE (v9, 4/8) : « Pour récupérer, je… » passe à l'écran 3 de l'émotion (tâche 5 du plan v9), qui reprend sa part
+// de ces deux tests (la durée sous « Cohérence cardiaque » ; la séance d'origine « ressourcer »). Leur version de la v8 :
+// git show febc289:tests/e2e/v7-bien-etre.spec.js.
+test.fixme('« Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', () => {});
+test.fixme('la respiration de « Pour récupérer, je… » crée une séance d\'origine « ressourcer »', () => {});
 
-test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, réglés au même endroit ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
+test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, réglés au même endroit', async ({ page }) => {
   // Bien-être (v8) : la carte compacte, son titre, la durée et le rythme sur leurs puces, comme Moment difficile ; un choix
   // se règle au même endroit (méta respiration).
   await aller(page, '#/bien-etre');
@@ -470,38 +468,13 @@ test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, r
   await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('5');
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(5);
 
-  // « Pour récupérer, je… » : une fois la respiration arrêtée.
-  await page.evaluate(async () => {
-    const m = window.__carnet.repo.meta;
-    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
-    await m.ecrire('ressourcer', { energieBasse: true });
-  });
-  await aller(page, '#/moment');
-  const emo = vue(page, 'Émotion du moment');
-  await tuile(emo, 'Basse').click();
-  await mot(emo, 'Vide', 'Tristesse').click();
-  const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
-  await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
-  await carte.getByRole('button', { name: 'Arrêter' }).click();
-  const phaseCarte = carte.locator('.phase-respiration');
-  await expect(phaseCarte).toHaveText('Cohérence cardiaque 5 minutes');
-  await expect(phaseCarte.locator('.duree-respiration')).toHaveText('5 minutes');
-  for (const taille of [null, 28]) {
-    if (taille) await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
-    const l = await lignesPhase(phaseCarte);
-    expect(l.duree).toBeGreaterThanOrEqual(l.nom - 1);
-    expect(l.lignesDuree).toBe(1);
-  }
-  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
-
   // Moment difficile (2b, tâche 8) : « Cohérence cardiaque » seul, la durée sur sa puce.
-  await bouton(emo, 'Fermer').click();
   await aller(page, '#/moment-difficile');
   await expect(vue(page, 'Moment difficile').locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
   await expect(vue(page, 'Moment difficile').getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
 });
 
-test('la respiration crée une séance avec son origine : Bien-être (au bout, dans le lecteur), Moment difficile, « Pour récupérer, je… »', async ({ page }) => {
+test('la respiration crée une séance avec son origine : Bien-être (au bout, dans le lecteur), Moment difficile', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('respiration', { duree: 2, rythme: '5-5', son: false }));
   // Bien-être : menée au bout (2 min), dans le lecteur.
   await aller(page, '#/bien-etre');
@@ -535,27 +508,7 @@ test('la respiration crée une séance avec son origine : Bien-être (au bout, d
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect.poll(async () => (await seances(page)).filter((s) => s.origine === 'moment-difficile')).toHaveLength(2);
   environ((await seances(page)).filter((s) => s.origine === 'moment-difficile' && s.id !== md1.id)[0].dureeS, 75);
-
-  // « Pour récupérer, je… » : la respiration lancée par « Respirer », quittée après 90 s.
-  await page.evaluate(async () => {
-    const m = window.__carnet.repo.meta;
-    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
-    await m.ecrire('ressourcer', { energieBasse: true });
-  });
-  await aller(page, '#/moment');
-  const emo = vue(page, 'Émotion du moment');
-  await tuile(emo, 'Basse').click();
-  await mot(emo, 'Vide', 'Tristesse').click();
-  const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
-  await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
-  await expect(carte.locator('.phase-respiration')).toHaveText('Inspire');
-  await page.clock.runFor(90000);
-  await bouton(emo, 'Fermer').click();
-  await expect.poll(async () => (await seances(page)).filter((s) => s.origine === 'ressourcer')).toHaveLength(1);
-  const rs = (await seances(page)).find((s) => s.origine === 'ressourcer');
-  expect(rs.exercice).toBe('coherence');
-  environ(rs.dureeS, 90);
-  expect(await seances(page)).toHaveLength(4);
+  expect(await seances(page)).toHaveLength(3);
 });
 
 test('Mes jours : une rangée « Bien-être » sur une période qui a une séance, un repère par jour, sans nombre', async ({ page }) => {

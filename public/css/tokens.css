@@ -78,6 +78,9 @@
      17 px (le corps d'iOS) : elles suivent la taille du texte réglée sur l'iPhone. Chiffres tabulaires. */
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* v9 : New York, la serif de l'iPhone, en gras pour les titres et les mots des bulles de l'émotion (spec §5) ; Georgia
+     ailleurs (tests, Mac sans New York). Rien à télécharger. */
+  --police-serif: ui-serif, Georgia, serif;
   --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
   --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
   --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */
@@ -179,6 +182,13 @@
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --duree: 0ms; --duree-anim: 0ms; --duree-glisse: 0ms; }
+}
+/* Les écrans noirs de l'émotion (v9, spec §4) : fond noir dans les deux thèmes, comme How We Feel. Les jetons de base y
+   prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent (« C'était vers… »). */
+.ecran-noir {
+  color-scheme: dark;
+  --bg: #000000; --surface: #1e1f21; --surface-2: #2d2e30; --line: #47484a; --text: #bfc0c3; --text-2: #97989b;
+  --action: #eaebed; --action-on: #000000; --fond-choix: var(--surface);
 }
 
 /* Teinte locale d'une rubrique, d'un parcours ou d'une famille d'émotions : les composants lisent ses six rôles

@@ -200,9 +200,9 @@ test('Un mot à soi qui a une famille : son nom et sa famille dans l\'Analyse, C
   await expect(texte).toContainText('cette semaine : émotions : colère 1 · joie 4');
   await expect(texte).not.toContainText(/roue:|undefined|null/);
 
-  // L'écran Émotion du moment (v8, jusqu'à la tâche 4) : les relevés du jour, le mot à soi avec son nom et sa zone.
+  // L'écran Émotion du moment (v9, 4/8) : le mot à soi est sur la carte, dans sa zone, sous son nom.
   await aller(page, '#/moment');
-  const lignes = page.locator('.moments-du-jour .ligne-releve');
-  await expect(lignes.locator('.texte-releve')).toHaveText(['Flottant · énergie basse', 'Irrité · énergie moyenne']);
-  await expect(lignes.first().locator('.point-releve-moment')).toHaveClass(/zone-vert/);
+  const emotion = page.getByRole('dialog', { name: 'Émotion du moment' });
+  await emotion.getByRole('button', { name: 'Énergie basse, agréable', exact: true }).click();
+  await expect(emotion.getByRole('group', { name: 'Énergie basse · agréable', exact: true }).getByRole('button', { name: 'Flottant', exact: true })).toHaveCount(1);
 });

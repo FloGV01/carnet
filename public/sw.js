@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '98cc532092d3';
+const VERSION = 'ee0f250e34e2';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -80,8 +80,10 @@ const FICHIERS = [
   "./js/plateforme/sw-client.js",
   "./js/routeur.js",
   "./js/store.js",
+  "./js/ui/carte-geometrie.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
+  "./js/ui/composants/carte-du-bas.js",
   "./js/ui/composants/carte-emotions.js",
   "./js/ui/composants/coche.js",
   "./js/ui/composants/confirmation.js",
@@ -101,6 +103,7 @@ const FICHIERS = [
   "./js/ui/composants/parcours.js",
   "./js/ui/composants/pastilles.js",
   "./js/ui/composants/pourquoi.js",
+  "./js/ui/composants/quatre-bulles.js",
   "./js/ui/composants/questions.js",
   "./js/ui/composants/repli.js",
   "./js/ui/composants/respiration.js",
