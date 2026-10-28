@@ -61,14 +61,19 @@ test('l\'Analyse avec des émotions : portes, Ma semaine « Tes émotions », Me
   for (const [fond, c] of couleurs) expect(fond).not.toBe('');
   expect(new Set(couleurs.map(([fond]) => fond)).size).toBe(5);
 
-  // Mes jours sur 7 jours : L M M J V S D en tête, une étiquette par rangée, un point par relevé à la couleur de sa famille.
+  // Mes jours sur 7 jours : L M M J V S D en tête, une étiquette par rangée, un point par relevé à la couleur de la zone de
+  // son mot (v9 ; Irrité et Préoccupé rouges, Vide bleu, Calme vert), creux pour la famille seule de la v7 (Joie).
   await periode(page, '7 j').click();
   await expect(graphe(page)).toHaveAttribute('aria-label', /^Mes jours, une colonne par jour : émotions, nuits, explosions, épisodes, énergie basse\./);
   await expect(graphe(page).locator('text.g-tete')).toHaveText(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Nuits', 'Explosions', 'Épisodes', 'Énergie', 'basse']);
-  await expect(graphe(page).locator('circle.g-emo')).toHaveCount(14);
-  await expect(graphe(page).locator('circle.g-emo.emo-colere')).toHaveCount(4);
-  await expect(mesJours(page).locator('.legende-frise')).toContainText('Colère');
+  await expect(graphe(page).locator('circle.g-emo, circle.g-creux')).toHaveCount(14);
+  await expect(graphe(page).locator('circle.g-emo.zone-rouge')).toHaveCount(7);
+  await expect(graphe(page).locator('circle.g-emo.zone-bleu')).toHaveCount(2);
+  await expect(graphe(page).locator('circle.g-emo.zone-vert')).toHaveCount(2);
+  await expect(graphe(page).locator('circle.g-creux')).toHaveCount(3);
+  await expect(mesJours(page).locator('.legende-frise')).toContainText('Énergie haute · désagréable');
+  await expect(mesJours(page).locator('.legende-frise')).not.toContainText('Colère');
   // Un jour touché : ses émotions, dans l'ordre des heures, avec le mot ou la famille seule.
   await graphe(page).locator('rect.g-zone').last().click();
   await expect(mesJours(page).locator('.detail-colonne')).toContainText(/^dimanche 18 oct\. · émotions : joie, préoccupé/);
@@ -136,10 +141,11 @@ test('la porte « Historique › » en haut de l\'Analyse ouvre l\'Historique ; 
   await porte.click();
   await expect(page).toHaveURL(/#\/historique$/);
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();
-  // Un jour qui n'a que des émotions a sa ligne : deux mots au plus, puis « … », et les points de ses trois familles.
+  // Un jour qui n'a que des émotions a sa ligne : deux mots au plus, puis « … », et les points de ses zones (v9 : Irrité
+  // rouge, Calme vert ; la famille seule Joie n'en a pas).
   const ligne = page.getByRole('link', { name: /samedi 17 oct\./ });
   await expect(ligne.locator('.mots-jour')).toHaveText('irrité, calme…');
-  await expect(ligne.locator('.familles-jour i')).toHaveCount(3);
+  expect(await ligne.locator('.zones-jour i').evaluateAll((els) => els.map((e) => e.className))).toEqual(['zone-rouge', 'zone-vert']);
 });
 
 test('point de vigilance 1 : une sauvegarde v6.1 (format 4) importée garde ses notes, et l\'Analyse les montre en « Humeur (notes) »', async ({ page }) => {
@@ -174,7 +180,7 @@ test('point de vigilance 5 : un jour qui mêle une ancienne note et une émotion
   await aller(page, '#/analyse');
   await periode(page, '7 j').click();
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes', 'Énergie', 'basse']);
-  await expect(graphe(page).locator('circle.g-emo.emo-colere')).toHaveCount(1);
+  await expect(graphe(page).locator('circle.g-emo.zone-rouge')).toHaveCount(1);
   await expect(graphe(page).locator('g.teinte-humeur circle')).toHaveCount(1);
   // Par jour, le point est la note du jour : la légende le dit, sans moyenne ni anneau.
   const legende = mesJours(page).locator('.legende-frise');

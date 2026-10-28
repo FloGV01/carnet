@@ -2,16 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { RACINE, lister, rel, lire, sansCommentaires } from '../aides/fichiers.js';
-import { contraste, ecartTeinte, oklch, jetons, COULEURS_LOT, FAMILLES_ROUE, ROLES } from '../aides/couleurs.js';
+import { contraste, ecartTeinte, oklch, jetons, COULEURS_LOT, FAMILLES_ROUE, ZONES_ROUE, ROLES } from '../aides/couleurs.js';
 
 // v7 · Fondations 2b (plan v7, tâche 1) : jetons de la piste 2b et des 7 familles de la roue des émotions, en
-// clair et en sombre ; contraste AA ; aucune variable CSS sans valeur.
+// clair et en sombre ; contraste AA ; aucune variable CSS sans valeur. v9 (tâche 3) : les 4 zones de la carte des émotions.
 const CSS = lister(join(RACINE, 'public', 'css'), (p) => p.endsWith('.css'));
 const JS = lister(join(RACINE, 'public', 'js'), (p) => p.endsWith('.js') && !p.includes('/vendor/'));
 const TOKENS = lire(join(RACINE, 'public', 'css', 'tokens.css'));
 const { clair, sombre, sombreSeul } = jetons(TOKENS);
 const THEMES = [['clair', clair], ['sombre', sombre]];
-const TOUTES = [...COULEURS_LOT, ...FAMILLES_ROUE.map((f) => `emo-${f}`)];
+const TOUTES = [...COULEURS_LOT, ...FAMILLES_ROUE.map((f) => `emo-${f}`), ...ZONES_ROUE.map((z) => `zone-${z}`)];
 
 test('aucune variable CSS non définie : chaque var(--x) des feuilles (et du JS) est déclarée dans une feuille', () => {
   const declarees = new Set();
@@ -49,7 +49,7 @@ test('couleurs du lot telles quelles : chaque --c-* et --chart-* du tokens.css d
   }
 });
 
-test('chaque couleur (lot et roue) a ses six rôles ; -fill et -on ne changent pas en sombre, les quatre autres oui', () => {
+test('chaque couleur (lot, familles et zones) a ses six rôles ; -fill et -on ne changent pas en sombre, les quatre autres sont redéclarés', () => {
   for (const c of TOUTES) {
     for (const r of ROLES) {
       assert.match(clair[`c-${c}${r}`] || '', /^#[0-9a-f]{6}$/, `--c-${c}${r} en clair`);
@@ -122,15 +122,80 @@ test('les couleurs de la roue ne servent qu\'aux classes .emo-* (roue et graphiq
   assert.deepEqual(fautes, []);
 });
 
-test('teintes locales : chaque classe .teinte-* et .emo-* donne les six rôles d\'une seule couleur', () => {
+test('teintes locales : chaque classe .teinte-*, .emo-* et .zone-* donne les six rôles d\'une seule couleur', () => {
   const sansCom = sansCommentaires(TOKENS);
-  const regles = [...sansCom.matchAll(/((?:\.(?:teinte|emo)-[\w-]+\s*,?\s*)+)\{([^}]*)\}/g)];
-  assert.ok(regles.length >= 12 + FAMILLES_ROUE.length);
+  const regles = [...sansCom.matchAll(/((?:\.(?:teinte|emo|zone)-[\w-]+\s*,?\s*)+)\{([^}]*)\}/g)];
+  assert.ok(regles.length >= 12 + FAMILLES_ROUE.length + ZONES_ROUE.length);
   for (const [, selecteurs, corps] of regles) {
     const cibles = [...corps.matchAll(/--c([\w-]*):\s*var\(--c-([\w-]+?)\1\);/g)];
     assert.equal(cibles.length, 6, selecteurs);
     assert.equal(new Set(cibles.map((m) => m[2])).size, 1, `${selecteurs} : une seule couleur`);
   }
+});
+
+// ---------- v9 · Zones de la carte des émotions (tâche 3) ----------
+// Les couleurs médianes des quatre bulles de How We Feel (visuel-hwf.md §1.5, dont les valeurs font foi), lues dans l'annexe.
+const VISUEL = lire(join(RACINE, 'docs', 'superpowers', 'specs', '2026-10-28-carnet-v9', 'visuel-hwf.md'));
+const NOMS_VISUEL = { rouge: 'Rouge', jaune: 'Jaune', bleu: 'Bleu', vert: 'Vert' };
+const MEDIANE = Object.fromEntries(ZONES_ROUE.map((z) => [z, VISUEL.match(new RegExp(`^\\| ${NOMS_VISUEL[z]} \\| (#[0-9a-f]{6}) \\|`, 'm'))[1]]));
+
+test('zones : rouge, jaune, bleu, vert, dans l\'ordre ; -fill est la couleur médiane de la bulle de How We Feel ; en sombre, l\'accent aussi', () => {
+  assert.deepEqual(MEDIANE, { rouge: '#fe4c40', jaune: '#ffd04c', bleu: '#789fff', vert: '#4ce39b' });
+  const ordre = [...TOKENS.matchAll(/--c-zone-([a-z]+):/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(ordre)], ZONES_ROUE);
+  for (const z of ZONES_ROUE) {
+    assert.equal(clair[`c-zone-${z}-fill`], MEDIANE[z], `${z} : -fill`);
+    // Sur noir, comme chez How We Feel : l'accent du thème sombre est la couleur de la bulle elle-même.
+    assert.equal(sombre[`c-zone-${z}`], MEDIANE[z], `${z} : accent en sombre`);
+  }
+  const sansCom = sansCommentaires(TOKENS);
+  for (const z of ZONES_ROUE) {
+    const regle = sansCom.match(new RegExp(`\\.zone-${z}\\s*\\{([^}]*)\\}`));
+    assert.ok(regle, `.zone-${z}`);
+    for (const r of ROLES) assert.ok(regle[1].includes(`--c${r}: var(--c-zone-${z}${r});`), `.zone-${z} : --c${r}`);
+  }
+});
+
+test('zones : AA de -on sur -fill et de -text sur le fond, les cartes, la surface 2 et les deux teintes ; l\'accent à 3:1 sur le fond et les cartes', () => {
+  for (const [theme, t] of THEMES) {
+    for (const z of ZONES_ROUE) {
+      const v = (r) => t[`c-zone-${z}${r}`];
+      assert.ok(contraste(v('-on'), v('-fill')) >= 4.5, `${theme} ${z} : -on sur -fill (${contraste(v('-on'), v('-fill')).toFixed(2)})`);
+      for (const [nom, fond] of [['fond', t.bg], ['carte', t.surface], ['surface 2', t['surface-2']], ['teinte', v('-tint')], ['teinte 2', v('-tint-2')]]) {
+        assert.ok(contraste(v('-text'), fond) >= 4.5, `${theme} ${z} : -text sur ${nom} (${contraste(v('-text'), fond).toFixed(2)})`);
+      }
+      // Un point de zone se pose sur le fond (en-tête du jour) ou sur une carte (Ma journée, Historique, Mes jours).
+      for (const [nom, fond] of [['fond', t.bg], ['carte', t.surface]]) {
+        assert.ok(contraste(v(''), fond) >= 3, `${theme} ${z} : accent sur ${nom} (${contraste(v(''), fond).toFixed(2)})`);
+      }
+    }
+  }
+});
+
+test('zones : chaque rôle garde la teinte de sa bulle (à 12° près), et les quatre zones restent bien distinctes', () => {
+  for (const [theme, t] of THEMES) {
+    for (const z of ZONES_ROUE) {
+      for (const r of ['', '-text', '-tint', '-tint-2']) {
+        const d = ecartTeinte(t[`c-zone-${z}${r}`], MEDIANE[z]);
+        assert.ok(d <= 12, `${theme} ${z}${r} : ${d.toFixed(0)}° de la bulle`);
+      }
+    }
+    for (let i = 0; i < ZONES_ROUE.length; i++) {
+      for (let j = i + 1; j < ZONES_ROUE.length; j++) {
+        const [a, b] = [ZONES_ROUE[i], ZONES_ROUE[j]];
+        assert.ok(ecartTeinte(t[`c-zone-${a}`], t[`c-zone-${b}`]) >= 45, `${theme} : ${a} et ${b}`);
+      }
+    }
+  }
+});
+
+test('les couleurs de zone ne servent qu\'aux classes .zone-* : aucune feuille ne les lit directement', () => {
+  const fautes = [];
+  for (const f of CSS) {
+    const code = sansCommentaires(lire(f)).replace(/\.zone-[a-z]+\s*\{[^}]*\}/g, '');
+    if (/var\(\s*--c-zone-/.test(code)) fautes.push(rel(f));
+  }
+  assert.deepEqual(fautes, []);
 });
 
 // Relecture de la tâche 9 : les règles des classes que l'app ne pose plus disparaissent avec leur composant (Rubrique,

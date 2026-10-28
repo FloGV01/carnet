@@ -554,8 +554,8 @@ button.effacer svg { width: 18px; height: 18px; }
 .phrase-resume { font-size: var(--t-corps); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding: 14px 16px; border-radius: var(--r-carte); background: var(--surface); }
 .phrase-recap { font-size: 1.059rem; line-height: 1.45; color: var(--text); text-wrap: pretty; margin-top: -6px; }
 .phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text); }
-/* « Ce jour-là » (v7) : les familles des émotions du jour en points, devant leurs mots. */
-.emotions-jour .familles-jour { margin-right: 5px; vertical-align: 1px; }
+/* « Ce jour-là » (v7) : les zones des émotions du jour en points (v9 ; leurs familles avant), devant leurs mots. */
+.emotions-jour .zones-jour { margin-right: 5px; vertical-align: 1px; }
 /* Intensité et échelles de 1 à 10 : 2 × 5 boutons de 64, chiffres en 21 (500, choisi 700). */
 .pastilles.grille-choix.chiffres .pastille { min-height: var(--h-grille-intensite); font-size: var(--t-grille-lg); font-weight: 500; }
 .pastilles.grille-choix.chiffres .pastille[aria-pressed="true"] { font-weight: 700; }

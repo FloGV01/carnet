@@ -32,11 +32,13 @@ export async function lireSiChange(nom, calculer) {
 
 // Toute la base (sans les sons des mémos), lue une fois pour les quatre écrans. Les tableaux rendus ne se modifient pas.
 export const lireBase = () => lireSiChange('base', async () => {
-  const [journal, episodes, symptomes, traitements, humeurs, seances, rdvs, items, avecMemo, explosionsDepuis, traitementActuel] = await Promise.all([
+  const [journal, episodes, symptomes, traitements, humeurs, seances, rdvs, items, avecMemo, explosionsDepuis, traitementActuel, perso] = await Promise.all([
     repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.traitements.tous(), repo.humeurs.tous(), repo.seances.tous(),
     repo.rdv.tous(), repo.listes.items(), repo.audios.parents(), repo.meta.lire('explosionsDepuis'), repo.meta.lire('traitementActuel'),
+    repo.meta.lire('motsPerso'),
   ]);
-  return { journal, episodes, symptomes, traitements, humeurs, seances, rdvs, items, avecMemo, explosionsDepuis, traitementActuel };
+  // perso (v9) : la méta `motsPerso`, les mots à soi, pour le libellé et la zone d'un relevé qui en cite un.
+  return { journal, episodes, symptomes, traitements, humeurs, seances, rdvs, items, avecMemo, explosionsDepuis, traitementActuel, perso };
 });
 
 // Un import, « Revenir » ou « Tout effacer » : tout est relu (même quand l'heure ne bouge pas, horloge des tests figée).

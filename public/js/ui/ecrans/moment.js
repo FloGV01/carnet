@@ -17,7 +17,7 @@ import { carteLibelles, libelle } from '../../domain/libelles.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { normaliserPlan } from '../../domain/mon-plan.js';
 import { regleRessourcer } from '../../domain/ressourcer.js';
-import { familleDe } from '../../domain/roue.js';
+import { zoneDe } from '../../domain/carte-roue.js';
 import { texteReleve } from '../../domain/releves.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { CarteEmotions } from '../composants/carte-emotions.js';
@@ -199,9 +199,9 @@ export function Moment() {
       ${jour.length > 0 && html`<section class="moments-du-jour" aria-label="Relevés d'aujourd'hui">
         <h3 class="libelle-section">Aujourd'hui</h3>
         <ul class="liste carte carte-groupe">${jour.map((h) => {
-          const famille = familleDe(h.emotion);
+          const zone = zoneDe(h.emotion);
           return html`<li class="ligne-releve">
-            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${famille ? `point-releve-moment emo-${famille}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte) || '·'}</span>
+            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${zone ? `point-releve-moment zone-${zone}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte) || '·'}</span>
             <button type="button" class="effacer" aria-label=${`Supprimer le relevé ${h.vers ? formaterVers(h.heure) : `de ${h.heure || 'cette heure'}`}`} onClick=${() => supprimer(h)}>${Icones.fermer()}</button>
           </li>`;
         })}</ul>

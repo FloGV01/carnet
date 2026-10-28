@@ -1,6 +1,7 @@
 // Historique : jours, épisodes et symptômes, groupés par semaine. Les jours non saisis
 // n'existent pas ici : ni ligne vide, ni décompte. v7 : la ligne d'un jour donne ses émotions du moment
-// (deux au plus, puis « … », avec les points de leurs familles) ; un jour qui n'a que des relevés a sa ligne.
+// (deux au plus, puis « … », avec les points de leurs zones depuis la v9, de leurs familles avant) ; un jour qui n'a que
+// des relevés a sa ligne.
 // Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
 // filtre « Humeur (notes) », nommé comme la rangée de Mes jours (v8), n'est proposé que si une note existe.
 // L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa porte en haut de l'Analyse, et « Retour » y ramène.
@@ -10,6 +11,7 @@ import { Segmente } from '../composants/segmente.js';
 import { Pastilles } from '../composants/pastilles.js';
 import { coche, libelleChoix } from '../composants/coche.js';
 import { Icones } from '../icones.js';
+import { PointsZones } from '../composants/zones.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, lireLocal, ecrireLocal } from '../hooks.js';
 import { etatApp } from '../../store.js';
@@ -87,7 +89,7 @@ export function Historique() {
 
   // La base n'est relue que si elle a changé depuis la dernière ouverture (v8, Q26, ui/lecture.js).
   const { donnees } = useDonnees(() => lireSiChange('historique', async () => {
-    const { journal, episodes, symptomes, items, avecMemo, humeurs } = await lireBase();
+    const { journal, episodes, symptomes, items, avecMemo, humeurs, perso } = await lireBase();
     // Les relevés de chaque jour logique ; un jour qui n'a que des relevés à émotion reçoit une entrée minimale.
     const releves = new Map();
     for (const h of humeurs) {
@@ -97,8 +99,8 @@ export function Historique() {
     }
     const jours = avecHumeurDuJour(journal, humeurs);
     const presents = new Set(jours.map((j) => j.date));
-    for (const [date, liste] of releves) if (!presents.has(date) && liste.some((h) => estEmotion(h.emotion))) jours.push({ date });
-    return { journal: jours, releves, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, aujourdhui: repo.aujourdhui() };
+    for (const [date, liste] of releves) if (!presents.has(date) && liste.some((h) => estEmotion(h.emotion, perso))) jours.push({ date });
+    return { journal: jours, releves, episodes, symptomes, items, carte: carteLibelles(items), avecMemo, perso, aujourdhui: repo.aujourdhui() };
   }), []);
   // Avant que l'écran ne s'affiche : la liste revient là où on l'avait laissée.
   useLayoutEffect(() => {
@@ -136,7 +138,7 @@ export function Historique() {
         <h2 class="titre-semaine">${formaterSemaine(g.lundi)}</h2>
         <ul class="liste carte carte-groupe">${g.elements.map((j) => {
           const puces = phraseResume('jour', j, carte, { nExplosions: nExplosions(j.date) }).filter((s) => s.valeur);
-          const emo = resumeEmotions(donnees.releves.get(j.date));
+          const emo = resumeEmotions(donnees.releves.get(j.date), 2, donnees.perso);
           const note = [];
           for (const e of (episodesDuJour.get(j.date) || []).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''))) {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
@@ -146,7 +148,7 @@ export function Historique() {
           return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>
-              ${emo.mots.length > 0 && html`<span class="hist-emotions"><span class="familles-jour" aria-hidden="true">${emo.familles.map((x) => html`<i class=${`emo-${x.cle}`}></i>`)}</span>
+              ${emo.mots.length > 0 && html`<span class="hist-emotions"><${PointsZones} zones=${emo.zones} />
                 <span class="mots-jour">${emo.mots.join(', ')}${emo.plus ? '…' : ''}</span></span>`}
               ${puces.length > 0 && html`<span class="puces">${puces.map((p) => html`<${Puce} p=${p} />`)}</span>`}
               ${q ? html`<${Extrait} ex=${trouves.get(j.date)} />` : note.length > 0 && html`<span class="hist-note">${note.join(' · ')}</span>`}

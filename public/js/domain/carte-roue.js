@@ -45,6 +45,10 @@ export const PLACEMENT = Object.freeze(Object.fromEntries(CASES.map(({ id, col, 
 
 // Les zones, dans l'ordre où l'app les montre et les compte.
 export const ZONES = Object.freeze(['rouge', 'jaune', 'bleu', 'vert']);
+// Le nom d'une zone (v9, spec §2) : son énergie et son ressenti, pour les légendes et VoiceOver. Jamais bien ou mal.
+export const NOMS_ZONES = Object.freeze({
+  rouge: 'Énergie haute · désagréable', jaune: 'Énergie haute · agréable', bleu: 'Énergie basse · désagréable', vert: 'Énergie basse · agréable',
+});
 const estZone = (z) => ZONES.includes(z);
 const dansLaGrille = (n) => Number.isInteger(n) && n >= 1 && n <= COTE;
 

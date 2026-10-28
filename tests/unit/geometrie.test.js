@@ -102,7 +102,7 @@ test('ta journée (v7) : 12 créneaux de 4 h à 4 h, les familles d\'émotions e
   assert.deepEqual(geometrieJournee({ parHeure: null, creneaux: [] }).rangees, []);
 });
 
-test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa famille, « Humeur (notes) » seulement avec des notes', async () => {
+test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa zone (v9), « Humeur (notes) » seulement avec des notes', async () => {
   const { geometrieMesJours } = await import('../../public/js/ui/graphes/geometrie.js');
   const { frise } = await import('../../public/js/analyse/frise.js');
   const humeurs = [
@@ -114,7 +114,8 @@ test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par re
   assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'nuits', 'explosions', 'autres'], 'sans note ni énergie : ni « Humeur (notes) » ni « Énergie basse »');
   assert.deepEqual(g.libelles.map((l) => l.lignes.map((x) => x.texte).join(' ')), ['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
   assert.deepEqual(g.etiquettes.map((e) => e.texte), ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
-  assert.deepEqual(g.points.map((p) => [p.cle, p.famille]), [['2026-10-12', 'colere'], ['2026-10-12', 'serenite'], ['2026-10-12', 'joie'], ['2026-10-14', 'peur']]);
+  // Irrité est rouge, Amusé jaune ; une famille seule de la v7 (Sérénité, Peur) n'a pas de zone : un point creux (null).
+  assert.deepEqual(g.points.map((p) => [p.cle, p.zone]), [['2026-10-12', 'rouge'], ['2026-10-12', null], ['2026-10-12', 'jaune'], ['2026-10-14', null]]);
   assert.ok(g.points[2].y < g.points[0].y, 'le troisième relevé du jour monte d\'un rang');
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
   // Avec une ancienne note : la rangée « Humeur (notes) », sous les émotions.
@@ -135,6 +136,43 @@ test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par re
   const g4 = geometrieMesJours(frise({ journal: [], episodes: [], humeurs: plein }, '2026-09-18', '2026-10-18'));
   const emo = g4.rangees[0];
   assert.ok(g4.points.every((p) => p.y - p.r >= emo.y - 0.1 && p.y + p.r <= emo.y + emo.h + 0.1));
+});
+
+// v9 · Tâche 3 : les points de Mes jours en mode jour prennent la couleur de la zone du mot (spec §13.4) ; les barres par
+// semaine ou par mois restent par famille.
+test('v9 · Mes jours par jour : un point par relevé à la zone de son mot (Fatigué compris), creux sans zone ; les barres par semaine restent par famille', async () => {
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const humeurs = [
+    { date: '2026-10-15', heure: '08:00', emotion: 'roue:colere:furieux' }, // rouge
+    { date: '2026-10-15', heure: '10:00', emotion: 'roue:joie:fier' }, // jaune
+    { date: '2026-10-15', heure: '12:00', emotion: 'roue:aucune:fatigue' }, // bleu, sans famille
+    { date: '2026-10-15', heure: '14:00', emotion: 'roue:serenite:calme' }, // vert
+    { date: '2026-10-15', heure: '16:00', emotion: 'roue:peur:accable' }, // rouge (bleu en v8)
+    { date: '2026-10-16', heure: '09:00', emotion: 'roue:colere' }, // famille seule (v7) : point creux
+    { date: '2026-10-16', heure: '10:00', humeur: 6 }, // ancienne note : pas de point d'émotion
+    { date: '2026-10-17', heure: '09:00', energie: 'energie:basse' }, // énergie seule : pas de point
+  ];
+  const f = frise({ journal: [], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g = geometrieMesJours(f);
+  assert.deepEqual(g.points.map((p) => [p.cle, p.zone]), [
+    ['2026-10-15', 'rouge'], ['2026-10-15', 'jaune'], ['2026-10-15', 'bleu'], ['2026-10-15', 'vert'], ['2026-10-15', 'rouge'], ['2026-10-16', null],
+  ]);
+  assert.ok(g.points.every((p) => !('famille' in p)), 'plus de famille sur un point');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Un mot à soi : sa zone vient de la méta motsPerso, passée par zoneDe.
+  const { zoneDe } = await import('../../public/js/domain/carte-roue.js');
+  const id = 'roue:perso:u-0a1b2c3d';
+  const perso = { [id]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-27T08:00:00.000Z' } };
+  const colonnes = [jour('2026-10-15', { emotions: [id, 'roue:joie:fier'], aDonnee: true })];
+  assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes }).points.map((p) => p.zone), [null, 'jaune'], 'sans la méta : point creux');
+  assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes }, { zoneDe: (x) => zoneDe(x, perso) }).points.map((p) => p.zone), ['vert', 'jaune']);
+  // Par semaine : les mêmes relevés en barres par famille (la famille seule de la v7 compte dans la sienne), sans Fatigué,
+  // qui n'a pas de famille ; aucun point.
+  const parSemaine = frise({ journal: [], episodes: [], humeurs }, '2026-07-20', '2026-10-18');
+  const g2 = geometrieMesJours(parSemaine);
+  assert.equal(parSemaine.pas, 'semaine');
+  assert.deepEqual(g2.points, []);
+  assert.deepEqual(g2.barres.map((b) => b.famille), ['colere', 'joie', 'peur', 'serenite']);
 });
 
 // v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement (avecEnergie). La page A4 ne la reçoit

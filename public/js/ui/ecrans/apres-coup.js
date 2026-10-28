@@ -20,6 +20,7 @@ import { PastillesMultiples } from '../composants/multiples.js';
 import { ChampTexte } from '../composants/texte.js';
 import { afficherToast } from '../composants/toast.js';
 import { EnParler } from '../composants/en-parler.js';
+import { PointsZones } from '../composants/zones.js';
 import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
 
@@ -97,12 +98,13 @@ export function ApresCoup({ id }) {
       acRef.current = lu.apresCoup || {};
       setEp(lu);
       const j = jourEvenement(lu.date, lu.heure);
-      const [entree, duJour, humeurs] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j), repo.humeurs.parJour(j, j)]);
+      const [entree, duJour, humeurs, perso] = await Promise.all([repo.journal.lire(j), repo.episodes.parJour(j, j), repo.humeurs.parJour(j, j), repo.meta.lire('motsPerso')]);
       if (!actif) return;
       // « Ce jour-là » dit l'humeur du jour (v6), comme tous les écrans, et non celle du soir ; depuis la v7, seuls les
-      // anciens relevés ont une note. Il dit aussi les émotions du jour (v7), chacune une fois, dans l'ordre des heures.
+      // anciens relevés ont une note. Il dit aussi les émotions du jour (v7), chacune une fois, dans l'ordre des heures,
+      // mots à soi compris (v9, méta `motsPerso`).
       const jourLu = avecHumeurDuJour([entree || { date: j }], humeurs).find((x) => x.date === j);
-      setJour({ entree: jourLu, nExplosions: duJour.filter(estExplosion).length, emotions: resumeEmotions(humeurs, Infinity) });
+      setJour({ entree: jourLu, nExplosions: duJour.filter(estExplosion).length, emotions: resumeEmotions(humeurs, Infinity, perso) });
       if (lu.apresCoup) setEtape('recap');
     })();
     return () => { actif = false; clearTimeout(suivant.current); };
@@ -164,9 +166,10 @@ export function ApresCoup({ id }) {
   }
 
   const et = etapes[etape];
-  // Les émotions du jour : leurs familles en points de couleur (masqués aux lecteurs d'écran), puis les mots.
+  // Les émotions du jour : leurs zones en points de couleur (v9 ; leurs familles avant ; masqués aux lecteurs d'écran),
+  // puis les mots.
   const phraseJour = jour && phraseResume('jour', jour.entree, carte, { nExplosions: jour.nExplosions, emotions: jour.emotions })
-    .map((s) => (s.rubrique === 'emotions' ? html`<span class="emotions-jour"><span class="familles-jour" aria-hidden="true">${s.familles.map((f) => html`<i key=${f.cle} class=${`emo-${f.cle}`}></i>`)}</span>${s.texte}</span>` : s.texte));
+    .map((s) => (s.rubrique === 'emotions' ? html`<span class="emotions-jour"><${PointsZones} zones=${s.zones} />${s.texte}</span>` : s.texte));
   const remplie = et.blocs.some((b) => (b.type === 'declencheur' ? ep.declencheur : b.type === 'siAlors' ? ac.siJe || ac.alorsJe : ac[b.champ]) != null);
   const bloc = (b, i) => {
     if (b.type === 'multi') {

@@ -269,8 +269,11 @@
 .g-anneau { fill: var(--surface); stroke: var(--c); stroke-width: 2; }
 .g-plein { fill: var(--c); }
 .g-barre { fill: var(--c); }
-/* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques. */
+/* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques ; un point
+   de Mes jours en mode jour, celle de la zone de son mot (.zone-*, v9). Un relevé sans zone (famille seule de la v7) :
+   un point creux, neutre, comme dans Ma journée. */
 .g-emo { fill: var(--c); }
+.g-creux { fill: var(--surface); stroke: var(--text-2); stroke-width: 1.5; }
 .g-zone { fill: transparent; cursor: pointer; }
 .g-sommeil-1 { fill: var(--chart-sommeil-1); background: var(--chart-sommeil-1); }
 .g-sommeil-2 { fill: var(--chart-sommeil-2); background: var(--chart-sommeil-2); }
@@ -370,8 +373,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .sous-jour { display: flex; align-items: center; gap: 8px; margin-top: -6px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; }
 /* Avant 4 h : en entier, avant les points et le résumé (qui se coupe) ; en grand texte, sur deux lignes au besoin. */
 .veille-jour { flex: 0 1 auto; min-width: 0; color: var(--text-2); }
-.familles-jour { flex: none; display: inline-flex; align-items: center; gap: 3px; }
-.familles-jour i { width: 8px; height: 8px; border-radius: 4px; background: var(--c); }
+/* Les zones des émotions du jour (v9 ; leurs familles en v7 et v8) : un point par zone présente, à sa couleur (.zone-*). */
+.zones-jour { flex: none; display: inline-flex; align-items: center; gap: 3px; }
+.zones-jour i { width: 8px; height: 8px; border-radius: 4px; background: var(--c); }
 .resume-jour { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .indicateur { flex: none; margin-left: auto; color: var(--text); font-weight: 600; }
 .sous-jour.echec .indicateur { flex: 1; white-space: normal; font-weight: 400; }
@@ -673,7 +677,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .moment-corps { padding: 0 var(--marge) 16px; display: flex; flex-direction: column; gap: 14px; }
 .moments-du-jour { display: flex; flex-direction: column; gap: 6px; }
 /* Une rangée : l'heure dans une colonne fixe d'environ 70 (« vers 12 h » y tient, comme dans « Ma journée »), le point
-   de la famille (un rond creux, neutre, pour un relevé sans émotion), le texte, puis ✕. Filets décalés comme en 2b. */
+   de la zone du mot (v9 ; un rond creux, neutre, pour un relevé sans zone), le texte, puis ✕. Filets décalés comme en 2b. */
 .moments-du-jour .liste.carte-groupe { padding-left: 14px; }
 .ligne-releve { display: flex; align-items: center; min-height: 48px; font-size: var(--t-corps); }
 .heure-moment { display: inline-block; min-width: 4.4em; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text-2); margin-right: 6px; }

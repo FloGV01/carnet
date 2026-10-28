@@ -94,7 +94,7 @@ test('réponses près du pouce (2b) : panneau collé en bas, en --surface, rayon
   }
 });
 
-test('les relevés du jour : « Irrité · énergie moyenne » au point de sa famille ; un ancien relevé chiffré garde « humeur 6 », point creux ; même colonne', async ({ page }) => {
+test('les relevés du jour : « Irrité · énergie moyenne » au point de sa zone (v9) ; un ancien relevé chiffré garde « humeur 6 », point creux ; même colonne', async ({ page }) => {
   await page.evaluate(async () => {
     const r = window.__carnet.repo;
     await r.humeurs.creer({ date: '2026-10-15', heure: '17:45', emotion: 'roue:colere:irrite', energie: 'energie:moyenne' });
@@ -117,10 +117,9 @@ test('les relevés du jour : « Irrité · énergie moyenne » au point de sa fa
       return { fond: s.backgroundColor, bord: s.borderTopWidth, heure: Math.round(li.querySelector('.heure-moment').getBoundingClientRect().width),
         texte: Math.round(li.querySelector('.texte-releve').getBoundingClientRect().left) };
     }));
-    expect(lignes[1].fond).toBe(rgb(t['c-emo-serenite']));
-    expect(lignes[3].fond).toBe(rgb(t['c-emo-colere']));
-    // Sans émotion (ancienne note, énergie seule) : un rond creux, neutre.
-    for (const i of [0, 2]) {
+    expect(lignes[3].fond).toBe(rgb(t['c-zone-rouge']));
+    // Sans zone (ancienne note, famille seule de la v7, énergie seule) : un rond creux, neutre.
+    for (const i of [0, 1, 2]) {
       expect(lignes[i].fond).toBe('rgba(0, 0, 0, 0)');
       expect(parseFloat(lignes[i].bord)).toBeGreaterThanOrEqual(1);
     }

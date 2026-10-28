@@ -1,6 +1,7 @@
 // Graphiques de l'écran Analyse (v5), rendus en SVG. Couleurs par classes (aucun style dans le
 // SVG ni en ligne) : chaque rangée porte la teinte de sa rubrique ; les émotions du moment, la couleur de
-// leur famille (.emo-*, roue et graphiques d'émotions seulement). Toucher une colonne affiche
+// leur famille (.emo-*, roue et graphiques d'émotions seulement), sauf les points de Mes jours en mode jour, à la
+// couleur de la zone de leur mot (.zone-*, v9 : un point montre un relevé, pas une famille). Toucher une colonne affiche
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
@@ -8,7 +9,8 @@ import { geometrieMesJours, geometrieJournee } from './geometrie.js';
 import { nombre, uneDecimale } from '../../analyse/textes.js';
 import { texteFamilles } from '../../analyse/emotions.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
-import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
+import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
+import { ZONES, NOMS_ZONES } from '../../domain/carte-roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
@@ -48,6 +50,10 @@ export function famillesPresentes(familles) {
   return FAMILLES.filter((f) => vues.has(f.cle));
 }
 export const LegendeFamilles = ({ familles }) => familles.map((f) => html`<span class=${`emo-${f.cle}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${f.libelle}</span>`);
+// Les zones (v9, Mes jours en mode jour) : les quatre, dans leur ordre, comme un repère fixe (la rampe des nuits aussi
+// montre tous ses pas) ; « sans zone » en plus, au point creux, pour un ancien relevé qui n'a que sa famille (v7).
+const LegendeZones = ({ creux = false }) => html`${ZONES.map((z) => html`<span class=${`zone-${z}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${NOMS_ZONES[z]}</span>`)}
+  ${creux && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-creux" cx="6" cy="6" r="3.5" /></svg>sans zone</span>`}`;
 // La rampe du sommeil et celle de l'énergie, une case par niveau : « du clair au foncé » serait faux en sombre, où la
 // rampe va du foncé au clair (v7).
 export const LegendeRampe = ({ classes, libelles, teinte = null, prefixe = '', suffixe = '' }) => html`<span class=${teinte ? `rampe teinte-${teinte}` : 'rampe'}>${prefixe}
@@ -111,13 +117,15 @@ const Etiquettes = ({ g }) => g.libelles.map((r) => r.lignes.map((l) => html`<te
 
 // reperes (v6, analyse/reperes.js) : les changements de traitement de la période, en traits numérotés.
 // v7 (2b) : une étiquette au début de chaque rangée ; la rangée Émotions en tête (un point par relevé, à la couleur de
-// sa famille), la rangée « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10.
+// la zone de son mot depuis la v9, de sa famille avant ; par semaine ou par mois, des barres par famille), la rangée
+// « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10.
 export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
   const g = geometrieMesJours(f, { reperes: reperes.traits });
   const d = g.dim;
-  const familles = famillesPresentes(f.pas === 'jour' ? f.colonnes.flatMap((c) => (c.emotions || []).map(familleDe)) : f.colonnes.flatMap((c) => Object.keys(c.familles || {}).filter((k) => c.familles[k] > 0)));
+  // La légende des émotions : les zones en mode jour (dès un point), les familles des barres sinon.
+  const familles = f.pas === 'jour' ? [] : famillesPresentes(f.colonnes.flatMap((c) => Object.keys(c.familles || {}).filter((k) => c.familles[k] > 0)));
   const col = choix != null ? f.colonnes.find((c) => c.cle === choix) : null;
   const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
   const avec = f.colonnes.filter((c) => c.aDonnee);
@@ -134,7 +142,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     ${g.notes.points.some((p) => !p.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-anneau" cx="6" cy="6" r="3.5" /></svg>peu de valeurs</span>`}
     ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}`;
   const legende = html`<p class="legende-graphe legende-frise">
-    <${LegendeFamilles} familles=${familles} />
+    ${g.points.length > 0 ? html`<${LegendeZones} creux=${g.points.some((p) => !p.zone)} />` : html`<${LegendeFamilles} familles=${familles} />`}
     ${legendeNotes}
     <${LegendeNuits} lib=${lib} />
   </p>${legendeReperes}`;
@@ -148,7 +156,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     <${Etiquettes} g=${g} />
     ${g.reperes.map((r) => html`<line class="g-changement" x1=${r.x} x2=${r.x} y1=${r.y1} y2=${r.y2} />
       <text class="g-changement-num" x=${r.texteX} y=${r.texteY} text-anchor="middle">${r.etiquette}</text>`)}
-    ${g.points.map((p) => html`<circle class=${`g-emo emo-${p.famille}`} cx=${p.x} cy=${p.y} r=${p.r} />`)}
+    ${g.points.map((p) => html`<circle class=${p.zone ? `g-emo zone-${p.zone}` : 'g-creux'} cx=${p.x} cy=${p.y} r=${p.r} />`)}
     ${g.barres.map((b) => html`<rect class=${`g-emo emo-${b.famille}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
     <g class="teinte-humeur">
       ${g.notes.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}

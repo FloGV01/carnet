@@ -2,7 +2,8 @@
 // Coordonnées arrondies au dixième. Une colonne vide ne dessine rien. 326 = largeur intérieure
 // d'une carte sur un écran de 390 : une unité vaut un pixel.
 import { jourSemaine as jourSemaineCle } from '../../domain/dates.js';
-import { FAMILLES, familleDe as familleDeRoue } from '../../domain/roue.js';
+import { FAMILLES } from '../../domain/roue.js';
+import { zoneDe as zoneDeCarte } from '../../domain/carte-roue.js';
 
 // Les familles de la roue, dans leur ordre : l'ordre d'empilement des barres d'émotions.
 const ORDRE_FAMILLES = FAMILLES.map((f) => f.cle);
@@ -38,10 +39,11 @@ function placerNumeros(reperes, centre, largeur) {
 
 // ---------- v7 · Mes jours, à l'écran (2b) et sur la page A4 ----------
 // Une étiquette au début de chaque rangée, les colonnes à droite, leurs noms en tête (L M M J V S D sur 7 jours). Rangées,
-// dans l'ordre : Émotions (un point par relevé, à la couleur de sa famille, dans l'ordre des heures, du bas vers le haut ;
-// par semaine ou par mois, une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de
-// relevés), Humeur (notes) seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait
-// du plus bas au plus haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté), Bien-être
+// dans l'ordre : Émotions (un point par relevé, à la couleur de la zone de son mot (v9 ; de sa famille en v7 et v8), creux
+// et neutre sans zone (famille seule de la v7), dans l'ordre des heures, du bas vers le haut ; par semaine ou par mois,
+// une barre par colonne, empilée par famille dans l'ordre de la roue, longue comme le nombre de relevés), Humeur (notes)
+// seulement si la période a des anciennes notes de 1 à 10 (le point de la note du jour et un trait du plus bas au plus
+// haut), Nuits, Explosions, Autres épisodes, Énergie basse (si un relevé d'énergie est noté), Bien-être
 // (v7 : un repère par jour, semaine ou mois qui a une séance, sans total ; si la période en a une ; un losange plein). Les
 // repères de traitement : leurs numéros sous les noms de colonnes, leurs traits à travers les rangées. Une colonne vide ne
 // dessine rien. La Vue soignants (PDF) dessine la même frise par semaine ou par mois, aux dimensions DIM_MES_JOURS_PDF (sa
@@ -62,20 +64,22 @@ const LIBELLES_RANGEES = {
 const LIGNE_ETIQUETTE = 13;
 
 // Les points d'une colonne : en une pile (deux côte à côte si la colonne est large), resserrés si la rangée est pleine.
-function pilePoints(familles, x, bas, h, l) {
+// zones : la zone de chaque relevé, ou null (point creux).
+function pilePoints(zones, x, bas, h, l) {
   const r = l >= 20 ? 3.5 : l >= 10 ? 2.5 : 1.8;
-  const k = l >= 22 && familles.length > 1 ? 2 : 1;
-  const rangs = Math.ceil(familles.length / k);
+  const k = l >= 22 && zones.length > 1 ? 2 : 1;
+  const rangs = Math.ceil(zones.length / k);
   const pas = rangs > 1 ? Math.min(2 * r + 2, (h - 2 * r) / (rangs - 1)) : 0;
-  return familles.map((famille, j) => {
+  return zones.map((zone, j) => {
     const rang = Math.floor(j / k);
-    const seul = k === 2 && j === familles.length - 1 && j % 2 === 0;
+    const seul = k === 2 && j === zones.length - 1 && j % 2 === 0;
     const dx = k === 2 && !seul ? (j % 2 ? 1 : -1) * (r + 0.8) : 0;
-    return { x: r1(x + dx), y: r1(bas - r - rang * pas), r, famille };
+    return { x: r1(x + dx), y: r1(bas - r - rang * pas), r, zone };
   });
 }
 
-export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnergie = false, avecBienEtre = false }, { reperes = [], familleDe = familleDeRoue, ordreFamilles = ORDRE_FAMILLES } = {}, d = DIM_MES_JOURS) {
+// zoneDe (v9) : la zone d'un mot, à passer avec les mots à soi (domain/carte-roue.js, zoneDe(id, perso)).
+export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnergie = false, avecBienEtre = false }, { reperes = [], zoneDe = zoneDeCarte, ordreFamilles = ORDRE_FAMILLES } = {}, d = DIM_MES_JOURS) {
   const n = Math.max(1, colonnes.length);
   const l = (d.largeur - d.gauche - d.droite) / n;
   const centre = (i) => d.gauche + l * (i + 0.5);
@@ -135,8 +139,9 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
     const x = r1(centre(i));
     const xb = r1(x - larg / 2);
     if (pas === 'jour') {
-      const familles = (c.emotions || []).map(familleDe).filter(Boolean);
-      points.push(...pilePoints(familles, x, emo.y + emo.h, emo.h, l).map((p) => ({ ...p, cle: c.cle })));
+      // Un point par relevé à émotion, Fatigué et Épuisé compris (sans famille, mais dans une zone).
+      const zones = (c.emotions || []).map((id) => zoneDe(id) || null);
+      points.push(...pilePoints(zones, x, emo.y + emo.h, emo.h, l).map((p) => ({ ...p, cle: c.cle })));
     } else if (totalFamilles(c) > 0) {
       const total = totalFamilles(c);
       let yy = emo.y + emo.h;
