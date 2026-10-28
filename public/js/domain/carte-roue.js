@@ -91,7 +91,8 @@ function caseDuMotPerso(zone, n) {
 }
 
 // Tous les mots de la carte : [{ id, libelle, col, rang, zone, perso }]. Les 144 de la roue dans l'ordre de lecture, puis
-// les mots à soi qui ne sont pas mis de côté, dans l'ordre de création.
+// les mots à soi qui ne sont pas mis de côté et ont une zone de la carte, dans l'ordre de création. La loupe trouve les
+// mêmes : motsActifs (mots-perso.js) les prend ici.
 export function motsDeLaCarte(perso) {
   const roue = CASES.map(({ id, col, rang }) => ({ id, libelle: libelleEmotion(id), col, rang, zone: zoneDeCase(col, rang), perso: false }));
   const actifs = Object.keys(perso && typeof perso === 'object' ? perso : {})

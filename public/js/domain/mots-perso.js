@@ -6,8 +6,8 @@
 // affichent son nom et la couleur de sa zone d'aujourd'hui ; leur énergie, enregistrée au toucher, reste celle d'alors.
 // Un mot déjà utilisé dans un relevé n'est jamais effacé : il est mis de côté. Il quitte alors la carte et la recherche,
 // et ses relevés le lisent toujours (roue.js connaît aussi les mots mis de côté).
-import { FAMILLES, motPerso, motsDeLaRoue, estIdPerso } from './roue.js';
-import { ZONES } from './carte-roue.js';
+import { FAMILLES, motPerso, estIdPerso } from './roue.js';
+import { ZONES, motsDeLaCarte } from './carte-roue.js';
 import { normLabel } from './vocabulaire.js';
 import { nouvelIdListe } from './ids.js';
 
@@ -61,12 +61,11 @@ function definitionPropre(definition) {
   return t || null;
 }
 
-// Un libellé est pris s'il est celui d'un mot de la carte (les 144) ou d'un autre mot à soi qui n'est pas mis de côté.
+// Un libellé est pris s'il est celui d'un autre mot de la carte : un des 144, ou un mot à soi qui y est (motsActifs).
 // Comparaison sans accents ni casse, comme pour les listes.
 function exigerLibre(perso, libelle, sauf) {
   const cible = normLabel(libelle);
-  const pris = motsDeLaRoue().some((m) => normLabel(m.libelle) === cible)
-    || motsActifs(perso).some((m) => m.id !== sauf && normLabel(m.libelle) === cible);
+  const pris = motsDeLaCarte(perso).some((m) => m.id !== sauf && normLabel(m.libelle) === cible);
   if (pris) throw new ErreurMot('LIBELLE_EXISTANT');
 }
 
@@ -76,19 +75,19 @@ function exigerMot(perso, id) {
   return mot;
 }
 
-// Les mots à soi qui ne sont pas mis de côté, dans l'ordre de création : [{ id, libelle, zone, famille, definition,
-// createdAt }]. Une entrée illisible (sans libellé, pas un objet, id mal formé) est laissée de côté.
+// Les mots à soi de la carte, dans l'ordre de création : [{ id, libelle, zone, famille, definition, createdAt }]. Ce
+// sont ceux de motsDeLaCarte, la seule règle : la loupe ne trouve que des mots qui ont leur case et leur énergie. Sont
+// laissés de côté les mots mis de côté, ceux sans zone de la carte (un mot recréé à l'import n'en a pas : pour revenir,
+// il lui en faut une) et les entrées illisibles (sans libellé, pas un objet, id mal formé).
 export function motsActifs(perso) {
   const p = persoDe(perso);
-  return Object.keys(p)
-    .map((id) => [id, motPerso(id, p)])
-    .filter(([, mot]) => mot && !mot.archive)
-    .sort(([a, x], [b, y]) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')) || a.localeCompare(b))
-    .map(([id, mot]) => ({
-      id, libelle: mot.libelle.trim(), zone: ZONES.includes(mot.zone) ? mot.zone : null,
-      famille: CLES_FAMILLES.has(mot.famille) ? mot.famille : null, definition: definitionPropre(mot.definition),
-      createdAt: mot.createdAt ?? null,
-    }));
+  return motsDeLaCarte(p).filter((m) => m.perso).map(({ id, libelle, zone }) => {
+    const mot = motPerso(id, p);
+    return {
+      id, libelle, zone, famille: CLES_FAMILLES.has(mot.famille) ? mot.famille : null,
+      definition: definitionPropre(mot.definition), createdAt: mot.createdAt ?? null,
+    };
+  });
 }
 
 // Crée un mot : le nom et la zone suffisent (spec §4.5), la famille et la définition sont facultatives. Rend

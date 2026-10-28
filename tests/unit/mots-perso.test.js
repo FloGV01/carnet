@@ -66,9 +66,11 @@ test('créer : un nom déjà pris par un mot de la carte ou un mot à soi actif 
   }
   // Les 144 mots de la carte, tous.
   for (const m of motsDeLaRoue()) assert.throws(() => creerMot(null, { libelle: m.libelle, zone: 'vert' }, { id: C, maintenant: LE_2 }), code('LIBELLE_EXISTANT'), m.libelle);
-  // Un mot mis de côté ne prend plus son nom.
+  // Un mot mis de côté ne prend plus son nom, ni un mot sans zone de la carte (hors de la carte comme de la loupe).
   const deCote = mettreDeCote(perso, A);
   assert.equal(creerMot(deCote, { libelle: 'Flottant', zone: 'bleu' }, { id: C, maintenant: LE_2 }).perso[C].libelle, 'Flottant');
+  const sansZone = { ...perso, [A]: { ...perso[A], zone: null } };
+  assert.equal(creerMot(sansZone, { libelle: 'Flottant', zone: 'bleu' }, { id: C, maintenant: LE_2 }).perso[C].libelle, 'Flottant');
 });
 
 test('créer : nom vide, zone ou famille inconnue, identifiant mal formé ou déjà pris sont refusés', () => {
@@ -137,22 +139,46 @@ test('effacer : refusé pour un mot utilisé, permis sinon ; la méta reçue res
   assert.throws(() => effacerMot(perso, C, false), code('INTROUVABLE'));
 });
 
-test('motsActifs : dans l\'ordre de création, sans les mots mis de côté ni les entrées illisibles', () => {
+test('motsActifs : dans l\'ordre de création, sans les mots mis de côté, sans zone de la carte ni les entrées illisibles', () => {
   const perso = {
     [B]: { libelle: 'Deuxième', zone: 'jaune', famille: 'joie', definition: 'Avec une définition.', archive: false, createdAt: LE_2 },
-    [A]: { libelle: ' Premier ', zone: 'orange', famille: 'inconnue', archive: false, createdAt: LE_1ER },
+    [A]: { libelle: ' Premier ', zone: 'rouge', famille: 'inconnue', archive: false, createdAt: LE_1ER },
     [C]: { libelle: 'De côté', zone: 'vert', archive: true, createdAt: LE_1ER },
     'roue:perso:u-33333333': { libelle: ' ', zone: 'rouge' },
     'roue:perso:u-44444444': 'Pas un objet',
     'roue:perso:u-zzzzzzzz': { libelle: 'Id mal formé', zone: 'rouge' },
+    'roue:perso:u-55555555': { libelle: 'Orangé', zone: 'orange', archive: false, createdAt: LE_1ER },
+    'roue:perso:u-66666666': { libelle: 'Sans zone', zone: null, archive: false, createdAt: LE_1ER },
   };
   assert.deepEqual(motsActifs(perso), [
-    { id: A, libelle: 'Premier', zone: null, famille: null, definition: null, createdAt: LE_1ER },
+    { id: A, libelle: 'Premier', zone: 'rouge', famille: null, definition: null, createdAt: LE_1ER },
     { id: B, libelle: 'Deuxième', zone: 'jaune', famille: 'joie', definition: 'Avec une définition.', createdAt: LE_2 },
   ]);
   for (const illisible of [null, undefined, 'texte', []]) assert.deepEqual(motsActifs(illisible), []);
   assert.deepEqual(persoDe([A]), {});
   assert.equal(persoDe(perso), perso);
+});
+
+// La loupe (motsActifs) et la carte (motsDeLaCarte) montrent les mêmes mots à soi, dans le même ordre : un mot trouvé
+// par la loupe a toujours sa case, où la carte se centre, et son énergie. Relecture de la tâche 2 : un mot recréé à
+// l'import (« Mot sans libellé », zone null) puis remis avec archive: false entrait dans la loupe sans être sur la carte.
+test('motsActifs : exactement les mots à soi de la carte ; un mot sans zone remis en service n\'y entre pas', () => {
+  const absent = 'roue:perso:u-99999999';
+  const recree = recreerSiAbsent(deuxMots(), absent, '2026-11-05T19:00:00.000Z');
+  const remis = { ...recree, [absent]: { ...recree[absent], archive: false } };
+  assert.deepEqual(motsActifs(remis).map((m) => m.id), [A, B]);
+  assert.equal(energieDe(absent, remis), null, 'sans zone, pas de case ni d\'énergie');
+  const variantes = [
+    null, {}, deuxMots(), mettreDeCote(deuxMots(), A), recree, remis,
+    { ...deuxMots(), [C]: { libelle: 'Orangé', zone: 'orange', archive: false, createdAt: LE_1ER } },
+    { ...deuxMots(), [C]: { libelle: 'Plus tôt', zone: 'vert', archive: false, createdAt: '2026-10-01T08:00:00.000Z' } },
+    { [C]: { libelle: 'Sans date', zone: 'bleu' }, [B]: { libelle: 'Sans date non plus', zone: 'bleu' } },
+  ];
+  for (const p of variantes) {
+    const actifs = motsActifs(p);
+    assert.deepEqual(actifs.map((m) => m.id), motsDeLaCarte(p).filter((m) => m.perso).map((m) => m.id));
+    for (const m of actifs) assert.ok(m.zone && energieDe(m.id, p), m.id);
+  }
 });
 
 // Point de vigilance 4, à l'import : db/sauvegarde.js recrée ainsi un mot cité par un relevé et absent du fichier.
