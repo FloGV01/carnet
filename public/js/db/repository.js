@@ -70,10 +70,18 @@ export function creerRepository({
     }
   }
 
-  function preparer(store, fusion) {
-    const { valeur, erreurs } = normaliser(store, fusion, { origine: 'app' });
+  function preparer(store, fusion, contexte = {}) {
+    const { valeur, erreurs } = normaliser(store, fusion, { origine: 'app', ...contexte });
     if (erreurs.length) throw new ErreurValidation(erreurs);
     return valeur;
+  }
+
+  // v9 : un relevé qui cite un mot à soi n'est valable que si ce mot est dans la méta `motsPerso`, lue dans la
+  // transaction de l'écriture (spec §9). Les autres magasins ne citent aucun mot.
+  async function contexteDe(t, store) {
+    if (store !== 'humeurs') return {};
+    const r = await req(t.objectStore('meta').get('motsPerso'));
+    return { perso: r ? r.valeur : null };
   }
 
   async function nbAudios(t, parentStore, parentId) {
@@ -144,7 +152,7 @@ export function creerRepository({
       // L'id est tiré une seule fois : un nouvel essai réécrit la même clé, sans doublon.
       creer: async (brut = {}, { id = nouvelId(PREFIXES[store], alea) } = {}) => {
         const res = await tx(stores, 'readwrite', async (t) => {
-          const valeur = preparer(store, { ...brut, id });
+          const valeur = preparer(store, { ...brut, id }, await contexteDe(t, store));
           await verifierRefs(t, store, valeur);
           const h = horo();
           const enreg = { ...valeur, createdAt: h, updatedAt: h };
@@ -161,7 +169,7 @@ export function creerRepository({
           const os = t.objectStore(store);
           const existant = await req(os.get(id));
           if (!existant) throw new DataError('INTROUVABLE', `${store} ${id} introuvable`);
-          const valeur = preparer(store, { ...existant, ...changements, id });
+          const valeur = preparer(store, { ...existant, ...changements, id }, await contexteDe(t, store));
           await verifierRefs(t, store, valeur);
           marquer(t);
           if (estVide(store, valeur) && (await nbAudios(t, store, id)) === 0) { os.delete(id); return null; }

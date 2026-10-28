@@ -189,3 +189,24 @@ test('v8 : une nuit hors bornes ou une séance au « fin » ou au « programme �
   assert.equal(res.parTable.journal, 4);
   assert.equal(res.parTable.seances, 4);
 });
+
+// v9 : « Vérifier mes données » reconnaît les mots à soi de la méta `motsPerso`, mis de côté compris ; un relevé qui
+// cite un mot à soi absent de la méta est illisible.
+test('v9 : un relevé qui cite un mot à soi connu est lisible, inconnu il est illisible', async () => {
+  const { repo } = nouveauRepo();
+  const perso = {
+    'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'bleu', famille: null, definition: null, archive: false, createdAt: '2026-09-30T08:00:00.000Z' },
+    'roue:perso:u-11111111': { libelle: 'De côté', zone: 'rouge', famille: 'peur', definition: null, archive: true, createdAt: '2026-09-30T08:00:00.000Z' },
+  };
+  await repo.meta.ecrire('motsPerso', perso);
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '10:00', emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' });
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '11:00', emotion: 'roue:perso:u-11111111', energie: 'energie:haute' });
+  await repo.humeurs.creer({ date: '2026-09-30', heure: '12:00', emotion: 'roue:aucune:fatigue', energie: 'energie:moyenne' });
+  const saine = await lireTout(repo);
+  assert.equal(verifierDonnees(saine).fichesIllisibles, 0);
+  const inconnu = { id: 'hu_x', date: '2026-09-30', heure: '13:00', emotion: 'roue:perso:u-99999999' };
+  assert.equal(verifierDonnees({ ...saine, humeurs: [...saine.humeurs, inconnu] }).fichesIllisibles, 1);
+  // Sans la méta, les deux relevés de mots à soi deviennent illisibles ; Fatigué reste lisible.
+  assert.equal(verifierDonnees({ ...saine, meta: saine.meta.filter((m) => m.cle !== 'motsPerso') }).fichesIllisibles, 2);
+  assert.equal(verifierDonnees({ ...saine, meta: 'illisible' }).fichesIllisibles, 2);
+});

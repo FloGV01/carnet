@@ -95,9 +95,11 @@ const CLES = new Set(FAMILLES.map((f) => f.cle));
 // Un mot à soi (v9) : son entrée de la méta `motsPerso` ({ libelle, zone, famille, definition, archive, createdAt }), mis
 // de côté compris ; null pour un autre id, une méta illisible ou une entrée sans libellé.
 const ID_PERSO = /^roue:perso:u-[0-9a-f]{8}$/;
+// L'identifiant a-t-il la forme de celui d'un mot à soi, qu'il soit connu ou non ?
+export const estIdPerso = (id) => typeof id === 'string' && ID_PERSO.test(id);
 const estObjet = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 export function motPerso(id, perso) {
-  if (typeof id !== 'string' || !ID_PERSO.test(id) || !estObjet(perso) || !Object.hasOwn(perso, id)) return null;
+  if (!estIdPerso(id) || !estObjet(perso) || !Object.hasOwn(perso, id)) return null;
   const mot = perso[id];
   return estObjet(mot) && typeof mot.libelle === 'string' && mot.libelle.trim() !== '' ? mot : null;
 }

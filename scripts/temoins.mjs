@@ -1,4 +1,4 @@
-// Sauvegardes témoins aux formats 1 à 5 (tests/fixtures/temoins/), écrites par le code même des
+// Sauvegardes témoins aux formats 1 à 6 (tests/fixtures/temoins/), écrites par le code même des
 // versions publiées. Chaque tag est extrait avec git worktree dans un dossier temporaire hors du
 // dépôt, retiré à la fin même en cas d'erreur. Sa base (fake-indexeddb) est remplie de données
 // inventées par son creerRepository, puis exportée par son construireSauvegarde.
@@ -20,6 +20,7 @@ const VERSIONS = [
   { tag: 'v5.0.0', format: 3, json: 'format-3.json', exporteLe: '2026-10-06T19:30:00.000Z', zip: 'format-3-memo.zip', zipLe: '2026-10-06T19:45:00.000Z' },
   { tag: 'v6.1.0', format: 4, json: 'format-4.json', exporteLe: '2026-10-19T19:30:00.000Z' },
   { tag: 'v7.0.0', format: 5, json: 'format-5.json', exporteLe: '2026-10-23T19:30:00.000Z' },
+  { tag: 'v8.0.0', format: 6, json: 'format-6.json', exporteLe: '2026-10-26T19:30:00.000Z' },
 ];
 const dec = new TextDecoder();
 
@@ -86,11 +87,13 @@ export function controlerTemoin(octets) {
   exiger((d.rdv || []).some((r) => r.date === null), 'un rendez-vous sans date');
   // Formats 2 et 3 : le champ Humeur du soir n'est pas encore masqué (la mise à niveau 3 → 4 le masque).
   // Format 4 : la v6 l'a déjà masqué.
+  // Format 6 : la v8 a aussi masqué « Nuit en détail » (migration 6 de la base).
   if (f >= 2) {
     const journee = (d.meta || []).find((m) => m.cle === 'journee');
     const masques = journee && Array.isArray(journee.valeur.masques) ? journee.valeur.masques : null;
     if (f <= 3) exiger(masques && !masques.includes('humeur'), 'meta.journee sans « humeur » dans ses masques');
     else exiger(masques && masques.includes('humeur'), 'meta.journee avec « humeur » dans ses masques');
+    if (f >= 6) exiger(masques && masques.includes('nuit'), 'meta.journee avec « nuit » dans ses masques');
   }
   if (f >= 4) {
     exiger((d.notes || []).some((n) => n.heure === '01:30'), 'une note à 01:30');
@@ -109,6 +112,16 @@ export function controlerTemoin(octets) {
     exiger(['bien-etre', 'moment-difficile', 'ressourcer'].every((o) => (d.seances || []).some((x) => x.origine === o)), 'une séance de chaque origine');
     exiger((d.seances || []).some((x) => x.exercice !== 'coherence'), 'une séance d\'un exercice');
     exiger((d.journal || []).some((j) => j.heureCoucher && j.heureLever), 'une nuit avec coucher et lever');
+  }
+  // Format 6 (v8) : une séance « Faite » du Programme, des définitions corrigées, les sujets d'un rendez-vous, et deux
+  // relevés que la v9 lit autrement (point de vigilance 1 de la v9) : une énergie seule, sans mot, et Accablé, qui passe
+  // du bleu au rouge.
+  if (f >= 6) {
+    exiger((d.seances || []).some((x) => x.fin === true && typeof x.programme === 'string'), 'une séance « Faite » du Programme');
+    exiger((d.meta || []).some((m) => m.cle === 'definitionsRoue' && m.valeur && Object.keys(m.valeur).length > 0), 'des définitions des émotions corrigées');
+    exiger(listes.some((i) => i.liste === 'sujetRdv'), 'les sujets d\'un rendez-vous');
+    exiger((d.humeurs || []).some((h) => h.emotion === null && h.humeur === null && typeof h.energie === 'string'), 'un relevé à énergie seule');
+    exiger((d.humeurs || []).some((h) => h.emotion === 'roue:peur:accable'), 'un relevé Accablé');
   }
   if (zip) {
     const noms = new Set(entrees.map((e) => e.nom));
@@ -142,6 +155,9 @@ async function remplir(repo, horloge, format) {
   const v6 = format >= 4;
   // Ce que la v7 ajoute (format 5) : émotions de la roue (un mot, une famille seule) et séances de Bien-être.
   const v7 = format >= 5;
+  // Ce que la v8 ajoute (format 6) : durée de la nuit, séance « Faite » du Programme, définitions corrigées, relevé à
+  // énergie seule et « Nuit en détail » masqué.
+  const v8 = format >= 6;
 
   // Listes : un lieu renommé (l'ancien libellé reste en alias), un lieu créé par l'utilisateur,
   // un symptôme créé puis disparu de la base (son id devient inconnu).
@@ -252,8 +268,17 @@ async function remplir(repo, horloge, format) {
     a('2026-09-29T17:20:00.000Z');
     await repo.seances.creer({ date: '2026-09-29', heure: '19:15', exercice: 'coherence', dureeS: 90, origine: 'ressourcer' });
   }
+  // v8 : un relevé à énergie seule, Accablé (bleu en v8, rouge en v9) et une séance « Faite » du Programme.
+  if (v8) {
+    a('2026-09-29T08:35:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '10:30', energie: 'energie:basse' });
+    a('2026-09-29T09:40:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '11:30', emotion: 'roue:peur:accable', energie: 'energie:basse', faisais: ['activiteMoment:travail'] });
+    a('2026-09-29T18:10:00.000Z');
+    await repo.seances.creer({ date: '2026-09-29', heure: '20:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' });
+  }
   a('2026-09-29T19:50:00.000Z');
-  await repo.journal.patch('2026-09-29', { lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien' });
+  await repo.journal.patch('2026-09-29', { lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien', ...(v8 ? { heuresSommeil: 7 } : {}) });
   await repo.listes.archiver('lieu:clinique');
 
   // Méta de l'utilisateur.
@@ -264,7 +289,8 @@ async function remplir(repo, horloge, format) {
     await repo.meta.ecrire('explosionsDepuis', '2026-09-24');
     await repo.meta.ecrire('journee', {
       ordre: ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'],
-      masques: v6 ? ['explosions', 'traitement', 'humeur'] : ['explosions', 'traitement'], heuresMoment: [12, 18],
+      masques: v8 ? ['explosions', 'traitement', 'humeur', 'nuit'] : v6 ? ['explosions', 'traitement', 'humeur'] : ['explosions', 'traitement'],
+      heuresMoment: [12, 18],
     });
     await repo.meta.ecrire('monPlan', {
       premiersSignes: 'Mâchoire serrée', quandCaMonte: 'Je sors marcher', siSurcharge: 'Je mets le casque',
@@ -280,6 +306,7 @@ async function remplir(repo, horloge, format) {
     await repo.meta.ecrire('uneChoseALaFois', { rubriques: ['quandCaMonte', 'pourRecuperer'], siAlors: true });
     await repo.meta.ecrire('ressourcer', { energieBasse: true });
   }
+  if (v8) await repo.meta.ecrire('definitionsRoue', { 'roue:joie:curieux': 'Envie d\'en savoir plus sur ce qui arrive.' });
   // v7 : une séance après minuit, qui compte pour la veille.
   if (v7) {
     a('2026-09-29T23:35:00.000Z');

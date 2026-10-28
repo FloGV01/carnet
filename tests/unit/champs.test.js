@@ -306,3 +306,41 @@ test('v8 : une séance gagne fin (vrai ou rien) et programme (l\'id d\'une séan
   // Une cohérence lancée ailleurs que dans le Programme garde sa forme : fin sans programme est valide.
   assert.deepEqual(seance({ exercice: 'coherence', origine: 'moment-difficile', fin: true }).erreurs, []);
 });
+
+// ---- v9 ----
+
+// Un mot à soi (spec §9) : accepté seulement s'il est dans la méta `motsPerso`, passée en contexte (perso), mis de côté
+// compris. Les mots sans famille (`roue:aucune:…`) sont des mots de la roue.
+test('v9 : emotion accepte un mot à soi connu de perso, et seulement lui ; Fatigué et Épuisé sans perso', () => {
+  const base = { id: 'h1', date: '2026-11-02', heure: '14:00' };
+  const perso = {
+    'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'bleu', famille: null, definition: null, archive: false, createdAt: 'x' },
+    'roue:perso:u-11111111': { libelle: 'De côté', zone: 'rouge', famille: 'peur', definition: null, archive: true, createdAt: 'x' },
+    'roue:perso:u-22222222': { libelle: '  ', zone: 'rouge' },
+  };
+  for (const emotion of ['roue:perso:u-0a1b2c3d', 'roue:perso:u-11111111']) {
+    const { valeur, erreurs } = normaliser('humeurs', { ...base, emotion }, { perso });
+    assert.deepEqual(erreurs, [], emotion);
+    assert.equal(valeur.emotion, emotion);
+    assert.equal(estVide('humeurs', valeur), false);
+    assert.deepEqual(normaliser('humeurs', { ...base, emotion }, { origine: 'sauvegarde', perso }).erreurs, [], `${emotion} à l'import`);
+    // Sans la méta, ou avec une méta illisible : refusé.
+    for (const sans of [undefined, null, {}, 'texte', []]) {
+      assert.deepEqual(normaliser('humeurs', { ...base, emotion }, { perso: sans }).erreurs, ['emotion : émotion inconnue'], `${emotion} sans méta`);
+    }
+    assert.deepEqual(normaliser('humeurs', { ...base, emotion }).erreurs, ['emotion : émotion inconnue']);
+  }
+  for (const emotion of ['roue:perso:u-22222222', 'roue:perso:u-99999999', 'roue:perso:zzz', 'roue:perso']) {
+    assert.deepEqual(normaliser('humeurs', { ...base, emotion }, { perso }).erreurs, ['emotion : émotion inconnue'], emotion);
+  }
+  for (const emotion of ['roue:aucune:fatigue', 'roue:aucune:epuise', 'roue:serenite:insouciant', 'roue:joie:euphorique']) {
+    assert.deepEqual(normaliser('humeurs', { ...base, emotion }).erreurs, [], emotion);
+  }
+  assert.deepEqual(normaliser('humeurs', { ...base, emotion: 'roue:serenite:ensommeille' }).erreurs, ['emotion : émotion inconnue'], 'jamais publié');
+  assert.deepEqual(valider('humeurs', { ...base, emotion: 'roue:perso:u-0a1b2c3d' }, { perso }).emotion, 'roue:perso:u-0a1b2c3d');
+  assert.throws(() => valider('humeurs', { ...base, emotion: 'roue:perso:u-0a1b2c3d' }), ErreurValidation);
+  // Le contexte ne change rien aux autres champs : la limite des textes importés reste celle de l'origine.
+  const long = 'x'.repeat(30000);
+  assert.ok(normaliser('journal', { date: '2026-11-02', notes: long }, { origine: 'import', perso }).erreurs.length > 0);
+  assert.deepEqual(normaliser('journal', { date: '2026-11-02', notes: long }, { origine: 'sauvegarde', perso }).erreurs, []);
+});

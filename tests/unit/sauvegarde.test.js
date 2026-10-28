@@ -4,11 +4,14 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES, MISES_A_NIVEAU,
 } from '../../public/js/db/sauvegarde.js';
 import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
+import { creerMot, mettreDeCote, motsActifs, MOT_SANS_LIBELLE } from '../../public/js/domain/mots-perso.js';
+import { libelleEmotion, familleDe } from '../../public/js/domain/roue.js';
+import { zoneDe, energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 
 const octetsDe = (f) => concatener(f.morceaux);
 const enc = new TextEncoder();
@@ -262,7 +265,7 @@ test('v6 : les notes et le lien d\'une question survivent à un export suivi d\'
   const rdv = await a.repo.rdv.creer({ professionnel: 'professionnel:psychiatre', questions: [{ texte: 'Parler de la colère', lien: { store: 'episodes', id: ep.id } }] });
   const [f] = await exporter(a.repo, { versionApp: '6.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.schemaVersion, 6);
   assert.equal(contenu.counts.notes, 1);
   assert.deepEqual(contenu.data.notes, [note]);
@@ -364,7 +367,7 @@ test('v7 : les séances et les émotions survivent à un export suivi d\'un impo
   const hu = await a.repo.humeurs.creer({ date: '2026-09-30', heure: '20:00', emotion: 'roue:colere:irrite', energie: 'energie:moyenne' });
   const [f] = await exporter(a.repo, { versionApp: '7.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.schemaVersion, 6);
   assert.equal(contenu.counts.seances, 2);
   assert.deepEqual(Object.keys(contenu.data), ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios']);
@@ -495,7 +498,7 @@ test('v8 : durée de la nuit, séance « Faite » du Programme et définitions c
   await a.repo.meta.ecrire('definitionsRoue', definitions);
   const [f] = await exporter(a.repo, { versionApp: '8.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 6);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.schemaVersion, 6);
   assert.equal(contenu.data.journal.find((j) => j.date === '2026-09-30').heuresSommeil, 6);
   assert.deepEqual(contenu.data.seances.find((x) => x.id === faite.id), faite);
@@ -520,7 +523,7 @@ test('v8 : durée de la nuit, séance « Faite » du Programme et définitions c
 });
 
 // v8, point de vigilance 1 : une sauvegarde de la v7 (format 5) passe au format 6 sans rien perdre ni inventer.
-test('v8 : une sauvegarde au format 5 passe au format 6 : sujets ajoutés sans écraser, séances sans fin, nuits sans heures', async () => {
+test('v8 : une sauvegarde au format 5 passe au format courant : sujets ajoutés sans écraser, séances sans fin, nuits sans heures', async () => {
   const v5 = {
     format: 'carnet-sauvegarde', formatVersion: 5, schemaVersion: 5, exportedAt: '2026-10-23T19:00:00.000Z',
     counts: { journal: 2, seances: 2, humeurs: 1, listes: 2, meta: 1 },
@@ -545,7 +548,7 @@ test('v8 : une sauvegarde au format 5 passe au format 6 : sujets ajoutés sans �
   const avant = structuredClone(v5);
   const a = analyserFichiers(json(v5));
   assert.deepEqual(v5, avant, 'mise à niveau pure : le fichier lu n\'est pas modifié');
-  assert.equal(a.sauvegarde.formatVersion, 6);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(a.erreurs, []);
   assert.equal(a.sauvegarde.counts.listes, 2 + IDS_V8.length - 1);
   for (const id of IDS_V8) assert.equal(a.sauvegarde.data.listes.filter((i) => i.id === id).length, 1, id);
@@ -575,9 +578,7 @@ test('v8 : une sauvegarde au format 5 passe au format 6 : sujets ajoutés sans �
   assert.throws(() => analyserFichiers(json({ ...v5, counts: { ...v5.counts, seances: 3 } })), (e) => e.code === 'BACKUP_INCOMPLET');
 });
 
-test('v8 : le format 7 est refusé, un format 6 tronqué aussi, une nuit ou une séance hors bornes est ignorée', () => {
-  assert.equal(FORMAT_VERSION, 6);
-  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 7, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+test('v8 : un format 6 tronqué est refusé, une nuit ou une séance hors bornes est ignorée', () => {
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 6, counts: { journal: 2 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
   const a = analyserFichiers(json({
     format: 'carnet-sauvegarde', formatVersion: 6, exportedAt: '2026-10-24T19:00:00.000Z', counts: { journal: 3, seances: 3 },
@@ -650,4 +651,155 @@ test('v8 : « Revenir » vers une copie prise avant la v8 remet les sujets d\'un
   for (const id of IDS_V8) assert.equal(listes.filter((i) => i.id === id).length, 1, id);
   assert.deepEqual(listes.find((i) => i.id === 'sujetRdv:sommeil'), sujet, 'le sujet de la copie est gardé');
   assert.equal((await a.repo.listes.items()).length, 204);
+});
+
+// ---- v9 ----
+
+// Mots à soi inventés pour les tests (spec v9 §4.5).
+const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+const DEBORDE = 'roue:perso:u-11111111';
+const motsPersoDe = (meta) => (meta.find((m) => m.cle === 'motsPerso') || {}).valeur;
+
+test('v9 : le format 8 est refusé, un format 7 tronqué aussi, une sauvegarde au format 6 passe au format 7 sans rien transformer', () => {
+  assert.equal(FORMAT_VERSION, 7);
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 8, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 7, counts: { humeurs: 2 }, data: { humeurs: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  // Les relevés de la v8 que la v9 lit autrement : énergie seule, famille seule de la v7, Accablé (bleu en v8, rouge en v9).
+  const v6 = {
+    format: 'carnet-sauvegarde', formatVersion: 6, schemaVersion: 6, exportedAt: '2026-10-26T19:00:00.000Z',
+    counts: { journal: 1, humeurs: 3, meta: 1 },
+    data: {
+      journal: [{ date: '2026-10-25', sommeilRessenti: 'sommeil:bien', heuresSommeil: 8 }],
+      humeurs: [
+        { id: 'hu_1', date: '2026-10-25', heure: '09:00', energie: 'energie:basse' },
+        { id: 'hu_2', date: '2026-10-25', heure: '12:00', emotion: 'roue:colere', energie: 'energie:haute' },
+        { id: 'hu_3', date: '2026-10-25', heure: '18:00', emotion: 'roue:peur:accable', energie: 'energie:basse' },
+      ],
+      meta: [{ cle: 'definitionsRoue', valeur: { 'roue:joie:curieux': 'Envie d\'en savoir plus.' } }],
+    },
+  };
+  const avant = structuredClone(v6);
+  assert.deepEqual(MISES_A_NIVEAU[6](v6), { ...v6, formatVersion: 7 });
+  const a = analyserFichiers(json(v6));
+  assert.deepEqual(v6, avant, 'mise à niveau pure');
+  assert.equal(a.sauvegarde.formatVersion, 7);
+  assert.deepEqual(a.sauvegarde.data, v6.data, 'rien n\'est transformé');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(a.valides.humeurs.map((h) => [h.id, h.emotion, h.energie]),
+    [['hu_1', null, 'energie:basse'], ['hu_2', 'roue:colere', 'energie:haute'], ['hu_3', 'roue:peur:accable', 'energie:basse']], 'énergies telles que saisies');
+  assert.deepEqual(a.valides.meta, v6.data.meta, 'aucun mot à soi inventé');
+});
+
+test('v9 : les mots à soi et leurs relevés survivent à un export suivi d\'un import', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const maintenant = a.repo.maintenant();
+  let { perso } = creerMot(null, { libelle: 'Flottant', zone: 'bleu', famille: 'tristesse' }, { id: FLOTTANT, maintenant });
+  ({ perso } = creerMot(perso, { libelle: 'Débordé', zone: 'rouge', definition: 'Plus de place pour rien.' }, { id: DEBORDE, maintenant }));
+  await a.repo.meta.ecrire('motsPerso', perso);
+  const h1 = await a.repo.humeurs.creer({ date: '2026-09-30', heure: '10:00', emotion: FLOTTANT, energie: energieDe(FLOTTANT, perso) });
+  const h2 = await a.repo.humeurs.creer({ date: '2026-09-30', heure: '11:00', emotion: DEBORDE, energie: energieDe(DEBORDE, perso), faisais: ['activiteMoment:travail'] });
+  // Débordé, utilisé, est mis de côté : il reste dans la méta et ses relevés le lisent toujours.
+  perso = mettreDeCote(perso, DEBORDE);
+  await a.repo.meta.ecrire('motsPerso', perso);
+
+  const [f] = await exporter(a.repo, { versionApp: '9.0.0' });
+  const contenu = contenuDe(f);
+  assert.equal(contenu.formatVersion, 7);
+  assert.equal(contenu.schemaVersion, 6);
+  assert.deepEqual(motsPersoDe(contenu.data.meta), perso);
+  assert.deepEqual(contenu.data.humeurs.map((h) => h.emotion).sort(), [FLOTTANT, DEBORDE].sort());
+
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  assert.deepEqual(motsPersoDe(analyse.valides.meta), perso, 'aucun mot recréé : tous sont connus');
+  const b = nouveauRepo();
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.humeurs.lire(h1.id), h1);
+  assert.deepEqual(await b.repo.humeurs.lire(h2.id), h2);
+  const lus = await b.repo.meta.lire('motsPerso');
+  assert.deepEqual(lus, perso);
+  assert.equal(libelleEmotion(DEBORDE, lus), 'Débordé');
+  assert.equal(zoneDe(DEBORDE, lus), 'rouge');
+  assert.deepEqual(motsActifs(lus).map((m) => m.id), [FLOTTANT]);
+  // Et un second export redonne les mêmes octets.
+  const [g] = await exporter(b.repo, { versionApp: '9.0.0' });
+  assert.ok(Buffer.from(octetsDe(g)).equals(Buffer.from(octetsDe(f))));
+});
+
+// Point de vigilance 4 : un relevé qui cite un mot à soi que le fichier ne connaît pas (méta perdue ou retouchée à la main)
+// n'est jamais perdu. Le mot est recréé mis de côté, « Mot sans libellé », sans zone ni famille, daté du fichier.
+test('v9 : un relevé qui cite un mot à soi absent du fichier le recrée, mis de côté, sans libellé ni zone', async () => {
+  const absent = 'roue:perso:u-99999999';
+  const illisible = 'roue:perso:u-33333333';
+  const flottant = { libelle: 'Flottant', zone: 'bleu', famille: 'tristesse', definition: null, archive: false, createdAt: '2026-11-01T08:00:00.000Z' };
+  const v7 = {
+    format: 'carnet-sauvegarde', formatVersion: 7, schemaVersion: 6, exportedAt: '2026-11-05T19:00:00.000Z',
+    counts: { humeurs: 6, meta: 1 },
+    data: {
+      humeurs: [
+        { id: 'hu_1', date: '2026-11-04', heure: '09:00', emotion: FLOTTANT, energie: 'energie:basse' },
+        { id: 'hu_2', date: '2026-11-04', heure: '10:00', emotion: absent, energie: 'energie:haute', faisais: ['activiteMoment:travail'] },
+        { id: 'hu_3', date: '2026-11-04', heure: '11:00', emotion: absent },
+        { id: 'hu_4', date: '2026-11-04', heure: '12:00', emotion: illisible, energie: 'energie:basse' },
+        // Refusés : une date impossible (rien n'est recréé pour lui), un id qui n'a pas la forme d'un mot à soi.
+        { id: 'hu_5', date: '2026-13-04', heure: '13:00', emotion: 'roue:perso:u-77777777' },
+        { id: 'hu_6', date: '2026-11-04', heure: '14:00', emotion: 'roue:perso:zzz' },
+      ],
+      meta: [{ cle: 'motsPerso', valeur: { [FLOTTANT]: flottant, [illisible]: { libelle: '  ', zone: 'rouge' } } }],
+    },
+  };
+  const avant = structuredClone(v7);
+  const a = analyserFichiers(json(v7));
+  assert.deepEqual(v7, avant, 'le fichier lu n\'est pas modifié');
+  assert.equal(a.erreurs.length, 2);
+  assert.match(a.erreurs[0], /humeurs n° 5 : date : date invalide/);
+  assert.match(a.erreurs[1], /humeurs n° 6 : emotion : émotion inconnue/);
+  assert.deepEqual(a.valides.humeurs.map((h) => h.id), ['hu_1', 'hu_2', 'hu_3', 'hu_4'], 'aucun relevé perdu');
+  const recree = { libelle: MOT_SANS_LIBELLE, zone: null, famille: null, definition: null, archive: true, createdAt: v7.exportedAt };
+  assert.deepEqual(motsPersoDe(a.valides.meta), { [FLOTTANT]: flottant, [illisible]: recree, [absent]: recree });
+
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  const perso = await repo.meta.lire('motsPerso');
+  const lu = await repo.humeurs.lire('hu_2');
+  assert.equal(lu.energie, 'energie:haute', 'l\'énergie enregistrée reste');
+  assert.deepEqual(lu.faisais, ['activiteMoment:travail']);
+  assert.equal(libelleEmotion(absent, perso), 'Mot sans libellé');
+  assert.equal(familleDe(absent, perso), null);
+  assert.equal(zoneDe(absent, perso), null, 'zone inconnue');
+  assert.equal(energieDe(absent, perso), null);
+  assert.ok(!motsDeLaCarte(perso).some((m) => m.id === absent || m.id === illisible), 'hors de la carte');
+  assert.deepEqual(motsActifs(perso).map((m) => m.id), [FLOTTANT], 'hors de la recherche');
+  // Le relevé reste modifiable : le mot recréé est connu de la validation.
+  assert.deepEqual((await repo.humeurs.modifier('hu_3', { vers: true })).emotion, absent);
+
+  // Sans méta du tout, la méta est créée avec le seul mot recréé ; sans rien à recréer, la méta du fichier reste telle quelle.
+  const sansMeta = analyserFichiers(json({ ...v7, counts: { humeurs: 1 }, data: { humeurs: [v7.data.humeurs[1]] } }));
+  assert.deepEqual(sansMeta.erreurs, []);
+  assert.deepEqual(sansMeta.valides.meta, [{ cle: 'motsPerso', valeur: { [absent]: recree } }]);
+  const rienARecreer = analyserFichiers(json({ ...v7, counts: { humeurs: 1, meta: 1 }, data: { humeurs: [v7.data.humeurs[0]], meta: v7.data.meta } }));
+  assert.deepEqual(rienARecreer.valides.meta, v7.data.meta);
+});
+
+test('v9 : l\'import remplace les mots à soi, l\'aperçu le dit, « Revenir » les remet', async () => {
+  const ici = creerMot(null, { libelle: 'Ici', zone: 'vert' }, { id: FLOTTANT, maintenant: '2026-11-01T08:00:00.000Z' }).perso;
+  const fichier = creerMot(null, { libelle: 'Du fichier', zone: 'jaune' }, { id: DEBORDE, maintenant: '2026-11-02T08:00:00.000Z' }).perso;
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  await a.repo.meta.ecrire('motsPerso', fichier);
+  const [f] = await exporter(a.repo, { versionApp: '9.0.0' });
+
+  const b = nouveauRepo();
+  await b.repo.meta.ecrire('motsPerso', ici);
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(metaRemplacee((await lireTout(b.repo)).meta, analyse.valides.meta), ['motsPerso']);
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.meta.lire('motsPerso'), fichier);
+  await revenirAvantImport(b.repo);
+  assert.deepEqual(await b.repo.meta.lire('motsPerso'), ici);
+
+  assert.equal(phraseMeta(['motsPerso']), 'Les mots ajoutés à la carte des émotions seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['definitionsRoue', 'motsPerso']),
+    'Les définitions des émotions et les mots ajoutés à la carte des émotions seront remplacés par ce que contient le fichier.');
 });

@@ -14,6 +14,8 @@ const T = {
   // contexte : sous-champs remplis par l'app (le jour d'écriture), qui seuls ne gardent pas l'objet.
   objet: (champs, contexte = []) => ({ type: 'objet', champs, contexte }), lignes: (champs) => ({ type: 'lignes', champs }),
   // v7 : un identifiant de la roue des émotions (domain/roue.js), et une valeur prise dans une liste fixe.
+  // v9 : un mot à soi n'est accepté que s'il est dans la méta `motsPerso`, passée en contexte (`perso`) : lue dans la
+  // même transaction à l'écriture (db/repository.js), prise dans le fichier à l'import (db/sauvegarde.js).
   roue: { type: 'roue' }, choix: (valeurs) => ({ type: 'choix', valeurs }),
 };
 
@@ -132,7 +134,9 @@ function lienValide(l) {
   return { store: l.store, id: l.id };
 }
 
-function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
+// ctx : { origine, perso } (perso : la méta `motsPerso`, v9).
+function normaliserChamp(nom, def, v, ctx, erreurs, avertissements) {
+  const { origine } = ctx;
   if (vide(v)) return null;
   switch (def.type) {
     case 'date':
@@ -162,7 +166,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
       if (typeof v !== 'string' || listeDe(v) !== def.liste) { erreurs.push(`${nom} : référence invalide`); return null; }
       return v;
     case 'roue':
-      if (!estEmotion(v)) { erreurs.push(`${nom} : émotion inconnue`); return null; }
+      if (!estEmotion(v, ctx.perso)) { erreurs.push(`${nom} : émotion inconnue`); return null; }
       return v;
     case 'choix':
       if (!def.valeurs.includes(v)) { erreurs.push(`${nom} : valeur inconnue`); return null; }
@@ -194,7 +198,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
     case 'objet': {
       if (typeof v !== 'object' || Array.isArray(v)) { erreurs.push(`${nom} : objet attendu`); return null; }
       const res = {};
-      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], origine, erreurs, avertissements);
+      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], ctx, erreurs, avertissements);
       const contexte = def.contexte || [];
       return Object.entries(res).some(([k, x]) => x !== null && !contexte.includes(k)) ? res : null;
     }
@@ -204,7 +208,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
       v.forEach((ligne, i) => {
         if (!ligne || typeof ligne !== 'object') { erreurs.push(`${nom}[${i}] : ligne invalide`); return; }
         const l = {};
-        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], origine, erreurs, avertissements);
+        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], ctx, erreurs, avertissements);
         if (Object.values(l).some((x) => x !== null)) res.push(l);
       });
       return res.length ? res : null;
@@ -225,7 +229,9 @@ export function refsDuChamp(def, v) {
 }
 
 // Rend { valeur, erreurs, avertissements }. Tous les champs du schéma sont présents dans valeur.
-export function normaliser(store, brut, { origine = 'app' } = {}) {
+// perso (v9) : la méta `motsPerso`, pour reconnaître un relevé qui cite un mot à soi ; sans elle, il est refusé.
+export function normaliser(store, brut, { origine = 'app', perso = null } = {}) {
+  const ctx = { origine, perso };
   const schema = SCHEMAS[store];
   if (!schema) throw new Error(`Store inconnu : ${store}`);
   const erreurs = [];
@@ -238,11 +244,11 @@ export function normaliser(store, brut, { origine = 'app' } = {}) {
       valeur[nom] = src[nom] ?? null;
     } else {
       const avant = erreurs.length;
-      valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
+      valeur[nom] = normaliserChamp(nom, def, src[nom], ctx, erreurs, avertissements);
       if (valeur[nom] === null && erreurs.length === avant) erreurs.push(`${nom} : absente`);
     }
   }
-  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
+  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], ctx, erreurs, avertissements);
   for (const nom of CHAMPS_TECHNIQUES) if (typeof src[nom] === 'string') valeur[nom] = src[nom];
   const connus = new Set([...Object.keys(schema.cles), ...Object.keys(schema.saisis), ...CHAMPS_TECHNIQUES]);
   for (const nom of Object.keys(src)) if (!connus.has(nom)) avertissements.push(`${nom} : champ inconnu ignoré`);
