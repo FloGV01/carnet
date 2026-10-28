@@ -30,10 +30,11 @@ const NOMS_CLASSEMENT = { emotionMoment: 'Émotion du moment', declencheur: 'Dé
 
 // Le calcul, et avant lui la lecture de la base, ne se refont que si la base a changé (v8, Q26, ui/lecture.js).
 export const calculerAnalyse = () => lireSiChange('analyse', async () => {
-  const { journal, episodes, symptomes, traitements, humeurs, seances, items, explosionsDepuis: zeroDepuis } = await lireBase();
+  // perso (v9) : la méta `motsPerso`, pour le libellé, la famille et la zone d'un relevé de mot à soi.
+  const { journal, episodes, symptomes, traitements, humeurs, seances, items, explosionsDepuis: zeroDepuis, perso } = await lireBase();
   await new Promise((ok) => setTimeout(ok, 0));
-  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs, seances }, { aujourdhui: repo.aujourdhui(), items, zeroDepuis });
-  return { resultat, items, carte: carteLibelles(items), zeroDepuis };
+  const resultat = analyze({ journal, episodes, symptomes, traitements, humeurs, seances, perso }, { aujourdhui: repo.aujourdhui(), items, zeroDepuis });
+  return { resultat, items, carte: carteLibelles(items), zeroDepuis, perso };
 });
 
 // En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
@@ -198,10 +199,10 @@ export function Analyse() {
   useEffect(() => { let actif = true; calculerAnalyse().then((v) => { if (actif) setEtat(v); }); return () => { actif = false; }; }, [version]);
 
   if (!etat) return html`<main class="ecran analyse"><${Entete} titre="Analyse" /><${Portes} /><p class="texte-secondaire centre">Calcul…</p></main>`;
-  const { resultat: r, carte, items } = etat;
+  const { resultat: r, carte, items, perso } = etat;
   const f = r.fenetres[fenetre];
   const cl = { emotionMoment: r.emotions[fenetre].mots, ...r.classements[fenetre] };
-  const libRoue = (id) => libelleEmotion(id) || carte.get(id) || id;
+  const libRoue = (id) => libelleEmotion(id, perso) || carte.get(id) || id;
   // Ta journée : les émotions à leur heure, à partir de 5 relevés (hors « vers ») ; l'énergie par créneau, à partir de
   // relevés de 3 jours (moments.js).
   const parHeure = r.emotions[fenetre].parHeure;
@@ -216,7 +217,7 @@ export function Analyse() {
 
     <div class="selon-periode">
       <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
-      <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} aujourdhui=${r.aujourdhui} />
+      <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} perso=${perso} aujourdhui=${r.aujourdhui} />
       ${journeeOk || r.moments[fenetre].statut === 'ok'
         ? html`<${TaJournee} key=${`journee-${fenetre}`} parHeure=${journeeOk ? parHeure : null} profil=${r.moments[fenetre]} carte=${carte} />`
         : journeeTout && html`<section class="section-analyse"><h2 class="titre-section">Ta journée heure par heure</h2><${Pourquoi} regle=${REGLES.emotionsJournee} /></section>`}

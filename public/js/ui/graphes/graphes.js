@@ -10,7 +10,7 @@ import { nombre, uneDecimale } from '../../analyse/textes.js';
 import { texteFamilles } from '../../analyse/emotions.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
 import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
-import { ZONES, NOMS_ZONES } from '../../domain/carte-roue.js';
+import { ZONES, NOMS_ZONES, zoneDe } from '../../domain/carte-roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
@@ -65,14 +65,15 @@ export const LegendeEnergie = ({ lib, unite }) => html`<${LegendeRampe} classes=
 
 // « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro (analyse/emotions.js).
 export { texteFamilles };
-// « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures.
-export const texteEmotions = (ids) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id) || id)).join(', ');
+// « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures. perso (v9) : la
+// méta `motsPerso`, pour le nom d'un mot à soi.
+export const texteEmotions = (ids, perso) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id, perso) || id)).join(', ');
 
 // Détail d'une colonne touchée : seulement ce qui est noté. Les anciennes notes de 1 à 10 restent dites (« humeur 6 »). Les
 // séances de Bien-être sont dites sans leur nombre (v7).
-export function detailColonne(pas, c, lib) {
+export function detailColonne(pas, c, lib, perso) {
   const m = [];
-  if (pas === 'jour' && (c.emotions || []).length) m.push(`émotions : ${texteEmotions(c.emotions)}`);
+  if (pas === 'jour' && (c.emotions || []).length) m.push(`émotions : ${texteEmotions(c.emotions, perso)}`);
   if (pas !== 'jour' && c.nEmotions > 0) m.push(`émotions : ${texteFamilles(c.familles)}`);
   if (c.humeur != null) {
     m.push(pas === 'jour' ? `humeur ${nombre(c.humeur)}${c.humeurMin != null && c.humeurMax > c.humeurMin ? ` (de ${c.humeurMin} à ${c.humeurMax})` : ''}`
@@ -118,11 +119,12 @@ const Etiquettes = ({ g }) => g.libelles.map((r) => r.lignes.map((l) => html`<te
 // reperes (v6, analyse/reperes.js) : les changements de traitement de la période, en traits numérotés.
 // v7 (2b) : une étiquette au début de chaque rangée ; la rangée Émotions en tête (un point par relevé, à la couleur de
 // la zone de son mot depuis la v9, de sa famille avant ; par semaine ou par mois, des barres par famille), la rangée
-// « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10.
-export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui }) {
+// « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10. perso (v9) : la méta `motsPerso`, pour le
+// nom et la zone d'un relevé de mot à soi.
+export function MesJours({ frise: f, reperes = SANS_REPERE, carte, perso = null, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
-  const g = geometrieMesJours(f, { reperes: reperes.traits });
+  const g = geometrieMesJours(f, { reperes: reperes.traits, zoneDe: (id) => zoneDe(id, perso) });
   const d = g.dim;
   // La légende des émotions : les zones en mode jour (dès un point), les familles des barres sinon.
   const familles = f.pas === 'jour' ? [] : famillesPresentes(f.colonnes.flatMap((c) => Object.keys(c.familles || {}).filter((k) => c.familles[k] > 0)));
@@ -134,7 +136,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
   const legendeReperes = reperes.legende.length > 0 && html`<ul class="legende-reperes" aria-label="Changements de traitement">
     ${reperes.legende.map((r) => html`<li>${r.texte}</li>`)}</ul>`;
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
-    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
+    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib, perso).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
   // Les anciennes notes : par semaine ou par mois, le point est une moyenne, et un anneau la dit faite de peu de
   // valeurs. Des libellés fixes, sans valeur calculée.
   const legendeNotes = g.notes.points.length > 0 && html`
@@ -146,7 +148,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     ${legendeNotes}
     <${LegendeNuits} lib=${lib} />
   </p>${legendeReperes}`;
-  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}
+  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib, perso).join(' · ')}
     ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
   return html`<${Cadre} titre="Mes jours" tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Mes jours, ${UNITE[f.pas]} : ${rangees}. Touche une colonne pour son détail, ou « Voir en tableau ».`}>

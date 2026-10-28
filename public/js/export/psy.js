@@ -2,6 +2,8 @@
 // chaque jour, et leurs comptes par famille dans les COMPTEURS ; les anciennes notes de 1 à 10 restent dites.
 // Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
+// v9 : `perso`, la méta `motsPerso`, fait connaître les mots à soi (leur nom dans les lignes du jour, leur famille dans les
+// COMPTEURS) ; sans elle, un relevé de mot à soi ne dit que son heure et son énergie.
 import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
@@ -41,13 +43,13 @@ function phraseHumeur(j) {
 // Un relevé du moment : « 18:42 irrité (énergie moyenne) » (v7, l'émotion de la roue, en minuscules ; une famille seule,
 // « colère ») ; un ancien relevé garde sa note, « 18:42 7 (énergie moyenne) » ; noté après coup, « vers 14 h calme
 // (énergie basse ; travail, trajet) » : l'énergie, puis ce que je faisais, entre parenthèses.
-function releveMoment(h, lib) {
+function releveMoment(h, lib, perso) {
   const details = [h.energie && `énergie ${minuscule(lib(h.energie))}`, h.faisais && h.faisais.length > 0 && listeLib(h.faisais, lib)].filter(Boolean).join(' ; ');
-  const emotion = libelleEmotion(h.emotion);
+  const emotion = libelleEmotion(h.emotion, perso);
   return [h.vers ? formaterVers(h.heure) : h.heure, emotion && minuscule(emotion), h.humeur != null && `${h.humeur}`, details && `(${details})`].filter(Boolean).join(' ');
 }
 
-function ligneJour(j, lib, moments = []) {
+function ligneJour(j, lib, moments = [], perso = null) {
   const m = [formaterJourCourt(j.date)];
   if (j.lieu) m.push(lib(j.lieu));
   // v8 : la nuit en qualité et en heures, « nuit Mal · 6 h » ; les réveils ne restent que pour une nuit ancienne qui en a.
@@ -62,7 +64,7 @@ function ligneJour(j, lib, moments = []) {
   if (j.humeur != null) m.push(phraseHumeur(j));
   // v7 : les émotions notées ce jour-là (le mot, ou la famille seule), chacune une fois, dans l'ordre des heures. Un jour
   // qui mêle d'anciennes notes et des émotions garde les deux (« humeur 6 · émotions : calme »).
-  const emotions = resumeEmotions(moments, Infinity).mots;
+  const emotions = resumeEmotions(moments, Infinity, perso).mots;
   if (emotions.length) m.push(`émotions : ${emotions.join(', ')}`);
   const contact = detailContact(j, lib);
   if (j.contactHumain != null || contact) m.push(`contact${j.contactHumain != null ? ` ${ouiNon(j.contactHumain)}` : ''}${contact ? ` (${contact})` : ''}`);
@@ -74,7 +76,7 @@ function ligneJour(j, lib, moments = []) {
   if (j.recharge && j.recharge.length) m.push(`a rechargé : ${listeLib(j.recharge, lib)}`);
   const lignes = [m.join(' · ')];
   if (moments.length) {
-    lignes.push(`  humeur du moment : ${moments.map((h) => releveMoment(h, lib)).join(' · ')}`);
+    lignes.push(`  humeur du moment : ${moments.map((h) => releveMoment(h, lib, perso)).join(' · ')}`);
   }
   if (j.pointsPositifs) lignes.push(`  + ${couper(j.pointsPositifs)}`);
   if (j.notes) lignes.push(`  note : ${couper(j.notes)}`);
@@ -139,7 +141,7 @@ function compteurs(f, complet, lib, emotions) {
   return m.join(' · ');
 }
 
-export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujourdhui, carte, zeroDepuis = null }) {
+export function exportPsy({ journal, episodes, symptomes, humeurs = [], perso = null }, { aujourdhui, carte, zeroDepuis = null }) {
   const lib = (id) => carte.get(id) || id;
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;
@@ -170,12 +172,12 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [] }, { aujo
   const anciens = episodes.filter((e) => e.apresCoup && e.apresCoup.jour && dans(e.apresCoup.jour) && jourEvenement(e.date, e.heure) < du).sort(parHeure);
   const sys = symptomes.filter((s) => dans(s.date)).sort((a, b) => a.date.localeCompare(b.date));
   const blocs = [`SUIVI APP · 7 jours du ${formaterJourCourt(du)} au ${formaterJourCourt(aujourdhui)}/${aujourdhui.slice(0, 4)}`];
-  if (jours.length) blocs.push(['JOURS', ...jours.flatMap((j) => ligneJour(j, lib, momentsDu.get(j.date) || []))].join('\n'));
+  if (jours.length) blocs.push(['JOURS', ...jours.flatMap((j) => ligneJour(j, lib, momentsDu.get(j.date) || [], perso))].join('\n'));
   if (eps.length) blocs.push([`ÉPISODES (${eps.length})`, ...eps.flatMap((e) => ligneEpisode(e, lib))].join('\n'));
   if (anciens.length) blocs.push(['APRÈS COUP (épisodes plus anciens)', ...anciens.flatMap((e) => [ligneEpisode(e, lib)[0], ...lignesApresCoup(e.apresCoup, lib)])].join('\n'));
   if (sys.length) blocs.push([`SYMPTÔMES (${sys.length})`, ...sys.flatMap((s) => ligneSymptome(s, lib))].join('\n'));
   const data = { journal: journalExpl, episodes, symptomes };
-  const releves = relevesAEmotion(humeurs);
+  const releves = relevesAEmotion(humeurs, perso);
   const emotionsEntre = (a, b) => parFamille(releves.filter((r) => r.date >= a && r.date <= b));
   const cette = compteurs(indicateurs(data, du, aujourdhui), true, lib, emotionsEntre(du, aujourdhui));
   const avant = compteurs(indicateurs(data, addDays(du, -7), addDays(du, -1)), false, lib, emotionsEntre(addDays(du, -7), addDays(du, -1)));

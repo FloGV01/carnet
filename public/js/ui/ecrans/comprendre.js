@@ -43,12 +43,13 @@ const lireChoix = (cle, valeurs, defaut) => { const v = lireLocal(cle); return v
 
 // La base n'est relue, et les jours recalculés, que si elle a changé depuis la dernière ouverture (v8, Q26).
 const charger = () => lireSiChange('comprendre', async () => {
-  const { journal, episodes, humeurs, seances, symptomes, items, explosionsDepuis: zeroDepuis } = await lireBase();
+  // perso (v9) : la méta `motsPerso`, pour qu'un relevé de mot à soi compte dans sa famille.
+  const { journal, episodes, humeurs, seances, symptomes, items, explosionsDepuis: zeroDepuis, perso } = await lireBase();
   const aujourdhui = repo.aujourdhui();
-  const jours = facteursParJour({ journal, humeurs, episodes, symptomes, zeroDepuis });
+  const jours = facteursParJour({ journal, humeurs, episodes, symptomes, zeroDepuis, perso });
   // « Tout » part du premier jour qui porte une donnée lue ici : un soir, un relevé, une explosion, (v8) une fiche de symptôme.
   const premier = premiereDate({ journal: [...jours.values()] }, aujourdhui);
-  return { journal, humeurs, episodes, seances, items, jours, premier, aujourdhui, carte: carteLibelles(items) };
+  return { journal, humeurs, episodes, seances, items, perso, jours, premier, aujourdhui, carte: carteLibelles(items) };
 });
 
 // periode : { du, au }, pour les calculs ; choixPeriode : la clé du sélecteur (« 3mois » ou « tout »), pour la
@@ -64,7 +65,7 @@ function Aligne({ graphe, resultat, d, choixPeriode }) {
 // période dont l'heure est notée (SEUILS.emotions.heuresAutour).
 function AutourExplosions({ d, periode, choixPeriode }) {
   const instants = d.episodes.filter((e) => estExplosion(e) && e.heure && (() => { const j = jourEvenement(e.date, e.heure); return j >= periode.du && j <= periode.au; })());
-  const r = autourDe(instants, d.humeurs);
+  const r = autourDe(instants, d.humeurs, {}, d.perso);
   if (r.statut !== 'ok') return html`<${PasAssez} graphe="autourExplosions" />`;
   return html`<${GrapheFamilles} graphe="autourExplosions" entete="Quand" periode=${choixPeriode} carte=${d.carte}
     lignes=${[{ cle: 'avant', nom: `${H} heures avant`, compte: r.avant }, { cle: 'apres', nom: `${H} heures après`, compte: r.apres }]} />`;
@@ -74,7 +75,7 @@ function AutourExplosions({ d, periode, choixPeriode }) {
 // depuis l'onglet Bien-être (les respirations de Moment difficile et de « Pour récupérer » ne comptent pas), sur la période.
 // Une description, sans phrase calculée ni verdict.
 function AutourBienEtre({ d, periode, choixPeriode }) {
-  const r = autourDuBienEtre(d.seances, d.humeurs, periode);
+  const r = autourDuBienEtre(d.seances, d.humeurs, periode, d.perso);
   if (r.statut !== 'ok') return html`<${PasAssez} graphe="autourBienEtre" />`;
   return html`<${GrapheFamilles} graphe="autourBienEtre" entete="Quand" periode=${choixPeriode} carte=${d.carte}
     lignes=${[{ cle: 'avant', nom: `${H} heures avant`, compte: r.avant }, { cle: 'apres', nom: `${H} heures après`, compte: r.apres }]} />`;
@@ -92,8 +93,8 @@ function Explosions({ d, periode, choixPeriode, cote, choisirCote }) {
 // partir de 5 relevés qui ont une émotion et une activité, comme les autres vues d'émotions.
 function EmotionsActivites({ d, periode, choixPeriode }) {
   const lib = (id) => d.carte.get(id) || id;
-  if (selonSeuilEmotions(relevesAvecActivite(d.humeurs, periode).length) !== 'ok') return html`<${PasAssez} graphe="emotionsActivites" />`;
-  const lignes = Object.entries(emotionsParActivite(d.humeurs, periode, d.items)).map(([id, compte]) => ({ cle: id, nom: lib(id), compte }));
+  if (selonSeuilEmotions(relevesAvecActivite(d.humeurs, periode, d.perso).length) !== 'ok') return html`<${PasAssez} graphe="emotionsActivites" />`;
+  const lignes = Object.entries(emotionsParActivite(d.humeurs, periode, d.items, d.perso)).map(([id, compte]) => ({ cle: id, nom: lib(id), compte }));
   return html`<${GrapheFamilles} graphe="emotionsActivites" entete="Activité" periode=${choixPeriode} carte=${d.carte} lignes=${lignes} />`;
 }
 
@@ -117,7 +118,7 @@ function MesNuits({ d, choixPeriode }) {
 // Après une nuit (v7) : les émotions du jour selon la nuit notée ce jour-là.
 function ApresNuit({ d, periode, choixPeriode }) {
   const lib = (id) => d.carte.get(id) || id;
-  const r = apresNuit(d.journal, d.humeurs, periode);
+  const r = apresNuit(d.journal, d.humeurs, periode, d.perso);
   if (r.statut !== 'ok') return html`<${PasAssez} graphe="apresNuit" />`;
   const jours = (n) => (n ? `${n} jour${n > 1 ? 's' : ''}` : null);
   return html`<${GrapheFamilles} graphe="apresNuit" entete="Nuit" periode=${choixPeriode} carte=${d.carte}

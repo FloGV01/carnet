@@ -282,6 +282,18 @@ test('v6 · Mes jours, détail d\'une colonne : l\'énergie basse seulement quan
   assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: null }, lib), ['humeur 5,0 en moyenne']);
 });
 
+// v9 · relecture de la tâche 3 : le détail d'un jour de Mes jours (et son tableau) dit le nom d'un mot à soi, lu dans la
+// méta motsPerso ; sans elle, l'identifiant brut s'afficherait.
+test('v9 · Mes jours, détail d\'un jour : le nom d\'un mot à soi, jamais son identifiant « roue: »', async () => {
+  const { detailColonne, texteEmotions } = await import('../../public/js/ui/graphes/graphes.js');
+  const id = 'roue:perso:u-0a1b2c3d';
+  const perso = { [id]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-27T08:00:00.000Z' } };
+  const ids = ['roue:joie:fier', id, 'roue:colere'];
+  assert.equal(texteEmotions(ids, perso), 'fier, flottant, colère');
+  assert.deepEqual(detailColonne('jour', { emotions: ids, entree: {} }, (x) => x, perso), ['émotions : fier, flottant, colère']);
+  assert.match(texteEmotions(ids), /roue:perso/, 'sans la méta');
+});
+
 // ---------- v6 · Comprendre ----------
 
 const r1 = (x) => Math.round(x * 10) / 10;

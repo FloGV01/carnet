@@ -119,15 +119,19 @@ test('Mes jours en mode jour : un point par relevé à la couleur de sa zone, cr
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/analyse');
     await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: '7 j' }).click();
-    // Le 15 : Calme, Furieux, Sérénité (creux), Fier, Accablé ; le mot à soi n'entre pas encore dans l'Analyse
-    // (tâche 7). Le 14 : Colère (creux).
+    // Le 15 : Calme, Furieux, Sérénité (creux), Fier, Accablé, et le mot à soi Flottant, vert (relecture de la tâche 3 : la
+    // méta motsPerso entre dans l'Analyse). Le 14 : Colère (creux).
     const points = await graphe.locator('circle.g-emo, circle.g-creux').evaluateAll((els) => els.map((c) => {
       const s = getComputedStyle(c);
       return c.classList.contains('g-creux') ? `creux ${s.stroke}` : s.fill;
     }));
     expect(points.sort(), schema).toEqual([
-      rgb(t['c-zone-vert']), rgb(t['c-zone-rouge']), `creux ${rgb(t['text-2'])}`, rgb(t['c-zone-jaune']), rgb(t['c-zone-rouge']), `creux ${rgb(t['text-2'])}`,
+      rgb(t['c-zone-vert']), rgb(t['c-zone-rouge']), `creux ${rgb(t['text-2'])}`, rgb(t['c-zone-jaune']), rgb(t['c-zone-rouge']), rgb(t['c-zone-vert']),
+      `creux ${rgb(t['text-2'])}`,
     ].sort());
+    // Le détail du 15 dit le nom du mot à soi, jamais son identifiant.
+    await graphe.locator('rect.g-zone').last().click();
+    await expect(mesJours.locator('.detail-colonne')).toContainText(/^jeudi 15 oct\. · émotions : calme, furieux, sérénité, fier, accablé, flottant/);
     await expect(graphe.locator('[class*="emo-"]')).toHaveCount(0);
     const legende = mesJours.locator('.legende-frise');
     await expect(legende.locator(':scope > span')).toContainText([
@@ -144,5 +148,61 @@ test('Mes jours en mode jour : un point par relevé à la couleur de sa zone, cr
     await expect(legende).toContainText('Colère');
     await expect(legende).not.toContainText('Énergie haute');
   }
-  await expect(page.locator('main')).not.toContainText(/NaN|undefined|%/);
+  await expect(page.locator('main')).not.toContainText(/NaN|undefined|%|roue:/);
+});
+
+// Relecture de la tâche 3 : la méta motsPerso passe dans toute la chaîne de l'Analyse et des exports. Un mot à soi qui a
+// une famille (Flottant, joie) y compte, et son nom s'affiche : Ma semaine, Mes jours, Les plus fréquents, Comprendre,
+// En consultation, l'Export PSY et l'écran Émotion du moment. Du lundi 12 au jeudi 15 : Flottant chaque matin en
+// travaillant, Irrité le 15 en trajet.
+test('Un mot à soi qui a une famille : son nom et sa famille dans l\'Analyse, Comprendre, En consultation, l\'Export PSY et Émotion du moment', async ({ page }) => {
+  const rdv = await repo(page, async ([perso, mot]) => {
+    const r = window.__carnet.repo;
+    await r.meta.ecrire('motsPerso', { [perso]: mot });
+    for (const date of ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15']) {
+      await r.humeurs.creer({ date, heure: '09:00', emotion: perso, energie: 'energie:basse', faisais: ['activiteMoment:travail'] });
+    }
+    await r.humeurs.creer({ date: '2026-10-15', heure: '18:00', emotion: 'roue:colere:irrite', energie: 'energie:moyenne', faisais: ['activiteMoment:trajet'] });
+    return (await r.rdv.creer({ date: '2026-10-20', heure: '10:30', professionnel: 'professionnel:psychiatre' })).id;
+  }, [PERSO, { ...MOT, famille: 'joie' }]);
+
+  // L'Analyse : Ma semaine compte Flottant dans la joie ; Mes jours lui donne son point vert et son nom ; il est le mot le
+  // plus noté.
+  await aller(page, '#/analyse');
+  const semaine = page.getByRole('region', { name: 'Ma semaine' });
+  await expect(semaine.locator('.barres-familles li')).toHaveText([/Colère\s*1/, /Joie\s*4/]);
+  await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: '7 j' }).click();
+  const mesJours = page.locator('figure', { has: page.getByText('Mes jours', { exact: true }) });
+  await expect(mesJours.locator('svg[role="img"] circle.g-emo.zone-vert')).toHaveCount(4);
+  await expect(mesJours.locator('svg[role="img"] circle.g-emo.zone-rouge')).toHaveCount(1);
+  await mesJours.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(mesJours.getByRole('row', { name: /^jeudi 15 oct\./ })).toContainText('émotions : flottant, irrité');
+  const frequents = page.locator('section', { has: page.getByRole('heading', { name: 'Les plus fréquents' }) });
+  await expect(frequents.locator('.ligne-classement').first()).toHaveText(/^Émotion du moment\s*Flottant\u00a0· 4 relevés sur 5$/);
+  await expect(page.locator('main')).not.toContainText(/NaN|undefined|roue:/);
+
+  // Comprendre › Énergie : « Émotions selon ce que je faisais », Flottant dans la joie (5 relevés : au-dessus du seuil).
+  await aller(page, '#/comprendre/energie');
+  const q18 = page.locator('figure.graphe', { has: page.getByText('Émotions selon ce que je faisais', { exact: true }) });
+  await q18.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(q18.locator('tbody tr')).toHaveText([/Travail\s*joie 4\s*4/, /Trajet\s*colère 1\s*1/]);
+
+  // En consultation : les familles des 30 derniers jours.
+  await aller(page, `#/consultation/${rdv}`);
+  const vue = page.getByRole('dialog', { name: 'En consultation' });
+  await expect(vue.locator('.emotions-consultation li')).toHaveText([/Colère\s*1/, /Joie\s*4/]);
+
+  // L'Export PSY : le nom du mot à soi dans la ligne du jour et ses relevés, sa famille dans les compteurs.
+  await aller(page, '#/export-psy');
+  const texte = page.getByLabel('Aperçu du texte');
+  await expect(texte).toContainText('jeu 15/10 · émotions : flottant, irrité');
+  await expect(texte).toContainText('humeur du moment : 09:00 flottant (énergie basse ; travail) · 18:00 irrité (énergie moyenne ; trajet)');
+  await expect(texte).toContainText('cette semaine : émotions : colère 1 · joie 4');
+  await expect(texte).not.toContainText(/roue:|undefined|null/);
+
+  // L'écran Émotion du moment (v8, jusqu'à la tâche 4) : les relevés du jour, le mot à soi avec son nom et sa zone.
+  await aller(page, '#/moment');
+  const lignes = page.locator('.moments-du-jour .ligne-releve');
+  await expect(lignes.locator('.texte-releve')).toHaveText(['Flottant · énergie basse', 'Irrité · énergie moyenne']);
+  await expect(lignes.first().locator('.point-releve-moment')).toHaveClass(/zone-vert/);
 });

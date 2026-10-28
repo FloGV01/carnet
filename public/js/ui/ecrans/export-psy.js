@@ -15,10 +15,12 @@ export function ExportPsy() {
   const sauvegarde = useSauvegarde();
   useEffect(() => {
     (async () => {
-      const [items, zeroDepuis, journal, episodes, symptomes, humeurs] = await Promise.all([
+      // perso (v9) : les mots à soi (méta `motsPerso`), pour le nom et la famille d'un relevé qui en cite un.
+      const [items, zeroDepuis, journal, episodes, symptomes, humeurs, perso] = await Promise.all([
         repo.listes.items(), repo.meta.lire('explosionsDepuis'), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous(),
+        repo.meta.lire('motsPerso'),
       ]);
-      setTexte(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: repo.aujourdhui(), carte: carteLibelles(items), zeroDepuis }));
+      setTexte(exportPsy({ journal, episodes, symptomes, humeurs, perso }, { aujourdhui: repo.aujourdhui(), carte: carteLibelles(items), zeroDepuis }));
     })();
   }, []);
 

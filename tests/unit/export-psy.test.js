@@ -238,6 +238,35 @@ test('v7 : sans aucune émotion, ni la ligne du jour ni les COMPTEURS ne parlent
   assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · humeur 5');
 });
 
+// v9 · relecture de la tâche 3 : un relevé de mot à soi (méta motsPerso) garde son nom dans la ligne du jour et dans
+// « humeur du moment », compte dans sa famille s'il en a une, et le texte ne montre jamais un identifiant « roue: ».
+// Un jour qui n'a que ce relevé a sa ligne « émotions ». Mots inventés.
+test('v9 : un mot à soi garde son nom dans la ligne du jour et ses relevés, compte dans sa famille ; jamais « roue: » dans le texte', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+  const perso = {
+    [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-09-01T08:00:00.000Z' },
+    [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: true, createdAt: '2026-09-02T08:00:00.000Z' },
+  };
+  const humeurs = [
+    rel('2026-09-25', '17:00', FLOTTANT, { energie: 'energie:basse' }),
+    rel('2026-09-26', '09:00', 'roue:colere:irrite'), rel('2026-09-26', '14:00', BRUMEUX, { energie: 'energie:basse' }),
+    rel('2026-09-26', '18:00', FLOTTANT),
+  ];
+  const t = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs, perso }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.equal(ligneDu(t, 'ven 25/09'), 'ven 25/09 · émotions : flottant', 'un jour qui n\'a que le mot à soi');
+  assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · émotions : irrité, brumeux, flottant');
+  assert.equal(t.split('\n').filter((l) => l.startsWith('  humeur du moment : ')).join('\n'),
+    '  humeur du moment : 17:00 flottant (énergie basse)\n  humeur du moment : 09:00 irrité · 14:00 brumeux (énergie basse) · 18:00 flottant');
+  // Flottant compte dans la joie ; Brumeux, sans famille, dans aucune.
+  assert.match(t, /cette semaine : émotions : colère 1 · joie 2\n/);
+  assert.doesNotMatch(t, /roue:|null|undefined/);
+  // Sans la méta, rien n'est inventé : ni nom, ni famille, ni identifiant.
+  const sans = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.equal(ligneDu(sans, 'sam 26/09'), 'sam 26/09 · émotions : irrité');
+  assert.doesNotMatch(sans, /roue:|flottant|brumeux|joie/);
+});
+
 // v8 (spec §7 bis) : « nuit Mal · 6 h » ; la qualité ou les heures seules ; les réveils et le coucher ne restent que pour une
 // nuit ancienne qui en a, jamais inventés.
 test('v8 : la nuit dit sa qualité et ses heures, « nuit Mal · 6 h » ; une nuit ancienne garde ses réveils et ses heures de coucher', () => {

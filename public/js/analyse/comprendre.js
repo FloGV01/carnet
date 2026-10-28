@@ -63,7 +63,8 @@ function hyperfocusParJour(symptomes) {
 // inconnue sans relevé) ; hyperfocus oui le jour d'une fiche Hyperfocus, non un jour qui a une saisie du soir ou une
 // autre fiche de symptôme (on aurait pu le noter), inconnu sinon : comme les explosions, un jour de relevés seuls ne
 // vaut jamais « non ».
-export function facteursParJour({ journal = [], humeurs = [], episodes = [], symptomes = [], zeroDepuis = null } = {}) {
+// perso (v9) : la méta `motsPerso`, pour que les relevés de mots à soi comptent dans leur famille.
+export function facteursParJour({ journal = [], humeurs = [], episodes = [], symptomes = [], zeroDepuis = null, perso = null } = {}) {
   // Comme l'Analyse (analyse/index.js) : les explosions. Un jour qui n'a que des relevés n'a pas de saisie du soir :
   // il ne vaut jamais 0 explosion.
   const soir = saisieDuSoir(journal);
@@ -71,7 +72,7 @@ export function facteursParJour({ journal = [], humeurs = [], episodes = [], sym
   const energie = energieBasseParJour(humeurs);
   const haute = energieHauteParJour(humeurs);
   const hyperfocus = hyperfocusParJour(symptomes);
-  const familles = famillesParJour(humeurs, '0000-01-01', '9999-12-31');
+  const familles = famillesParJour(humeurs, '0000-01-01', '9999-12-31', perso);
   const presentes = new Set(entrees.map((j) => j.date));
   for (const date of [...energie.keys(), ...familles.keys(), ...hyperfocus.keys()]) if (!presentes.has(date)) { entrees.push({ date }); presentes.add(date); }
   entrees.sort((a, b) => a.date.localeCompare(b.date));

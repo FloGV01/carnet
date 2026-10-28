@@ -442,3 +442,65 @@ test('v9 · un mot sans famille (Fatigué, Épuisé) : un relevé à émotion, c
   propre(septembre.familles, 'frise, septembre');
   assert.deepEqual([septembre.familles, septembre.nEmotions], [compte({ joie: 1, colere: 1 }), 2]);
 });
+
+// v9 · relecture de la tâche 3 : les mots à soi (méta motsPerso) entrent dans toute la chaîne de l'Analyse. Avec `perso`,
+// un relevé de mot à soi est une émotion du jour, compté dans sa famille s'il en a une (Flottant, joie), dans aucune sinon
+// (Brumeux, sans famille, comme Fatigué) ; sans `perso`, il reste hors des comptes, comme avant. Mots inventés.
+test('v9 · un mot à soi, avec la méta motsPerso : une émotion du jour, comptée dans sa famille s\'il en a une, partout dans l\'Analyse', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+  const perso = {
+    [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-08-01T08:00:00.000Z' },
+    [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: true, createdAt: '2026-08-02T08:00:00.000Z' },
+  };
+  const humeurs = [
+    releve('2026-09-02', '10:00', FLOTTANT, { faisais: [TRAVAIL], energie: 'energie:basse' }),
+    releve('2026-09-02', '11:00', 'roue:colere:irrite', { faisais: [TRAVAIL] }),
+    releve('2026-09-03', '01:00', BRUMEUX, { faisais: [TRAJET] }), // encore le 02
+    releve('2026-09-15', '09:00', FLOTTANT),
+  ];
+  const periode = { du: '2026-09-01', au: '2026-09-30' };
+
+  // Les relevés à émotion : les deux mots à soi, leur famille (null pour Brumeux) et leur mot ; mis de côté compris.
+  assert.deepEqual(relevesAEmotion(humeurs, perso).map((r) => [r.date, r.famille, r.mot]), [
+    ['2026-09-02', 'joie', FLOTTANT], ['2026-09-02', 'colere', 'roue:colere:irrite'], ['2026-09-02', null, BRUMEUX], ['2026-09-15', 'joie', FLOTTANT],
+  ]);
+  assert.deepEqual(parFamille(relevesAEmotion(humeurs, perso)), compte({ joie: 2, colere: 1 }));
+  assert.deepEqual([...emotionsParJour(humeurs, periode.du, periode.au, perso)], [['2026-09-02', [FLOTTANT, 'roue:colere:irrite', BRUMEUX]], ['2026-09-15', [FLOTTANT]]]);
+  assert.deepEqual([...famillesParJour(humeurs, periode.du, periode.au, perso)], [['2026-09-02', ['joie', 'colere']], ['2026-09-15', ['joie']]]);
+  assert.deepEqual(facteursParJour({ humeurs, perso }).get('2026-09-15').familles, ['joie']);
+  // Sans la méta : hors des comptes, comme avant la v9.
+  assert.deepEqual(relevesAEmotion(humeurs).map((r) => r.mot), ['roue:colere:irrite']);
+  assert.equal(facteursParJour({ humeurs }).has('2026-09-15'), false);
+
+  // Après une nuit, autour d'un instant, selon ce que je faisais : Flottant compte dans la joie, Brumeux nulle part.
+  const nuit = apresNuit([{ date: '2026-09-02', sommeilRessenti: 'sommeil:mal' }], humeurs, periode, perso);
+  assert.deepEqual([nuit.mal, nuit.n], [compte({ joie: 1, colere: 1 }), 2]);
+  const autour = autourDe([{ date: '2026-09-02', heure: '10:30' }], humeurs, {}, perso);
+  assert.deepEqual([autour.avant, autour.apres, autour.n], [compte({ joie: 1 }), compte({ colere: 1 }), 2]);
+  assert.deepEqual(autourDuBienEtre([{ origine: 'bien-etre', date: '2026-09-15', heure: '10:00' }], humeurs, periode, perso).avant, compte({ joie: 1 }));
+  assert.deepEqual(relevesAvecActivite(humeurs, periode, perso).map((x) => [x.date, x.famille]), [['2026-09-02', 'joie'], ['2026-09-02', 'colere']]);
+  assert.deepEqual(emotionsParActivite(humeurs, periode, [], perso), { [TRAVAIL]: compte({ joie: 1, colere: 1 }) });
+
+  // Mes jours : par jour, les mots à soi sont des émotions du jour (leur point, leur nom) ; par semaine, Flottant compte
+  // dans la joie.
+  const jours = frise({ humeurs, perso }, '2026-09-01', '2026-09-30');
+  assert.deepEqual(jours.colonnes.find((c) => c.cle === '2026-09-02').emotions, [FLOTTANT, 'roue:colere:irrite', BRUMEUX]);
+  assert.equal(jours.colonnes.find((c) => c.cle === '2026-09-15').aDonnee, true);
+  assert.equal(frise({ humeurs }, '2026-09-01', '2026-09-30').colonnes.find((c) => c.cle === '2026-09-15').aDonnee, false, 'sans la méta');
+  const semaines = frise({ humeurs, perso }, '2026-08-03', '2026-10-04');
+  const s = (cle) => semaines.colonnes.find((c) => c.cle === cle);
+  assert.deepEqual([s('2026-08-31').familles, s('2026-08-31').nEmotions], [compte({ joie: 1, colere: 1 }), 2]);
+  assert.deepEqual([s('2026-09-14').familles, s('2026-09-14').nEmotions], [compte({ joie: 1 }), 1]);
+
+  // L'Analyse, avec la méta dans les données : comptes, Ma semaine, classement des mots et frise.
+  const items = seedItems(SEED_V1, 'x');
+  const a = analyze({ journal: [], humeurs, episodes: [], symptomes: [], traitements: [], perso }, { aujourdhui: '2026-09-20', items });
+  assert.equal(a.emotions['30'].n, 4);
+  assert.deepEqual(a.emotions['30'].parFamille, compte({ joie: 2, colere: 1 }));
+  assert.deepEqual(a.semaine.emotions, compte({ joie: 1 }));
+  assert.deepEqual(a.emotions['30'].mots.tries.map(([id, n]) => [id, n]), [[FLOTTANT, 2], ['roue:colere:irrite', 1], [BRUMEUX, 1]]);
+  assert.deepEqual(a.frise['30'].colonnes.find((c) => c.cle === '2026-09-15').emotions, [FLOTTANT]);
+  const sans = analyze({ journal: [], humeurs, episodes: [], symptomes: [], traitements: [] }, { aujourdhui: '2026-09-20', items });
+  assert.equal(sans.emotions['30'].n, 1, 'sans la méta : seul Irrité');
+});

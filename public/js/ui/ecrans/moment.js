@@ -85,12 +85,12 @@ export function Moment() {
   const aujourdhui = repo.aujourdhui();
   const { donnees } = useDonnees(async () => {
     // Le réglage et le plan de la règle : une lecture qui échoue donne leurs valeurs par défaut (règle éteinte) ; les
-    // définitions corrigées, le texte de Carnet.
-    const [items, jour, reglage, plan, corrections] = await Promise.all([
+    // définitions corrigées, le texte de Carnet ; les mots à soi (v9, méta `motsPerso`), aucun.
+    const [items, jour, reglage, plan, corrections, perso] = await Promise.all([
       repo.listes.items(), repo.humeurs.parJour(aujourdhui, aujourdhui), lireRessourcer(), lirePlan().catch(() => normaliserPlan(null)),
-      repo.meta.lire('definitionsRoue').catch(() => null),
+      repo.meta.lire('definitionsRoue').catch(() => null), repo.meta.lire('motsPerso').catch(() => null),
     ]);
-    return { items, carte: carteLibelles(items), jour, reglage, plan, corrections };
+    return { items, carte: carteLibelles(items), jour, reglage, plan, corrections, perso };
   }, [aujourdhui]);
   useEffect(() => () => clearTimeout(fermeture.current.minuteur), []);
 
@@ -199,9 +199,9 @@ export function Moment() {
       ${jour.length > 0 && html`<section class="moments-du-jour" aria-label="Relevés d'aujourd'hui">
         <h3 class="libelle-section">Aujourd'hui</h3>
         <ul class="liste carte carte-groupe">${jour.map((h) => {
-          const zone = zoneDe(h.emotion);
+          const zone = zoneDe(h.emotion, donnees.perso);
           return html`<li class="ligne-releve">
-            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${zone ? `point-releve-moment zone-${zone}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte) || '·'}</span>
+            <span class="heure-moment">${h.vers ? formaterVers(h.heure) : h.heure || '·'}</span> <span class=${zone ? `point-releve-moment zone-${zone}` : 'point-releve-moment point-creux'} aria-hidden="true"></span> <span class="texte-releve">${texteReleve(h, carte, donnees.perso) || '·'}</span>
             <button type="button" class="effacer" aria-label=${`Supprimer le relevé ${h.vers ? formaterVers(h.heure) : `de ${h.heure || 'cette heure'}`}`} onClick=${() => supprimer(h)}>${Icones.fermer()}</button>
           </li>`;
         })}</ul>

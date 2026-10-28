@@ -86,10 +86,11 @@ test('humeur du jour : aucun module d\'analyse ne lit l\'humeur brute', () => {
       continue;
     }
     if (nom === 'frise.js') {
-      // Les relevés n'ont que trois emplois : le paramètre, energieBasseParJour(humeurs) et emotionsParJour(humeurs, …). Le
-      // reste de `humeurs` dans ce fichier, ce sont les humeurs du jour d'une semaine ou d'un mois (g.humeurs, humeurs: []).
+      // Les relevés n'ont que trois emplois : le paramètre, energieBasseParJour(humeurs) et emotionsParJour(humeurs, …) (v9 :
+      // avec les mots à soi, `perso`). Le reste de `humeurs` dans ce fichier, ce sont les humeurs du jour d'une semaine ou
+      // d'un mois (g.humeurs, humeurs: []).
       const emplois = code.match(/(?<![.\w])humeurs\b(?!\s*:)/g) || [];
-      assert.ok(emplois.length === 3 && code.includes('energieBasseParJour(humeurs)') && code.includes('emotionsParJour(humeurs, du, au)'),
+      assert.ok(emplois.length === 3 && code.includes('energieBasseParJour(humeurs)') && /\bemotionsParJour\(humeurs, du, au(, perso)?\)/.test(code),
         `${nom} lit autre chose que l'énergie et les émotions des relevés`);
       continue;
     }

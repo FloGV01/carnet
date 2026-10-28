@@ -6,7 +6,8 @@
 // Les anciennes notes de 1 à 10 n'entrent pas ici (humeur-jour.js). Un relevé se rattache à son jour logique par
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
 // v9 (spec §8) : un mot sans famille (Fatigué, Épuisé ; familleDe rend null) reste un relevé à émotion, mais il n'entre
-// dans aucun compte par famille.
+// dans aucun compte par famille. Chaque fonction qui lit les relevés prend en dernier paramètre facultatif `perso`, la méta
+// `motsPerso` : un mot à soi est alors un relevé à émotion, compté dans sa famille s'il en a une (sans elle, il n'y est pas).
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
 import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
 import { minusculeInitiale } from '../domain/phrase.js';
@@ -33,10 +34,10 @@ const motDe = (id) => (id === `roue:${familleDe(id)}` ? null : id);
 
 // Les relevés qui portent une émotion, dans l'ordre des heures : { date (le jour logique), heure, famille, mot (l'id du mot,
 // ou null pour une famille seule), emotion (l'id noté), vers }. Un relevé sans émotion (ancienne note, énergie seule) n'y est pas.
-export function relevesAEmotion(humeurs) {
-  return (humeurs || []).filter((h) => h && estDateValide(h.date) && estEmotion(h.emotion)).sort(ordreHeure)
+export function relevesAEmotion(humeurs, perso) {
+  return (humeurs || []).filter((h) => h && estDateValide(h.date) && estEmotion(h.emotion, perso)).sort(ordreHeure)
     .map((h) => ({
-      date: jourEvenement(h.date, h.heure), heure: h.heure || null, famille: familleDe(h.emotion), mot: motDe(h.emotion),
+      date: jourEvenement(h.date, h.heure), heure: h.heure || null, famille: familleDe(h.emotion, perso), mot: motDe(h.emotion),
       emotion: h.emotion, vers: Boolean(h.vers),
     }));
 }
@@ -50,9 +51,9 @@ export function parFamille(releves) {
 
 // Map jour logique → les émotions (identifiants) de ses relevés, dans l'ordre des heures. Seuls les jours de [du, au] qui
 // en ont une.
-export function emotionsParJour(humeurs, du, au) {
+export function emotionsParJour(humeurs, du, au, perso) {
   const res = new Map();
-  for (const r of relevesAEmotion(humeurs)) {
+  for (const r of relevesAEmotion(humeurs, perso)) {
     if (r.date < du || r.date > au) continue;
     if (!res.has(r.date)) res.set(r.date, []);
     res.get(r.date).push(r.emotion);
@@ -62,10 +63,10 @@ export function emotionsParJour(humeurs, du, au) {
 
 // Map jour logique → les familles de ses relevés, une par relevé, dans l'ordre des heures. Un mot sans famille n'en
 // donne pas ; un jour qui n'a que des mots sans famille n'y est pas.
-export function famillesParJour(humeurs, du, au) {
+export function famillesParJour(humeurs, du, au, perso) {
   const res = new Map();
-  for (const [date, ids] of emotionsParJour(humeurs, du, au)) {
-    const familles = ids.map((id) => familleDe(id)).filter(Boolean);
+  for (const [date, ids] of emotionsParJour(humeurs, du, au, perso)) {
+    const familles = ids.map((id) => familleDe(id, perso)).filter(Boolean);
     if (familles.length) res.set(date, familles);
   }
   return res;
@@ -107,8 +108,8 @@ export function famillesParColonnes(jours, periode, { cle }, items = []) {
 // Après une nuit Mal · Moyen · Bien (spec §5) : la nuit notée le jour D (celle qui précède D) et les émotions du jour D.
 // Pour chaque qualité : le nombre de relevés de chaque famille, et `jours`, le nombre de jours comptés.
 const NUITS = new Map([['sommeil:mal', 'mal'], ['sommeil:moyen', 'moyen'], ['sommeil:bien', 'bien']]);
-export function apresNuit(journal, humeurs, periode) {
-  const parJour = famillesParJour(humeurs, periode.du, periode.au);
+export function apresNuit(journal, humeurs, periode, perso) {
+  const parJour = famillesParJour(humeurs, periode.du, periode.au, perso);
   const res = { mal: comptesVides(), moyen: comptesVides(), bien: comptesVides() };
   const jours = { mal: 0, moyen: 0, bien: 0 };
   let n = 0;
@@ -139,7 +140,7 @@ function minutesParDate() {
 // ronde. Un relevé compte au plus une fois de chaque côté, même près de deux instants. Un instant ou un relevé sans heure
 // n'est pas placé. v8 (Q26) : les instants sont triés, et chaque relevé ne cherche que l'instant voisin (recherche
 // dichotomique) : sur des années de séances et de relevés, le calcul ne croît plus comme leur produit.
-export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = S.heuresAutour } = {}) {
+export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = S.heuresAutour } = {}, perso) {
   const minutes = minutesParDate();
   const temps = (instants || []).filter((i) => i && estDateValide(i.date) && estHeureValide(i.heure)).map((i) => minutes(i.date, i.heure));
   const tries = Float64Array.from(temps).sort();
@@ -153,8 +154,8 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
   const apres = comptesVides();
   let n = 0;
   for (const h of humeurs || []) {
-    if (!h || !estDateValide(h.date) || !estHeureValide(h.heure) || !estEmotion(h.emotion)) continue;
-    const f = familleDe(h.emotion);
+    if (!h || !estDateValide(h.date) || !estHeureValide(h.heure) || !estEmotion(h.emotion, perso)) continue;
+    const f = familleDe(h.emotion, perso);
     if (!f) continue;
     const m = minutes(h.date, h.heure);
     const k = premierApres(m);
@@ -168,10 +169,10 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
 
 // Autour du Bien-être (spec §6.4) : autourDe sur les séances lancées depuis l'onglet Bien-être (origine `bien-etre`) dont le
 // jour logique est dans la période ; les respirations de Moment difficile et de « Pour récupérer » n'y entrent pas.
-export function autourDuBienEtre(seances, humeurs, periode) {
+export function autourDuBienEtre(seances, humeurs, periode, perso) {
   const instants = (seances || []).filter((x) => x && x.origine === 'bien-etre' && estDateValide(x.date) && estHeureValide(x.heure)
     && (() => { const j = jourEvenement(x.date, x.heure); return j >= periode.du && j <= periode.au; })());
-  return autourDe(instants, humeurs);
+  return autourDe(instants, humeurs, {}, perso);
 }
 
 // ---------- Émotions selon ce que je faisais (v8, Q18) ----------
@@ -179,11 +180,11 @@ export function autourDuBienEtre(seances, humeurs, periode) {
 // Les relevés de la période qui portent une émotion d'une famille et au moins une activité de « Ce que je faisais » :
 // { date (le jour logique), famille, faisais (sans doublon) }. Leur nombre fait le seuil commun des vues d'émotions
 // (5 relevés) : un mot sans famille, qui ne compte pas dans emotionsParActivite, n'y compte pas non plus.
-export function relevesAvecActivite(humeurs, periode) {
+export function relevesAvecActivite(humeurs, periode, perso) {
   const res = [];
   for (const h of humeurs || []) {
-    if (!h || !estDateValide(h.date) || !estEmotion(h.emotion) || !Array.isArray(h.faisais) || !h.faisais.length) continue;
-    const famille = familleDe(h.emotion);
+    if (!h || !estDateValide(h.date) || !estEmotion(h.emotion, perso) || !Array.isArray(h.faisais) || !h.faisais.length) continue;
+    const famille = familleDe(h.emotion, perso);
     if (!famille) continue;
     const date = jourEvenement(h.date, h.heure);
     if (date < periode.du || date > periode.au) continue;
@@ -196,9 +197,9 @@ export function relevesAvecActivite(humeurs, periode) {
 // les activités dans l'ordre de leur liste (`items`, Réglages › Listes), celles qui n'ont aucun relevé absentes. Comme
 // l'énergie selon ce que je faisais (comprendre.js), un relevé de deux activités compte pour chacune ; « vers » compris.
 // Des comptes de relevés, jamais une part.
-export function emotionsParActivite(humeurs, periode, items = []) {
+export function emotionsParActivite(humeurs, periode, items = [], perso) {
   const par = new Map();
-  for (const r of relevesAvecActivite(humeurs, periode)) {
+  for (const r of relevesAvecActivite(humeurs, periode, perso)) {
     for (const id of r.faisais) {
       if (!par.has(id)) par.set(id, comptesVides());
       par.get(id)[r.famille] += 1;

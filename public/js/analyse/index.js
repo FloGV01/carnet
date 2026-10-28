@@ -39,7 +39,9 @@ export function analyze(data, ctx) {
   const regle = { zeroDepuis, jourNote: saisieDuSoir(data.journal) };
   const brut = { ...data, journal };
   const d = { ...data, journal: journalAvecExplosions(journal, episodes, regle).filter((j) => j.date <= aujourdhui) };
-  const releves = relevesAEmotion(data.humeurs || []).filter((r) => r.date <= aujourdhui);
+  // perso (v9) : la méta `motsPerso` ; un relevé de mot à soi est une émotion, comptée dans sa famille s'il en a une. Elle
+  // passe aussi à la frise, par `d`.
+  const releves = relevesAEmotion(data.humeurs || [], data.perso).filter((r) => r.date <= aujourdhui);
   // « Tout » part du premier jour noté, toutes sources, émotions du moment comprises (v7 : un relevé à émotion n'a pas
   // d'humeur du jour, il n'est pas dans le journal).
   // Les séances de Bien-être aussi (v7), à leur jour logique : leur rangée de Mes jours remonte jusqu'à la première.

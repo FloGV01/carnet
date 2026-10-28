@@ -71,7 +71,9 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   // l'humeur du soir. Un jour qui n'a que des relevés compte, mais jamais pour « 0 explosion ».
   const journal = avecHumeurDuJour(data.journal, data.humeurs || []);
   // Les relevés à émotion (v7) : rattachés à leur jour logique ; un jour qui n'a qu'eux date aussi le début des données.
-  const releves = relevesAEmotion(data.humeurs || []).filter((r) => r.date <= aujourdhui);
+  // data.perso (v9) : la méta `motsPerso`, pour qu'un relevé de mot à soi compte dans sa famille.
+  const perso = data.perso || null;
+  const releves = relevesAEmotion(data.humeurs || [], perso).filter((r) => r.date <= aujourdhui);
   const emotionsEntre = (du, au) => parFamille(releves.filter((r) => r.date >= du && r.date <= au));
   const premier = premiereDate({ ...data, journal: [...journal, ...releves.map((r) => ({ date: r.date }))] }, aujourdhui);
   data = { ...data, journal: journalAvecExplosions(journal, data.episodes || [], { zeroDepuis, jourNote: saisieDuSoir(data.journal) }) };
@@ -104,8 +106,8 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   }
   // Les relevés n'y entrent que par leur émotion (v7) : l'énergie basse (v6) est à l'écran seulement, elle ne touche ni
   // les colonnes ni aDonnee.
-  const emotionsSeules = (data.humeurs || []).filter((h) => h && estEmotion(h.emotion)).map(({ date, heure, emotion, vers }) => ({ date, heure, emotion, vers }));
-  const f = frise({ journal: data.journal, episodes: data.episodes, humeurs: emotionsSeules }, duFrise, aujourdhui);
+  const emotionsSeules = (data.humeurs || []).filter((h) => h && estEmotion(h.emotion, perso)).map(({ date, heure, emotion, vers }) => ({ date, heure, emotion, vers }));
+  const f = frise({ journal: data.journal, episodes: data.episodes, humeurs: emotionsSeules, perso }, duFrise, aujourdhui);
   // Les familles notées sur la frise, dans l'ordre de la roue : la légende de ses barres empilées.
   const famillesFrise = FAMILLES.filter((x) => f.colonnes.some((c) => c.familles && c.familles[x.cle] > 0)).map((x) => ({ cle: x.cle, libelle: x.libelle }));
 

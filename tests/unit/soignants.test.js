@@ -137,8 +137,8 @@ test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements
 // ---------- v6 : humeur du jour ----------
 
 const releve = (date, heure, humeur) => ({ id: `${date}-${heure}`, date, heure, humeur, energie: null });
-function casV6({ journal = [], humeurs = [], zeroDepuis = '2026-01-01' }) {
-  const data = { journal, episodes: [], symptomes: [], traitements: [], humeurs };
+function casV6({ journal = [], humeurs = [], zeroDepuis = '2026-01-01', perso }) {
+  const data = { journal, episodes: [], symptomes: [], traitements: [], humeurs, ...(perso ? { perso } : {}) };
   const aujourdhui = '2026-10-14';
   const analyse = analyze(data, { aujourdhui, items, zeroDepuis });
   return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: null, prenom: '', zeroDepuis });
@@ -276,6 +276,25 @@ test('v7 : « Émotions par famille » en tête des indicateurs, un compte de re
   assert.match(m.entete, /données depuis le 20\/08\/2026/, 'un jour qui n\'a qu\'un relevé à émotion date le début');
   // Sans relevé à émotion : « · ».
   assert.deepEqual(casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] }).indicateurs[0].valeurs, ['·', '·', '·']);
+});
+
+// v9 · relecture de la tâche 3 : avec la méta motsPerso, un relevé de mot à soi compte dans sa famille (Flottant, joie),
+// dans les indicateurs comme dans la frise ; sans famille (Brumeux), dans aucune. Mots inventés.
+test('v9 : un mot à soi compte dans sa famille, dans « Émotions par famille » et dans la frise ; sans famille, nulle part', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+  const perso = {
+    [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-08-01T08:00:00.000Z' },
+    [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: false, createdAt: '2026-08-02T08:00:00.000Z' },
+  };
+  const humeurs = [emo('2026-10-13', '09:00', FLOTTANT), emo('2026-10-13', '10:00', 'roue:colere:irrite'), emo('2026-10-14', '09:00', BRUMEUX)];
+  const m = casV6({ humeurs, perso });
+  assert.deepEqual(m.indicateurs[0].valeurs, ['colère 1 · joie 1', 'colère 1 · joie 1', 'colère 1 · joie 1']);
+  const semaine = m.frise.colonnes.find((c) => c.cle === '2026-10-12');
+  assert.deepEqual([semaine.familles.joie, semaine.familles.colere, semaine.nEmotions], [1, 1, 2]);
+  assert.deepEqual(m.frise.familles.map((f) => f.cle), ['colere', 'joie']);
+  // Sans la méta, comme avant : seul Irrité.
+  assert.deepEqual(casV6({ humeurs }).indicateurs[0].valeurs, ['colère 1', 'colère 1', 'colère 1']);
 });
 
 test('v7 : « Humeur (notes) » seulement si une colonne a d\'anciennes notes ; « Journées à 7 ou plus » est retirée', () => {
