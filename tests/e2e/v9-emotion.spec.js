@@ -3,6 +3,7 @@ import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.j
 import { contraste } from '../aides/couleurs.js';
 import { vueMoment, bulles, bulle, carte, mot, retour, fermer, continuer, carteDuBas, noter, NOMS_BULLES, NOTEE } from '../aides/emotion.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
+import { energieDe } from '../../public/js/domain/carte-roue.js';
 
 // v9 (4/8) · L'émotion comme How We Feel, en plein écran (spec §4.1, §4.2, §5 et §7 ; visuel-hwf.md §1, §2 et §4) :
 // l'écran 1 (quatre bulles, « Maintenant ▾ ») et l'écran 2 (la carte de 144 mots, la carte du bas, la flèche). Toucher
@@ -240,6 +241,42 @@ test('la carte s\'ouvre sur le milieu de la zone touchée, ses 144 mots, et le f
   }
 });
 
+// Relecture de la tâche 4 : le balayage de VoiceOver et le clavier suivent l'ordre du DOM. ← est en haut à gauche de
+// l'écran 2 : il vient avant les 144 mots, comme ✕ avant le titre à l'écran 1, et reste au-dessus des bulles.
+test('l\'ordre de lecture suit l\'écran : ✕ d\'abord à l\'écran 1 ; à l\'écran 2, ← avant les mots, la flèche après, et ← au-dessus des bulles qui passent dessous', async ({ page }) => {
+  const vue = await ouvrir(page);
+  const boutons = () => vue.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label') || b.textContent));
+  expect((await boutons())[0]).toBe('Fermer');
+  await bulle(vue, 'rouge').click();
+  await expect(carte(vue).getByRole('button')).toHaveCount(144);
+  let noms = await boutons();
+  expect([noms[0], noms.length]).toEqual(['Revenir au choix de la couleur', 145]);
+  await mot(vue, 'Anxieux').click();
+  await expect(continuer(vue)).toBeVisible();
+  noms = await boutons();
+  expect([noms[0], noms.at(-1), noms.length]).toEqual(['Revenir au choix de la couleur', 'Continuer', 146]);
+  // La carte glissée pour qu'une bulle passe sous ← : c'est ← qu'on touche, et l'écran 1 revient, le mot gardé.
+  await finGarde(carte(vue));
+  const dessous = await page.evaluate(() => {
+    const v = document.querySelector('.ecran-carte .verre').getBoundingClientRect();
+    const [x, y] = [v.left + v.width / 2, v.top + v.height / 2];
+    let proche = null;
+    for (const b of document.querySelectorAll('.bulle-mot:not(.choisi)')) {
+      const r = b.getBoundingClientRect();
+      const d = Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
+      if (!proche || d < proche.d) proche = { d, dx: r.left + r.width / 2 - x, dy: r.top + r.height / 2 - y };
+    }
+    document.querySelector('.carte-defile').scrollBy(proche.dx, proche.dy);
+    const pile = document.elementsFromPoint(x, y);
+    return { premier: Boolean(pile[0].closest('.verre')), bulle: pile.some((e) => e.closest('.bulle-mot')), x, y };
+  });
+  expect([dessous.premier, dessous.bulle]).toEqual([true, true]);
+  await page.touchscreen.tap(dessous.x, dessous.y);
+  await expect(carte(vue)).toHaveCount(0);
+  await expect(bulle(vue, 'rouge')).toBeVisible();
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:peur:anxieux' }]);
+});
+
 test('le mot choisi : la double capsule de 156 au milieu de l\'écran, ses voisines à 120 puis 108, les autres à 96 ; en New York grasse, corps = diamètre / 8', async ({ page }) => {
   for (const mouvement of ['reduce', 'no-preference']) {
     await page.emulateMedia({ reducedMotion: mouvement });
@@ -453,6 +490,49 @@ test('point de vigilance 5 : deux touchers rapides, sur une bulle puis au même 
       await fermer(vue).click();
       await expect(page).toHaveURL(/#\/aujourdhui$/);
     }
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+});
+
+// Relecture de la tâche 4 : la garde vaut aussi après un mot choisi. La carte bouge alors sous le doigt (elle glisse
+// jusqu'au mot, ses voisines grandissent ; d'un coup avec « Réduire les animations ») : un second toucher rapide au même
+// endroit, pour vérifier que le premier a été pris (l'iPhone ne vibre pas), tomberait sur un autre mot, qui remplacerait
+// le premier. Anxieux (col 3, rang 10) est près du milieu de la zone rouge, pas au milieu : choisi, il y vient.
+test('deux touchers rapides au même endroit sur un mot loin du milieu : le premier mot reste choisi, le relevé porte ce mot et son énergie (avec ou sans « Réduire les animations »)', async ({ page }) => {
+  test.setTimeout(60000);
+  const anxieux = 'roue:peur:anxieux';
+  for (const mouvement of ['no-preference', 'reduce']) {
+    await page.emulateMedia({ reducedMotion: mouvement });
+    const vue = await ouvrir(page);
+    await bulle(vue, 'rouge').click();
+    await finGarde(carte(vue));
+    const b = await mot(vue, 'Anxieux').boundingBox();
+    const point = [b.x + b.width / 2, b.y + b.height / 2];
+    expect(Math.hypot(point[0] - 195, point[1] - 422), mouvement).toBeGreaterThan(40);
+    await toucherDeuxFois(page, point, point);
+    await page.clock.runFor(400);
+    await page.clock.resume();
+    await expect(carte(vue).getByRole('button', { pressed: true }), mouvement).toHaveText(['Anxieux']);
+    await expect.poll(releves(page), { message: mouvement }).toMatchObject([{ emotion: anxieux, energie: energieDe(anxieux) }]);
+    await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Anxieux');
+    // La carte posée (Anxieux au milieu), un autre mot est sous le doigt ; la garde passée, le même toucher le prend :
+    // c'est bien la garde qui a joué. Retouché, ce mot s'efface, et le relevé avec.
+    await expect.poll(async () => {
+      const c = await mot(vue, 'Anxieux').boundingBox();
+      return Math.abs(c.x + c.width / 2 - 195) <= 1 && Math.abs(c.y + c.height / 2 - 422) <= 1;
+    }, { message: mouvement }).toBe(true);
+    await finMouvements(page);
+    const sous = await page.evaluate(([x, y]) => document.elementFromPoint(x, y).closest('.bulle-mot').textContent, point);
+    expect(sous, mouvement).not.toBe('Anxieux');
+    await finGarde(carte(vue));
+    await page.touchscreen.tap(...point);
+    await expect(mot(vue, sous), mouvement).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([anxieux]);
+    await mot(vue, sous).click();
+    await expect.poll(async () => (await releves(page)()).length, { message: mouvement }).toBe(0);
+    await retour(vue).click();
+    await fermer(vue).click();
+    await expect(page).toHaveURL(/#\/aujourdhui$/);
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });

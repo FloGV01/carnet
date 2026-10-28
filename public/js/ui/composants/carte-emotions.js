@@ -6,7 +6,7 @@
 //   ui/carte-geometrie.js) et la carte glisse jusqu'à lui, au milieu de l'écran. Les bulles changent de place et de
 //   taille en 450 ms ; avec « Réduire les animations », tout est immédiat (base.css), recentrage compris.
 // - Toucher un mot appelle `surMot(id)`, qui écrit (le mot, ou rien s'il était déjà choisi). Pendant la garde (`enGarde`,
-//   350 ms après un changement de vue), la carte ignore les touchers et est aria-disabled.
+//   350 ms après un changement de vue ou un mot choisi), la carte ignore les touchers et est aria-disabled.
 // Le plan a la taille de toutes les dispositions possibles, plus une demi-fenêtre de chaque côté : n'importe quel mot,
 // même au bord, peut venir au centre. Les bulles y sont posées par CSSOM (transform, --c), sans attribut style.
 // Pour VoiceOver, chaque zone est un groupe nommé (« Énergie haute · désagréable »), ses mots dans l'ordre de lecture de

@@ -138,10 +138,11 @@ test('v6 : ce que je faisais, références activiteMoment', () => {
   assert.ok(normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', faisais: ['pese:bruit'] }).erreurs.length > 0);
 });
 
-test('v6 : vers est du contexte, seul il ne garde pas un relevé ; v7 : des activités le gardent (spec §4.3)', () => {
+test('v6 : vers ; v7 : des activités gardent le relevé (spec §4.3) ; v9 : « vers » seul aussi (spec v9 §13.5)', () => {
   const rel = (extra) => normaliser('humeurs', { id: 'h1', date: '2026-10-15', heure: '14:00', ...extra }).valeur;
   assert.equal(rel({ vers: true }).vers, true, 'le champ existe');
-  assert.equal(estVide('humeurs', rel({ vers: true })), true, 'un relevé « vers » seul est vide');
+  assert.equal(estVide('humeurs', rel({ vers: true })), false, 'v9 : un relevé « vers » seul reste (v6 à v8 : il était vide)');
+  assert.equal(estVide('humeurs', rel({ vers: null })), true);
   assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), false, 'v7 : des activités seules gardent le relevé');
   assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:repos'] })), false);
   assert.equal(estVide('humeurs', rel({ vers: true, humeur: 4 })), false);
@@ -228,9 +229,10 @@ test('v7 : un relevé avec seulement une émotion est valide et n\'est pas vide 
   assert.equal(estVide('humeurs', rel({ emotion: 'roue:colere', vers: true })), false);
   assert.equal(estVide('humeurs', rel({ faisais: ['activiteMoment:repos'] })), false, 'des activités seules gardent le relevé');
   assert.equal(estVide('humeurs', rel({ vers: true, faisais: ['activiteMoment:travail'] })), false);
-  assert.equal(estVide('humeurs', rel({ vers: true })), true, '« vers » seul reste du contexte');
+  assert.equal(estVide('humeurs', rel({ vers: true })), false, 'v9 : « vers » seul garde le relevé (spec v9 §13.5)');
   assert.equal(estVide('humeurs', rel({})), true);
-  assert.equal(estVide('humeurs', rel({ emotion: null, humeur: null, energie: null, faisais: null, vers: true })), true);
+  assert.equal(estVide('humeurs', rel({ emotion: null, humeur: null, energie: null, faisais: null, vers: true })), false);
+  assert.equal(estVide('humeurs', rel({ emotion: null, humeur: null, energie: null, faisais: null, vers: null })), true);
   assert.equal(estVide('humeurs', rel({ humeur: 6 })), false, 'un ancien relevé chiffré reste un relevé');
   assert.equal(estVide('humeurs', { id: 'h1', date: '2026-10-20', heure: '14:00', humeur: null, energie: null }), true, 'champ absent d\'un ancien relevé');
 });

@@ -25,6 +25,10 @@ test('texteReleve : sans émotion, note ni énergie, ce que je faisais ; un rele
   assert.equal(texteReleve({ faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }, carte), 'ce que je faisais : travail, trajet');
   assert.equal(texteReleve({ date: '2026-10-15', heure: '17:00' }, carte), '');
   assert.equal(texteReleve({ emotion: 'roue:inconnue', faisais: [] }, carte), '');
+  // v9 (spec §13.5) : le mot effacé, un relevé « vers » reste ; il a sa ligne dans Ma journée.
+  assert.equal(texteReleve({ date: '2026-10-15', heure: '14:00', vers: true, emotion: null, energie: null, faisais: null }, carte), 'Aucun mot');
+  assert.equal(texteReleve({ vers: true, faisais: ['activiteMoment:travail'] }, carte), 'ce que je faisais : travail');
+  assert.equal(texteReleve({ vers: true, energie: 'energie:basse' }, carte), 'énergie basse');
 });
 
 // v9 · Tâche 3 : un point par zone présente, sans doublon, dans l'ordre rouge, jaune, bleu, vert (et non celui de la

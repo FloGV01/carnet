@@ -80,7 +80,8 @@ export const SCHEMAS = {
   // vers (v6) : relevé noté après coup, pour une heure passée. faisais : ce que je faisais.
   // emotion (v7) : une famille ou un mot de la roue, à la place de la note ; humeur reste pour les
   // anciens relevés et vaut null dans les nouveaux. Vide quand emotion, humeur, energie et faisais le
-  // sont tous (spec v7 §4.3) : « vers » seul ne garde pas un relevé, des activités le gardent.
+  // sont tous (spec v7 §4.3), et, depuis la v9, vers aussi (spec v9 §13.5 : le mot effacé, le relevé
+  // reste s'il a encore « Ce que je faisais » ou une heure « vers »).
   humeurs: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
     saisis: { emotion: T.roue, humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
@@ -269,8 +270,9 @@ export function valider(store, brut, options) {
 }
 
 // Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
-// v7 : « Ce que je faisais » n'en est plus un (spec §4.3), seul « vers » le reste pour les relevés.
-const CONTEXTE = { episodes: ['heure'], humeurs: ['vers'] };
+// v7 : « Ce que je faisais » n'en est plus un (spec §4.3). v9 : « vers » non plus (spec §13.5), un relevé
+// n'en a plus aucun.
+const CONTEXTE = { episodes: ['heure'] };
 
 export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];

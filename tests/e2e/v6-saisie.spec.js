@@ -153,7 +153,7 @@ test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, el
   await expect(ligneDuJour(page, 'Vide')).toContainText('vers 14 h');
 });
 
-test('C\'était vers… : le relevé déjà créé change d\'heure, revient à « maintenant », et se vide en disparaissant', async ({ page }) => {
+test('C\'était vers… : le relevé déjà créé change d\'heure et revient à « maintenant » ; le mot effacé, une heure « vers » le garde (v9, spec §13.5), « Maintenant » ensuite le supprime', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
   await noter(vue, 'jaune', 'Curieux');
@@ -174,17 +174,35 @@ test('C\'était vers… : le relevé déjà créé change d\'heure, revient à �
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '21:00', vers: null, energie: 'energie:haute' }]);
   await expect(boutonQuand(vue)).toHaveText('Maintenant');
 
-  // Retirer la seule valeur d'un relevé « vers » (le mot, et son énergie avec lui) le supprime.
+  // v9 (spec §13.5) : effacer le mot d'un relevé « vers » (et son énergie avec lui) le garde, à son heure : il reste
+  // l'heure « vers ». Un nouveau mot y revient. (De la v6 à la v8, « vers » seul ne gardait pas le relevé.)
   await heure(vue, '12 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, heure: '12:00', vers: true }]);
   await bulle(vue, 'jaune').click();
   await mot(vue, 'Curieux').click();
-  await expect.poll(async () => (await releves(page)()).length).toBe(0);
-  // L'heure choisie reste à l'écran : un nouveau mot recrée un relevé « vers 12 h ».
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '12:00', vers: true, emotion: null, energie: null, humeur: null, faisais: null }]);
   await retour(vue).click();
   await expect(vue.getByRole('button', { name: 'C\'était vers 12 h' })).toBeVisible();
   await noter(vue, 'rouge', 'Préoccupé');
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '12:00', vers: true, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne' }]);
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '12:00', vers: true, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne' }]);
+  // Effacé de nouveau, puis « Maintenant » : il ne reste rien, le relevé part. L'heure ne se garde plus qu'à l'écran.
+  await mot(vue, 'Préoccupé').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, heure: '12:00', vers: true, emotion: null, energie: null }]);
+  await retour(vue).click();
+  await heure(vue, 'Maintenant').click();
+  await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  // « Vers 12 h », un mot effacé, et fermer : le relevé est noté, « Aucun mot » dans Ma journée, à son heure.
+  await heure(vue, '12 h').click();
+  await noter(vue, 'vert', 'Calme');
+  await expect.poll(releves(page)).toMatchObject([{ heure: '12:00', vers: true, emotion: 'roue:serenite:calme' }]);
+  await mot(vue, 'Calme').click();
+  await expect.poll(releves(page)).toMatchObject([{ heure: '12:00', vers: true, emotion: null, energie: null }]);
+  await retour(vue).click();
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+  await expect(ligneDuJour(page, 'Aucun mot')).toHaveCount(1);
+  await expect(ligneDuJour(page, 'Aucun mot')).toContainText('vers 12 h');
 });
 
 test('C\'était vers… après minuit : « vers 22 h » et « vers 0 h » restent au jour logique d\'hier', async ({ page }) => {

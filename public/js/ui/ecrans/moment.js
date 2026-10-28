@@ -6,13 +6,14 @@
 // - Écran 2 : la carte (ui/composants/carte-emotions.js), ← vers l'écran 1. Toucher un mot écrit le relevé tout de suite
 //   (le mot, et l'énergie de sa case, energieDe) et montre la carte du bas (ui/composants/carte-du-bas.js) : le mot, sa
 //   définition, et la flèche « Continuer ». Un autre mot le remplace, énergie comprise. Retoucher le mot choisi l'efface,
-//   énergie comprise, et le relevé part s'il ne reste rien.
+//   énergie comprise, et le relevé part s'il ne reste rien : une heure « vers » le garde (spec §13.5).
 // - La flèche ferme l'écran, comme ✕ : « Émotion du moment notée » (avec Annuler) s'il y a un relevé. L'écran 3, « Ce que
 //   je faisais », arrive à la tâche 5 du plan v9 ; il n'y a plus de fermeture automatique, ni d'appui long.
 // Le relevé est créé au premier mot (date et heure réelles, ou l'heure de « C'était vers… »), puis modifié : revenir à
 // l'écran 1 ou fermer le garde. Chaque ouverture de l'écran part d'un relevé neuf, la liste des heures repliée.
-// Après chaque changement de vue, une garde de 350 ms : les boutons de la nouvelle vue ignorent les touchers (un second
-// toucher rapide tomberait sur un mot jamais vu, point de vigilance 5) et sont aria-disabled.
+// Après chaque changement de vue, et après chaque mot choisi, une garde de 350 ms : les boutons de l'écran ignorent les
+// touchers et sont aria-disabled. Un second toucher rapide tomberait sur un mot jamais vu (point de vigilance 5) ou, la
+// carte glissant jusqu'au mot choisi, sur un autre mot que celui qu'on vient de toucher, qui le remplacerait.
 import { html, useEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { useDonnees, useIndicateur, ecrireAvecEssais } from '../hooks.js';
@@ -98,10 +99,13 @@ export function Moment() {
     if (vue.nom === 'bulles' && titre.current) titre.current.focus({ preventScroll: true });
   }, [vue]);
 
-  const changerDeVue = (suivante) => {
+  const poserGarde = () => {
     clearTimeout(garde.current);
     setEnGarde(true);
     garde.current = setTimeout(() => setEnGarde(false), GARDE_MS);
+  };
+  const changerDeVue = (suivante) => {
+    poserGarde();
     aFocaliser.current = true;
     setVue(suivante);
   };
@@ -133,9 +137,11 @@ export function Moment() {
     }).catch(() => {});
     return file.current;
   };
-  // Un mot : il est écrit avec l'énergie de sa case (spec §7). Le mot déjà choisi : il s'efface, et son énergie avec.
+  // Un mot : il est écrit avec l'énergie de sa case (spec §7), et la garde se pose, la carte glissant jusqu'à lui. Le mot
+  // déjà choisi : il s'efface, et son énergie avec ; rien ne bouge sous le doigt, pas de garde.
   const choisirMot = (id) => {
     const efface = releve.emotion === id;
+    if (!efface) poserGarde();
     const champs = efface ? { emotion: null, energie: null } : { emotion: id, energie: energieDe(id, perso) };
     const suivant = { ...releve, ...champs };
     setReleve(suivant);
@@ -171,11 +177,13 @@ export function Moment() {
     </div>`;
   } else {
     const choisi = releve.emotion && mots.find((m) => m.id === releve.emotion);
+    // ← vient avant la carte, comme à l'écran : VoiceOver et le clavier l'atteignent avant les 144 mots. Il reste
+    // au-dessus des bulles par son z-index (.verre).
     ecran = html`<div class="ecran-carte" key="carte">
-      ${donnees && html`<${CarteEmotions} mots=${mots} choisi=${releve.emotion} centre=${vue.zone} enGarde=${enGarde} surMot=${choisirMot} />`}
-      <div class="carte-fondu" aria-hidden="true"></div>
       <button type="button" class="verre gauche" aria-label="Revenir au choix de la couleur" aria-disabled=${enGarde ? 'true' : null}
         onClick=${() => { if (!enGarde) changerDeVue({ nom: 'bulles', zone: null }); }}>${RETOUR}</button>
+      ${donnees && html`<${CarteEmotions} mots=${mots} choisi=${releve.emotion} centre=${vue.zone} enGarde=${enGarde} surMot=${choisirMot} />`}
+      <div class="carte-fondu" aria-hidden="true"></div>
       <${CarteDuBas} mot=${choisi || null} definition=${choisi ? definition(choisi.id, donnees && donnees.corrections, perso) : null}
         enGarde=${enGarde} surContinuer=${terminer} />
     </div>`;

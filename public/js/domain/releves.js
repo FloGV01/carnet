@@ -10,13 +10,15 @@ import { minusculeInitiale } from './phrase.js';
 const enMinuscules = (ids, carte) => (ids || []).map((id) => minusculeInitiale(libelle(carte, id))).join(', ');
 
 // « Irrité · énergie moyenne » ; une famille seule, « Colère » ; un ancien relevé garde sa note, « humeur 6 · énergie
-// basse ». Sans émotion, note ni énergie : « ce que je faisais : travail, trajet ». Un relevé vide : '' (pas de ligne).
+// basse ». Sans émotion, note ni énergie : « ce que je faisais : travail, trajet ». Un relevé qui n'a plus que son heure
+// « vers », son mot effacé (v9, spec §13.5 : il reste) : « Aucun mot ». Un relevé vide : '' (pas de ligne).
 export function texteReleve(h, carte, perso) {
   const texte = [libelleEmotion(h.emotion, perso), h.humeur != null && `humeur ${h.humeur}`,
     h.energie && `énergie ${minusculeInitiale(libelle(carte, h.energie))}`].filter(Boolean).join(' · ');
   if (texte) return texte;
   const faisais = enMinuscules(h.faisais, carte);
-  return faisais ? `ce que je faisais : ${faisais}` : '';
+  if (faisais) return `ce que je faisais : ${faisais}`;
+  return h.vers && h.emotion == null ? 'Aucun mot' : '';
 }
 
 const ordreHeure = (a, b) => `${a.date} ${a.heure || ''}`.localeCompare(`${b.date} ${b.heure || ''}`);
