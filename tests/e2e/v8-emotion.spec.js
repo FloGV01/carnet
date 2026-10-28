@@ -3,7 +3,7 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { vueMoment, tuiles, tuile, carte, mot, retourEnergie, touteLaCarte, definition, NOTEE } from '../aides/emotion.js';
-import { FAMILLES } from '../../public/js/domain/roue.js';
+import { FAMILLES, MOTS_SANS_FAMILLE } from '../../public/js/domain/roue.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
 import { ENERGIES, COTES, EXEMPLES, cleZone, motsDeZone } from '../../public/js/domain/carte-roue.js';
 
@@ -569,9 +569,12 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await page.getByRole('link', { name: 'Émotions', exact: true }).click();
   await expect(page).toHaveURL(/#\/reglages\/emotions$/);
   await expect(page.getByRole('heading', { name: 'Émotions', level: 1 })).toBeVisible();
-  // Sept familles, dans l'ordre de la roue ; sous chacune, ses mots et le texte de Carnet.
-  await expect(page.locator('main h2')).toHaveText(FAMILLES.map((f) => f.libelle));
-  for (const f of FAMILLES) {
+  // Sept familles, dans l'ordre de la roue, puis « Sans famille » (v9 : Fatigué, Épuisé) ; sous chacune, ses mots et le
+  // texte de Carnet.
+  await expect(page.locator('main h2')).toHaveText([...FAMILLES.map((f) => f.libelle), 'Sans famille']);
+  // Le point de « Sans famille » est creux : aucune couleur de famille.
+  await expect(page.getByRole('region', { name: 'Sans famille', exact: true }).locator('.point-famille')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  for (const f of [...FAMILLES, { libelle: 'Sans famille', mots: MOTS_SANS_FAMILLE }]) {
     const section = page.getByRole('region', { name: f.libelle, exact: true });
     await expect(section.locator('.mot-definitions')).toHaveText(f.mots.map((m) => m.libelle));
     await expect(section.locator('.texte-definitions')).toHaveText(f.mots.map((m) => DEFINITIONS[m.id]));
@@ -636,6 +639,22 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await page.clock.runFor(700);
   expect(await lireCorrections(page)).toEqual({});
+  // v9 : un mot sans famille se corrige comme les autres, puis revient au texte de Carnet.
+  const sansFamille = page.getByRole('region', { name: 'Sans famille', exact: true });
+  await sansFamille.getByRole('button', { name: `Fatigué ${DEFINITIONS['roue:aucune:fatigue']}` }).click();
+  const fatigue = page.getByRole('textbox', { name: 'Fatigué', exact: true });
+  await expect(fatigue).toBeFocused();
+  await fatigue.fill('Lourd, envie de poser la tête.');
+  await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
+  await expect.poll(() => lireCorrections(page)).toEqual({ 'roue:aucune:fatigue': 'Lourd, envie de poser la tête.' });
+  await sansFamille.getByRole('button', { name: 'Revenir au texte de Carnet' }).click();
+  await expect.poll(() => lireCorrections(page)).toEqual({});
+  await expect(page.getByRole('textbox', { name: 'Fatigué', exact: true })).toHaveValue(DEFINITIONS['roue:aucune:fatigue']);
+  // Épuisé ouvert, Fatigué se referme sur le texte de Carnet.
+  await sansFamille.getByRole('button', { name: `Épuisé ${DEFINITIONS['roue:aucune:epuise']}` }).click();
+  await expect(page.getByRole('textbox', { name: 'Épuisé', exact: true })).toBeFocused();
+  await expect(sansFamille.getByRole('button', { name: `Fatigué ${DEFINITIONS['roue:aucune:fatigue']}` })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Retour' }).click();
   await expect(page).toHaveURL(/#\/reglages$/);
 });

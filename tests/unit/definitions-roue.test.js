@@ -88,8 +88,10 @@ test('v9 : six textes de Carnet changent, sans le mot d\'une autre bulle ; les 7
     assert.equal(v8, TEXTES_V8[id], id);
     assert.equal(DEFINITIONS[id], v9, id);
   }
-  // Tranquille laisse à Insouciant le sens de « sans souci ».
-  assert.doesNotMatch(normaliser(DEFINITIONS['roue:serenite:tranquille']), /souci/);
+  // Tranquille laisse à Insouciant le sens de « sans souci » et garde le « rien ne presse » de la v8 : ce qu'on vit, pas
+  // le décor (relecture de la tâche 1 ; le texte « sans bruit ni dérangement » décrivait les alentours).
+  assert.doesNotMatch(normaliser(DEFINITIONS['roue:serenite:tranquille']), /souci|bruit|derangement/);
+  assert.equal(DEFINITIONS['roue:serenite:tranquille'], 'Le temps s\'écoule doucement, sans hâte ni agitation.');
   // Les 79 textes de la v8 : la section « Les 79 définitions » de docs/decisions.md, une ligne par mot sous sa famille.
   const doc = lire('docs/decisions.md');
   const debut = doc.indexOf('**Les 79 définitions**');

@@ -123,7 +123,8 @@ export function geometrieMesJours({ pas, colonnes, avecHumeur = false, avecEnerg
   const zones = [];
   const yNote = (v) => r1(hum.y + ((10 - v) / 9) * hum.h);
   if (hum) notes.graduations.push({ v: 10, y: yNote(10) }, { v: 1, y: yNote(1) });
-  const totalFamilles = (c) => (c.familles ? Object.values(c.familles).reduce((s, x) => s + x, 0) : 0);
+  // Le total d'une colonne : la somme des familles dessinées, et d'elles seules (une clé inconnue ne fausse pas la hauteur).
+  const totalFamilles = (c) => (c.familles ? ordreFamilles.reduce((s, f) => s + (c.familles[f] || 0), 0) : 0);
   const maxEmotions = Math.max(1, ...colonnes.map(totalFamilles));
   const maxExpl = Math.max(1, ...colonnes.map((c) => c.explosions || 0));
   const joursBas = (c) => (c.energieBasse === true ? 1 : c.energieBasse || 0);

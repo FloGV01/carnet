@@ -154,7 +154,7 @@ export const DEFINITIONS = Object.freeze({
   'roue:serenite:apaise': 'La tension est retombée, le corps se relâche.',
   'roue:serenite:detendu': 'Les muscles et l\'esprit relâchés.',
   'roue:serenite:repose': 'Le corps a récupéré, l\'énergie est revenue.',
-  'roue:serenite:tranquille': 'Un moment paisible, sans bruit ni dérangement.', // v9
+  'roue:serenite:tranquille': 'Le temps s\'écoule doucement, sans hâte ni agitation.', // v9
   'roue:serenite:serein': 'En paix avec ce qui est, sans inquiétude.',
   'roue:serenite:pose': 'Stable et réfléchi, on prend son temps.',
   'roue:serenite:en-securite': 'À l\'abri, rien ne menace.',

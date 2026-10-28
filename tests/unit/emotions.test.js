@@ -375,3 +375,70 @@ test('emotionsParActivite (v8) : le jour logique fait foi (bascule de 4 h) ; seu
   assert.deepEqual(relevesAvecActivite(humeurs, periode).map((x) => [x.date, x.famille, x.faisais]),
     [['2026-10-01', 'peur', [TRAVAIL]], ['2026-10-01', 'tristesse', [TRAVAIL]]]);
 });
+
+// ---------- v9 · les mots sans famille (spec §8 et §13.4) ----------
+
+// Fatigué et Épuisé (roue:aucune:…, familleDe null) restent des relevés à émotion, mais n'entrent dans aucun compte par
+// famille : ni clé « null », ni NaN, ni relevé compté en plus (relecture de la tâche 1). Fatigué et Fier le 02/09, Irrité
+// le 15/09, Épuisé seul la semaine du 21/09.
+test('v9 · un mot sans famille (Fatigué, Épuisé) : un relevé à émotion, compté dans aucune famille, sans clé « null » ni NaN', () => {
+  const FATIGUE = 'roue:aucune:fatigue';
+  const EPUISE = 'roue:aucune:epuise';
+  const humeurs = [
+    releve('2026-09-02', '10:00', FATIGUE, { faisais: [TRAVAIL], energie: 'energie:basse' }),
+    releve('2026-09-02', '11:00', 'roue:joie:fier', { faisais: [TRAVAIL] }),
+    releve('2026-09-15', '10:00', 'roue:colere:irrite'),
+    releve('2026-09-22', '09:00', EPUISE, { faisais: [TRAJET] }),
+  ];
+  const periode = { du: '2026-09-01', au: '2026-09-30' };
+  // Des comptes par famille propres : les sept familles, chacune un nombre fini.
+  const propre = (c, quoi) => {
+    assert.deepEqual(Object.keys(c), CLES_FAMILLES, `${quoi} : les sept familles, sans clé « null »`);
+    assert.ok(Object.values(c).every(Number.isFinite), `${quoi} : ${JSON.stringify(c)}`);
+  };
+
+  // Un relevé à émotion, son mot compris, sans famille.
+  const r = relevesAEmotion(humeurs);
+  assert.deepEqual(r.filter((x) => x.famille === null).map((x) => [x.date, x.mot]), [['2026-09-02', FATIGUE], ['2026-09-22', EPUISE]]);
+  assert.deepEqual(parFamille(r), compte({ joie: 1, colere: 1 }));
+  assert.deepEqual([...emotionsParJour(humeurs, periode.du, periode.au).keys()], ['2026-09-02', '2026-09-15', '2026-09-22']);
+  // Par jour : pas de famille null ; le jour d'Épuisé seul n'y est pas.
+  assert.deepEqual([...famillesParJour(humeurs, periode.du, periode.au)], [['2026-09-02', ['joie']], ['2026-09-15', ['colere']]]);
+  assert.deepEqual(facteursParJour({ humeurs }).get('2026-09-02').familles, ['joie']);
+
+  // Après une nuit : Fatigué n'est ni compté ni dans n.
+  const nuit = apresNuit([{ date: '2026-09-02', sommeilRessenti: 'sommeil:mal' }, { date: '2026-09-22', sommeilRessenti: 'sommeil:bien' }], humeurs, periode);
+  propre(nuit.mal, 'apresNuit');
+  propre(nuit.bien, 'apresNuit');
+  assert.deepEqual([nuit.mal, nuit.bien, nuit.n], [compte({ joie: 1 }), comptesVides(), 1]);
+
+  // Autour d'un instant : Fatigué (30 min avant) n'entre ni dans avant, ni dans n.
+  const autour = autourDe([{ date: '2026-09-02', heure: '10:30' }], humeurs);
+  propre(autour.avant, 'autourDe avant');
+  propre(autour.apres, 'autourDe après');
+  assert.deepEqual([autour.avant, autour.apres, autour.n], [comptesVides(), compte({ joie: 1 }), 1]);
+
+  // Selon ce que je faisais : ni compté, ni dans le seuil ; l'activité d'Épuisé seul n'a pas de ligne.
+  assert.deepEqual(relevesAvecActivite(humeurs, periode).map((x) => [x.date, x.famille]), [['2026-09-02', 'joie']]);
+  const parActivite = emotionsParActivite(humeurs, periode);
+  assert.deepEqual(parActivite, { [TRAVAIL]: compte({ joie: 1 }) });
+  propre(parActivite[TRAVAIL], 'emotionsParActivite');
+
+  // Mes jours : par jour, le mot reste (le détail du jour le montre) ; par semaine et par mois, aucune famille null.
+  const jours = frise({ humeurs }, '2026-09-01', '2026-09-30');
+  assert.equal(jours.pas, 'jour');
+  assert.deepEqual(jours.colonnes.find((c) => c.cle === '2026-09-02').emotions, [FATIGUE, 'roue:joie:fier']);
+  assert.equal(jours.colonnes.find((c) => c.cle === '2026-09-22').aDonnee, true);
+  const semaines = frise({ humeurs }, '2026-08-03', '2026-10-04');
+  assert.equal(semaines.pas, 'semaine');
+  const s = (cle) => semaines.colonnes.find((c) => c.cle === cle);
+  propre(s('2026-08-31').familles, 'frise, semaine du 31/08');
+  assert.deepEqual([s('2026-08-31').familles, s('2026-08-31').nEmotions], [compte({ joie: 1 }), 1]);
+  assert.deepEqual([s('2026-09-14').familles, s('2026-09-14').nEmotions], [compte({ colere: 1 }), 1]);
+  assert.deepEqual([s('2026-09-21').familles, s('2026-09-21').nEmotions, s('2026-09-21').aDonnee], [null, 0, false], 'Épuisé seul');
+  const mois = frise({ humeurs }, '2026-01-01', '2026-10-31');
+  assert.equal(mois.pas, 'mois');
+  const septembre = mois.colonnes.find((c) => c.cle === '2026-09');
+  propre(septembre.familles, 'frise, septembre');
+  assert.deepEqual([septembre.familles, septembre.nEmotions], [compte({ joie: 1, colere: 1 }), 2]);
+});

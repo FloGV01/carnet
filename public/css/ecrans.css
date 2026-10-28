@@ -869,6 +869,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .famille-definitions { display: flex; flex-direction: column; gap: 6px; }
 .titre-famille-definitions { display: flex; align-items: center; gap: 8px; padding: 10px 0 0; }
 .point-famille { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); }
+/* v9 : « Sans famille » (Fatigué, Épuisé), après les sept familles : un point creux, comme un relevé sans famille. */
+.sans-famille .point-famille { background: none; border: 1.5px solid var(--text-2); }
 .bouton-definition { flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 16px; min-height: 58px; }
 .mot-definitions { font-weight: 600; }
 .texte-definitions { font-size: var(--t-sous); line-height: 1.35; color: var(--text-2); text-wrap: pretty; }

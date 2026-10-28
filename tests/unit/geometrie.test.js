@@ -46,6 +46,29 @@ test('Mes jours par semaine : nuits empilées, anneau si fragile, explosions à 
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
 });
 
+// v9 (relecture de la tâche 1) : Fatigué (roue:aucune:…, sans famille) ne fausse plus Mes jours par semaine. Avant, la
+// frise lui donnait une clé « null » à NaN : la barre de sa semaine disparaissait et les autres prenaient y = NaN.
+test('v9 · Mes jours par semaine avec un mot sans famille : une barre par semaine notée, aucun NaN, rien hors du cadre', async () => {
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const releve = (date, heure, emotion) => ({ id: `${date}-${heure}`, date, heure, emotion });
+  const humeurs = [releve('2026-09-02', '10:00', 'roue:aucune:fatigue'), releve('2026-09-02', '11:00', 'roue:joie:fier'), releve('2026-09-15', '10:00', 'roue:colere:irrite')];
+  for (const [du, pas] of [['2026-08-01', 'semaine'], ['2026-01-01', 'mois']]) {
+    const f = frise({ humeurs }, du, '2026-10-15');
+    assert.equal(f.pas, pas);
+    for (const g of [geometrieMesJours(f), geometrieMesJours(f, {}, { ...DIM_MES_JOURS_PDF, largeur: 900 })]) {
+      assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), [], pas);
+      assert.deepEqual(g.barres.map((b) => b.famille), pas === 'semaine' ? ['joie', 'colere'] : ['colere', 'joie'], pas);
+    }
+  }
+  // Une clé qui n'est pas une famille ne compte pas dans la hauteur : la barre a celle d'une colonne sans elle.
+  const colonne = (familles) => ({ cle: '2026-09-21', humeur: null, nuits: null, explosions: null, autres: 0, aDonnee: true, familles, nEmotions: 2 });
+  const vides = { colere: 0, degout: 0, tristesse: 0, joie: 0, surprise: 0, peur: 0, serenite: 0 };
+  const avec = geometrieMesJours({ pas: 'semaine', colonnes: [colonne({ ...vides, joie: 2, null: 3 }), colonne({ ...vides, colere: 4 })] });
+  const sans = geometrieMesJours({ pas: 'semaine', colonnes: [colonne({ ...vides, joie: 2 }), colonne({ ...vides, colere: 4 })] });
+  assert.deepEqual(avec.barres, sans.barres);
+  assert.deepEqual(horsCadre(avec, avec.dim.largeur, avec.dim.hauteur), []);
+});
+
 test('v7 · Mes jours sur la page A4 : des barres plus larges (barreMax), les mêmes rangées et le même ordre qu\'à l\'écran', () => {
   const colonnes = Array.from({ length: 12 }, (_, i) => ({ cle: `2026-${String(i + 1).padStart(2, '0')}`, humeur: 5, fragile: false, nuits: null, explosions: 1, autres: 0, aDonnee: true,
     familles: { colere: 1, degout: 0, tristesse: 0, joie: 0, surprise: 0, peur: 0, serenite: 2 }, nEmotions: 3 }));

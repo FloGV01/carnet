@@ -5,6 +5,8 @@
 // « meilleure » qu'une autre.
 // Les anciennes notes de 1 à 10 n'entrent pas ici (humeur-jour.js). Un relevé se rattache à son jour logique par
 // jourEvenement (bascule à 4 h), « vers » compris. Pur : la date du jour n'arrive que par la période.
+// v9 (spec §8) : un mot sans famille (Fatigué, Épuisé ; familleDe rend null) reste un relevé à émotion, mais il n'entre
+// dans aucun compte par famille.
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
 import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
 import { minusculeInitiale } from '../domain/phrase.js';
@@ -58,9 +60,15 @@ export function emotionsParJour(humeurs, du, au) {
   return res;
 }
 
-// Map jour logique → les familles de ses relevés, une par relevé, dans l'ordre des heures.
+// Map jour logique → les familles de ses relevés, une par relevé, dans l'ordre des heures. Un mot sans famille n'en
+// donne pas ; un jour qui n'a que des mots sans famille n'y est pas.
 export function famillesParJour(humeurs, du, au) {
-  return new Map([...emotionsParJour(humeurs, du, au)].map(([date, ids]) => [date, ids.map(familleDe)]));
+  const res = new Map();
+  for (const [date, ids] of emotionsParJour(humeurs, du, au)) {
+    const familles = ids.map((id) => familleDe(id)).filter(Boolean);
+    if (familles.length) res.set(date, familles);
+  }
+  return res;
 }
 
 // Par heure de la journée (0 à 23), le nombre de relevés de chaque famille. Comme l'ancien profil de la journée, un relevé
@@ -146,8 +154,9 @@ export function autourDe(instants, humeurs, { avantH = S.heuresAutour, apresH = 
   let n = 0;
   for (const h of humeurs || []) {
     if (!h || !estDateValide(h.date) || !estHeureValide(h.heure) || !estEmotion(h.emotion)) continue;
-    const m = minutes(h.date, h.heure);
     const f = familleDe(h.emotion);
+    if (!f) continue;
+    const m = minutes(h.date, h.heure);
     const k = premierApres(m);
     // Avant un instant t : t − avantH ≤ m < t, soit le premier instant après m, à avantH heures au plus.
     if (k < tries.length && tries[k] - m <= avantH * 60) { avant[f] += 1; n += 1; }
@@ -167,15 +176,18 @@ export function autourDuBienEtre(seances, humeurs, periode) {
 
 // ---------- Émotions selon ce que je faisais (v8, Q18) ----------
 
-// Les relevés de la période qui portent une émotion et au moins une activité de « Ce que je faisais » : { date (le jour
-// logique), famille, faisais (sans doublon) }. Leur nombre fait le seuil commun des vues d'émotions (5 relevés).
+// Les relevés de la période qui portent une émotion d'une famille et au moins une activité de « Ce que je faisais » :
+// { date (le jour logique), famille, faisais (sans doublon) }. Leur nombre fait le seuil commun des vues d'émotions
+// (5 relevés) : un mot sans famille, qui ne compte pas dans emotionsParActivite, n'y compte pas non plus.
 export function relevesAvecActivite(humeurs, periode) {
   const res = [];
   for (const h of humeurs || []) {
     if (!h || !estDateValide(h.date) || !estEmotion(h.emotion) || !Array.isArray(h.faisais) || !h.faisais.length) continue;
+    const famille = familleDe(h.emotion);
+    if (!famille) continue;
     const date = jourEvenement(h.date, h.heure);
     if (date < periode.du || date > periode.au) continue;
-    res.push({ date, famille: familleDe(h.emotion), faisais: [...new Set(h.faisais.filter(Boolean))] });
+    res.push({ date, famille, faisais: [...new Set(h.faisais.filter(Boolean))] });
   }
   return res;
 }

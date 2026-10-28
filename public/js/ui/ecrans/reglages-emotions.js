@@ -1,17 +1,23 @@
-// Réglages › Émotions (v8, spec §4) : le sens des 79 mots de la roue, par famille, tel que la carte de l'Émotion du
-// moment l'affiche. Un toucher sur un mot ouvre le champ de sa définition ; le texte s'enregistre à la sortie du champ
-// seulement, ou si l'app passe en arrière-plan (méta `definitionsRoue`, sauvegardée avec le reste) : la frappe reste
-// dans le brouillon local, et rien ne bouge sous le doigt pendant qu'on réécrit (ChampTexte `aLaSortie`).
+// Réglages › Émotions (v8, spec §4) : le sens des mots de la roue, par famille, tel que la carte de l'Émotion du
+// moment l'affiche. v9 (spec §13.3) : les 144 mots, Fatigué et Épuisé dans une section « Sans famille », au point
+// creux, après les sept familles. Un toucher sur un mot ouvre le champ de sa définition ; le texte s'enregistre à la
+// sortie du champ seulement, ou si l'app passe en arrière-plan (méta `definitionsRoue`, sauvegardée avec le reste) : la
+// frappe reste dans le brouillon local, et rien ne bouge sous le doigt pendant qu'on réécrit (ChampTexte `aLaSortie`).
 // « Revenir au texte de Carnet » retire la correction ; un champ vidé fait de même. Le texte de Carnet
 // (domain/definitions-roue.js) ne change jamais.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
 import { repo } from '../../donnees.js';
-import { FAMILLES } from '../../domain/roue.js';
+import { FAMILLES, MOTS_SANS_FAMILLE } from '../../domain/roue.js';
 import { corriger, definition, estCorrigee } from '../../domain/definitions-roue.js';
 
 const idChamp = (id) => `definition-${id.replace(/:/g, '-')}`;
+// Les sections : les sept familles, au point de leur couleur, puis les mots sans famille (v9), au point creux.
+const SECTIONS = [
+  ...FAMILLES.map((f) => ({ cle: f.cle, libelle: f.libelle, mots: f.mots, classe: `emo-${f.cle}` })),
+  { cle: 'sans-famille', libelle: 'Sans famille', mots: MOTS_SANS_FAMILLE, classe: 'sans-famille' },
+];
 
 export function ReglagesEmotions() {
   const [corrections, setCorrections] = useState(null);
@@ -47,8 +53,8 @@ export function ReglagesEmotions() {
   return html`<main class="ecran fiche reglages-emotions">
     <${Entete} titre="Émotions" retour=${retour} />
     <p class="aide-carte">Le sens de chaque mot, tel que la carte de l'émotion du moment l'affiche. Touche un mot pour l'écrire à ta façon.</p>
-    ${FAMILLES.map((f) => html`<section class="famille-definitions" aria-labelledby=${`titre-${f.cle}`}>
-      <h2 class=${`libelle-section titre-famille-definitions emo-${f.cle}`} id=${`titre-${f.cle}`}><span class="point-famille" aria-hidden="true"></span>${f.libelle}</h2>
+    ${SECTIONS.map((f) => html`<section class="famille-definitions" aria-labelledby=${`titre-${f.cle}`}>
+      <h2 class=${`libelle-section titre-famille-definitions ${f.classe}`} id=${`titre-${f.cle}`}><span class="point-famille" aria-hidden="true"></span>${f.libelle}</h2>
       <ul class="liste carte carte-groupe">
         ${f.mots.map((m) => {
           const corrigee = estCorrigee(m.id, corrections);
