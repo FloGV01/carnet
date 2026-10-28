@@ -70,7 +70,7 @@ test('relevé en deux touchers : une tuile (l\'énergie), un mot (sa définition
   await mot(vue, 'Mécontent', 'Colère').click();
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:mecontent', energie: 'energie:moyenne' }]);
   await expect(mot(vue, 'Mécontent', 'Colère')).toHaveAttribute('aria-pressed', 'true');
-  await expect(definition(vue)).toHaveText('Mécontent : pas satisfait de ce qui se passe ou de ce qu\'on a reçu.');
+  await expect(definition(vue)).toHaveText('Mécontent : ce qui se passe, ou ce qu\'on a reçu, ne convient pas.');
   await page.clock.runFor(900);
   await expect(page).toHaveURL(/#\/moment$/);
   // Un autre toucher change le mot et relance le délai.
@@ -170,7 +170,7 @@ test('la carte s\'ouvre centrée sur la zone de la tuile ; elle glisse dans les 
       await tuile(vue, e, c === 'gauche' ? 'désagréable' : 'agréable').click();
       const cle = cleZone({ energie: e, cote: c });
       await expect(carte(vue).getByRole('button')).toHaveCount(79);
-      // Les mots de la zone, dans l'ordre de la carte (domain/carte-roue.js).
+      // Les mots de la zone, dans l'ordre de la carte (domain/carte-roue.js, section de la v8).
       expect(await carte(vue).locator(`[data-zone="${cle}"] button`).evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label'))))
         .toEqual(motsDeZone({ energie: e, cote: c }).map(nomBulle));
       expect(await zone(cle), cle).toEqual({ gauche: true, droite: true, haut: true, glisse: [true, true] });
@@ -564,7 +564,7 @@ test('les tuiles (contrôle v8) : sur une rangée, les deux noms d\'énergie son
   }
 });
 
-test('Réglages › Émotions : les 79 mots par famille et leur sens ; un toucher ouvre le champ, la sortie l\'enregistre ; « Revenir au texte de Carnet »', async ({ page }) => {
+test('Réglages › Émotions : les mots par famille et leur sens ; un toucher ouvre le champ, la sortie l\'enregistre ; « Revenir au texte de Carnet »', async ({ page }) => {
   await aller(page, '#/reglages');
   await page.getByRole('link', { name: 'Émotions', exact: true }).click();
   await expect(page).toHaveURL(/#\/reglages\/emotions$/);

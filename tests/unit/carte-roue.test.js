@@ -1,214 +1,192 @@
-// v8 (2/9) · L'écran Émotion en carte (spec §4, §12.5) : la place des 79 mots (domain/carte-roue.js) et leurs
-// définitions (domain/definitions-roue.js). Deux données pures et figées, qui ne touchent jamais aux relevés.
+// v9 (1/8) · La carte de How We Feel (spec §6 et §7) : la place des 144 mots sur la grille 12 × 12 (domain/carte-roue.js),
+// leur zone et l'énergie notée avec eux, et la place des mots à soi hors du carré. Une donnée pure et figée : seule
+// l'énergie, déduite du rang au toucher du mot, est enregistrée.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { FAMILLES } from '../../public/js/domain/roue.js';
-import { PLACEMENT, ENERGIES, COTES, EXEMPLES, cleZone, zoneDe, motsDeZone } from '../../public/js/domain/carte-roue.js';
-import { DEFINITIONS, definition, estCorrigee, corriger } from '../../public/js/domain/definitions-roue.js';
-import { trouverInterdits, normaliser } from '../aides/mots-interdits.js';
+import { FAMILLES, familleDe, motsDeLaRoue } from '../../public/js/domain/roue.js';
+import { PLACEMENT, ZONES, zoneDeCase, zoneDe, energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 
-const MOTS = FAMILLES.flatMap((f) => f.mots.map((m) => ({ ...m, famille: f.cle })));
-const IDS = MOTS.map((m) => m.id);
-const PAR_NOM = new Map(FAMILLES.flatMap((f) => f.mots.map((m) => [`${m.libelle}|${f.libelle}`, m.id])));
 const lire = (chemin) => readFileSync(new URL(`../../${chemin}`, import.meta.url), 'utf8');
-const bande = (rang) => (rang >= 5 ? 'haute' : rang >= 3 ? 'moyenne' : 'basse');
-// Les lignes d'un tableau Markdown qui passent le filtre, en cellules.
-const lignes = (texte, filtre) => texte.split('\n').filter((l) => l.startsWith('| '))
-  .map((l) => l.slice(1, -1).split('|').map((c) => c.trim())).filter(filtre);
-// Le tableau §9.3 de l'annexe hwf-placement.md (« | 1 | Embarrassé | Colère | 2 | 4 | … ») : { id: { col, rang } }.
-const ANNEXE = Object.fromEntries(lignes(lire('docs/superpowers/specs/2026-10-24-carnet-v8/hwf-placement.md'),
-  (c) => /^\d+$/.test(c[0]) && PAR_NOM.has(`${c[1]}|${c[2]}`))
-  .map(([, mot, famille, a, e]) => [PAR_NOM.get(`${mot}|${famille}`), { col: Number(a), rang: Number(e) }]));
+const ANNEXES = 'docs/superpowers/specs/2026-10-28-carnet-v9';
+const PROPOSITION = JSON.parse(lire(`${ANNEXES}/carte-proposee.json`));
+const HWF = JSON.parse(lire(`${ANNEXES}/liste-hwf.json`));
+const IDS = motsDeLaRoue().map((m) => m.id);
+// Les trois changements de la spec §6 sur la proposition : Insouciant à la case d'Ensommeillé, Fatigué et Épuisé sans famille.
+const CHANGES = { 'roue:serenite:ensommeille': 'roue:serenite:insouciant', 'roue:tristesse:fatigue': 'roue:aucune:fatigue', 'roue:tristesse:epuise': 'roue:aucune:epuise' };
+const bande = (rang) => (rang <= 4 ? 'energie:basse' : rang <= 8 ? 'energie:moyenne' : 'energie:haute');
+const cle = ({ col, rang }) => `${col},${rang}`;
 
-test('79 placements, un par mot de la roue, ni plus ni moins ; colonne et rang de 1 à 6', () => {
-  assert.equal(IDS.length, 79);
+test('144 cases, une par mot de la roue, ni plus ni moins ; colonne et rang de 1 à 12 ; aucune case partagée', () => {
+  assert.equal(IDS.length, 144);
   assert.deepEqual(Object.keys(PLACEMENT).sort(), [...IDS].sort());
   for (const id of IDS) {
     const { col, rang } = PLACEMENT[id];
-    assert.ok(Number.isInteger(col) && col >= 1 && col <= 6, `${id} : colonne ${col}`);
-    assert.ok(Number.isInteger(rang) && rang >= 1 && rang <= 6, `${id} : rang ${rang}`);
+    assert.ok(Number.isInteger(col) && col >= 1 && col <= 12, `${id} : colonne ${col}`);
+    assert.ok(Number.isInteger(rang) && rang >= 1 && rang <= 12, `${id} : rang ${rang}`);
   }
+  assert.equal(new Set(Object.values(PLACEMENT).map(cle)).size, 144, 'toutes différentes : la grille est pleine');
   assert.ok(Object.isFrozen(PLACEMENT) && Object.isFrozen(PLACEMENT['roue:colere:irrite']), 'figé');
 });
 
-test('zoneDe : le côté (colonnes 1-3 à gauche, 4-6 à droite) et la bande (5-6 haute, 3-4 moyenne, 1-2 basse)', () => {
-  assert.deepEqual(zoneDe('roue:colere:enrage'), { cote: 'gauche', energie: 'haute' });
-  assert.deepEqual(zoneDe('roue:joie:extasie'), { cote: 'droite', energie: 'haute' });
-  assert.deepEqual(zoneDe('roue:colere:mecontent'), { cote: 'gauche', energie: 'moyenne' });
-  assert.deepEqual(zoneDe('roue:joie:confiant'), { cote: 'droite', energie: 'moyenne' });
-  assert.deepEqual(zoneDe('roue:serenite:calme'), { cote: 'droite', energie: 'basse' });
-  assert.deepEqual(zoneDe('roue:tristesse:vide'), { cote: 'gauche', energie: 'basse' });
-  assert.deepEqual(zoneDe('roue:serenite:serein'), { cote: 'droite', energie: 'basse' });
-  // Une famille seule (relevé de la v7), un id inconnu ou mal formé : aucune zone.
-  for (const id of ['roue:colere', 'roue:colere:inconnu', 'emotion:colere', '', null, undefined, 'constructor', '__proto__']) {
+test('la carte de la spec : carte-proposee.json, avec Insouciant, Fatigué et Épuisé de la spec §6 ; chaque mot à la case de son mot How We Feel', () => {
+  const attendu = Object.fromEntries(PROPOSITION.mots.map((m) => [CHANGES[m.id] || m.id, { col: m.col, rang: m.rang }]));
+  assert.deepEqual(PLACEMENT, attendu);
+  // La grille officielle (liste-hwf.json : ligne 1 en haut, rang = 13 − ligne) : le mot How We Feel de chaque case est
+  // celui que la proposition donne à ce mot (son équivalent, ou le mot écarté dont il prend la place).
+  for (const m of PROPOSITION.mots) assert.equal(HWF.grille[12 - m.rang][m.col - 1], m.caseHwf, m.libelle);
+  assert.equal(HWF.grille[12 - PLACEMENT['roue:serenite:insouciant'].rang][PLACEMENT['roue:serenite:insouciant'].col - 1], 'Carefree');
+  // Quelques cases : les coins, Survolté sur « Hyper », Accablé sur « Overwhelmed ».
+  assert.deepEqual(PLACEMENT['roue:colere:enrage'], { col: 1, rang: 12 });
+  assert.deepEqual(PLACEMENT['roue:joie:extasie'], { col: 12, rang: 12 });
+  assert.deepEqual(PLACEMENT['roue:peur:sans-valeur'], { col: 1, rang: 1 });
+  assert.deepEqual(PLACEMENT['roue:serenite:serein'], { col: 12, rang: 1 });
+  assert.deepEqual(PLACEMENT['roue:peur:survolte'], { col: 6, rang: 12 });
+  assert.deepEqual(PLACEMENT['roue:peur:accable'], { col: 3, rang: 11 });
+  assert.deepEqual(PLACEMENT['roue:serenite:insouciant'], { col: 7, rang: 1 });
+});
+
+test('zoneDeCase : rouge col 1-6 et rang 7-12, jaune col 7-12 et rang 7-12, bleu col 1-6 et rang 1-6, vert col 7-12 et rang 1-6', () => {
+  assert.deepEqual(ZONES, ['rouge', 'jaune', 'bleu', 'vert']);
+  assert.ok(Object.isFrozen(ZONES));
+  assert.equal(zoneDeCase(1, 12), 'rouge');
+  assert.equal(zoneDeCase(6, 7), 'rouge');
+  assert.equal(zoneDeCase(7, 7), 'jaune');
+  assert.equal(zoneDeCase(12, 12), 'jaune');
+  assert.equal(zoneDeCase(6, 6), 'bleu');
+  assert.equal(zoneDeCase(1, 1), 'bleu');
+  assert.equal(zoneDeCase(7, 6), 'vert');
+  assert.equal(zoneDeCase(12, 1), 'vert');
+  for (const [col, rang] of [[0, 5], [13, 5], [5, 0], [5, 13], [-1, 12], [1.5, 3], ['1', 3], [null, 3], [undefined, undefined]]) {
+    assert.equal(zoneDeCase(col, rang), null, `${col}, ${rang}`);
+  }
+});
+
+test('36 mots par zone ; un seul mot de la roue change de zone depuis la v8 : Accablé, du bleu au rouge', () => {
+  const comptes = Object.fromEntries(ZONES.map((z) => [z, IDS.filter((id) => zoneDe(id) === z).length]));
+  assert.deepEqual(comptes, { rouge: 36, jaune: 36, bleu: 36, vert: 36 });
+  assert.equal(zoneDe('roue:peur:accable'), 'rouge');
+  // La place des 79 mots en v8 : le tableau §9.3 de l'annexe v8 (hwf-placement.md), sauf Dégoût et Perplexe, ramenés dans
+  // le quadrant de How We Feel (décision v8). Le quadrant (col 1-3 à gauche ; rang 4-6 en haut) donne la zone de la v8.
+  const PAR_NOM = new Map(FAMILLES.flatMap((f) => f.mots.map((m) => [`${m.libelle}|${f.libelle}`, m.id])));
+  const annexe = Object.fromEntries(lire('docs/superpowers/specs/2026-10-24-carnet-v8/hwf-placement.md').split('\n')
+    .filter((l) => l.startsWith('| ')).map((l) => l.slice(1, -1).split('|').map((c) => c.trim()))
+    .filter((c) => /^\d+$/.test(c[0]) && PAR_NOM.has(`${c[1]}|${c[2]}`))
+    .map(([, mot, famille, col, rang]) => [PAR_NOM.get(`${mot}|${famille}`), { col: Number(col), rang: Number(rang) }]));
+  Object.assign(annexe, { 'roue:degout:degout': { col: 1, rang: 3 }, 'roue:surprise:perplexe': { col: 3, rang: 4 } });
+  assert.equal(Object.keys(annexe).length, 79);
+  const zoneV8 = ({ col, rang }) => (rang >= 4 ? (col <= 3 ? 'rouge' : 'jaune') : (col <= 3 ? 'bleu' : 'vert'));
+  const changes = Object.entries(annexe).filter(([id, p]) => zoneV8(p) !== zoneDe(id)).map(([id, p]) => [id, zoneV8(p), zoneDe(id)]);
+  assert.deepEqual(changes, [['roue:peur:accable', 'bleu', 'rouge']]);
+});
+
+test('zoneDe et energieDe : un mot de chaque zone et de chaque bande ; l\'énergie suit le rang (1-4 basse, 5-8 moyenne, 9-12 haute)', () => {
+  const cas = [
+    ['roue:colere:enrage', 'rouge', 'energie:haute'], ['roue:peur:preoccupe', 'rouge', 'energie:moyenne'],
+    ['roue:joie:extasie', 'jaune', 'energie:haute'], ['roue:joie:confiant', 'jaune', 'energie:moyenne'],
+    ['roue:colere:mecontent', 'bleu', 'energie:moyenne'], ['roue:tristesse:vide', 'bleu', 'energie:basse'],
+    ['roue:serenite:calme', 'vert', 'energie:moyenne'], ['roue:serenite:serein', 'vert', 'energie:basse'],
+    // Les bords des bandes : rang 4, 5, 8 et 9.
+    ['roue:tristesse:triste', 'bleu', 'energie:basse'], ['roue:aucune:fatigue', 'bleu', 'energie:moyenne'],
+    ['roue:peur:tendu', 'rouge', 'energie:moyenne'], ['roue:joie:optimiste', 'jaune', 'energie:haute'],
+    // Sans famille, mais avec une zone.
+    ['roue:aucune:epuise', 'bleu', 'energie:basse'],
+  ];
+  for (const [id, zone, energie] of cas) {
+    assert.equal(zoneDe(id), zone, id);
+    assert.equal(energieDe(id), energie, id);
+  }
+  assert.equal(familleDe('roue:aucune:fatigue'), null);
+  for (const id of IDS) {
+    assert.equal(zoneDe(id), zoneDeCase(PLACEMENT[id].col, PLACEMENT[id].rang), id);
+    assert.equal(energieDe(id), bande(PLACEMENT[id].rang), id);
+  }
+  // Une famille seule (relevé de la v7), un id inconnu ou mal formé : ni zone ni énergie.
+  for (const id of ['roue:colere', 'roue:colere:inconnu', 'roue:aucune', 'emotion:colere', '', null, undefined, 3, 'constructor', '__proto__', 'hasOwnProperty']) {
     assert.equal(zoneDe(id), null, String(id));
-  }
-  for (const id of IDS) {
-    const { col, rang } = PLACEMENT[id];
-    const z = zoneDe(id);
-    assert.equal(z.cote, col <= 3 ? 'gauche' : 'droite', id);
-    assert.equal(z.energie, rang >= 5 ? 'haute' : rang >= 3 ? 'moyenne' : 'basse', id);
+    assert.equal(energieDe(id), null, String(id));
   }
 });
 
-test('« comme How We Feel », sans source vérifiable de la hauteur (spec §12.5) : le tableau §9 de l\'annexe, dans le quadrant de la liste How We Feel', () => {
-  assert.deepEqual(Object.keys(ANNEXE).sort(), [...IDS].sort(), 'les 79 mots de l\'annexe');
-  // Deux mots seulement quittent l'annexe : la liste How We Feel les met dans l'autre moitié de leur côté (« disgusted »
-  // en bas, « confused » en haut). Ils prennent le rang de ce quadrant le plus proche, et restent dans la bande Moyenne.
-  const RAMENES = { 'roue:degout:degout': { col: 1, rang: 3 }, 'roue:surprise:perplexe': { col: 3, rang: 4 } };
-  for (const id of IDS) {
-    assert.deepEqual(PLACEMENT[id], RAMENES[id] || ANNEXE[id], id);
-    // La bande d'énergie, qui décide sous quelle tuile on trouve le mot, et le côté : ceux de l'annexe, pour tous.
-    assert.equal(bande(PLACEMENT[id].rang), bande(ANNEXE[id].rang), `${id} : bande`);
-    assert.equal(PLACEMENT[id].col <= 3, ANNEXE[id].col <= 3, `${id} : côté`);
-  }
-  assert.deepEqual(ANNEXE['roue:degout:degout'], { col: 1, rang: 4 });
-  assert.deepEqual(ANNEXE['roue:surprise:perplexe'], { col: 3, rang: 3 });
-  // Quelques équivalents clairs : enraged, furious, ecstatic, calm, serene, tranquil, guilty, curious, irritated.
-  assert.deepEqual(PLACEMENT['roue:colere:enrage'], { col: 1, rang: 6 });
-  assert.deepEqual(PLACEMENT['roue:colere:furieux'], { col: 1, rang: 6 });
-  assert.deepEqual(PLACEMENT['roue:joie:extasie'], { col: 6, rang: 6 });
-  assert.deepEqual(PLACEMENT['roue:serenite:calme'], { col: 5, rang: 2 });
-  assert.deepEqual(PLACEMENT['roue:serenite:serein'], { col: 6, rang: 2 });
-  assert.deepEqual(PLACEMENT['roue:serenite:tranquille'], { col: 5, rang: 1 });
-  assert.deepEqual(PLACEMENT['roue:tristesse:fautif'], { col: 2, rang: 3 });
-  assert.deepEqual(PLACEMENT['roue:joie:curieux'], { col: 4, rang: 4 });
-  assert.deepEqual(PLACEMENT['roue:colere:irrite'], { col: 2, rang: 4 });
-  // Sans équivalent clair : l'annexe (Accablé, le plus ambigu ; Dévasté ; Défiant ; Provocant).
-  assert.deepEqual(PLACEMENT['roue:peur:accable'], { col: 1, rang: 3 });
-  assert.deepEqual(PLACEMENT['roue:colere:devaste'], { col: 1, rang: 2 });
-  assert.deepEqual(PLACEMENT['roue:colere:defiant'], { col: 3, rang: 4 });
-  assert.deepEqual(PLACEMENT['roue:joie:provocant'], { col: 4, rang: 5 });
+// Trois mots à soi : deux rouges, un vert, et un rouge mis de côté. Plus un mot sans zone (recréé à l'import, spec v9 §9).
+const PERSO = Object.freeze({
+  'roue:perso:u-aaaaaaa1': { libelle: 'Électrique', zone: 'rouge', famille: 'peur', definition: null, archive: false, createdAt: '2026-11-02T10:00:00.000Z' },
+  'roue:perso:u-aaaaaaa2': { libelle: 'Débordé', zone: 'rouge', famille: null, definition: 'Plus de place pour rien.', archive: false, createdAt: '2026-11-01T10:00:00.000Z' },
+  'roue:perso:u-aaaaaaa3': { libelle: 'Au chaud', zone: 'vert', famille: 'serenite', definition: null, archive: false, createdAt: '2026-11-03T10:00:00.000Z' },
+  'roue:perso:u-aaaaaaa4': { libelle: 'Mis de côté', zone: 'rouge', famille: null, definition: null, archive: true, createdAt: '2026-10-30T10:00:00.000Z' },
+  'roue:perso:u-aaaaaaa5': { libelle: 'Mot sans libellé', zone: null, famille: null, definition: null, archive: true, createdAt: '2026-10-29T10:00:00.000Z' },
 });
 
-test('docs/decisions.md : le tableau des 33 équivalents How We Feel donne la place de la carte, et les 46 autres sont nommés', () => {
-  const doc = lire('docs/decisions.md');
-  const tableau = lignes(doc, (c) => c.length === 6 && PAR_NOM.has(`${c[0]}|${c[1]}`) && /^\d, \d/.test(c[4]));
-  assert.equal(tableau.length, 33);
-  const equivalents = new Set();
-  for (const [mot, famille, , quadrant, place, bandeDoc] of tableau) {
-    const id = PAR_NOM.get(`${mot}|${famille}`);
-    equivalents.add(id);
-    const [col, rang] = place.match(/^(\d), (\d)/).slice(1).map(Number);
-    assert.deepEqual(PLACEMENT[id], { col, rang }, `${mot} : place dans decisions.md`);
-    assert.equal(bandeDoc.toLowerCase(), zoneDe(id).energie, `${mot} : bande dans decisions.md`);
-    // Le quadrant de la liste How We Feel : le côté et la moitié de la carte.
-    assert.equal(quadrant, `${rang >= 4 ? 'haut' : 'bas'} ${col <= 3 ? 'gauche' : 'droite'}`, `${mot} : quadrant`);
-  }
-  const autres = doc.match(/\*\*Les 46 autres[^\n]*/)[0];
-  for (const m of MOTS.filter((x) => !equivalents.has(x.id))) assert.ok(autres.includes(m.libelle), `${m.libelle} absent des 46 autres`);
+test('mots à soi : la zone de la méta ; l\'énergie haute en rouge et en jaune, basse en bleu et en vert ; rien sans zone', () => {
+  assert.equal(zoneDe('roue:perso:u-aaaaaaa1', PERSO), 'rouge');
+  assert.equal(energieDe('roue:perso:u-aaaaaaa1', PERSO), 'energie:haute');
+  assert.equal(zoneDe('roue:perso:u-aaaaaaa3', PERSO), 'vert');
+  assert.equal(energieDe('roue:perso:u-aaaaaaa3', PERSO), 'energie:basse');
+  // Mis de côté : la zone et l'énergie restent lisibles.
+  assert.equal(zoneDe('roue:perso:u-aaaaaaa4', PERSO), 'rouge');
+  assert.equal(energieDe('roue:perso:u-aaaaaaa4', PERSO), 'energie:haute');
+  const jaune = { 'roue:perso:u-bbbbbbb1': { libelle: 'Pétillant', zone: 'jaune' }, 'roue:perso:u-bbbbbbb2': { libelle: 'Lourd', zone: 'bleu' } };
+  assert.equal(energieDe('roue:perso:u-bbbbbbb1', jaune), 'energie:haute');
+  assert.equal(energieDe('roue:perso:u-bbbbbbb2', jaune), 'energie:basse');
+  // Sans zone, une zone inconnue, sans méta.
+  assert.equal(zoneDe('roue:perso:u-aaaaaaa5', PERSO), null);
+  assert.equal(energieDe('roue:perso:u-aaaaaaa5', PERSO), null);
+  assert.equal(zoneDe('roue:perso:u-ccccccc1', { 'roue:perso:u-ccccccc1': { libelle: 'Orange', zone: 'orange' } }), null);
+  assert.equal(zoneDe('roue:perso:u-aaaaaaa1'), null);
+  assert.equal(energieDe('roue:perso:u-aaaaaaa1', null), null);
+  // La méta ne déplace jamais un mot de la roue.
+  assert.equal(zoneDe('roue:peur:accable', { 'roue:peur:accable': { libelle: 'Accablé', zone: 'bleu' } }), 'rouge');
 });
 
-// v8 (9/9) : les définitions sont relues par l'utilisateur après la publication (spec §2), dans docs/decisions.md.
-test('docs/decisions.md : les 79 définitions, une ligne par mot sous sa famille, au texte de Carnet', () => {
-  const doc = lire('docs/decisions.md');
-  const debut = doc.indexOf('**Les 79 définitions**');
-  assert.ok(debut > 0, 'section des définitions absente');
-  const section = doc.slice(debut, doc.indexOf('**Les 8 séances nouvelles**', debut));
-  for (const f of FAMILLES) {
-    const titre = `#### ${f.libelle} (${f.mots.length})`;
-    assert.ok(section.includes(titre), `${titre} absent`);
-    const bloc = `${section.slice(section.indexOf(titre)).split('\n\n#### ')[0]}\n`;
-    for (const m of f.mots) assert.ok(bloc.includes(`- **${m.libelle}** : ${DEFINITIONS[m.id]}\n`), `${m.libelle} : définition absente ou pas à jour`);
-  }
-  assert.equal((section.match(/^- \*\*/gm) || []).length, 79);
+test('motsDeLaCarte : les 144 dans l\'ordre de lecture, puis les mots à soi actifs, hors du carré, du côté extérieur de leur zone', () => {
+  const sans = motsDeLaCarte();
+  assert.equal(sans.length, 144);
+  assert.deepEqual(motsDeLaCarte(null), sans);
+  assert.deepEqual(motsDeLaCarte({}), sans);
+  // De haut en bas, de gauche à droite ; chaque mot avec son libellé, sa case et sa zone.
+  assert.deepEqual(sans.slice(0, 2), [
+    { id: 'roue:colere:enrage', libelle: 'Enragé', col: 1, rang: 12, zone: 'rouge', perso: false },
+    { id: 'roue:peur:terrifie', libelle: 'Terrifié', col: 2, rang: 12, zone: 'rouge', perso: false }]);
+  assert.deepEqual(sans[143], { id: 'roue:serenite:serein', libelle: 'Serein', col: 12, rang: 1, zone: 'vert', perso: false });
+  assert.deepEqual(sans.map((m) => [m.rang, m.col]), Array.from({ length: 144 }, (_, i) => [12 - Math.floor(i / 12), (i % 12) + 1]));
+  for (const m of sans) assert.deepEqual([m.col, m.rang, m.zone], [PLACEMENT[m.id].col, PLACEMENT[m.id].rang, zoneDe(m.id)], m.id);
+
+  // Deux rouges (dans l'ordre de création), un vert ; le mot mis de côté et le mot sans zone n'y sont pas.
+  const avec = motsDeLaCarte(PERSO);
+  assert.deepEqual(avec.slice(0, 144), sans);
+  assert.deepEqual(avec.slice(144), [
+    { id: 'roue:perso:u-aaaaaaa2', libelle: 'Débordé', col: 0, rang: 12, zone: 'rouge', perso: true },
+    { id: 'roue:perso:u-aaaaaaa1', libelle: 'Électrique', col: 0, rang: 11, zone: 'rouge', perso: true },
+    { id: 'roue:perso:u-aaaaaaa3', libelle: 'Au chaud', col: 13, rang: 1, zone: 'vert', perso: true },
+  ]);
+  assert.equal(new Set(avec.map(cle)).size, avec.length, 'aucune case partagée');
 });
 
-test('les six zones de la carte : chaque mot une fois, les mots d\'une famille côte à côte, du plus haut au plus bas', () => {
-  const vus = [];
-  const comptes = {};
-  for (const energie of ENERGIES) {
-    for (const cote of COTES) {
-      const mots = motsDeZone({ energie, cote });
-      comptes[cleZone({ energie, cote })] = mots.length;
-      vus.push(...mots);
-      for (const id of mots) assert.deepEqual(zoneDe(id), { cote, energie }, id);
-      // Les familles forment des taches d'un seul tenant.
-      const familles = mots.map((id) => id.split(':')[1]);
-      const suites = familles.filter((f, i) => i === 0 || familles[i - 1] !== f);
-      assert.equal(new Set(suites).size, suites.length, `${energie} ${cote} : ${familles.join(' ')}`);
-      // Dans une famille, le plus haut d'abord.
-      for (const f of new Set(familles)) {
-        const rangs = mots.filter((id) => id.split(':')[1] === f).map((id) => PLACEMENT[id].rang);
-        assert.deepEqual(rangs, [...rangs].sort((a, b) => b - a), `${energie} ${cote} ${f}`);
-      }
-      // Toujours la même carte.
-      assert.deepEqual(motsDeZone({ energie, cote }), mots);
+test('motsDeLaCarte : beaucoup de mots à soi, colonne par colonne vers l\'extérieur, du bord d\'énergie extérieur ; jamais sur un autre mot', () => {
+  const perso = {};
+  const CHIFFRE = { rouge: 'a', jaune: 'b', bleu: 'c', vert: 'd' };
+  const ajouter = (zone, n) => {
+    for (let i = 0; i < n; i++) {
+      const id = `roue:perso:u-${CHIFFRE[zone].repeat(4)}${String(i).padStart(4, '0')}`;
+      perso[id] = { libelle: `${zone} ${i}`, zone, famille: null, definition: null, archive: false, createdAt: `2026-11-01T10:${String(i).padStart(2, '0')}:00.000Z` };
     }
+  };
+  ajouter('rouge', 7);
+  ajouter('jaune', 6);
+  ajouter('bleu', 8);
+  ajouter('vert', 1);
+  const carte = motsDeLaCarte(perso);
+  assert.equal(carte.length, 144 + 22);
+  const places = (zone) => carte.filter((m) => m.perso && m.zone === zone).map((m) => [m.col, m.rang]);
+  assert.deepEqual(places('rouge'), [[0, 12], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [-1, 12]]);
+  assert.deepEqual(places('jaune'), [[13, 12], [13, 11], [13, 10], [13, 9], [13, 8], [13, 7]]);
+  assert.deepEqual(places('bleu'), [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [-1, 1], [-1, 2]]);
+  assert.deepEqual(places('vert'), [[13, 1]]);
+  assert.equal(new Set(carte.map(cle)).size, carte.length, 'aucune case partagée');
+  // Chaque mot à soi reste à hauteur de sa zone, du bon côté, hors du carré.
+  for (const m of carte.filter((x) => x.perso)) {
+    assert.ok(m.col < 1 || m.col > 12, m.libelle);
+    assert.equal(m.col < 1, m.zone === 'rouge' || m.zone === 'bleu', m.libelle);
+    assert.equal(m.rang >= 7, m.zone === 'rouge' || m.zone === 'jaune', m.libelle);
   }
-  assert.deepEqual([...vus].sort(), [...IDS].sort());
-  assert.deepEqual(comptes, {
-    'haute-gauche': 9, 'haute-droite': 8, 'moyenne-gauche': 27, 'moyenne-droite': 12, 'basse-gauche': 17, 'basse-droite': 6,
-  });
-});
-
-test('les mots d\'exemple des tuiles : deux ou trois, de leur zone, de familles différentes quand la zone en a plusieurs', () => {
-  assert.deepEqual(Object.keys(EXEMPLES).sort(), ENERGIES.flatMap((energie) => COTES.map((cote) => cleZone({ energie, cote }))).sort());
-  for (const [cle, ids] of Object.entries(EXEMPLES)) {
-    assert.ok(ids.length >= 2 && ids.length <= 3, cle);
-    for (const id of ids) assert.equal(cleZone(zoneDe(id)), cle, `${id} hors de ${cle}`);
-    const familles = new Set(motsDeZone(Object.fromEntries([['energie', cle.split('-')[0]], ['cote', cle.split('-')[1]]])).map((id) => id.split(':')[1]));
-    if (familles.size >= ids.length) assert.equal(new Set(ids.map((id) => id.split(':')[1])).size, ids.length, cle);
-  }
-});
-
-test('79 définitions, une par mot, courtes, sans texte vide ni mot interdit', () => {
-  assert.deepEqual(Object.keys(DEFINITIONS).sort(), [...IDS].sort());
-  assert.ok(Object.isFrozen(DEFINITIONS));
-  for (const m of MOTS) {
-    const t = DEFINITIONS[m.id];
-    assert.equal(typeof t, 'string', m.id);
-    assert.ok(t.trim().length >= 10 && t.length <= 100, `${m.libelle} : ${t.length} signes`);
-    assert.match(t, /^\p{Lu}.*\.$/u, `${m.libelle} : une phrase, majuscule et point`);
-    assert.equal(t, t.trim());
-    assert.deepEqual(trouverInterdits(t), [], `${m.libelle} : ${t}`);
-    // Spec §2 : jamais « positif », « négatif », « bon » ni « mauvais » ; aucun conseil, aucun avis clinique.
-    assert.doesNotMatch(normaliser(t), /\b(positi|negati|bons?\b|bonnes?\b|mauvais|tu devrais|il faut|essaie|symptome|trouble|diagnostic)/, `${m.libelle} : ${t}`);
-    // La définition ne répète pas le mot qu'elle définit.
-    assert.ok(!normaliser(t).includes(normaliser(m.libelle)), `${m.libelle} : le mot dans sa définition`);
-  }
-  // Toutes différentes.
-  assert.equal(new Set(Object.values(DEFINITIONS)).size, 79);
-  // L'exemple de la spec §4, mot pour mot.
-  assert.equal(DEFINITIONS['roue:colere:irrite'], 'Agacé par quelque chose qui gêne ou qui se répète.');
-});
-
-test('definition : la correction de l\'utilisateur, sinon le texte de Carnet ; une correction vide ou illisible ne compte pas', () => {
-  const id = 'roue:colere:irrite';
-  assert.equal(definition(id, null), DEFINITIONS[id]);
-  assert.equal(definition(id, {}), DEFINITIONS[id]);
-  assert.equal(definition(id, { [id]: 'Agacé par un bruit qui revient.' }), 'Agacé par un bruit qui revient.');
-  assert.equal(definition(id, { [id]: '  Agacé.  ' }), 'Agacé.');
-  for (const illisible of ['', '   ', 12, null, ['Agacé'], { texte: 'Agacé' }]) {
-    assert.equal(definition(id, { [id]: illisible }), DEFINITIONS[id], JSON.stringify(illisible));
-  }
-  for (const corrections of ['texte', 42, [], true]) assert.equal(definition(id, corrections), DEFINITIONS[id]);
-  // Une famille seule, un id inconnu : pas de définition.
-  assert.equal(definition('roue:colere', { 'roue:colere': 'Un texte.' }), null);
-  assert.equal(definition('roue:colere:inconnu', null), null);
-  assert.equal(definition('__proto__', null), null);
-});
-
-test('corriger : ajoute, remplace, retire (texte vide ou texte de Carnet) sans toucher l\'objet reçu ; estCorrigee le suit', () => {
-  const id = 'roue:serenite:calme';
-  const avant = Object.freeze({ 'roue:colere:irrite': 'Agacé.' });
-  const apres = corriger(avant, id, '  Rien ne presse.  ');
-  assert.deepEqual(apres, { 'roue:colere:irrite': 'Agacé.', [id]: 'Rien ne presse.' });
-  assert.deepEqual(avant, { 'roue:colere:irrite': 'Agacé.' });
-  assert.equal(estCorrigee(id, apres), true);
-  assert.equal(estCorrigee('roue:joie:curieux', apres), false);
-  for (const retrait of [null, '', '   ', DEFINITIONS[id], ` ${DEFINITIONS[id]} `]) {
-    const r = corriger(apres, id, retrait);
-    assert.deepEqual(r, { 'roue:colere:irrite': 'Agacé.' }, JSON.stringify(retrait));
-    assert.equal(estCorrigee(id, r), false);
-  }
-  // Rien au départ, une méta illisible : un objet neuf.
-  assert.deepEqual(corriger(null, id, 'Posé.'), { [id]: 'Posé.' });
-  assert.deepEqual(corriger('texte', id, 'Posé.'), { [id]: 'Posé.' });
-  assert.deepEqual(corriger([], id, 'Posé.'), { [id]: 'Posé.' });
-  // Un id qui n'est pas un mot n'est jamais écrit.
-  assert.deepEqual(corriger({}, 'roue:colere', 'Un texte.'), {});
-  // Une correction égale au texte de Carnet n'en est pas une.
-  assert.equal(estCorrigee(id, { [id]: DEFINITIONS[id] }), false);
 });

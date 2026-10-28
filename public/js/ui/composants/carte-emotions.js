@@ -6,8 +6,9 @@
 //   en bas. Retoucher le mot choisi l'efface ;
 // - un appui long sur une bulle montre sa définition sans rien choisir ;
 // - « Toute la carte » ouvre la carte sans passer par l'énergie, « ‹ Énergie » ramène aux tuiles.
-// La carte est toujours la même (domain/carte-roue.js) : trois bandes d'énergie, deux côtés, et dans chaque zone les
-// mots d'une même famille côte à côte. Elle se fait glisser dans les deux sens ; rien n'est grisé.
+// La carte est toujours la même (domain/carte-roue.js, section de la v8, jusqu'aux écrans de la v9) : trois bandes
+// d'énergie, deux côtés, et dans chaque zone les mots d'une même famille côte à côte. Elle se fait glisser dans les deux
+// sens ; rien n'est grisé.
 // Une vue remplace l'autre au même endroit : pendant 350 ms, ses boutons ignorent les touchers (un second toucher
 // rapide tomberait sur un mot jamais vu), fondu ou non (« Réduire les animations ») ; ils sont alors aria-disabled.
 // Pour VoiceOver, chaque zone est un groupe nommé par sa légende (« Basse · plutôt agréable ») ; ouverte depuis une
@@ -16,7 +17,7 @@
 // surGeste.relancer() : un doigt posé sur la carte, puis levé ou la carte qui glisse (la fermeture attend).
 import { html, useEffect, useLayoutEffect, useRef, useState } from '../lib.js';
 import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
-import { COTES, ENERGIES, EXEMPLES, cleZone, motsDeZone, zoneDe } from '../../domain/carte-roue.js';
+import { COTES, ENERGIES, EXEMPLES, cleZone, motsDeZone, tuileDe } from '../../domain/carte-roue.js';
 import { definition } from '../../domain/definitions-roue.js';
 import { Icones } from '../icones.js';
 import { coche, libelleChoix } from './coche.js';
@@ -52,7 +53,7 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
   // Le côté de la tuile touchée (jamais enregistré) : il dit laquelle des deux tuiles d'une énergie est cochée.
   const [cote, setCote] = useState(null);
   // Le mot dont la définition s'affiche : le mot choisi, ou celui d'un appui long.
-  const [montre, setMontre] = useState(() => (zoneDe(emotion) ? emotion : null));
+  const [montre, setMontre] = useState(() => (tuileDe(emotion) ? emotion : null));
   const [enGarde, setEnGarde] = useState(false);
   const titre = useRef(null);
   const cadre = useRef(null);
@@ -67,7 +68,7 @@ export function CarteEmotions({ emotion, energie, libelle, corrections, surEnerg
 
   const montrer = (nom, centre = null) => {
     aFocaliser.current = true;
-    setMontre(zoneDe(emotion) ? emotion : null);
+    setMontre(tuileDe(emotion) ? emotion : null);
     clearTimeout(garde.current);
     setEnGarde(true);
     garde.current = setTimeout(() => setEnGarde(false), GARDE_MS);
