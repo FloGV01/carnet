@@ -36,11 +36,14 @@ const SECTIONS = [
 ];
 
 // Une rangée de « Mes mots » : fermée, le mot au point de sa zone, sa couleur et sa famille, sa définition ; ouverte, son
-// formulaire et ce qu'on peut en faire.
+// formulaire et ce qu'on peut en faire. Ce qu'elle en dit suit l'état du mot : sur la carte (pas mis de côté, une zone,
+// comme motsDeLaCarte) ou non, utilisé dans un relevé ou non. Un mot mis de côté dont le relevé a été supprimé ne sert
+// plus : l'aide ne parle plus de relevés, ni la confirmation d'une carte qu'il a déjà quittée.
 function MotPerso({ id, mot, utilise, ouvert, surOuvrir, surEffacer }) {
   const ecrire = (champs) => repo.meta.modifier('motsPerso', (p) => modifierMot(p, id, champs));
   const agir = (transformer) => repo.meta.modifier('motsPerso', transformer).catch((e) => afficherToast(messageMot(e), null, 3500));
   const zone = NOMS_ZONES[mot.zone] ? mot.zone : null;
+  const surCarte = !mot.archive && Boolean(zone);
   const famille = LIBELLES_FAMILLES[mot.famille] || null;
   const def = definition(id, null, { [id]: mot });
   if (!ouvert) {
@@ -54,13 +57,13 @@ function MotPerso({ id, mot, utilise, ouvert, surOuvrir, surEffacer }) {
     <${FormulaireMot} idBase=${idMot(id)} mot=${{ libelle: mot.libelle, zone, famille: mot.famille || null, definition: mot.definition || null }}
       surNom=${(libelle) => ecrire({ libelle })} surZone=${(z) => ecrire({ zone: z })}
       surFamille=${(f) => ecrire({ famille: f })} surDefinition=${(texte) => ecrire({ definition: texte })} />
-    <p class="aide-carte">${!mot.archive && utilise ? 'Il sert dans un relevé : mis de côté, il quitte la carte et la loupe, et ses relevés le gardent.'
-      : mot.archive && !zone ? 'Choisis sa couleur pour le remettre sur la carte.'
-        : mot.archive ? 'Il n\'est plus sur la carte ni dans la loupe ; ses relevés le gardent.' : 'Il ne sert dans aucun relevé.'}</p>
+    <p class="aide-carte">${surCarte ? (utilise ? 'Il sert dans un relevé : mis de côté, il quitte la carte et la loupe, et ses relevés le gardent.' : 'Il ne sert dans aucun relevé.')
+      : !zone ? 'Choisis sa couleur pour le remettre sur la carte.'
+        : utilise ? 'Il n\'est plus sur la carte ni dans la loupe ; ses relevés le gardent.' : 'Il n\'est plus sur la carte ni dans la loupe.'}</p>
     <div class="actions-mot">
       ${!mot.archive && utilise && html`<button type="button" class="btn-lien" onClick=${() => agir((p) => mettreDeCote(p, id))}>Mettre de côté</button>`}
       ${mot.archive && zone && html`<button type="button" class="btn-lien" onClick=${() => agir((p) => remettreSurLaCarte(p, id))}>Remettre sur la carte</button>`}
-      ${!utilise && html`<button type="button" class="btn-lien" onClick=${() => surEffacer(id, mot.libelle)}>Effacer</button>`}
+      ${!utilise && html`<button type="button" class="btn-lien" onClick=${() => surEffacer(id, mot.libelle, surCarte)}>Effacer</button>`}
     </div>
   </div>`;
 }
@@ -80,7 +83,7 @@ function MesMots({ ouvert, surOuvrir }) {
     .sort((a, b) => String(perso[a].createdAt || '').localeCompare(String(perso[b].createdAt || '')) || a.localeCompare(b));
   const ligne = (id) => html`<li class="ligne-definition" key=${id}>
     <${MotPerso} id=${id} mot=${perso[id]} utilise=${utilises.has(id)} ouvert=${ouvert === id} surOuvrir=${surOuvrir}
-      surEffacer=${(i, libelle) => setEffacer({ id: i, libelle })} />
+      surEffacer=${(i, libelle, surCarte) => setEffacer({ id: i, libelle, surCarte })} />
   </li>`;
   const confirmer = async () => {
     const { id } = effacer;
@@ -95,7 +98,8 @@ function MesMots({ ouvert, surOuvrir }) {
     ${surLaCarte.length > 0 && html`<ul class="liste carte carte-groupe" aria-label="Sur la carte">${surLaCarte.map(ligne)}</ul>`}
     ${autres.length > 0 && html`<h3 class="sous-titre-mes-mots" id="titre-mis-de-cote">Mis de côté</h3>
       <ul class="liste carte carte-groupe" aria-labelledby="titre-mis-de-cote">${autres.map(ligne)}</ul>`}
-    ${effacer && html`<${Confirmation} titre=${`Effacer « ${effacer.libelle} » ?`} texte="Aucun relevé ne s'en sert. Il quitte la carte et la loupe."
+    ${effacer && html`<${Confirmation} titre=${`Effacer « ${effacer.libelle} » ?`}
+      texte=${effacer.surCarte ? 'Aucun relevé ne s\'en sert. Il quitte la carte et la loupe.' : 'Aucun relevé ne s\'en sert.'}
       action="Effacer" surAnnuler=${() => setEffacer(null)} surConfirmer=${confirmer} />`}
   </section>`;
 }

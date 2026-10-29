@@ -174,8 +174,13 @@ test('« Ajouter mon mot » : sans résultat ; le mot naît au choix de sa coule
   await expect.poll(releves(page)).toMatchObject([{ emotion: id, energie: 'energie:haute' }]);
   expect(await releves(page)()).toHaveLength(1);
 
-  // La famille au toucher (« Aucune » d'abord, comme Fatigué et Épuisé), la définition à la sortie du champ.
-  await expect(familleMot(vue, 'Aucune')).toHaveAttribute('aria-pressed', 'true');
+  // La famille au toucher, la définition à la sortie du champ. Rien n'est coché d'avance (rien par défaut) : une famille
+  // vide est une donnée ; « Aucune », touchée alors, n'écrit rien et ne coche rien.
+  const familles = vue.getByRole('group', { name: 'Famille', exact: true });
+  await expect(familles.getByRole('button', { pressed: true })).toHaveCount(0);
+  await familleMot(vue, 'Aucune').click();
+  await expect(familles.getByRole('button', { pressed: true })).toHaveCount(0);
+  expect((await lirePerso(page)())[id].famille).toBeNull();
   await familleMot(vue, 'Tristesse').click();
   await expect.poll(async () => (await lirePerso(page)())[id].famille).toBe('tristesse');
   await definitionMot(vue).fill('Les idées dans le brouillard.');
@@ -185,6 +190,13 @@ test('« Ajouter mon mot » : sans résultat ; le mot naît au choix de sa coule
   await nomMot(vue).fill('calme');
   await nomMot(vue).press('Enter');
   await expect(vue.getByRole('alert')).toHaveText('Ce mot est déjà sur la carte.');
+  expect((await lirePerso(page)())[id].libelle).toBe('Brumeux');
+  // Une famille écrite ensuite n'efface pas l'alerte : le champ montre toujours un nom qui n'est pas enregistré.
+  await familleMot(vue, 'Joie').click();
+  await expect.poll(async () => (await lirePerso(page)())[id].famille).toBe('joie');
+  await expect(nomMot(vue)).toHaveValue('calme');
+  await expect(vue.getByRole('alert')).toHaveText('Ce mot est déjà sur la carte.');
+  await expect(nomMot(vue)).toHaveAttribute('aria-invalid', 'true');
   expect((await lirePerso(page)())[id].libelle).toBe('Brumeux');
   await nomMot(vue).fill('Brumeux');
   await nomMot(vue).blur();
@@ -374,10 +386,16 @@ test('Réglages › Émotions › « Mes mots » : après « Sans famille » ; r
   await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].zone).toBe('jaune');
   await familleMot(editeur2, 'Joie').click();
   await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].famille).toBe('joie');
-  // Retoucher la famille choisie : plus de famille.
+  // Retoucher la famille choisie : plus de famille, et rien de coché. « Aucune » fait de même.
+  const familles = editeur2.getByRole('group', { name: 'Famille', exact: true });
   await familleMot(editeur2, 'Joie').click();
   await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].famille).toBeNull();
-  await expect(familleMot(editeur2, 'Aucune')).toHaveAttribute('aria-pressed', 'true');
+  await expect(familles.getByRole('button', { pressed: true })).toHaveCount(0);
+  await familleMot(editeur2, 'Peur').click();
+  await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].famille).toBe('peur');
+  await familleMot(editeur2, 'Aucune').click();
+  await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].famille).toBeNull();
+  await expect(familles.getByRole('button', { pressed: true })).toHaveCount(0);
   await definitionMot(editeur2).fill('Tout chauffe dedans.');
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].definition).toBe('Tout chauffe dedans.');
@@ -386,6 +404,17 @@ test('Réglages › Émotions › « Mes mots » : après « Sans famille » ; r
   await nomMot(editeur2).blur();
   await expect(editeur2.getByRole('alert')).toHaveText('Ce mot est déjà sur la carte.');
   expect((await lirePerso(page)())[BOUILLONNANT].libelle).toBe('Bouillant');
+  // Une couleur écrite ensuite ne l'efface pas : le champ montre un nom qui n'est pas enregistré.
+  await couleurMot(editeur2, 'bleu').click();
+  await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].zone).toBe('bleu');
+  await expect(nomMot(editeur2)).toHaveValue('flottant');
+  await expect(editeur2.getByRole('alert')).toHaveText('Ce mot est déjà sur la carte.');
+  // Remis tel qu'il est enregistré : plus rien à dire.
+  await nomMot(editeur2).fill('Bouillant');
+  await nomMot(editeur2).blur();
+  await expect(editeur2.getByRole('alert')).toHaveText('');
+  await couleurMot(editeur2, 'jaune').click();
+  await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].zone).toBe('jaune');
 
   // Ma journée : le nouveau nom, au point de la nouvelle zone ; le relevé n'est pas réécrit (son énergie reste).
   await aller(page, '#/aujourdhui');
@@ -434,12 +463,44 @@ test('point de vigilance 4 : un mot utilisé se met de côté (hors de la carte 
   await mesMots.getByRole('button', { name: 'Effacer', exact: true }).click();
   const boite = page.getByRole('alertdialog', { name: 'Effacer « Flottant » ?' });
   await expect(boite).toBeVisible();
+  await expect(boite.locator('.boite-texte')).toHaveText('Aucun relevé ne s\'en sert. Il quitte la carte et la loupe.');
   await boite.getByRole('button', { name: 'Annuler' }).click();
   expect(Object.keys(await lirePerso(page)())).toContain(FLOTTANT);
   await mesMots.getByRole('button', { name: 'Effacer', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
   await expect.poll(async () => Object.keys(await lirePerso(page)())).toEqual([BOUILLONNANT]);
   await expect(mesMots.locator('.bouton-definition')).toHaveText([/^Bouillonnant/]);
+});
+
+test('un mot mis de côté qui ne sert plus (son relevé supprimé) : l\'aide et la confirmation ne parlent ni de ses relevés ni de la carte qu\'il a déjà quittée', async ({ page }) => {
+  await ecrirePerso(page, DEUX_MOTS);
+  const [releve] = await creer(page, [{ date: '2026-10-15', heure: '18:00', emotion: BOUILLONNANT, energie: 'energie:haute' }]);
+  await aller(page, '#/reglages/emotions');
+  const mesMots = page.getByRole('region', { name: 'Mes mots', exact: true });
+  await mesMots.getByRole('button', { name: /^Bouillonnant/ }).click();
+  await expect(mesMots.getByText('Il sert dans un relevé : mis de côté, il quitte la carte et la loupe, et ses relevés le gardent.')).toBeVisible();
+  await mesMots.getByRole('button', { name: 'Mettre de côté', exact: true }).click();
+  await expect.poll(async () => (await lirePerso(page)())[BOUILLONNANT].archive).toBe(true);
+  // Mis de côté et toujours utilisé : ses relevés le gardent ; il ne s'efface pas.
+  await expect(mesMots.getByText('Il n\'est plus sur la carte ni dans la loupe ; ses relevés le gardent.')).toBeVisible();
+  await expect(mesMots.getByRole('button', { name: 'Effacer', exact: true })).toHaveCount(0);
+
+  // Son relevé supprimé, il ne sert plus : l'aide ne parle plus de relevés, et il peut s'effacer.
+  await page.evaluate((id) => window.__carnet.repo.humeurs.supprimer(id), releve);
+  await page.reload();
+  await aller(page, '#/reglages/emotions');
+  await mesMots.getByRole('button', { name: /^Bouillonnant/ }).click();
+  const editeur = mesMots.getByRole('group', { name: 'Bouillonnant', exact: true });
+  await expect(editeur.locator('.aide-carte')).toHaveText('Il n\'est plus sur la carte ni dans la loupe.');
+  await expect(editeur.getByRole('button', { name: 'Remettre sur la carte', exact: true })).toBeVisible();
+  await editeur.getByRole('button', { name: 'Effacer', exact: true }).click();
+  // La confirmation ne dit pas qu'il quitte la carte : il n'y est plus.
+  const boite = page.getByRole('alertdialog', { name: 'Effacer « Bouillonnant » ?' });
+  await expect(boite.locator('.boite-texte')).toHaveText('Aucun relevé ne s\'en sert.');
+  expect(trouverInterdits(await boite.textContent())).toEqual([]);
+  await boite.getByRole('button', { name: 'Effacer' }).click();
+  await expect.poll(async () => Object.keys(await lirePerso(page)())).toEqual([FLOTTANT]);
+  await expect(mesMots.getByRole('list', { name: 'Mis de côté', exact: true })).toHaveCount(0);
 });
 
 test('un mot recréé à l\'import (« Mot sans libellé », sans couleur) : sous « Mis de côté » ; une couleur choisie, il peut revenir sur la carte', async ({ page }) => {
