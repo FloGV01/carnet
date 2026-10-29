@@ -798,6 +798,34 @@ test('un relevé rouvert depuis Ma journée s\'ouvre sur l\'écran 3 : son mot, 
   await expect(ligneReleve(page, 'Curieux')).toHaveCount(1);
 });
 
+// Relecture de la tâche 5 : le message « Émotion du moment notée · Annuler » de la fermeture d'avant restait 5 s, en
+// haut, par-dessus l'écran ouvert aussitôt après. Sur le relevé rouvert, il cachait le mot, et son « Annuler » retirait
+// de la base le relevé qui était à l'écran : les activités touchées ensuite n'étaient plus écrites nulle part.
+test('le message de la fermeture d\'avant se ferme à l\'ouverture : rouvert aussitôt depuis Ma journée, le relevé a son mot visible et garde ce qu\'on y touche ; l\'écran 1 de même', async ({ page }) => {
+  let vue = await ouvrir(page);
+  await noter(vue, 'rouge', 'Irrité');
+  await finir(vue);
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.locator('.toast')).toContainText(NOTEE);
+  // Aussitôt, sa ligne : l'écran 3, sans message par-dessus le mot.
+  await ligneReleve(page, 'Irrité').click();
+  vue = vueMoment(page);
+  await expect(rappel(vue, 'Irrité')).toBeVisible();
+  // Sans attendre : le message s'en irait de lui-même au bout de ses 5 s.
+  expect(await page.locator('.toast').count()).toBe(0);
+  await activite(vue, 'Travail').click();
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', faisais: ['activiteMoment:travail'] }]);
+  // Fermé, le message revient, pour ce relevé ; l'écran 1 ouvert aussitôt l'efface aussi, son titre est libre.
+  await terminer(vue).click();
+  await expect(page.locator('.toast')).toContainText(NOTEE);
+  await page.getByRole('link', { name: 'Émotion du moment', exact: true }).click();
+  await expect(vue.getByRole('heading', { name: 'Touche la couleur la plus proche de ce moment', level: 1 })).toBeVisible();
+  expect(await page.locator('.toast').count()).toBe(0);
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  expect(await releves(page)()).toMatchObject([{ emotion: 'roue:colere:irrite', faisais: ['activiteMoment:travail'] }]);
+});
+
 test('un relevé se rouvre depuis n\'importe quel jour, Historique compris, et y ramène', async ({ page }) => {
   await creer(page, [
     { date: '2026-10-12', heure: '18:00', emotion: 'roue:serenite:calme', energie: 'energie:moyenne' },

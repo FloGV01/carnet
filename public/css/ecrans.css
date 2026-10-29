@@ -481,8 +481,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .replis > .repli .repli-corps { padding: 2px 0 14px; }
 
 /* Ma journée : une carte, une rangée de 48 par relevé, épisode ou symptôme ; l'heure dans une colonne fixe de 70
-   (« vers 23 h » y tient), le repère (un rond pour un relevé : à sa famille s'il est noté d'une émotion, creux
-   sinon ; un petit carré à la couleur du parcours pour un épisode ou un symptôme), le texte, puis le chevron. */
+   (« vers 23 h » y tient), le repère, le texte, puis le chevron. Le repère d'un relevé est un rond à la couleur de la
+   zone de son mot (v9 ; de sa famille en v7 et v8), creux sans zone ; celui d'un épisode ou d'un symptôme, un petit
+   carré à la couleur de son parcours. Toutes les lignes, relevés compris (v9, spec §13.1), sont des liens, avec leur
+   chevron. */
 .evenements-jour { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .libelle-section { font-size: var(--t-section); font-weight: 600; letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2); padding-bottom: 4px; }
 .evenements-jour > .libelle-section { padding: 0; }

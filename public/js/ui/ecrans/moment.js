@@ -19,12 +19,16 @@
 //   avec Annuler). Ni « Maintenant ▾ » (son heure ne change pas) ni « Pour récupérer, je… » (la règle joue quand on note).
 //   Fermer ramène à l'écran d'où il a été ouvert ; Annuler le remet tel qu'il était à l'ouverture. Un id inconnu renvoie
 //   sur Aujourd'hui.
+// À l'ouverture (#/moment comme #/moment/ID), le message laissé par l'écran d'avant se ferme (relecture de la tâche 5) :
+// posé en haut, il cacherait le titre de l'écran 1 ou le mot en rappel. Et l'« Annuler » d'un relevé qu'on vient de
+// fermer, rouvert aussitôt, déferait sous l'écran le relevé qui y est (retiré, ou remis tel qu'avant) : ce qu'on y
+// toucherait ensuite serait perdu ou mêlé à l'ancien, et « Terminer » pourrait dire noté un relevé qui n'existe plus.
 // Un relevé neuf est créé au premier mot (date et heure réelles, ou l'heure de « C'était vers… »), puis modifié : revenir
 // à l'écran 1 ou fermer le garde. Chaque ouverture de #/moment part d'un relevé neuf, la liste des heures repliée.
 // Après chaque changement de vue, et après chaque mot choisi, une garde de 350 ms : les boutons de l'écran ignorent les
 // touchers et sont aria-disabled. Un second toucher rapide tomberait sur un mot jamais vu (point de vigilance 5), sur un
 // autre mot que celui qu'on vient de toucher (la carte glissant jusqu'à lui), ou, sous la flèche, sur « Terminer ».
-import { html, useEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
+import { html, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { etatApp } from '../../store.js';
 import { useDonnees, useIndicateur, ecrireAvecEssais } from '../hooks.js';
@@ -47,7 +51,7 @@ import { lirePlan } from '../composants/mon-plan.js';
 import { PourRecuperer, lireRessourcer } from '../composants/ressourcer.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { coche, libelleChoix } from '../composants/coche.js';
-import { afficherToast } from '../composants/toast.js';
+import { afficherToast, fermerToast } from '../composants/toast.js';
 import { Icones } from '../icones.js';
 import { options } from './aujourdhui.js';
 
@@ -103,6 +107,10 @@ function ListeVers({ quand, heures, surChoix }) {
 // `id` : le relevé rouvert (#/moment/ID) ; sans lui, un relevé neuf (#/moment).
 export function Moment({ id = null }) {
   usePleinEcran();
+  // Le message de l'écran d'avant, quel qu'il soit, se ferme avant que cet écran-ci soit peint : il n'y paraît pas, même
+  // un instant. Son « Annuler » ne manque pas ici : un relevé rouvert se supprime de l'écran 3, et un relevé noté juste
+  // avant se rouvre depuis Ma journée.
+  useLayoutEffect(() => { fermerToast(); }, []);
   const rouvert = Boolean(id);
   // La vue : les bulles, la carte (`zone` : la bulle touchée), ou « Ce que je faisais » (l'écran 3).
   const [vue, setVue] = useState(rouvert ? { nom: 'faisais' } : { nom: 'bulles', zone: null });
