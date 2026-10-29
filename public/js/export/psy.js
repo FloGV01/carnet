@@ -3,14 +3,16 @@
 // Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
 // v9 : `perso`, la méta `motsPerso`, fait connaître les mots à soi (leur nom dans les lignes du jour, leur famille dans les
-// COMPTEURS) ; sans elle, un relevé de mot à soi ne dit que son heure et son énergie.
+// COMPTEURS) ; sans elle, un relevé de mot à soi ne dit que son heure et son énergie. Dans les COMPTEURS, sous chaque
+// semaine, une ligne « zones : rouge 3 · jaune 2 · bleu 9 · vert 5 » (spec §8) : les relevés de chaque zone de la carte,
+// dans cet ordre, sans les zones à zéro ; absente sans relevé qui ait une zone.
 import { addDays, formaterJourCourt, formaterDateNumerique, formaterVers, jourEvenement } from '../domain/dates.js';
 import { SEUILS } from '../analyse/seuils.js';
 import { indicateurs } from '../analyse/fenetres.js';
 import { nombre } from '../analyse/textes.js';
 import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
-import { relevesAEmotion, parFamille, texteFamilles } from '../analyse/emotions.js';
+import { relevesAEmotion, parFamille, parZone, texteFamilles, texteZones } from '../analyse/emotions.js';
 import { resumeContacts } from '../domain/contacts.js';
 import { libelleEmotion } from '../domain/roue.js';
 import { resumeEmotions } from '../domain/releves.js';
@@ -178,10 +180,16 @@ export function exportPsy({ journal, episodes, symptomes, humeurs = [], perso = 
   if (sys.length) blocs.push([`SYMPTÔMES (${sys.length})`, ...sys.flatMap((s) => ligneSymptome(s, lib))].join('\n'));
   const data = { journal: journalExpl, episodes, symptomes };
   const releves = relevesAEmotion(humeurs, perso);
-  const emotionsEntre = (a, b) => parFamille(releves.filter((r) => r.date >= a && r.date <= b));
-  const cette = compteurs(indicateurs(data, du, aujourdhui), true, lib, emotionsEntre(du, aujourdhui));
-  const avant = compteurs(indicateurs(data, addDays(du, -7), addDays(du, -1)), false, lib, emotionsEntre(addDays(du, -7), addDays(du, -1)));
-  const lignesCompteurs = [cette && `cette semaine : ${cette}`, avant && `semaine d'avant : ${avant}`].filter(Boolean);
+  const entre = (a, b) => releves.filter((r) => r.date >= a && r.date <= b);
+  // Une semaine : sa ligne de compteurs, puis, en retrait, sa ligne de zones. Une semaine qui n'a que des zones (des mots
+  // sans famille, comme Fatigué) garde son nom seul sur la première, comme un jour qui n'a que des relevés.
+  const semaine = (nom, a, b, complet) => {
+    const texte = compteurs(indicateurs(data, a, b), complet, lib, parFamille(entre(a, b)));
+    const zones = texteZones(parZone(entre(a, b), perso));
+    if (!texte && !zones) return [];
+    return [texte ? `${nom} : ${texte}` : nom, ...(zones ? [`  zones : ${zones}`] : [])];
+  };
+  const lignesCompteurs = [...semaine('cette semaine', du, aujourdhui, true), ...semaine('semaine d\'avant', addDays(du, -7), addDays(du, -1), false)];
   if (lignesCompteurs.length) blocs.push(['COMPTEURS', ...lignesCompteurs].join('\n'));
   // v7 : plus de « REPÈRES DE L'APP » : les phrases calculées sur la note de 1 à 10 sont retirées de l'Analyse.
   blocs.push('PSY : fais-moi le récap de la semaine, format habituel.');

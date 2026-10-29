@@ -8,8 +8,13 @@
 // v9 (spec §8) : un mot sans famille (Fatigué, Épuisé ; familleDe rend null) reste un relevé à émotion, mais il n'entre
 // dans aucun compte par famille. Chaque fonction qui lit les relevés prend en dernier paramètre facultatif `perso`, la méta
 // `motsPerso` : un mot à soi est alors un relevé à émotion, compté dans sa famille s'il en a une (sans elle, il n'y est pas).
+// v9 (spec §8 et §13.2) : les mêmes relevés, comptés aussi par zone de la carte (rouge, jaune, bleu, vert), dans cet ordre
+// fixe. Seuls comptent ceux dont le mot a une zone : une famille seule (v7), une énergie seule ou une ancienne note n'en a
+// pas. Fatigué, Épuisé et les mots à soi sans famille y comptent. Des comptes de relevés, jamais une part ni une zone
+// « meilleure » qu'une autre.
 import { FAMILLES, estEmotion, familleDe } from '../domain/roue.js';
-import { diffDays, estDateValide, estHeureValide, jourEvenement } from '../domain/dates.js';
+import { ZONES, zoneDe } from '../domain/carte-roue.js';
+import { addDays, diffDays, estDateValide, estHeureValide, jourEvenement, lundiDe } from '../domain/dates.js';
 import { minusculeInitiale } from '../domain/phrase.js';
 import { clesDeColonnes, colonneDe, ordreDeListe } from './colonnes.js';
 import { SEUILS } from './seuils.js';
@@ -47,6 +52,48 @@ export function parFamille(releves) {
   const n = comptesVides();
   for (const r of releves || []) if (r && Object.hasOwn(n, r.famille)) n[r.famille] += 1;
   return n;
+}
+
+// ---------- v9 · Par zone (spec §8 et §13.2) ----------
+
+// { rouge: 0, jaune: 0, bleu: 0, vert: 0 } : les quatre zones, dans leur ordre.
+export const zonesVides = () => Object.fromEntries(ZONES.map((z) => [z, 0]));
+// Le nombre de relevés d'un compte par zone.
+export const nombreParZone = (compte) => (compte ? ZONES.reduce((s, z) => s + (compte[z] || 0), 0) : 0);
+// « rouge 3 · jaune 2 · bleu 9 · vert 5 » : dans l'ordre des zones, sans les zones à zéro ; '' sans relevé. Pour l'Export
+// PSY, la page A4 et l'Analyse.
+export const texteZones = (compte) => ZONES.filter((z) => compte && compte[z] > 0).map((z) => `${z} ${compte[z]}`).join(' · ');
+
+// Le nombre de relevés de chaque zone : { rouge, jaune, bleu, vert }. releves : relevesAEmotion (ou tout relevé qui porte
+// `emotion`) ; un relevé dont le mot n'a pas de zone n'y est pas.
+export function parZone(releves, perso) {
+  const n = zonesVides();
+  for (const r of releves || []) {
+    const z = r && zoneDe(r.emotion, perso);
+    if (z) n[z] += 1;
+  }
+  return n;
+}
+
+// Les `n` dernières semaines (du lundi au dimanche), la plus ancienne d'abord : leurs lundis, jusqu'à celle d'`aujourdhui`.
+export const dernieresSemaines = (aujourdhui, n = S.zonesSemaines) => Array.from({ length: n }, (_, i) => addDays(lundiDe(aujourdhui), -7 * (n - 1 - i)));
+
+// Par semaine (`semaines` : leurs lundis, dernieresSemaines), le nombre de relevés de chaque zone :
+// [{ semaine, rouge, jaune, bleu, vert }], dans l'ordre reçu, une semaine sans relevé à zéro. releves : relevesAEmotion,
+// déjà rattachés à leur jour logique (bascule à 4 h), « vers » compris : l'Analyse les a calculés une fois pour toutes
+// ses vues, et les passe sans ceux d'après aujourd'hui. Seuls les relevés des semaines demandées cherchent leur lundi.
+export function zonesParSemaine(releves, semaines, perso) {
+  const res = new Map((semaines || []).map((s) => [s, { semaine: s, ...zonesVides() }]));
+  if (!res.size) return [];
+  const lundis = [...res.keys()].sort();
+  const [du, au] = [lundis[0], addDays(lundis[lundis.length - 1], 6)];
+  for (const r of releves || []) {
+    if (!r || !(r.date >= du && r.date <= au)) continue;
+    const z = zoneDe(r.emotion, perso);
+    const ligne = z && res.get(lundiDe(r.date));
+    if (ligne) ligne[z] += 1;
+  }
+  return [...res.values()];
 }
 
 // Map jour logique → les émotions (identifiants) de ses relevés, dans l'ordre des heures. Seuls les jours de [du, au] qui

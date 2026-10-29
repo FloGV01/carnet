@@ -9,7 +9,12 @@ const E = SEUILS.emotions;
 const M = SEUILS.moments;
 // Le nombre de relevés d'une vue d'émotions, tiré du seuil (jamais recopié).
 const AU_MOINS_EMOTIONS = `au moins ${E.minReleves} émotions du moment`;
+// v9 · Tes zones (spec §8) : la zone d'un relevé vient de son mot.
+export const NOTE_ZONES = "Seuls comptent les relevés qui ont un mot : une famille seule ou une ancienne note de 1 à 10 n'a pas de zone.";
 export const REGLES = {
+  // v9 · Tes zones : les bulles, sur la période ; la barre par semaine, sur les 12 dernières semaines.
+  zones: `La règle : ${AU_MOINS_EMOTIONS} notées avec un mot sur la période. ${NOTE_ZONES}`,
+  zonesSemaines: `La règle : ${AU_MOINS_EMOTIONS} notées avec un mot sur les ${E.zonesSemaines} dernières semaines. ${NOTE_ZONES}`,
   classement: 'La règle : au moins 3 éléments notés, et 2 fois le même en tête.',
   explosions: 'La règle : au moins 3 explosions sur la période (épisodes dont la réaction est « Explosion »). Une liste montre ce qui y est noté au moins 2 fois.',
   // Ta journée a deux rangées, chacune avec son seuil : la règle les dit toutes les deux (moments.js pour l'énergie).

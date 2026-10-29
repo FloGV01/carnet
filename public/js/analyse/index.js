@@ -11,16 +11,17 @@ import { tesMoments } from './avant-explosions.js';
 import { frise } from './frise.js';
 import { avecHumeurDuJour } from './humeur-jour.js';
 import { reperesTraitement } from './reperes.js';
-import { relevesAEmotion, parFamille, famillesParHeure } from './emotions.js';
+import { relevesAEmotion, parFamille, famillesParHeure, parZone, zonesParSemaine, dernieresSemaines } from './emotions.js';
 
 export const FENETRES = ['7', '30', '90', 'tout'];
 
 // Les émotions du moment d'une période : le nombre de relevés de chaque famille, par heure de la journée (hors « vers »),
-// et le classement des mots notés (une famille seule n'est pas un mot).
-function emotionsDe(releves) {
+// et le classement des mots notés (une famille seule n'est pas un mot). v9 : et de chaque zone (Tes zones), avec `perso`.
+function emotionsDe(releves, perso) {
   return {
     n: releves.length,
     parFamille: parFamille(releves),
+    parZone: parZone(releves, perso),
     parHeure: famillesParHeure(releves),
     mots: classer(releves.filter((r) => r.mot).map((r) => r.mot), new Set()),
   };
@@ -64,15 +65,18 @@ export function analyze(data, ctx) {
     frises[f] = frise(d, du, au);
     // Repères de traitement (v6) : les changements notés, sur les colonnes de cette frise.
     reperes[f] = reperesTraitement(data.traitements, frises[f].colonnes);
-    emotions[f] = emotionsDe(releves.filter((r) => r.date >= du && r.date <= au));
+    emotions[f] = emotionsDe(releves.filter((r) => r.date >= du && r.date <= au), data.perso);
   }
   // Ma semaine : les 7 derniers jours, quelle que soit la période choisie. Les émotions par famille, et les 2 points
   // positifs les plus récents (dans un repli fermé).
   const debut7 = addDays(aujourdhui, -6);
   const positifs = journal.filter((j) => j.date >= debut7 && j.pointsPositifs).sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 2).map((j) => ({ date: j.date, texte: j.pointsPositifs.length > 120 ? `${j.pointsPositifs.slice(0, 119)}…` : j.pointsPositifs }));
+  // Tes zones (v9, spec §13.2) : les relevés de chaque zone par semaine, sur les 12 dernières semaines quelle que soit la
+  // période choisie ; rien après aujourd'hui (jour logique, comme les périodes).
+  const zonesSemaines = zonesParSemaine(releves, dernieresSemaines(aujourdhui), data.perso);
   return {
-    aujourdhui, premier, fenetres, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, emotions,
+    aujourdhui, premier, fenetres, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, emotions, zonesSemaines,
     semaine: { du: debut7, au: aujourdhui, positifs, emotions: parFamille(releves.filter((r) => r.date >= debut7)) },
   };
 }

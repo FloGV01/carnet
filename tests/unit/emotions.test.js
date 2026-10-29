@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   CLES_FAMILLES, comptesVides, nombreDeReleves, relevesAEmotion, parFamille, emotionsParJour, famillesParJour, famillesParHeure,
   famillesParColonnes, apresNuit, autourDe, autourDuBienEtre, emotionsParActivite, relevesAvecActivite, selonSeuilEmotions,
+  zonesVides, nombreParZone, texteZones, parZone, dernieresSemaines, zonesParSemaine,
 } from '../../public/js/analyse/emotions.js';
 import { SEUILS } from '../../public/js/analyse/seuils.js';
 import { analyze } from '../../public/js/analyse/index.js';
@@ -21,7 +22,7 @@ test('les familles dans l\'ordre de la roue ; un compte vide les a toutes à zé
   assert.ok(Object.values(comptesVides()).every((n) => n === 0));
   assert.equal(nombreDeReleves(compte({ colere: 2, joie: 3 })), 5);
   assert.equal(nombreDeReleves(null), 0);
-  assert.deepEqual(SEUILS.emotions, { minReleves: 5, heuresAutour: 3 });
+  assert.deepEqual(SEUILS.emotions, { minReleves: 5, heuresAutour: 3, zonesSemaines: 12 });
 });
 
 test('relevesAEmotion : jour logique (bascule à 4 h), famille et mot, famille seule, « vers », sans les anciennes notes', () => {
@@ -503,4 +504,108 @@ test('v9 · un mot à soi, avec la méta motsPerso : une émotion du jour, compt
   assert.deepEqual(a.frise['30'].colonnes.find((c) => c.cle === '2026-09-15').emotions, [FLOTTANT]);
   const sans = analyze({ journal: [], humeurs, episodes: [], symptomes: [], traitements: [] }, { aujourdhui: '2026-09-20', items });
   assert.equal(sans.emotions['30'].n, 1, 'sans la méta : seul Irrité');
+});
+
+// ---------- v9 · Tes zones (spec §8 et §13.2) ----------
+// Les relevés comptés par zone de la carte : seuls ceux dont le mot a une zone ; Fatigué et Épuisé (sans famille) et les
+// mots à soi y comptent, une famille seule (v7), une énergie seule ou une ancienne note non. Mots inventés.
+const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+const SANS_ZONE = 'roue:perso:u-8c9d0e1f';
+const PERSO_ZONES = {
+  [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-08-01T08:00:00.000Z' },
+  [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: true, createdAt: '2026-08-02T08:00:00.000Z' },
+  // Recréé à l'import, sans zone connue (point de vigilance 4) : une émotion, sans zone.
+  [SANS_ZONE]: { libelle: 'Mot sans libellé', zone: null, famille: null, definition: null, archive: true, createdAt: '2026-08-03T08:00:00.000Z' },
+};
+const zones = (o) => ({ ...zonesVides(), ...o });
+
+test('v9 · zonesVides, nombreParZone, texteZones : les quatre zones dans leur ordre ; « rouge 3 · bleu 9 », sans zéro', () => {
+  assert.deepEqual(Object.keys(zonesVides()), ['rouge', 'jaune', 'bleu', 'vert']);
+  assert.ok(Object.values(zonesVides()).every((n) => n === 0));
+  assert.equal(nombreParZone(zones({ rouge: 3, vert: 5 })), 8);
+  assert.equal(nombreParZone(null), 0);
+  assert.equal(texteZones({ vert: 5, bleu: 9, jaune: 2, rouge: 3 }), 'rouge 3 · jaune 2 · bleu 9 · vert 5', 'l\'ordre des zones, pas celui reçu');
+  assert.equal(texteZones(zones({ bleu: 9 })), 'bleu 9');
+  assert.equal(texteZones(zonesVides()), '');
+  assert.equal(texteZones(null), '');
+});
+
+test('v9 · parZone : les relevés dont le mot a une zone ; Fatigué en bleu, un mot à soi dans la sienne ; ni famille seule, ni note', () => {
+  const humeurs = [
+    releve('2026-10-12', '09:00', 'roue:colere:irrite'), releve('2026-10-12', '10:00', 'roue:colere:furieux'),
+    releve('2026-10-12', '11:00', 'roue:joie:fier'), releve('2026-10-12', '12:00', 'roue:aucune:fatigue'),
+    releve('2026-10-12', '13:00', 'roue:serenite:calme'), releve('2026-10-12', '14:00', 'roue:peur:accable'), // Accablé : rouge en v9
+    releve('2026-10-12', '15:00', 'roue:colere'), // famille seule (v7) : pas de zone
+    releve('2026-10-12', '16:00', FLOTTANT), releve('2026-10-12', '17:00', BRUMEUX), releve('2026-10-12', '18:00', SANS_ZONE),
+    { id: 'n', date: '2026-10-12', heure: '19:00', humeur: 6 }, { id: 'e', date: '2026-10-12', heure: '20:00', energie: 'energie:basse' },
+  ];
+  const r = relevesAEmotion(humeurs, PERSO_ZONES);
+  assert.deepEqual(parZone(r, PERSO_ZONES), zones({ rouge: 3, jaune: 1, bleu: 2, vert: 2 }));
+  // Les familles, elles, ne comptent ni Fatigué ni Brumeux (sans famille), et comptent la famille seule.
+  assert.deepEqual(parFamille(r), compte({ colere: 3, joie: 2, serenite: 1, peur: 1 }));
+  // Sans la méta : les mots à soi n'ont ni zone ni place dans les relevés à émotion.
+  assert.deepEqual(parZone(relevesAEmotion(humeurs), null), zones({ rouge: 3, jaune: 1, bleu: 1, vert: 1 }));
+  // Des relevés bruts (qui portent `emotion`) se comptent de même ; rien ne vaut ni NaN ni clé « null ».
+  assert.deepEqual(parZone(humeurs, PERSO_ZONES), zones({ rouge: 3, jaune: 1, bleu: 2, vert: 2 }));
+  assert.deepEqual(parZone([], null), zonesVides());
+  assert.deepEqual(parZone(null), zonesVides());
+  assert.deepEqual(Object.keys(parZone(r, PERSO_ZONES)), ['rouge', 'jaune', 'bleu', 'vert']);
+});
+
+test('v9 · dernieresSemaines et zonesParSemaine : 12 lundis, la plus ancienne d\'abord ; jour logique (4 h) ; semaines vides à zéro ; ni avant ni après', () => {
+  // Jeudi 15 octobre 2026 : la semaine du lundi 12, et les 11 d'avant, depuis le 27 juillet.
+  const semaines = dernieresSemaines('2026-10-15');
+  assert.equal(semaines.length, 12);
+  assert.deepEqual([semaines[0], semaines.at(-1)], ['2026-07-27', '2026-10-12']);
+  assert.ok(semaines.every((s, i) => i === 0 || s > semaines[i - 1]));
+  assert.deepEqual(dernieresSemaines('2026-10-12', 2), ['2026-10-05', '2026-10-12'], 'un lundi est le début de sa semaine');
+  const humeurs = [
+    releve('2026-10-12', '09:00', 'roue:colere:irrite'), releve('2026-10-12', '10:00', 'roue:aucune:epuise'),
+    releve('2026-10-12', '03:30', 'roue:joie:fier'), // 03:30 le lundi 12 : encore le dimanche 11, la semaine du 5
+    releve('2026-10-07', '14:00', 'roue:serenite:calme', { vers: true }), releve('2026-10-08', '14:00', 'roue:colere'), // famille seule
+    releve('2026-10-09', '14:00', FLOTTANT),
+    releve('2026-07-26', '14:00', 'roue:colere:irrite'), // la semaine du 20 juillet : hors des 12
+  ];
+  const res = zonesParSemaine(relevesAEmotion(humeurs, PERSO_ZONES), semaines, PERSO_ZONES);
+  assert.equal(res.length, 12);
+  assert.deepEqual(res.map((x) => x.semaine), semaines);
+  assert.deepEqual(res.at(-1), { semaine: '2026-10-12', ...zones({ rouge: 1, bleu: 1 }) });
+  assert.deepEqual(res.at(-2), { semaine: '2026-10-05', ...zones({ jaune: 1, vert: 2 }) });
+  assert.ok(res.slice(0, -2).every((x) => nombreParZone(x) === 0), 'les autres semaines, à zéro');
+  assert.deepEqual(Object.keys(res[0]), ['semaine', 'rouge', 'jaune', 'bleu', 'vert']);
+  // Sans la méta, Flottant ne compte pas.
+  assert.deepEqual(zonesParSemaine(relevesAEmotion(humeurs), semaines).at(-2), { semaine: '2026-10-05', ...zones({ jaune: 1, vert: 1 }) });
+  assert.deepEqual(zonesParSemaine([], []), []);
+  // Le dimanche de la dernière semaine compte ; le lundi suivant, non.
+  const bords = [releve('2026-10-18', '23:00', 'roue:colere:irrite'), releve('2026-10-19', '05:00', 'roue:colere:irrite'), releve('2026-07-27', '04:00', 'roue:joie:fier')];
+  const r = zonesParSemaine(relevesAEmotion(bords), semaines);
+  assert.deepEqual([r[0].jaune, r.at(-1).rouge, r.reduce((s, x) => s + nombreParZone(x), 0)], [1, 1, 2]);
+});
+
+test('v9 · analyze : les zones de chaque période et des 12 dernières semaines, sans relevé après aujourd\'hui ; Paris et UTC', () => {
+  const items = seedItems(SEED_V1, 'x');
+  const humeurs = [
+    ...['2026-10-12', '2026-10-13', '2026-10-14'].map((d) => releve(d, '10:00', 'roue:colere:irrite')),
+    releve('2026-10-15', '10:00', 'roue:colere'), releve('2026-10-16', '10:00', 'roue:aucune:fatigue'), releve('2026-10-17', '10:00', FLOTTANT),
+    releve('2026-09-01', '10:00', 'roue:joie:fier'), releve('2026-05-04', '10:00', 'roue:serenite:calme'),
+    releve('2026-10-19', '02:00', 'roue:peur:craintif'), // le lundi 19 à 2 h : encore le dimanche 18, aujourd'hui
+    releve('2026-10-19', '10:00', 'roue:peur:craintif'), // après aujourd'hui : nulle part
+  ];
+  const calculer = () => analyze({ journal: [], humeurs, episodes: [], symptomes: [], traitements: [], perso: PERSO_ZONES }, { aujourdhui: '2026-10-18', items });
+  const a = calculer();
+  assert.deepEqual(a.emotions['7'].parZone, zones({ rouge: 4, bleu: 1, vert: 1 }));
+  assert.deepEqual(a.emotions['90'].parZone, zones({ rouge: 4, jaune: 1, bleu: 1, vert: 1 }));
+  assert.deepEqual(a.emotions.tout.parZone, zones({ rouge: 4, jaune: 1, bleu: 1, vert: 2 }));
+  assert.equal(a.zonesSemaines.length, 12);
+  assert.deepEqual(a.zonesSemaines.at(-1), { semaine: '2026-10-12', ...zones({ rouge: 4, bleu: 1, vert: 1 }) });
+  assert.deepEqual(a.zonesSemaines.find((x) => x.semaine === '2026-08-31'), { semaine: '2026-08-31', ...zones({ jaune: 1 }) });
+  assert.equal(a.zonesSemaines.reduce((s, x) => s + nombreParZone(x), 0), 7, 'le 4 mai, hors des 12 semaines ; le 19 à 10 h, après aujourd\'hui');
+  const avant = process.env.TZ;
+  try {
+    process.env.TZ = 'UTC';
+    assert.equal(JSON.stringify([calculer().emotions, calculer().zonesSemaines]), JSON.stringify([a.emotions, a.zonesSemaines]));
+  } finally {
+    if (avant === undefined) delete process.env.TZ; else process.env.TZ = avant;
+  }
 });

@@ -216,3 +216,32 @@ test('v8 · Nuit par nuit : une barre par nuit qui a sa durée, à la teinte imp
   // La nuit qui n'a que sa qualité : son texte, sans barre.
   assert.ok(appels.some((a) => a.nom === 'fillText' && a.args[0] === 'Bien'));
 });
+
+// v9 (spec §8) : la page dessine la ligne « Émotions par zone (relevés) » sous celle des familles, ses valeurs dans leur
+// colonne, et la légende des zones une seule fois, sur la ligne du titre « Indicateurs », en texte secondaire.
+test('v9 · la page dessine la ligne des zones sous les familles et la légende des zones, une fois, sur la ligne d\'« Indicateurs »', async () => {
+  const { dessinerPage, TAILLE_PX } = await import('../../public/js/ui/graphes/dessin-canvas.js');
+  const { mettreEnPage, A4 } = await import('../../public/js/export/page-a4.js');
+  const { modeleSoignants, NOM_EMOTIONS, NOM_ZONES, LEGENDE_ZONES } = await import('../../public/js/export/soignants.js');
+  const { analyze } = await import('../../public/js/analyse/index.js');
+  const { SEED_V1, seedItems } = await import('../../public/js/domain/vocabulaire.js');
+  const { carteLibelles } = await import('../../public/js/domain/libelles.js');
+  const items = seedItems(SEED_V1, 'x');
+  const emo = (date, heure, emotion) => ({ id: `${date}-${heure}`, date, heure, emotion, humeur: null, energie: null });
+  const humeurs = [emo('2026-10-13', '09:00', 'roue:colere:irrite'), emo('2026-10-13', '12:00', 'roue:aucune:fatigue'), emo('2026-10-14', '09:00', 'roue:serenite:calme')];
+  const data = { journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }], episodes: [], symptomes: [], traitements: [], humeurs };
+  const aujourdhui = '2026-10-14';
+  const m = modeleSoignants(data, { aujourdhui, carte: carteLibelles(items), analyse: analyze(data, { aujourdhui, items }), professionnel: null, prenom: '' });
+  const page = mettreEnPage(m);
+  const { toile, appels } = toileFactice();
+  dessinerPage(toile, page);
+  const k = TAILLE_PX.largeur / A4.largeur;
+  const textes = appels.filter((a) => a.nom === 'fillText').map((a) => ({ texte: a.args[0], x: a.args[1] / k, y: a.args[2] / k }));
+  const un = (t) => { const l = textes.filter((x) => x.texte === t); assert.equal(l.length, 1, t); return l[0]; };
+  const legende = un(LEGENDE_ZONES);
+  assert.ok(Math.abs(legende.y - un('INDICATEURS').y) < 1e-6, 'sur la ligne du titre');
+  assert.ok(legende.x > A4.marge && legende.x < A4.largeur - A4.marge);
+  assert.ok(un(NOM_EMOTIONS).y < un(NOM_ZONES).y, 'sous les familles');
+  const valeurs = textes.filter((x) => Math.abs(x.y - un(NOM_ZONES).y) < 1e-6 && x.texte !== NOM_ZONES).map((x) => x.texte);
+  assert.deepEqual(valeurs, ['rouge 1 · bleu 1 · vert 1', 'rouge 1 · bleu 1 · vert 1', 'rouge 1 · bleu 1 · vert 1']);
+});

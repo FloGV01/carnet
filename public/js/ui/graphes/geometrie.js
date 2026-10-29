@@ -3,7 +3,7 @@
 // d'une carte sur un écran de 390 : une unité vaut un pixel.
 import { jourSemaine as jourSemaineCle } from '../../domain/dates.js';
 import { FAMILLES } from '../../domain/roue.js';
-import { zoneDe as zoneDeCarte } from '../../domain/carte-roue.js';
+import { ZONES, zoneDe as zoneDeCarte } from '../../domain/carte-roue.js';
 
 // Les familles de la roue, dans leur ordre : l'ordre d'empilement des barres d'émotions.
 const ORDRE_FAMILLES = FAMILLES.map((f) => f.cle);
@@ -263,6 +263,43 @@ export function geometrieJournee({ parHeure = null, creneaux = [], ordreFamilles
   const etiquettes = CRENEAUX.map((debut, i) => ({ x: r1(centre(i) - l / 2), texte: `${debut} h` })).filter((_, i) => i % 2 === 0);
   const libelles = rangees.map((r) => ({ cle: r.cle, lignes: r.libelle.map((t) => ({ texte: t, y: r1(r.y + r.h / 2) })) }));
   return { dim: { largeur: d.largeur, hauteur }, axeY, rangees, libelles, barres, energies, zones, etiquettes, parCreneau };
+}
+
+// ---------- v9 · Tes zones, par semaine (spec §8 et §13.2) ----------
+// Une colonne par semaine (les 12 dernières, analyse/emotions.js, zonesParSemaine), la plus ancienne à gauche : une barre
+// empilée par zone, de bas en haut dans l'ordre des zones (rouge, jaune, bleu, vert, celui de la légende), longue comme
+// le nombre de relevés de la semaine, sur une échelle commune. Une semaine sans relevé ne dessine rien et ne se touche
+// pas. Sous les barres, le filet de base et le lundi de chaque semaine (« 29/09 »), un sur deux en partant de la plus
+// récente. zones : la colonne entière de chaque semaine qui a un relevé, à toucher pour son détail.
+export const DIM_ZONES_SEMAINES = { largeur: 326, haut: 4, barresH: 96, axeH: 18, barreMax: 16 };
+
+export function geometrieZonesSemaines(semaines, d = DIM_ZONES_SEMAINES) {
+  const n = Math.max(1, semaines.length);
+  const l = d.largeur / n;
+  const centre = (i) => l * (i + 0.5);
+  const larg = r1(Math.min(d.barreMax, l * 0.6));
+  const bas = d.haut + d.barresH;
+  const total = (s) => ZONES.reduce((t, z) => t + (s[z] || 0), 0);
+  const max = Math.max(1, ...semaines.map(total));
+  const barres = [];
+  const zones = [];
+  semaines.forEach((s, i) => {
+    const t = total(s);
+    if (!t) return;
+    let yy = bas;
+    const hTotal = Math.max(3, (t / max) * d.barresH);
+    for (const zone of ZONES) {
+      const k = s[zone] || 0;
+      if (!k) continue;
+      const h = (k / t) * hTotal;
+      yy -= h;
+      barres.push({ x: r1(centre(i) - larg / 2), y: r1(yy), l: larg, h: r1(Math.max(0.8, h - 0.6)), zone, cle: s.semaine });
+    }
+    zones.push({ x: r1(l * i), l: r1(l), cle: s.semaine });
+  });
+  const etiquettes = semaines.map((s, i) => ({ x: r1(centre(i)), texte: `${Number(s.semaine.slice(8))}/${s.semaine.slice(5, 7)}`, cle: s.semaine }))
+    .filter((_, i) => (n - 1 - i) % 2 === 0);
+  return { dim: { largeur: d.largeur, hauteur: r1(bas + d.axeH) }, base: { x1: 0, x2: d.largeur, y: r1(bas + 0.5) }, axeY: r1(bas + 13), barres, zones, etiquettes };
 }
 
 // ---------- v6 · Comprendre ----------

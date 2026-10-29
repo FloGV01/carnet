@@ -1,6 +1,6 @@
 // Écran Analyse (v5 ; v7 en 2b) : en haut, la porte « Historique › » et les trois portes de Comprendre ; Ma semaine en
-// tuiles (dont « Tes émotions ») ; puis, selon la période : Mes jours, ta journée heure par heure, contacts et
-// mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les chiffres. v7 : plus aucune
+// tuiles (dont « Tes émotions ») ; puis, selon la période : Tes zones (v9), Mes jours, ta journée heure par heure, contacts
+// et mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les chiffres. v7 : plus aucune
 // phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de ressemblance).
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache jusqu'à la prochaine écriture, et la
 // base n'est pas relue avant (v8).
@@ -13,12 +13,13 @@ import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { useEtatApp } from '../hooks.js';
 import { analyze } from '../../analyse/index.js';
-import { nombreDeReleves, selonSeuilEmotions } from '../../analyse/emotions.js';
+import { nombreDeReleves, nombreParZone, selonSeuilEmotions } from '../../analyse/emotions.js';
 import { nombre, duree, moyenneReveils, phraseClassement, REGLES, PIED_EXPLOSIONS } from '../../analyse/textes.js';
 import { carteLibelles } from '../../domain/libelles.js';
 import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
 import { JOURS, jourSemaine, formaterPlage } from '../../domain/dates.js';
-import { MesJours, TaJournee, Barres } from '../graphes/graphes.js';
+import { MesJours, TaJournee, Barres, ZonesParSemaine } from '../graphes/graphes.js';
+import { QuatreBulles } from '../composants/quatre-bulles.js';
 import { ONGLETS as PORTES_COMPRENDRE } from './comprendre.js';
 import { versHash } from '../../routeur.js';
 import { pourAffichage } from '../../domain/typographie.js';
@@ -99,6 +100,23 @@ function MaSemaine({ f, frise7, semaine, carte }) {
     ${semaine.positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" icone="positifs" teinte="pos" memoriser=${false}>
       <ul class="lignes-semaine">${semaine.positifs.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>
     </${Repli}>`}
+  </section>`;
+}
+
+// Tes zones (v9, spec §8 et §13.2), juste après « Tes émotions » (Ma semaine), en tête de ce que règle la période : les
+// quatre bulles de l'émotion en petit, chacune avec son nombre de relevés de la période ; dessous, la barre par semaine,
+// toujours sur les 12 dernières semaines. Seuls comptent les relevés dont le mot a une zone. Sous 5 relevés, « Pas encore
+// assez de données pour le dire. » et sa règle ; rien du tout tant qu'aucun relevé n'a de zone. Ni pourcentage, ni zone
+// mise en avant : l'ordre est fixe.
+function TesZones({ compte, semaines, avecZone }) {
+  if (!avecZone) return null;
+  const bullesOk = selonSeuilEmotions(nombreParZone(compte)) === 'ok';
+  const semainesOk = selonSeuilEmotions(semaines.reduce((s, x) => s + nombreParZone(x), 0)) === 'ok';
+  return html`<section class="carte tes-zones" aria-label="Tes zones">
+    <div class="carte-entete"><h2 class="titre-carte">Tes zones</h2></div>
+    ${bullesOk ? html`<${QuatreBulles} comptes=${compte} etiquette="Relevés par zone, sur la période" />` : html`<${Pourquoi} regle=${REGLES.zones} />`}
+    ${semainesOk ? html`<${ZonesParSemaine} semaines=${semaines} />`
+      : bullesOk && html`<figure class="graphe g-zones-semaines"><figcaption><span class="graphe-titre">Par semaine</span></figcaption><${Pourquoi} regle=${REGLES.zonesSemaines} /></figure>`}
   </section>`;
 }
 
@@ -217,6 +235,7 @@ export function Analyse() {
 
     <div class="selon-periode">
       <div class="selecteur-periode"><${Segmente} etiquette="Période" options=${FENETRES} valeur=${fenetre} surChoix=${(v) => v && setFenetre(v)} classe="large" sansVide=${true} /></div>
+      <${TesZones} compte=${r.emotions[fenetre].parZone} semaines=${r.zonesSemaines} avecZone=${nombreParZone(r.emotions.tout.parZone) > 0} />
       <${MesJours} key=${`frise-${fenetre}`} frise=${r.frise[fenetre]} reperes=${r.reperesTraitement[fenetre]} carte=${carte} perso=${perso} aujourdhui=${r.aujourdhui} />
       ${journeeOk || r.moments[fenetre].statut === 'ok'
         ? html`<${TaJournee} key=${`journee-${fenetre}`} parHeure=${journeeOk ? parHeure : null} profil=${r.moments[fenetre]} carte=${carte} />`

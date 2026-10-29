@@ -5,15 +5,16 @@
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
-import { geometrieMesJours, geometrieJournee } from './geometrie.js';
-import { nombre, uneDecimale } from '../../analyse/textes.js';
-import { texteFamilles } from '../../analyse/emotions.js';
+import { geometrieMesJours, geometrieJournee, geometrieZonesSemaines } from './geometrie.js';
+import { nombre, uneDecimale, NOTE_ZONES } from '../../analyse/textes.js';
+import { texteFamilles, texteZones, nombreParZone, zonesVides } from '../../analyse/emotions.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
 import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
 import { ZONES, NOMS_ZONES, zoneDe } from '../../domain/carte-roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
+import { pourAffichage } from '../../domain/typographie.js';
 import { texteHeuresSommeil } from '../../domain/champs.js';
 
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
@@ -50,9 +51,10 @@ export function famillesPresentes(familles) {
   return FAMILLES.filter((f) => vues.has(f.cle));
 }
 export const LegendeFamilles = ({ familles }) => familles.map((f) => html`<span class=${`emo-${f.cle}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${f.libelle}</span>`);
-// Les zones (v9, Mes jours en mode jour) : les quatre, dans leur ordre, comme un repère fixe (la rampe des nuits aussi
-// montre tous ses pas) ; « sans zone » en plus, au point creux, pour un ancien relevé qui n'a que sa famille (v7).
-const LegendeZones = ({ creux = false }) => html`${ZONES.map((z) => html`<span class=${`zone-${z}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${NOMS_ZONES[z]}</span>`)}
+// Les zones (v9, Mes jours en mode jour, Tes zones par semaine) : les quatre, dans leur ordre, comme un repère fixe (la
+// rampe des nuits aussi montre tous ses pas) ; « sans zone » en plus, au point creux, pour un ancien relevé qui n'a que sa
+// famille (v7).
+export const LegendeZones = ({ creux = false }) => html`${ZONES.map((z) => html`<span class=${`zone-${z}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${NOMS_ZONES[z]}</span>`)}
   ${creux && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-creux" cx="6" cy="6" r="3.5" /></svg>sans zone</span>`}`;
 // La rampe du sommeil et celle de l'énergie, une case par niveau : « du clair au foncé » serait faux en sombre, où la
 // rampe va du foncé au clair (v7).
@@ -234,4 +236,35 @@ export function Barres({ titre, rubrique, lignes, precisions, lib, pied }) {
     })}</ul>
     ${pied && html`<p class="legende-graphe">${pied}</p>`}
   </figure>`;
+}
+
+// Tes zones par semaine (v9, spec §8 et §13.2) : sur les 12 dernières semaines, une barre par semaine, empilée par zone
+// (rouge, jaune, bleu, vert, de bas en haut), longue comme le nombre de relevés. En tête, la phrase-résumé : les relevés
+// de chaque zone sur les 12 semaines, sans zone à zéro, jamais une part. Toucher une semaine dit ses comptes ; « Voir en
+// tableau » les donne toutes. semaines : zonesParSemaine (analyse/emotions.js), au-dessus du seuil.
+const nomSemaine = (cle) => `semaine du ${formaterDateNumerique(cle).slice(0, 5)}`;
+// « rouge 4 · jaune 1 » à l'écran : une zone ne quitte jamais son nombre, et « · » ni « : » ne commencent une ligne.
+const lisible = (t) => pourAffichage(t).replace(/(rouge|jaune|bleu|vert) (\d)/g, '$1\u00a0$2');
+export function ZonesParSemaine({ semaines }) {
+  const [choix, setChoix] = useState(null);
+  const g = geometrieZonesSemaines(semaines);
+  const d = g.dim;
+  const total = zonesVides();
+  for (const s of semaines) for (const z of ZONES) total[z] += s[z] || 0;
+  const avec = semaines.filter((s) => nombreParZone(s) > 0);
+  const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
+  const semaine = zone && semaines.find((s) => s.semaine === choix);
+  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Semaine</th><th scope="col">Zones</th><th scope="col">Relevés</th></tr></thead>
+    <tbody>${avec.map((s) => html`<tr><td>${nomSemaine(s.semaine)}</td><td>${lisible(texteZones(s))}</td><td>${nombreParZone(s)}</td></tr>`)}</tbody></table>`;
+  const legende = html`<p class="legende-graphe legende-frise"><${LegendeZones} /></p>`;
+  const detail = semaine && html`<p class="detail-colonne" role="status"><strong>${nomSemaine(semaine.semaine)}</strong> · ${lisible(texteZones(semaine))}</p>`;
+  return html`<${Cadre} titre="Par semaine" classe="g-zones-semaines" droite=${`${semaines.length} dernières semaines`} resume=${lisible(`Relevés de ces ${semaines.length} semaines : ${texteZones(total)}.`)}
+    tableau=${tableau} legende=${legende} detail=${detail} dim=${d} pied=${NOTE_ZONES}
+    aria=${`Tes zones par semaine, sur les ${semaines.length} dernières semaines : une barre par semaine, découpée par zone, longue comme le nombre de relevés. Touche une semaine pour son détail, ou « Voir en tableau ».`}>
+    ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${g.base.y} rx="3" />`}
+    <line class="g-filet" x1=${g.base.x1} x2=${g.base.x2} y1=${g.base.y} y2=${g.base.y} />
+    ${g.barres.map((b) => html`<rect class=${`g-emo zone-${b.zone}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
+    ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${g.axeY} text-anchor="middle">${e.texte}</text>`)}
+    ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
+  </${Cadre}>`;
 }

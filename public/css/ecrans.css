@@ -238,6 +238,10 @@
 .tuiles-semaine .tuile { background: var(--surface-2); min-height: 0; padding: 12px 12px 14px; gap: 8px; }
 .tuiles-semaine .tuile-valeur { font-size: var(--t-tuile); color: var(--text); }
 .tuile-emotions { grid-column: 1 / -1; }
+/* Tes zones (v9) : les quatre bulles, puis la barre par semaine dans la même carte (son cadre de graphique s'y fond). */
+.tes-zones { display: flex; flex-direction: column; gap: 14px; }
+.tes-zones .carte-entete { margin: 0; }
+.tes-zones .graphe { padding: 0; background: none; border-radius: 0; }
 .barres-familles { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .barres-familles li { display: grid; grid-template-columns: minmax(0, 5.6em) minmax(0, 1fr) 2.2em; align-items: center; gap: 10px; font-size: var(--t-sous); }
 .nom-famille { color: var(--text); overflow-wrap: anywhere; }
@@ -750,6 +754,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
 .quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 0.812rem; }
 .quatre-bulles.petites .bulle-zone[aria-pressed="true"] { outline: 2.5px solid var(--anneau, var(--text)); outline-offset: 3px; }
+/* Avec leurs comptes (v9, spec §13.2 : Tes zones, dans l'Analyse) : une liste de 2 × 2 disques de 120 (7,06 rem : ils
+   grandissent avec le texte, jusqu'à la moitié de la carte), sans halo, qui ne se touchent pas ; sous le libellé,
+   « 9 relevés » en police système grasse, au même corps ajusté. */
+.quatre-bulles.comptes { margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, min(7.06rem, calc((100% - 12px) / 2))); gap: 12px; justify-content: center; }
+.quatre-bulles.comptes .bulle-zone { width: 100%; height: auto; aspect-ratio: 1; transition: none; }
+.quatre-bulles.comptes .bulle-zone:active { transform: none; }
+.quatre-bulles.comptes .etiquette-bulle { width: 87%; font-size: 0.706rem; line-height: 0.812rem; }
+.compte-bulle { margin-top: 5px; font: 600 1.1em/1.2 var(--police); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 /* « Maintenant ▾ » sous les bulles, en petit, et les heures de « C'était vers… » dessous (à la couleur Humeur, v6). */
 .moment-plein .puce-quand { flex: none; margin-top: 30px; padding: 0; }
 .moment-plein .puce-quand > .btn-lien { width: auto; min-height: var(--cible); padding: 0 10px; gap: 6px; }

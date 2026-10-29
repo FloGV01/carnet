@@ -3,6 +3,8 @@
 // v7 : les émotions du moment (roue), en nombre de relevés par famille, dans l'ordre de la roue ; les anciennes notes de
 // 1 à 10 gardent leur ligne « Humeur (notes) » tant qu'une colonne en a, et leur rangée sur la frise quand sa période en a.
 // v8 (Q15) : « Nuit par nuit », les nuits notées des 4 dernières semaines (2 si la page ne tient pas, page-a4.js).
+// v9 (spec §8) : sous les familles, les mêmes relevés par zone de la carte (rouge, jaune, bleu, vert), avec la légende
+// des zones au bout du titre « Indicateurs » (page-a4.js).
 import { addDays, diffDays, lundiDe, formaterDateNumerique, formaterJourCourt } from '../domain/dates.js';
 import { indicateurs, premiereDate } from '../analyse/fenetres.js';
 import { nombre, duree, moyenneReveils, texteNuit } from '../analyse/textes.js';
@@ -14,7 +16,7 @@ import { journalAvecExplosions, saisieDuSoir } from '../domain/explosions.js';
 import { frise } from '../analyse/frise.js';
 import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
 import { reperesTraitement } from '../analyse/reperes.js';
-import { relevesAEmotion, parFamille, texteFamilles } from '../analyse/emotions.js';
+import { relevesAEmotion, parFamille, parZone, texteFamilles, texteZones } from '../analyse/emotions.js';
 import { FAMILLES, estEmotion } from '../domain/roue.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions (épisodes)', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
@@ -27,6 +29,10 @@ export const SEMAINES_NUITS = [4, 2];
 // « Émotions par famille » : une valeur par colonne, sur plusieurs lignes si besoin (multiligne, page-a4.js). « Humeur
 // (notes) » : seulement si une colonne a d'anciennes notes ; une colonne sans note dit « · ».
 export const NOM_EMOTIONS = 'Émotions par famille (relevés)';
+// « Émotions par zone » (v9) : même forme que la ligne de l'Export PSY (« rouge 3 · jaune 2 »), une valeur par colonne,
+// sur plusieurs lignes si besoin ; « · » sans relevé qui ait une zone. Sa légende dit ce que chaque couleur veut dire.
+export const NOM_ZONES = 'Émotions par zone (relevés)';
+export const LEGENDE_ZONES = 'Zones : rouge = énergie haute, désagréable · jaune = haute, agréable · bleu = basse, désagréable · vert = basse, agréable';
 export const NOM_NOTES = 'Humeur (notes), moyenne (min-max)';
 function lignesIndicateurs(colonnes, lib) {
   const v = (f, fn) => fn(f);
@@ -41,6 +47,7 @@ function lignesIndicateurs(colonnes, lib) {
     ? ['Coucher · lever · durée (médianes)', (f) => (aHoraires(f) ? `${f.nuits.coucher || '·'} · ${f.nuits.lever || '·'} · ${duree(f.nuits.duree)}` : dureeSeule(f))]
     : ['Durée de nuit (médiane)', dureeSeule];
   const emotions = { nom: NOM_EMOTIONS, valeurs: colonnes.map((c) => texteFamilles(c.emotions) || '·'), multiligne: true };
+  const zones = { nom: NOM_ZONES, valeurs: colonnes.map((c) => texteZones(c.zones) || '·'), multiligne: true };
   const defs = [
     ...(avecNotes ? [[NOM_NOTES, (f) => (f.humeur.n ? `${nombre(f.humeur.moyenne)} (${nombre(f.humeur.minReleve)}-${nombre(f.humeur.maxReleve)}, sur ${f.humeur.n} j)` : '·')]] : []),
     ['Explosions (jours avec)', (f) => (f.explosions.n ? `${f.explosions.total} (${f.explosions.jours})` : '·')],
@@ -54,7 +61,7 @@ function lignesIndicateurs(colonnes, lib) {
     ['Épisodes (intensité moyenne)', (f) => `${f.episodes.nombre}${f.episodes.nIntensite ? ` (${nombre(f.episodes.intensite)})` : ''}`],
     ['Symptômes', (f) => String(f.symptomes.nombre)],
   ];
-  return [emotions, ...defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }))];
+  return [emotions, zones, ...defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }))];
 }
 
 export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
@@ -74,13 +81,13 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
   // data.perso (v9) : la méta `motsPerso`, pour qu'un relevé de mot à soi compte dans sa famille.
   const perso = data.perso || null;
   const releves = relevesAEmotion(data.humeurs || [], perso).filter((r) => r.date <= aujourdhui);
-  const emotionsEntre = (du, au) => parFamille(releves.filter((r) => r.date >= du && r.date <= au));
+  const entre = (du, au) => releves.filter((r) => r.date >= du && r.date <= au);
   const premier = premiereDate({ ...data, journal: [...journal, ...releves.map((r) => ({ date: r.date }))] }, aujourdhui);
   data = { ...data, journal: journalAvecExplosions(journal, data.episodes || [], { zeroDepuis, jourNote: saisieDuSoir(data.journal) }) };
   // Le dernier rendez-vous : la même référence que « La dernière fois » (domain/soins.js), comptée depuis aujourd'hui.
   const dernierRdv = rdvReference(rdvs, { professionnel, avant: aujourdhui });
   const prochain = trierRdv(rdvs.filter((r) => !professionnel || r.professionnel === professionnel), aujourdhui).aVenir[0] || null;
-  const colonne = (titre, du) => ({ titre, f: indicateurs(data, du, aujourdhui), emotions: emotionsEntre(du, aujourdhui) });
+  const colonne = (titre, du) => ({ titre, f: indicateurs(data, du, aujourdhui), emotions: parFamille(entre(du, aujourdhui)), zones: parZone(entre(du, aujourdhui), perso) });
   const colonnes = [colonne('7 j', addDays(aujourdhui, -6)), colonne('30 j', addDays(aujourdhui, -29))];
   if (dernierRdv && dernierRdv.date && diffDays(dernierRdv.date, aujourdhui) <= 180) {
     colonnes.push(colonne(`Depuis le RDV du ${formaterDateNumerique(dernierRdv.date).slice(0, 5)}`, dernierRdv.date));
@@ -131,6 +138,7 @@ export function modeleSoignants(data, { aujourdhui, carte, analyse, professionne
     noteLecture: `Émotions : relevés notés, par famille de la roue.${colonnes.some((c) => c.f.humeur.n > 0) ? ' Humeur (notes) : anciennes notes de 1 à 10, moyenne de chaque journée.' : ''}`,
     colonnes: colonnes.map((c) => c.titre),
     indicateurs: lignesIndicateurs(colonnes, lib),
+    legendeZones: LEGENDE_ZONES,
     titreEvolution: parMois ? 'Évolution sur 12 mois' : 'Évolution sur 12 semaines',
     // Sans la clé energieBasse (toujours nulle ici) : l'énergie basse reste à l'écran. Par semaine ou par mois, chaque
     // colonne porte ses familles (familles, nEmotions) ; avecHumeur dit si la période a d'anciennes notes.

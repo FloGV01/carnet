@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieMesJours, geometrieJournee, DIM_MES_JOURS, DIM_MES_JOURS_PDF, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieMesJours, geometrieJournee, geometrieZonesSemaines, DIM_MES_JOURS, DIM_MES_JOURS_PDF, DIM_ZONES_SEMAINES, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
 
 const jour = (cle, extra = {}) => ({ cle, humeur: null, moyenne7: null, nuit: null, explosions: null, autres: 0, aDonnee: false, ...extra });
 
@@ -619,4 +619,49 @@ test('v6 · repères : deux numéros trop proches passent sur un second rang ; u
   const pdf = geometrieMesJours({ pas: 'mois', colonnes: mois, avecHumeur: true }, { reperes: mois.map((c, i) => repere(i, '⑦–⑨', c.cle)) }, { ...DIM_MES_JOURS_PDF, largeur: 900 });
   assert.ok(pdf.reperes.every((r) => r.rang === 0));
   assert.deepEqual(horsCadre(pdf, 900, pdf.dim.hauteur), []);
+});
+
+// ---------- v9 · Tes zones, par semaine (spec §8 et §13.2) ----------
+
+const semaineZones = (semaine, o = {}) => ({ semaine, rouge: 0, jaune: 0, bleu: 0, vert: 0, ...o });
+// Les 12 lundis jusqu'à celui du 12 octobre 2026.
+const LUNDIS = ['2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05', '2026-10-12'];
+
+test('v9 · Tes zones par semaine : une barre empilée par semaine, de bas en haut rouge, jaune, bleu, vert, longue comme ses relevés ; rien pour une semaine vide', () => {
+  const semaines = LUNDIS.map((s) => semaineZones(s));
+  semaines[3] = semaineZones('2026-08-17', { vert: 2, rouge: 4, bleu: 2 });
+  semaines[11] = semaineZones('2026-10-12', { jaune: 4 });
+  semaines[10] = semaineZones('2026-10-05', { bleu: 1 });
+  const g = geometrieZonesSemaines(semaines);
+  const d = DIM_ZONES_SEMAINES;
+  assert.deepEqual(g.dim, { largeur: d.largeur, hauteur: d.haut + d.barresH + d.axeH });
+  // Une barre par zone notée, dans l'ordre des zones, la première posée sur la base, chacune au-dessus de la précédente.
+  const b = (cle) => g.barres.filter((x) => x.cle === cle);
+  assert.deepEqual(b('2026-08-17').map((x) => x.zone), ['rouge', 'bleu', 'vert']);
+  const [r, bl, v] = b('2026-08-17');
+  assert.ok(Math.abs(r.y + r.h + 0.6 - (d.haut + d.barresH)) < 0.2, 'posée sur la base');
+  assert.ok(bl.y + bl.h <= r.y + 0.05 && v.y + v.h <= bl.y + 0.05, 'empilées de bas en haut');
+  // Longue comme le nombre de relevés, sur une échelle commune : 8 relevés, la plus haute ; 4, la moitié ; 1, un huitième
+  // (3 unités au moins).
+  const hauteur = (cle) => (d.haut + d.barresH) - Math.min(...b(cle).map((x) => x.y));
+  assert.ok(Math.abs(hauteur('2026-08-17') - d.barresH) < 0.2);
+  assert.ok(Math.abs(hauteur('2026-10-12') - d.barresH / 2) < 0.2);
+  assert.ok(Math.abs(hauteur('2026-10-05') - Math.max(3, d.barresH / 8)) < 0.2);
+  // Rien pour une semaine vide : ni barre, ni zone à toucher.
+  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-08-17', '2026-10-05', '2026-10-12']);
+  assert.equal(new Set(g.barres.map((x) => x.cle)).size, 3);
+  // Les lundis sous les barres, un sur deux en partant du plus récent.
+  assert.deepEqual(g.etiquettes.map((e) => e.texte), ['3/08', '17/08', '31/08', '14/09', '28/09', '12/10']);
+  assert.ok(g.etiquettes.every((e, i) => i === 0 || e.x > g.etiquettes[i - 1].x));
+  assert.ok(g.barres.every((x) => x.l <= d.barreMax && x.h > 0));
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+});
+
+test('v9 · Tes zones par semaine : sans relevé, rien de dessiné ni de touchable ; jamais NaN', () => {
+  const g = geometrieZonesSemaines(LUNDIS.map((s) => semaineZones(s)));
+  assert.deepEqual([g.barres, g.zones], [[], []]);
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  const vide = geometrieZonesSemaines([]);
+  assert.deepEqual([vide.barres, vide.zones, vide.etiquettes], [[], [], []]);
+  assert.ok(!JSON.stringify(vide).includes('null'));
 });
