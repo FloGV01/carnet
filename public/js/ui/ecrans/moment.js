@@ -28,6 +28,14 @@
 // Après chaque changement de vue, et après chaque mot choisi, une garde de 350 ms : les boutons de l'écran ignorent les
 // touchers et sont aria-disabled. Un second toucher rapide tomberait sur un mot jamais vu (point de vigilance 5), sur un
 // autre mot que celui qu'on vient de toucher (la carte glissant jusqu'à lui), ou, sous la flèche, sur « Terminer ».
+// - La loupe (v9, spec §4.4), en haut à droite des écrans 1 et 2 : la recherche plein écran (ui/composants/
+//   recherche-emotion.js), champ actif. Un mot trouvé est choisi comme sur la carte (écrit, s'il ne l'était pas déjà ; la
+//   loupe ne l'efface jamais), puis la carte s'ouvre centrée sur lui, avec la carte du bas. ← ramène où l'on était.
+// - « Ajouter mon mot « … » » (spec §4.5) : l'écran du mot à soi (ui/composants/mot-perso.js), son nom déjà rempli. Le
+//   mot naît au premier choix de sa couleur (méta `motsPerso`, écrite avant le relevé, dont la validation la lit) et
+//   entre aussitôt dans le relevé, comme un mot touché sur la carte ; une autre couleur change la sienne, et l'énergie du
+//   relevé avec. Sa famille et sa définition le complètent ensuite, au toucher. La flèche ouvre la carte, centrée sur lui,
+//   hors du carré de sa zone ; ← ramène à la loupe.
 import { html, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { etatApp } from '../../store.js';
@@ -40,12 +48,15 @@ import { regleRessourcer } from '../../domain/ressourcer.js';
 import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
 import { motsDeLaCarte, energieDe, zoneDe } from '../../domain/carte-roue.js';
 import { definition } from '../../domain/definitions-roue.js';
+import { chercher, nomPropose, creerMot, modifierMot, nouvelIdMot } from '../../domain/mots-perso.js';
 import { texteReleve } from '../../domain/releves.js';
 import { couleurLisible } from '../carte-geometrie.js';
 import { usePleinEcran } from '../composants/parcours.js';
 import { QuatreBulles } from '../composants/quatre-bulles.js';
 import { CarteEmotions, motsColores } from '../composants/carte-emotions.js';
-import { CarteDuBas } from '../composants/carte-du-bas.js';
+import { CarteDuBas, FLECHE } from '../composants/carte-du-bas.js';
+import { RechercheEmotion, LOUPE, amorcerClavier } from '../composants/recherche-emotion.js';
+import { FormulaireMot } from '../composants/mot-perso.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { lirePlan } from '../composants/mon-plan.js';
 import { PourRecuperer, lireRessourcer } from '../composants/ressourcer.js';
@@ -79,7 +90,8 @@ function quandDuReleve(h, aujourdhui) {
   return [nom.charAt(0).toUpperCase() + nom.slice(1), heure].filter(Boolean).join(' · ');
 }
 
-// Les icônes des boutons en verre (visuel §1.2 et §2.9) : la croix et la flèche retour, au trait fin.
+// Les icônes des boutons en verre (visuel §1.2 et §2.9) : la croix et la flèche retour, au trait fin (la loupe :
+// recherche-emotion.js).
 const CROIX = html`<svg width="19" height="19" viewBox="0 0 19 19" fill="none" stroke="currentColor" stroke-width="1.6"
   stroke-linecap="round" aria-hidden="true"><path d="M3 3l13 13M16 3L3 16" /></svg>`;
 const RETOUR = html`<svg width="21" height="21" viewBox="0 0 21 21" fill="none" stroke="currentColor" stroke-width="1.6"
@@ -112,8 +124,13 @@ export function Moment({ id = null }) {
   // avant se rouvre depuis Ma journée.
   useLayoutEffect(() => { fermerToast(); }, []);
   const rouvert = Boolean(id);
-  // La vue : les bulles, la carte (`zone` : la bulle touchée), ou « Ce que je faisais » (l'écran 3).
+  // La vue : les bulles, la carte (`zone` : la bulle touchée), « Ce que je faisais » (l'écran 3), la loupe (`retour` : la
+  // vue d'où elle s'ouvre) ou le mot à soi (`libelle` : son nom proposé ; `id`, une fois créé ; `retour` : la loupe).
   const [vue, setVue] = useState(rouvert ? { nom: 'faisais' } : { nom: 'bulles', zone: null });
+  // Le texte de la loupe, gardé d'une ouverture à l'autre.
+  const [recherche, setRecherche] = useState('');
+  // Les mots à soi tels qu'écrits ici (un mot créé, complété) ; avant, ceux de la lecture.
+  const [persoEcrit, setPersoEcrit] = useState(undefined);
   // Un relevé rouvert n'est à l'écran qu'une fois lu (null jusque-là).
   const [releve, setReleve] = useState(rouvert ? null : NEUF);
   const [versOuvert, setVersOuvert] = useState(false);
@@ -129,6 +146,7 @@ export function Moment({ id = null }) {
   const titre = useRef(null);
   const aFocaliser = useRef(false);
   const ferme = useRef(false);
+  const enCreation = useRef(false);
   const { donnees } = useDonnees(async () => {
     // Les définitions corrigées (méta `definitionsRoue`), les mots à soi (méta `motsPerso`), les activités de « Ce que je
     // faisais », le réglage et le plan de la règle « Me ressourcer », le relevé rouvert : une lecture qui échoue donne le
@@ -139,7 +157,11 @@ export function Moment({ id = null }) {
     ]);
     return { corrections, perso, items, carte: carteLibelles(items), reglage, plan, lu };
   }, [], { suivre: false });
-  const perso = donnees ? donnees.perso : null;
+  const perso = persoEcrit !== undefined ? persoEcrit : donnees ? donnees.perso : null;
+  const corrections = donnees ? donnees.corrections : null;
+  // Le relevé de la dernière peinture, pour une écriture qui finit après une attente (la création d'un mot à soi).
+  const releveRef = useRef(releve);
+  releveRef.current = releve;
   const mots = useMemo(() => motsColores(motsDeLaCarte(perso)), [perso]);
   useEffect(() => () => clearTimeout(garde.current), []);
 
@@ -159,11 +181,11 @@ export function Moment({ id = null }) {
     poserGarde();
     setReleve({ emotion: lu.emotion ?? null, energie: lu.energie ?? null, faisais: lu.faisais ?? null, humeur: lu.humeur ?? null, quand: null });
   }, [donnees]);
-  // Revenu à l'écran 1 ou arrivé à l'écran 3, le focus va au titre.
+  // Revenu à l'écran 1, arrivé à l'écran 3 ou au mot à soi, le focus va au titre (dans la loupe, il est au champ).
   useEffect(() => {
     if (!aFocaliser.current || !releve) return;
     aFocaliser.current = false;
-    if (vue.nom !== 'carte' && titre.current) titre.current.focus({ preventScroll: true });
+    if (vue.nom !== 'carte' && vue.nom !== 'loupe' && titre.current) titre.current.focus({ preventScroll: true });
   }, [vue, releve !== null]);
 
   const changerDeVue = (suivante) => {
@@ -221,17 +243,55 @@ export function Moment({ id = null }) {
     }).catch(() => {});
     return file.current;
   };
+  // Change le relevé à l'écran et l'écrit.
+  const changer = (champs, depuis = releve) => {
+    const suivant = { ...depuis, ...champs };
+    setReleve(suivant);
+    ecrire(champs, suivant);
+  };
   // Un mot : il est écrit avec l'énergie de sa case (spec §7 ; sur un ancien relevé, elle remplace celle qui avait été
   // saisie), et la garde se pose, la carte glissant jusqu'à lui. Le mot déjà choisi : il s'efface, et son énergie avec ;
   // rien ne bouge sous le doigt, pas de garde.
   const choisirMot = (motId) => {
     const efface = releve.emotion === motId;
     if (!efface) poserGarde();
-    const champs = efface ? { emotion: null, energie: null } : { emotion: motId, energie: energieDe(motId, perso) };
-    const suivant = { ...releve, ...champs };
-    setReleve(suivant);
-    ecrire(champs, suivant);
+    changer(efface ? { emotion: null, energie: null } : { emotion: motId, energie: energieDe(motId, perso) });
   };
+  // Un mot trouvé par la loupe : choisi comme sur la carte, mais jamais effacé (déjà choisi, il le reste) ; puis la carte,
+  // centrée sur lui, avec la carte du bas.
+  const choisirTrouve = (motId) => {
+    if (releve.emotion !== motId) changer({ emotion: motId, energie: energieDe(motId, perso) });
+    changerDeVue({ nom: 'carte', zone: null });
+  };
+  // Les mots à soi : la méta est écrite en file, avant le relevé qui cite un mot neuf (sa validation la lit dans sa
+  // transaction). Un refus (nom pris ou vide) rejette, et le formulaire le dit.
+  const ecrireMot = (transformer) => {
+    const fait = file.current.then(() => repo.meta.modifier('motsPerso', transformer));
+    file.current = fait.catch(() => {});
+    return fait.then((p) => { setPersoEcrit(p); return p; });
+  };
+  // La couleur du mot à soi. Le premier choix crée le mot (le nom tapé et la couleur suffisent), et le met dans le
+  // relevé, avec l'énergie de sa zone ; un autre change sa couleur, et l'énergie du relevé s'il porte encore ce mot.
+  // Pendant la création, un second toucher ne crée pas un second mot.
+  const choisirZoneDuMot = async (zone, libelle) => {
+    if (enCreation.current) return;
+    if (vue.id) {
+      const id = vue.id;
+      const p = await ecrireMot((v) => modifierMot(v, id, { zone }));
+      if (releveRef.current.emotion === id) changer({ energie: energieDe(id, p) }, releveRef.current);
+      return;
+    }
+    enCreation.current = true;
+    try {
+      const id = nouvelIdMot();
+      const p = await ecrireMot((v) => creerMot(v, { libelle, zone }, { id, maintenant: repo.maintenant() }).perso);
+      setVue((v) => (v.nom === 'mot' ? { ...v, id } : v));
+      changer({ emotion: id, energie: energieDe(id, p) }, releveRef.current);
+    } finally {
+      enCreation.current = false;
+    }
+  };
+  const completerMot = (champs) => ecrireMot((v) => modifierMot(v, vue.id, champs));
   // « Ce que je faisais » : écrit au toucher, comme en v8.
   const choisirFaisais = (faisais) => {
     if (enGarde) return;
@@ -258,13 +318,16 @@ export function Moment({ id = null }) {
 
   // ✕ est à la place de ← : un second toucher rapide sur ←, revenu aux bulles, ne ferme pas l'écran (la garde).
   const fermer = html`<button type="button" class="verre gauche" aria-label="Fermer" aria-disabled=${ariaGarde} onClick=${gardee(terminer)}>${CROIX}</button>`;
+  // La loupe, en haut à droite des écrans 1 et 2 : le clavier s'amorce pendant le toucher même (recherche-emotion.js).
+  const loupe = html`<button type="button" class="verre droite" aria-label="Chercher un mot" aria-disabled=${ariaGarde}
+    onClick=${gardee(() => { amorcerClavier(); changerDeVue({ nom: 'loupe', retour: vue }); })}>${LOUPE}</button>`;
   let ecran = null;
   if (!releve) {
     // Le relevé rouvert se lit : l'écran reste noir.
   } else if (vue.nom === 'bulles') {
     const heures = heuresVers(repo.maintenant());
     ecran = html`<div class="ecran-bulles" key="bulles">
-      ${fermer}
+      ${fermer}${loupe}
       <h1 class="titre-bulles" ref=${titre} tabindex="-1">${TITRE}</h1>
       <span class="espace-bulles" aria-hidden="true"></span>
       <${QuatreBulles} etiquette=${TITRE} enGarde=${enGarde} surZone=${(zone) => changerDeVue({ nom: 'carte', zone })} />
@@ -280,10 +343,38 @@ export function Moment({ id = null }) {
     ecran = html`<div class="ecran-carte" key="carte">
       <button type="button" class="verre gauche" aria-label=${rouvert ? 'Revenir au relevé' : 'Revenir au choix de la couleur'} aria-disabled=${ariaGarde}
         onClick=${gardee(() => changerDeVue(arriere))}>${RETOUR}</button>
+      ${loupe}
       ${donnees && html`<${CarteEmotions} mots=${mots} choisi=${releve.emotion} centre=${vue.zone} enGarde=${enGarde} surMot=${choisirMot} />`}
       <div class="carte-fondu" aria-hidden="true"></div>
-      <${CarteDuBas} mot=${choisi || null} definition=${choisi ? definition(choisi.id, donnees && donnees.corrections, perso) : null}
+      <${CarteDuBas} mot=${choisi || null} definition=${choisi ? definition(choisi.id, corrections, perso) : null}
         enGarde=${enGarde} surContinuer=${() => changerDeVue({ nom: 'faisais' })} />
+    </div>`;
+  } else if (vue.nom === 'loupe') {
+    ecran = html`<${RechercheEmotion} key="loupe" texte=${recherche} resultats=${chercher(perso, recherche, corrections)}
+      propose=${nomPropose(perso, recherche)} enGarde=${enGarde} retour=${RETOUR}
+      etiquetteRetour=${vue.retour.nom === 'carte' ? 'Revenir à la carte' : 'Revenir au choix de la couleur'}
+      surTexte=${setRecherche} surMot=${choisirTrouve} surRetour=${() => changerDeVue(vue.retour)}
+      surAjouter=${(libelle) => changerDeVue({ nom: 'mot', libelle, id: null, retour: vue })} />`;
+  } else if (vue.nom === 'mot') {
+    // Le mot à soi : ce qu'en dit la méta une fois créé ; avant, son nom proposé. Ses champs portent son id, comme dans
+    // Réglages › Émotions : le brouillon de sa définition est le sien, jamais celui d'un autre mot.
+    const sien = vue.id && perso && perso[vue.id];
+    const mot = sien
+      ? { libelle: sien.libelle, zone: sien.zone, famille: sien.famille ?? null, definition: sien.definition ?? null }
+      : { libelle: vue.libelle, zone: null, famille: null, definition: null };
+    ecran = html`<div class=${`ecran-mot${mot.zone ? ` zone-${mot.zone}` : ''}`} key="mot">
+      <button type="button" class="verre gauche" aria-label="Revenir à la recherche" aria-disabled=${ariaGarde}
+        onClick=${gardee(() => changerDeVue(vue.retour))}>${RETOUR}</button>
+      <div class="corps-mot">
+        <h1 class="titre-mot" ref=${titre} tabindex="-1">Mon mot</h1>
+        <${FormulaireMot} idBase=${vue.id ? `mot-${vue.id.replace(/:/g, '-')}` : 'mot-neuf'} mot=${mot} cree=${Boolean(sien)} enGarde=${enGarde}
+          surZone=${choisirZoneDuMot} surNom=${(libelle) => completerMot({ libelle })}
+          surFamille=${(famille) => completerMot({ famille })} surDefinition=${(texte) => completerMot({ definition: texte })} />
+      </div>
+      ${sien && html`<div class="pied-mot">
+        <button type="button" class="continuer" aria-label="Continuer" aria-disabled=${ariaGarde}
+          onClick=${gardee(() => changerDeVue({ nom: 'carte', zone: null }))}>${FLECHE}</button>
+      </div>`}
     </div>`;
   } else {
     // L'écran 3. Le mot dans la couleur de sa case (éclaircie, comme dans la carte du bas) ; un mot à soi mis de côté, qui

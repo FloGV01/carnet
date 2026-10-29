@@ -9,6 +9,7 @@ import { nouvelId, nouvelIdListe } from '../domain/ids.js';
 import { LISTES, estListe } from '../domain/listes-def.js';
 import { normLabel } from '../domain/vocabulaire.js';
 import { carteLibelles } from '../domain/libelles.js';
+import { effacerMot } from '../domain/mots-perso.js';
 
 export { DataError };
 
@@ -454,6 +455,25 @@ export function creerRepository({
     },
   };
 
+  // ---------- mots à soi (v9, spec §4.5) ----------
+  // Un mot à soi s'efface seulement s'il ne sert dans aucun relevé ; sinon il se met de côté (domain/mots-perso.js). La
+  // vérification et l'effacement tiennent dans la même transaction : un relevé écrit entre les deux ne perd pas son mot.
+  const motsPerso = {
+    effacer: async (id) => {
+      const valeur = await tx(['humeurs', 'meta'], 'readwrite', async (t) => {
+        const utilise = (await req(t.objectStore('humeurs').getAll())).some((h) => h.emotion === id);
+        const os = t.objectStore('meta');
+        const r = await req(os.get('motsPerso'));
+        const v = effacerMot(r ? r.valeur : null, id, utilise);
+        os.put({ cle: 'motsPerso', valeur: v });
+        marquer(t);
+        return v;
+      });
+      signaler('meta', 'motsPerso');
+      return valeur;
+    },
+  };
+
   return {
     aujourdhui: () => jourLogique(now()),
     maintenant: () => now(),
@@ -468,6 +488,7 @@ export function creerRepository({
     listes,
     audios,
     meta,
+    motsPerso,
     tx,
     ouvrir: getDb,
     fermer: async () => { if (dbP) { const db = await dbP.catch(() => null); if (db) db.close(); dbP = null; } },

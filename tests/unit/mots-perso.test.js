@@ -1,12 +1,16 @@
 // v9 (2/8) · Les mots à soi (spec §4.5 et §9) : la méta `motsPerso` et ses changements (domain/mots-perso.js, pur), et la
-// validation des relevés qui en citent un, à l'écriture (db/repository.js, même transaction que la méta).
+// validation des relevés qui en citent un, à l'écriture (db/repository.js, même transaction que la méta). v9 (6/8) : la
+// loupe (chercher, nomPropose, spec §4.4), « Remettre sur la carte », et l'effacement vérifié dans sa transaction.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nouveauRepo } from '../aides/repo.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
 import {
   creerMot, modifierMot, mettreDeCote, effacerMot, motsActifs, recreerSiAbsent, persoDe, nouvelIdMot, ErreurMot, MOT_SANS_LIBELLE,
+  remettreSurLaCarte, chercher, nomPropose, EXTRAIT_MAX, LIBELLE_MAX,
 } from '../../public/js/domain/mots-perso.js';
+import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
+import { normLabel } from '../../public/js/domain/vocabulaire.js';
 import { estEmotion, familleDe, libelleEmotion, motsDeLaRoue } from '../../public/js/domain/roue.js';
 import { zoneDe, energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 import { definition } from '../../public/js/domain/definitions-roue.js';
@@ -202,6 +206,107 @@ test('recreerSiAbsent : un mot à soi absent ou illisible est recréé mis de c�
   assert.ok(!motsDeLaCarte(suite).some((m) => m.id === absent));
 });
 
+test('remettre sur la carte : un mot mis de côté revient sur la carte et dans la loupe ; il lui faut une zone et un nom libre', () => {
+  const deCote = mettreDeCote(deuxMots(), A);
+  const avant = structuredClone(deCote);
+  const remis = remettreSurLaCarte(deCote, A);
+  assert.deepEqual(deCote, avant, 'pas de modification en place');
+  assert.deepEqual(remis[A], { ...deCote[A], archive: false });
+  assert.deepEqual(motsActifs(remis).map((m) => m.id), [A, B]);
+  assert.ok(chercher(remis, 'flott').some((r) => r.id === A));
+  // Un mot actif l'est déjà : il reste tel quel.
+  assert.deepEqual(remettreSurLaCarte(deuxMots(), A)[A], deuxMots()[A]);
+  // Son nom pris entre-temps par un autre mot de la carte.
+  const pris = creerMot(deCote, { libelle: 'FLOTTANT', zone: 'vert' }, { id: C, maintenant: LE_2 }).perso;
+  assert.throws(() => remettreSurLaCarte(pris, A), code('LIBELLE_EXISTANT'));
+  // Recréé à l'import, sans zone : il en faut une d'abord.
+  const absent = 'roue:perso:u-99999999';
+  const recree = recreerSiAbsent(deuxMots(), absent, LE_2);
+  assert.throws(() => remettreSurLaCarte(recree, absent), code('ZONE_INCONNUE'));
+  const colore = modifierMot(recree, absent, { libelle: 'Retrouvé', zone: 'jaune' });
+  assert.equal(remettreSurLaCarte(colore, absent)[absent].archive, false);
+  assert.ok(motsDeLaCarte(remettreSurLaCarte(colore, absent)).some((m) => m.id === absent));
+  assert.throws(() => remettreSurLaCarte(deCote, C), code('INTROUVABLE'));
+});
+
+// ---------- la loupe (v9, 6/8, spec §4.4) ----------
+
+const ids = (resultats) => resultats.map((r) => r.id);
+
+test('chercher : sans accents ni casse, dans les noms (« epuise » trouve Épuisé) et dans les définitions', () => {
+  for (const texte of ['epuise', 'ÉPUISÉ', ' Epuisé ', 'épuis']) assert.equal(chercher(null, texte)[0].id, 'roue:aucune:epuise', texte);
+  assert.deepEqual(chercher(null, 'epuise'), [{ id: 'roue:aucune:epuise', libelle: 'Épuisé', zone: 'bleu', extrait: DEFINITIONS['roue:aucune:epuise'] }]);
+  // Un mot de la définition trouve son mot.
+  assert.deepEqual(ids(chercher(null, 'chavire')), ['roue:joie:emu']);
+  assert.deepEqual(ids(chercher(null, 'CHAVIRÉ')), ['roue:joie:emu']);
+  // Les apostrophes et les espaces se comparent comme les libellés des listes.
+  assert.equal(chercher(null, 'mal a l’aise')[0].id, 'roue:peur:mal-a-l-aise');
+  assert.equal(chercher(null, 'mal   à l\'aise')[0].id, 'roue:peur:mal-a-l-aise');
+  // Rien à chercher, rien de trouvé ; un texte qu'aucun mot ne contient non plus.
+  for (const vide of ['', '   ', null, undefined]) assert.deepEqual(chercher(null, vide), [], String(vide));
+  assert.deepEqual(chercher(null, 'zzzz'), []);
+});
+
+test('chercher : le nom qui commence par le texte d\'abord (ou un de ses mots), puis le nom qui le contient, puis la définition ; chaque groupe dans l\'ordre alphabétique', () => {
+  // « colere » : En colère (un de ses mots commence par le texte), puis les définitions qui le contiennent.
+  const colere = chercher(null, 'colere');
+  assert.equal(colere[0].id, 'roue:colere:en-colere');
+  const parDefinition = colere.slice(1);
+  assert.ok(parDefinition.length > 0);
+  for (const r of parDefinition) assert.ok(!/col[eè]re/i.test(r.libelle) && /colère/i.test(r.extrait), r.libelle);
+  assert.deepEqual(parDefinition.map((r) => r.libelle), [...parDefinition.map((r) => r.libelle)].sort((a, b) => a.localeCompare(b, 'fr')));
+  // « repos » : Reposé par son nom, Fatigué par sa définition (« … du repos. »).
+  assert.deepEqual(ids(chercher(null, 'repos')).slice(0, 2), ['roue:serenite:repose', 'roue:aucune:fatigue']);
+  // « able » : contenu dans un nom (Détestable…), jamais au début d'un de ses mots.
+  const able = chercher(null, 'able');
+  const rangDe = (r) => (normLabel(r.libelle).includes('able') ? 1 : 2);
+  assert.deepEqual(able.map(rangDe), [...able.map(rangDe)].sort());
+  // Chaque résultat est un mot de la carte, avec sa zone ; aucun en double.
+  const tous = chercher(null, 'e');
+  const carte = new Map(motsDeLaCarte(null).map((m) => [m.id, m]));
+  assert.equal(new Set(ids(tous)).size, tous.length);
+  for (const r of tous) assert.equal(r.zone, carte.get(r.id).zone, r.id);
+});
+
+test('chercher : la correction de l\'utilisateur remplace le texte de Carnet, pour trouver comme pour l\'extrait', () => {
+  const corrections = { 'roue:colere:irrite': 'Agacé par un bruit qui revient.' };
+  assert.deepEqual(chercher(null, 'bruit qui revient', corrections), [{ id: 'roue:colere:irrite', libelle: 'Irrité', zone: 'rouge', extrait: 'Agacé par un bruit qui revient.' }]);
+  assert.deepEqual(chercher(null, 'bruit qui revient'), []);
+  assert.equal(chercher(null, 'irrite', corrections)[0].extrait, 'Agacé par un bruit qui revient.');
+});
+
+test('chercher : les mots à soi de la carte, par leur nom ou leur définition ; pas ceux mis de côté ; un long texte coupé à un espace', () => {
+  const perso = deuxMots();
+  assert.deepEqual(chercher(perso, 'flot'), [{ id: A, libelle: 'Flottant', zone: 'bleu', extrait: null }]);
+  assert.deepEqual(ids(chercher(perso, 'plus de place')), [B]);
+  assert.deepEqual(chercher(perso, 'deborde')[0].extrait, 'Plus de place pour rien.');
+  assert.deepEqual(chercher(mettreDeCote(perso, A), 'flot'), []);
+  assert.deepEqual(chercher(null, 'flot'), []);
+  const long = 'Une sensation lente et diffuse, comme un brouillard qui reste posé sur tout ce que je fais depuis le matin, sans se lever.';
+  const avecLong = modifierMot(perso, A, { definition: long });
+  const { extrait } = chercher(avecLong, 'flottant')[0];
+  assert.ok(extrait.endsWith('…') && extrait.length <= EXTRAIT_MAX + 1, extrait);
+  assert.ok(long.startsWith(extrait.slice(0, -1)), 'le début du texte, coupé entre deux mots');
+  assert.equal(long[extrait.length - 1], ' ');
+  // Les définitions de Carnet tiennent en entier.
+  for (const def of Object.values(DEFINITIONS)) assert.ok(def.length <= EXTRAIT_MAX, def);
+});
+
+test('nomPropose : le texte cherché, propre, la première lettre en capitale ; rien s\'il est vide ou si un mot de la carte porte ce nom', () => {
+  assert.equal(nomPropose(null, '  brumeux   dense '), 'Brumeux dense');
+  assert.equal(nomPropose(null, 'éteint'), 'Éteint');
+  assert.equal(nomPropose(null, 'x'.repeat(60)), 'X'.concat('x'.repeat(LIBELLE_MAX - 1)));
+  for (const vide of ['', '   ', null, undefined]) assert.equal(nomPropose(null, vide), null, String(vide));
+  for (const pris of ['calme', 'CALME', 'epuise', 'mal a l’aise', 'En colère']) assert.equal(nomPropose(null, pris), null, pris);
+  const perso = deuxMots();
+  assert.equal(nomPropose(perso, 'flottant'), null, 'un mot à soi de la carte');
+  assert.equal(nomPropose(mettreDeCote(perso, A), 'flottant'), 'Flottant', 'mis de côté, son nom est libre (creerMot l\'accepte)');
+  // Ce qui est proposé, creerMot l'accepte.
+  for (const texte of ['brumeux', ' Étourdi ', 'à part']) {
+    assert.doesNotThrow(() => creerMot(perso, { libelle: nomPropose(perso, texte), zone: 'vert' }, { id: C, maintenant: LE_2 }), texte);
+  }
+});
+
 // ---------- écriture des relevés (repository) ----------
 
 const releve = (emotion, extra = {}) => ({ date: '2026-09-30', heure: '15:00', emotion, ...extra });
@@ -275,4 +380,24 @@ test('point de vigilance 4 : renommé, changé de zone ou de famille, puis mis d
   // Jamais utilisé, A s'efface.
   await repo.meta.modifier('motsPerso', (p) => effacerMot(p, A, false));
   assert.deepEqual(Object.keys(await lirePerso()), [B]);
+});
+
+// v9 (6/8) : Réglages › Émotions › « Mes mots » efface par repo.motsPerso.effacer, qui regarde les relevés dans la
+// transaction même de l'effacement.
+test('effacer un mot à soi (repository) : refusé s\'il sert dans un relevé, la méta intacte ; permis sinon', async () => {
+  const { repo, changements } = nouveauRepo();
+  await repo.meta.ecrire('motsPerso', deuxMots());
+  await repo.humeurs.creer(releve(B, { energie: 'energie:haute' }));
+  await assert.rejects(repo.motsPerso.effacer(B), code('MOT_UTILISE'));
+  assert.deepEqual(await repo.meta.lire('motsPerso'), deuxMots());
+  await assert.rejects(repo.motsPerso.effacer(C), code('INTROUVABLE'));
+  const avant = changements.length;
+  const reste = await repo.motsPerso.effacer(A);
+  assert.deepEqual(Object.keys(reste), [B]);
+  assert.deepEqual(await repo.meta.lire('motsPerso'), reste);
+  assert.deepEqual(changements.slice(avant), [{ store: 'meta', cle: 'motsPerso' }]);
+  // Le relevé de B supprimé, B s'efface à son tour.
+  const [h] = await repo.humeurs.tous();
+  await repo.humeurs.supprimer(h.id);
+  assert.deepEqual(await repo.motsPerso.effacer(B), {});
 });

@@ -32,5 +32,16 @@ export async function finir(vue) {
   await continuer(vue).click();
   await terminer(vue).click();
 }
+// La loupe (v9, 6/8) : son bouton, son champ, un mot trouvé (par son nom, au début de son nom accessible), et « Ajouter
+// mon mot « … » ». Le mot à soi : son écran, son nom, ses couleurs, ses familles.
+export const loupe = (vue) => vue.getByRole('button', { name: 'Chercher un mot', exact: true });
+export const champLoupe = (vue) => vue.getByRole('searchbox', { name: 'Chercher un mot', exact: true });
+export const trouves = (vue) => vue.getByRole('list', { name: 'Mots trouvés', exact: true });
+export const trouve = (vue, libelle) => trouves(vue).getByRole('button', { name: new RegExp(`^${libelle}( |$)`) });
+export const ajouterMot = (vue) => vue.getByRole('button', { name: /^Ajouter mon mot « / });
+export const nomMot = (portee) => portee.getByRole('textbox', { name: 'Nom', exact: true });
+export const couleurMot = (portee, zone) => portee.getByRole('group', { name: 'Couleur', exact: true }).getByRole('button', { name: NOMS_BULLES[zone], exact: true });
+export const familleMot = (portee, libelle) => portee.getByRole('group', { name: 'Famille', exact: true }).getByRole('button', { name: libelle, exact: true });
+export const definitionMot = (portee) => portee.getByRole('textbox', { name: /^Définition/ });
 export const NOTEE = 'Émotion du moment notée';
 export const SUPPRIME = 'Relevé supprimé';

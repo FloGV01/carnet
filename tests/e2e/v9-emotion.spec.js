@@ -254,19 +254,21 @@ test('la carte s\'ouvre sur le milieu de la zone touchée, ses 144 mots, et le f
 });
 
 // Relecture de la tâche 4 : le balayage de VoiceOver et le clavier suivent l'ordre du DOM. ← est en haut à gauche de
-// l'écran 2 : il vient avant les 144 mots, comme ✕ avant le titre à l'écran 1, et reste au-dessus des bulles.
+// l'écran 2 : il vient avant les 144 mots, comme ✕ avant le titre à l'écran 1, et reste au-dessus des bulles. La loupe
+// (v9, 6/8), en haut à droite, le suit.
 test('l\'ordre de lecture suit l\'écran : ✕ d\'abord à l\'écran 1 ; à l\'écran 2, ← avant les mots, la flèche après, et ← au-dessus des bulles qui passent dessous', async ({ page }) => {
   const vue = await ouvrir(page);
   const boutons = () => vue.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label') || b.textContent));
-  expect((await boutons())[0]).toBe('Fermer');
+  // v9 (6/8) : la loupe, en haut à droite, vient juste après ✕ (et ←).
+  expect((await boutons()).slice(0, 2)).toEqual(['Fermer', 'Chercher un mot']);
   await bulle(vue, 'rouge').click();
   await expect(carte(vue).getByRole('button')).toHaveCount(144);
   let noms = await boutons();
-  expect([noms[0], noms.length]).toEqual(['Revenir au choix de la couleur', 145]);
+  expect([noms[0], noms[1], noms.length]).toEqual(['Revenir au choix de la couleur', 'Chercher un mot', 146]);
   await mot(vue, 'Anxieux').click();
   await expect(continuer(vue)).toBeVisible();
   noms = await boutons();
-  expect([noms[0], noms.at(-1), noms.length]).toEqual(['Revenir au choix de la couleur', 'Continuer', 146]);
+  expect([noms[0], noms[1], noms.at(-1), noms.length]).toEqual(['Revenir au choix de la couleur', 'Chercher un mot', 'Continuer', 147]);
   // La carte glissée pour qu'une bulle passe sous ← : c'est ← qu'on touche, et l'écran 1 revient, le mot gardé.
   await finGarde(carte(vue));
   const dessous = await page.evaluate(() => {

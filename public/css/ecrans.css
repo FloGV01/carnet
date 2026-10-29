@@ -675,7 +675,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* ---------- Émotion du moment (v9, spec §4 et §5 ; visuel-hwf.md) ----------
    Comme How We Feel : plein écran, fond noir dans les deux thèmes (les jetons de base y prennent leurs valeurs sombres,
    tokens.css, .ecran-noir), sans barre d'onglets. Mesures en pt de l'iPhone (1 px CSS = 1 pt). */
-.moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: #000; color: #fff; }
+.moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: #000; color: #fff; --anneau: #fff; }
 /* Les boutons en verre, en haut (visuel §1.2 et §2.9) : capsules de 48 × 44, à 16 du bord, juste sous la barre d'état ;
    « verre » sombre, un liseré clair et une ombre intérieure. Sur la carte, translucide et flouté. */
 .verre {
@@ -684,8 +684,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, .14), inset 0 0 3px rgba(0, 0, 0, .35);
 }
 .verre.gauche { left: calc(16px + var(--zone-gauche)); }
+.verre.droite { right: calc(16px + var(--zone-droite)); }
 .verre svg { display: block; }
-.verre:focus-visible, .bulle-zone:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.verre:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.bulle-zone:focus-visible { outline: 2px solid var(--anneau, var(--text)); outline-offset: 3px; }
 .ecran-carte .verre { background: rgba(32, 32, 32, .85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 
 /* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en New York grasse), les quatre bulles (haut à 306), puis
@@ -741,6 +743,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 .etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.118rem var(--police-serif); letter-spacing: -0.01em; overflow-wrap: normal; }
 .ligne-bulle { display: block; }
+/* En petit (v9, spec §4.5 : la couleur d'un mot à soi) : 104 de diamètre, sans halo, le libellé à 12 (le corps des bulles
+   de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond, noir
+   ou carte), de blanc sur le noir (--anneau, posé par .moment-plein), du texte ailleurs (Réglages). */
+.quatre-bulles.petites { grid-template-columns: repeat(2, 104px); gap: 12px; align-self: center; }
+.quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
+.quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 0.812rem; }
+.quatre-bulles.petites .bulle-zone[aria-pressed="true"] { outline: 2.5px solid var(--anneau, var(--text)); outline-offset: 3px; }
 /* « Maintenant ▾ » sous les bulles, en petit, et les heures de « C'était vers… » dessous (à la couleur Humeur, v6). */
 .moment-plein .puce-quand { flex: none; margin-top: 30px; padding: 0; }
 .moment-plein .puce-quand > .btn-lien { width: auto; min-height: var(--cible); padding: 0 10px; gap: 6px; }
@@ -840,6 +849,69 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   background: #fff; color: #000; font: 600 1.059rem/1.25 var(--police);
 }
 .terminer-releve:focus-visible, .changer-mot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* La loupe (v9, spec §4.4) : ← en verre et, à sa droite, le champ, une capsule de verre de 44 de haut ; dessous, les mots
+   trouvés, chacun à la couleur de sa zone (-fill, la même dans les deux thèmes, AA sur le noir) en New York grasse, et le
+   début de sa définition en gris ; puis « Ajouter mon mot « … » », derrière un rond blanc au « + » noir. */
+.ecran-loupe { position: absolute; inset: 0; display: flex; flex-direction: column; animation: apparition-carte var(--duree-anim) ease-out; }
+.champ-loupe {
+  position: absolute; z-index: 3; top: calc(var(--zone-haut) + 0.3px); left: calc(72px + var(--zone-gauche)); right: calc(16px + var(--zone-droite));
+  height: 44px; border-radius: 22px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 13px; background: #1b1b1b; color: #909090;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, .14), inset 0 0 3px rgba(0, 0, 0, .35);
+}
+.champ-loupe:focus-within { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .7); }
+.champ-loupe svg { flex: none; }
+.champ-loupe input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: #fff; outline: none;
+  font: 400 1rem/1.2 var(--police); -webkit-appearance: none; appearance: none;
+}
+.champ-loupe input::placeholder { color: #909090; }
+.champ-loupe input::-webkit-search-decoration { -webkit-appearance: none; }
+.corps-loupe {
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  margin-top: calc(var(--zone-haut) + 56px); padding: 4px calc(16px + var(--zone-droite)) calc(24px + var(--zone-bas)) calc(16px + var(--zone-gauche));
+}
+.resultats-loupe { margin: 0; padding: 0; list-style: none; }
+.resultat-loupe {
+  width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+  padding: 10px 4px; border: 0; border-bottom: 1px solid #1f1f1f; background: none; text-align: left;
+}
+.mot-resultat { color: var(--c-fill); font: 700 1.118rem/1.25 var(--police-serif); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.extrait-resultat { color: #909090; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
+.sans-resultat { padding: 14px 4px 0; color: #909090; font-size: var(--t-sous); line-height: 1.35; }
+.sans-resultat:empty { padding: 0; }
+.ajouter-mot {
+  width: 100%; min-height: 64px; display: flex; align-items: center; gap: 14px; margin-top: 6px; padding: 10px 4px; border: 0; background: none;
+  color: #fff; text-align: left; font: 400 1rem/1.3 var(--police); overflow-wrap: anywhere;
+}
+.rond-ajouter { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #000; }
+.resultat-loupe:focus-visible, .ajouter-mot:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+/* iOS n'ouvre le clavier que pour un champ qui prend le focus au toucher même : cette amorce le prend, invisible, le temps
+   que la loupe paraisse (recherche-emotion.js). 16 px : iOS ne zoome pas. */
+.amorce-clavier { position: fixed; top: 0; left: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; font-size: 16px; pointer-events: none; }
+
+/* Le mot à soi (v9, spec §4.5) : comme l'écran 3, ← en haut, le corps qui défile, et en bas, une fois le mot créé, le
+   rond blanc à la flèche de la carte du bas. Le titre en New York grasse ; les champs sur #2c2c2e ; une famille choisie à
+   la couleur de la zone du mot (.zone-*, -fill et -on), à la couleur action avant. */
+.ecran-mot { position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; animation: apparition-carte var(--duree-anim) ease-out; }
+.corps-mot {
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  margin-top: calc(var(--zone-haut) + 52px);
+  padding: 12px calc(16px + var(--zone-droite)) 24px calc(16px + var(--zone-gauche));
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+}
+.titre-mot { max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police-serif); letter-spacing: -0.01em; }
+.pied-mot { flex: none; display: flex; justify-content: flex-end; padding: 8px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) 16px; }
+.ecran-mot .etiquette { color: #909090; }
+/* Le formulaire du mot à soi, à la création comme dans Réglages › Émotions › « Mes mots » (ui/composants/mot-perso.js). */
+.formulaire-mot { width: 100%; max-width: 358px; display: flex; flex-direction: column; gap: 20px; }
+.rubrique-mot { display: flex; flex-direction: column; }
+.rubrique-mot > .quatre-bulles { margin-top: 4px; }
+.nom-mot { font-size: max(16px, 1rem); color: var(--text); }
+.erreur-mot { margin-top: 6px; color: var(--text); font-size: var(--t-sous); line-height: 1.35; }
+.erreur-mot:empty { margin: 0; }
+.aide-mot { margin-top: 12px; color: var(--text-2); font-size: var(--t-sous); line-height: 1.35; text-align: center; text-wrap: balance; }
+.ecran-mot .aide-mot { color: #909090; }
+
 /* Analyse v4 : Avant tes explosions */
 .mots-utilisateur { margin-top: var(--esp-3); }
 .mots-utilisateur ul { margin: 4px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; font-size: var(--t-sous); line-height: 1.4; text-wrap: pretty; }
@@ -1030,6 +1102,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .point-famille { flex: none; width: 10px; height: 10px; border-radius: 5px; background: var(--c); }
 /* v9 : « Sans famille » (Fatigué, Épuisé), après les sept familles : un point creux, comme un relevé sans famille. */
 .sans-famille .point-famille { background: none; border: 1.5px solid var(--text-2); }
+/* v9 : « Mes mots », les mots à soi, après « Sans famille » : une rangée par mot, au point de sa zone (creux sans zone),
+   sa couleur et sa famille, puis sa définition ; touchée, elle devient son formulaire, et ce qu'on peut en faire. */
+.sous-titre-mes-mots { padding: 6px 0 0; font-size: var(--t-note); font-weight: 600; color: var(--text-2); }
+.mot-perso-ligne { display: flex; align-items: center; gap: 8px; }
+.editeur-mot { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; }
+.actions-mot { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.actions-mot .btn-lien { font-size: var(--t-sous); font-weight: 600; }
 .bouton-definition { flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 16px; min-height: 58px; }
 .mot-definitions { font-weight: 600; }
 .texte-definitions { font-size: var(--t-sous); line-height: 1.35; color: var(--text-2); text-wrap: pretty; }

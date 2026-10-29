@@ -5,9 +5,12 @@
 // le libellé ni la zone : un mot se renomme, change de zone ou de famille sans que ses relevés soient réécrits. Ils
 // affichent son nom et la couleur de sa zone d'aujourd'hui ; leur énergie, enregistrée au toucher, reste celle d'alors.
 // Un mot déjà utilisé dans un relevé n'est jamais effacé : il est mis de côté. Il quitte alors la carte et la recherche,
-// et ses relevés le lisent toujours (roue.js connaît aussi les mots mis de côté).
+// et ses relevés le lisent toujours (roue.js connaît aussi les mots mis de côté). Il revient par « Remettre sur la
+// carte ».
+// La loupe de l'émotion du moment (chercher, v9, spec §4.4) cherche ici, parmi les mots de la carte.
 import { FAMILLES, motPerso, estIdPerso } from './roue.js';
 import { ZONES, motsDeLaCarte } from './carte-roue.js';
+import { definition as definitionAffichee } from './definitions-roue.js';
 import { normLabel } from './vocabulaire.js';
 import { nouvelIdListe } from './ids.js';
 
@@ -122,6 +125,16 @@ export function mettreDeCote(perso, id) {
   return { ...p, [id]: { ...exigerMot(p, id), archive: true } };
 }
 
+// Un mot mis de côté revient sur la carte et dans la recherche. Il lui faut une zone de la carte (un mot recréé à
+// l'import n'en a pas : elle se choisit d'abord), et un nom qu'aucun mot de la carte n'a pris entre-temps.
+export function remettreSurLaCarte(perso, id) {
+  const p = persoDe(perso);
+  const mot = exigerMot(p, id);
+  zoneValide(mot.zone);
+  exigerLibre(p, mot.libelle.trim(), id);
+  return { ...p, [id]: { ...mot, archive: false } };
+}
+
 // Efface un mot qui ne sert dans aucun relevé (estUtilise : l'appelant l'a vérifié). Un mot utilisé se met de côté.
 export function effacerMot(perso, id, estUtilise) {
   const p = persoDe(perso);
@@ -139,4 +152,53 @@ export function recreerSiAbsent(perso, id, horodatageFichier) {
   if (!estIdPerso(id) || motPerso(id, perso)) return perso;
   const mot = { libelle: MOT_SANS_LIBELLE, zone: null, famille: null, definition: null, archive: true, createdAt: horodatage(horodatageFichier) };
   return { ...persoDe(perso), [id]: mot };
+}
+
+// ---------- la loupe (v9, spec §4.4) ----------
+
+// Le début d'une définition, dans la liste des résultats : coupé à un espace, avec « … », au-delà de EXTRAIT_MAX signes
+// (les textes de Carnet tiennent en entier ; une longue définition d'un mot à soi est coupée).
+export const EXTRAIT_MAX = 90;
+function debut(texte) {
+  if (!texte || texte.length <= EXTRAIT_MAX) return texte || null;
+  const coupe = texte.slice(0, EXTRAIT_MAX);
+  const espace = coupe.lastIndexOf(' ');
+  return `${(espace > EXTRAIT_MAX / 2 ? coupe.slice(0, espace) : coupe).replace(/[\s,;:.]+$/, '')}…`;
+}
+
+// Les mots de la carte (les 144 et les mots à soi qui y sont : motsDeLaCarte, la seule règle) dont le nom ou la
+// définition contient le texte cherché, sans accents ni casse (normLabel, comme les libellés des listes). Rend
+// [{ id, libelle, zone, extrait }] : d'abord les mots dont le nom, ou un de ses mots, commence par le texte ; puis ceux
+// dont le nom le contient ; puis ceux qui le contiennent dans leur définition ; chaque groupe dans l'ordre alphabétique.
+// La définition est celle que la carte du bas affiche (la correction de l'utilisateur, sinon celle du mot à soi, sinon
+// le texte de Carnet) ; `extrait` en est le début, null sans définition. Un texte vide ne trouve rien.
+export function chercher(perso, texte, corrections) {
+  const cible = normLabel(texte);
+  if (!cible) return [];
+  const p = persoDe(perso);
+  const trouves = [];
+  for (const m of motsDeLaCarte(p)) {
+    const nom = normLabel(m.libelle);
+    const def = definitionAffichee(m.id, corrections, p);
+    let rang = null;
+    if (nom.startsWith(cible) || nom.split(/[ '-]/).some((w) => w.startsWith(cible))) rang = 0;
+    else if (nom.includes(cible)) rang = 1;
+    else if (def && normLabel(def).includes(cible)) rang = 2;
+    if (rang !== null) trouves.push({ rang, nom, resultat: { id: m.id, libelle: m.libelle, zone: m.zone, extrait: debut(def) } });
+  }
+  return trouves
+    .sort((a, b) => a.rang - b.rang || a.nom.localeCompare(b.nom, 'fr') || a.resultat.id.localeCompare(b.resultat.id))
+    .map((t) => t.resultat);
+}
+
+// Le nom qu'on pourrait ajouter depuis la loupe (« Ajouter mon mot « … » ») : le texte cherché, sans les espaces en
+// trop, la première lettre en capitale comme les mots de la carte ; null s'il est vide ou si un mot de la carte porte
+// déjà ce nom (sans accents ni casse : creerMot le refuserait).
+export const LIBELLE_MAX = 40;
+export function nomPropose(perso, texte) {
+  const propre = String(texte ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, LIBELLE_MAX).trim();
+  if (!propre) return null;
+  const cible = normLabel(propre);
+  if (motsDeLaCarte(persoDe(perso)).some((m) => normLabel(m.libelle) === cible)) return null;
+  return propre.charAt(0).toLocaleUpperCase('fr') + propre.slice(1);
 }

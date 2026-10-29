@@ -6,8 +6,8 @@
 import { html } from '../lib.js';
 import { couleurLisible } from '../carte-geometrie.js';
 
-// La flèche de How We Feel : 29,5 × 28, trait de 2,7, bouts arrondis.
-const fleche = html`<svg width="30" height="28" viewBox="0 0 30 28" fill="none" stroke="currentColor" stroke-width="2.7"
+// La flèche de How We Feel : 29,5 × 28, trait de 2,7, bouts arrondis (aussi celle de l'écran du mot à soi).
+export const FLECHE = html`<svg width="30" height="28" viewBox="0 0 30 28" fill="none" stroke="currentColor" stroke-width="2.7"
   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h23M16 4l10 10-10 10" /></svg>`;
 
 // `mot` : { libelle, couleur } ou null ; `definition` : un texte ou null.
@@ -19,7 +19,7 @@ export function CarteDuBas({ mot, definition, surContinuer, enGarde = false }) {
         ${definition && html`<p class="definition-carte-du-bas">${definition}</p>`}
       </div>
       <button type="button" class="continuer" aria-label="Continuer" aria-disabled=${enGarde ? 'true' : null}
-        onClick=${() => { if (!enGarde) surContinuer(); }}>${fleche}</button>
+        onClick=${() => { if (!enGarde) surContinuer(); }}>${FLECHE}</button>
     </div>`}
   </div>`;
 }

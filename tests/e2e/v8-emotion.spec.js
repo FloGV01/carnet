@@ -22,8 +22,8 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await expect(page).toHaveURL(/#\/reglages\/emotions$/);
   await expect(page.getByRole('heading', { name: 'Émotions', level: 1 })).toBeVisible();
   // Sept familles, dans l'ordre de la roue, puis « Sans famille » (v9 : Fatigué, Épuisé) ; sous chacune, ses mots et le
-  // texte de Carnet.
-  await expect(page.locator('main h2')).toHaveText([...FAMILLES.map((f) => f.libelle), 'Sans famille']);
+  // texte de Carnet. Enfin « Mes mots » (v9, 6/8 : les mots à soi, tests/e2e/v9-mot-perso.spec.js), vide ici.
+  await expect(page.locator('main h2')).toHaveText([...FAMILLES.map((f) => f.libelle), 'Sans famille', 'Mes mots']);
   // Le point de « Sans famille » est creux : aucune couleur de famille.
   await expect(page.getByRole('region', { name: 'Sans famille', exact: true }).locator('.point-famille')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   for (const f of [...FAMILLES, { libelle: 'Sans famille', mots: MOTS_SANS_FAMILLE }]) {
