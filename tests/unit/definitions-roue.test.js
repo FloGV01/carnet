@@ -110,16 +110,21 @@ test('v9 : six textes de Carnet changent, sans le mot d\'une autre bulle ; les 7
   assert.equal(MOTS_V8.length, 79);
 });
 
-// v9 (8/8) : les textes à relire de la v9, dans l'entrée v9.0.0 de docs/decisions.md : les six textes changés (celui de
-// la v8, puis celui de la v9), puis les définitions des 65 ajouts, une ligne par mot sous sa famille, Fatigué et Épuisé
-// sous « Sans famille ». Un texte changé dans definitions-roue.js sans l'être là fait échouer ce test.
-test('v9 : les six textes changés et les 65 ajouts sont repris dans docs/decisions.md, au texte de Carnet', () => {
+// L'entrée v9.0.0 de docs/decisions.md, jusqu'à l'entrée suivante.
+const entreeV9 = () => {
   const doc = lire('docs/decisions.md');
   const debut = doc.indexOf('## 2026-10-30 : v9.0.0');
   assert.ok(debut > 0, 'entrée v9.0.0 absente');
   const suite = doc.slice(debut);
   const fin = suite.indexOf('\n## ', 1);
-  const v9 = fin > 0 ? suite.slice(0, fin + 1) : suite;
+  return fin > 0 ? suite.slice(0, fin + 1) : suite;
+};
+
+// v9 (8/8) : les textes à relire de la v9, dans l'entrée v9.0.0 de docs/decisions.md : les six textes changés (celui de
+// la v8, puis celui de la v9), puis les définitions des 65 ajouts, une ligne par mot sous sa famille, Fatigué et Épuisé
+// sous « Sans famille ». Un texte changé dans definitions-roue.js sans l'être là fait échouer ce test.
+test('v9 : les six textes changés et les 65 ajouts sont repris dans docs/decisions.md, au texte de Carnet', () => {
+  const v9 = entreeV9();
   const [six, ajouts] = ['**Les six textes de Carnet qui changent**', '**Les définitions des 65 ajouts**'].map((t) => v9.indexOf(t));
   assert.ok(six > 0 && ajouts > six, 'sections des textes à relire absentes');
   const changes = v9.slice(six, ajouts);
@@ -138,6 +143,20 @@ test('v9 : les six textes changés et les 65 ajouts sont repris dans docs/decisi
   }
   assert.equal(blocs.reduce((n, [, mots]) => n + mots.length, 0), 65);
   assert.equal((liste.match(/^- \*\*/gm) || []).length, 65);
+});
+
+// Relecture de la tâche 8 : la règle de la roue étendue aux 144 mots est dans CLAUDE.md (commit 7f6eb61), et l'entrée
+// v9.0.0 le dit dans son contrôle global ; elle ne la range plus parmi ce qui attend l'utilisateur.
+test('v9 : CLAUDE.md porte la règle de la roue pour les 144 mots, et docs/decisions.md le dit', () => {
+  const regle = lire('CLAUDE.md').split('\n').find((l) => l.includes('Le vocabulaire de la roue des émotions ne se lisse jamais'));
+  assert.ok(regle, 'règle de la roue absente de CLAUDE.md');
+  for (const x of ['144 mots', '`roue:aucune:`', '`roue:perso:u-<8 hexa>`', '`motsPerso`']) assert.ok(regle.includes(x), `CLAUDE.md : ${x}`);
+  const v9 = entreeV9();
+  const section = (titre) => { const i = v9.indexOf(`### ${titre}\n`); assert.ok(i > 0, `${titre} absent`); return v9.slice(i).split('\n### ')[0]; };
+  const controle = section('Contrôle global (tâche 8)').split('\n').find((l) => l.startsWith('- **CLAUDE.md**'));
+  assert.ok(controle, 'CLAUDE.md absent du contrôle global');
+  for (const x of ['144 mots', '`roue:aucune:`', '`roue:perso:u-<8 hexa>`', '`motsPerso`']) assert.ok(controle.includes(x), `decisions.md : ${x}`);
+  assert.doesNotMatch(section('En attente de l\'utilisateur'), /CLAUDE\.md/);
 });
 
 test('v9 : les définitions des 65 ajouts viennent de la proposition ; Insouciant a la sienne, écrite pour Carnet', () => {

@@ -184,13 +184,41 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 
 // Les choix faits visibles sans leur coche (jamais la couleur seule). Une question cochée a sa propre case ; le mot choisi
 // de la carte des émotions (v9) a sa forme, la double capsule de 156 au lieu d'un disque de 96 (visuel §2.4) ; la couleur
-// choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau blanc autour du disque.
-const sansCoche = (page) => page.evaluate(() => [...document.querySelectorAll('[aria-pressed="true"]')].filter((b) => {
-  if (b.getBoundingClientRect().width < 1 || b.closest('.visuellement-cache') || b.classList.contains('question-case')) return false;
-  if (b.classList.contains('bulle-mot') || b.matches('.quatre-bulles.petites .bulle-zone')) return false;
-  const svg = b.querySelector(':scope > .coche svg');
-  return !svg || svg.getBoundingClientRect().width < 10;
-}).map((b) => b.textContent.trim().slice(0, 30)));
+// choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau autour du disque (blanc sur le noir du relevé,
+// couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
+// d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
+const sansCoche = (page) => page.evaluate(() => {
+  const rgba = (c) => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const lin = (v) => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const fond = (el) => {
+    for (let e = el; e; e = e.parentElement) {
+      const c = rgba(getComputedStyle(e).backgroundColor);
+      if (c && c[3] >= 0.99) return c;
+    }
+    return rgba(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255, 1];
+  };
+  // L'anneau est dessiné hors du disque : son fond est celui du parent ; sa couleur y est fondue selon son alpha.
+  const anneauVu = (b) => {
+    const s = getComputedStyle(b);
+    const c = rgba(s.outlineColor);
+    if (s.outlineStyle !== 'solid' || parseFloat(s.outlineWidth) < 2 || parseFloat(s.outlineOffset) < 2 || !c) return false;
+    const f = fond(b.parentElement);
+    return ratio([0, 1, 2].map((i) => c[3] * c[i] + (1 - c[3]) * f[i]), f) >= 3;
+  };
+  return [...document.querySelectorAll('[aria-pressed="true"]')].filter((b) => {
+    if (b.getBoundingClientRect().width < 1 || b.closest('.visuellement-cache') || b.classList.contains('question-case')) return false;
+    if (b.classList.contains('bulle-mot') || (b.matches('.quatre-bulles.petites .bulle-zone') && anneauVu(b))) return false;
+    const svg = b.querySelector(':scope > .coche svg');
+    return !svg || svg.getBoundingClientRect().width < 10;
+  }).map((b) => b.textContent.trim().slice(0, 30));
+});
 
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [

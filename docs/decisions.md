@@ -1092,9 +1092,10 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 
 - **Captures**, dans WebKit à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, gardées hors du dépôt : écran 1, carte sans mot et avec un mot choisi (Calme, la case de « Calm »), écran 3, loupe (un résultat, puis aucun), création d'un mot (avant et après sa couleur), « Tes zones », Aujourd'hui et sa liste du jour, Historique, Réglages › Émotions › « Mes mots » (fermé et ouvert). Comparées à `apercu-carte.html` et aux captures de How We Feel : rien à corriger. Les écrans du relevé sont les mêmes dans les deux thèmes, sur leur fond noir.
 - **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par la loupe (un mot trouvé), l'écran du mot à soi (une couleur choisie), ce mot sur la carte, « Tes zones » en tableau et « Mes mots » (un mot ouvert), avec un mot à soi et Fatigué dans les relevés versés : 56 écrans, contre 49 en v8. Tout texte visible a au moins 4,5:1 sur son fond, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte par défaut et à 23 px), et il vérifie maintenant aussi qu'aucune violation de la CSP ne survient sur tout le parcours.
-- **Choix fait sans coche** : la couleur choisie d'un mot à soi est marquée par un anneau autour de sa bulle (une forme, pas la couleur seule), comme le mot choisi de la carte l'est par sa double capsule. Le contrôle l'accepte ainsi, sans coche.
+- **Choix fait sans coche** : la couleur choisie d'un mot à soi est marquée par un anneau autour de sa bulle (une forme, pas la couleur seule), comme le mot choisi de la carte l'est par sa double capsule. Le contrôle l'accepte sans coche si cet anneau se voit : un contour plein d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (blanc sur le noir du relevé, couleur du texte dans Réglages).
 - **Mots interdits** : tous les textes de l'app passent `trouverInterdits` (`ton.test.js`), les 144 définitions aussi (`definitions-roue.test.js`).
 - **Version 9.0.0** (package.json, precache).
+- **CLAUDE.md** : la règle du vocabulaire de la roue vaut pour les 144 mots ; préfixe réservé `roue:aucune:` des mots sans famille, identifiant `roue:perso:u-<8 hexa>` des mots à soi, dont le libellé, la zone et la famille vivent dans `motsPerso` (ajouté le 30/10, avec l'accord de l'utilisateur).
 
 ### Le format de l'Export PSY change (v9, à signaler)
 
@@ -1106,7 +1107,6 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 ### En attente de l'utilisateur
 
 - **Les textes à relire** (plus bas), dans l'app, après la publication : Réglages › Émotions, où une définition se corrige.
-- **CLAUDE.md** : le plan y ajoute le préfixe `roue:aucune:` des mots sans famille, `roue:perso:u-…` des mots à soi, et la règle « jamais de renommage » pour les 144 mots. Une modification de CLAUDE.md doit venir de l'utilisateur : elle n'est pas faite dans ce commit.
 - **Les points en attente de la v7 et de la v8 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie…).
 
 ### À essayer sur l'iPhone
