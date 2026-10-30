@@ -526,3 +526,29 @@ test('un mot recréé à l\'import (« Mot sans libellé », sans couleur) : sou
   // Le relevé n'a pas changé ; il porte le nom d'aujourd'hui.
   expect(await releves(page)()).toMatchObject([{ emotion: absent, energie: 'energie:basse' }]);
 });
+
+// Contre-relecture : un mot à soi qui n'est pas mis de côté mais n'a pas de couleur (une méta écrite à la main ; l'import
+// le met maintenant de côté, sauvegarde.test.js). Le choix de sa couleur le faisait entrer sur la carte sans vérifier son
+// nom : deux bulles « Calme ». Il y entre seulement avec un nom qu'aucun mot de la carte ne porte.
+test('un mot sans couleur, pas mis de côté : sa couleur ne le met pas sur la carte sous un nom déjà pris ; renommé, il y entre', async ({ page }) => {
+  const sansCouleur = 'roue:perso:u-99999998';
+  await ecrirePerso(page, { [sansCouleur]: { libelle: 'Calme', zone: null, famille: null, definition: null, archive: false, createdAt: '2026-10-10T08:00:00.000Z' } });
+  await aller(page, '#/reglages/emotions');
+  const mesMots = page.getByRole('region', { name: 'Mes mots', exact: true });
+  await mesMots.getByRole('button', { name: /^Calme/ }).click();
+  await expect(mesMots.getByText('Choisis sa couleur pour le remettre sur la carte.')).toBeVisible();
+  await couleurMot(mesMots, 'vert').click();
+  await expect(mesMots.locator('.erreur-mot')).toHaveText('Ce mot est déjà sur la carte.');
+  await page.clock.runFor(300);
+  expect((await lirePerso(page)())[sansCouleur].zone).toBeNull();
+  await nomMot(mesMots).fill('Calme à moi');
+  await nomMot(mesMots).press('Enter');
+  await expect.poll(async () => (await lirePerso(page)())[sansCouleur].libelle).toBe('Calme à moi');
+  await couleurMot(mesMots, 'vert').click();
+  await expect.poll(async () => (await lirePerso(page)())[sansCouleur].zone).toBe('vert');
+  await expect(mesMots.locator('.erreur-mot')).toHaveText('');
+  const vue = await ouvrir(page);
+  await bulle(vue, 'vert').click();
+  await expect(mot(vue, 'Calme')).toHaveCount(1);
+  await expect(mot(vue, 'Calme à moi')).toHaveCount(1);
+});

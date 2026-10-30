@@ -106,14 +106,20 @@ export function creerMot(perso, { libelle, zone, famille = null, definition = nu
 }
 
 // Change le nom, la zone, la famille ou la définition (seuls les champs donnés). Les relevés ne sont pas réécrits.
+// Contre-relecture : un mot qui n'est pas mis de côté mais n'a pas de zone de la carte (une méta écrite à la main, que
+// l'app n'écrit jamais) y entre au choix de sa couleur ; son nom est alors vérifié, comme par remettreSurLaCarte.
 export function modifierMot(perso, id, champs = {}) {
   const p = persoDe(perso);
-  const mot = { ...exigerMot(p, id) };
+  const avant = exigerMot(p, id);
+  const mot = { ...avant };
   if (Object.hasOwn(champs, 'libelle')) {
     mot.libelle = libellePropre(champs.libelle);
     exigerLibre(p, mot.libelle, id);
   }
-  if (Object.hasOwn(champs, 'zone')) mot.zone = zoneValide(champs.zone);
+  if (Object.hasOwn(champs, 'zone')) {
+    mot.zone = zoneValide(champs.zone);
+    if (!mot.archive && !ZONES.includes(avant.zone)) exigerLibre(p, mot.libelle.trim(), id);
+  }
   if (Object.hasOwn(champs, 'famille')) mot.famille = familleValide(champs.famille);
   if (Object.hasOwn(champs, 'definition')) mot.definition = definitionPropre(champs.definition);
   return { ...p, [id]: mot };
@@ -148,9 +154,11 @@ export function effacerMot(perso, id, estUtilise) {
 // Import (relecture finale) : la méta `motsPerso` d'un fichier, telle que l'app l'aurait écrite. Un fichier qui ne vient
 // pas de Carnet peut tout y mettre ; creerMot, modifierMot et remettreSurLaCarte l'empêchent dans l'app. Sont gardées
 // les entrées dont l'id est celui d'un mot à soi et le libellé un texte non vide (NFC, sans espaces autour, coupé à
-// LIBELLE_MAX comme au clavier) ; une zone hors de la carte, une famille inconnue ou une définition qui n'est pas un
-// texte deviennent null ; seul `true` met de côté. Enfin, un mot de la carte dont le nom est déjà pris (par un des 144,
-// ou par un mot à soi de la carte créé avant lui, sans accents ni casse) est mis de côté : une seule bulle par nom.
+// LIBELLE_MAX comme au clavier) ; une famille inconnue ou une définition qui n'est pas un texte deviennent null. Une
+// zone hors de la carte devient null et met le mot de côté (contre-relecture), comme un mot recréé (recreerSiAbsent) :
+// il revient par sa couleur, puis « Remettre sur la carte », qui vérifie son nom. Sinon, seul `true` met de côté.
+// Enfin, un mot de la carte dont le nom est déjà pris (par un des 144, ou par un mot à soi de la carte créé avant lui,
+// sans accents ni casse) est mis de côté : une seule bulle par nom.
 // Les autres champs restent tels quels. Une entrée écartée n'emporte aucun relevé : recreerSiAbsent, ensuite, recrée
 // le mot qu'un relevé cite encore.
 export function normaliserPerso(perso) {
@@ -158,15 +166,16 @@ export function normaliserPerso(perso) {
     if (!estIdPerso(id) || !estObjet(mot) || typeof mot.libelle !== 'string') return [];
     const libelle = mot.libelle.normalize('NFC').trim().slice(0, LIBELLE_MAX).trim();
     if (!libelle) return [];
+    const zone = ZONES.includes(mot.zone) ? mot.zone : null;
     return [[id, {
-      ...mot, libelle, zone: ZONES.includes(mot.zone) ? mot.zone : null, famille: CLES_FAMILLES.has(mot.famille) ? mot.famille : null,
-      definition: typeof mot.definition === 'string' ? definitionPropre(mot.definition) : null, archive: mot.archive === true,
+      ...mot, libelle, zone, famille: CLES_FAMILLES.has(mot.famille) ? mot.famille : null,
+      definition: typeof mot.definition === 'string' ? definitionPropre(mot.definition) : null, archive: mot.archive === true || !zone,
     }]];
   });
   const sortie = Object.fromEntries(propres);
   // Les noms pris : d'abord les 144, puis les mots à soi de la carte, dans l'ordre de création (celui de motsDeLaCarte).
   const pris = new Set(motsDeLaCarte(null).map((m) => normLabel(m.libelle)));
-  const actifs = propres.filter(([, mot]) => !mot.archive && mot.zone)
+  const actifs = propres.filter(([, mot]) => !mot.archive)
     .sort(([a, x], [b, y]) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')) || a.localeCompare(b));
   for (const [id, mot] of actifs) {
     const nom = normLabel(mot.libelle);

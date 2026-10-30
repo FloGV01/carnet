@@ -121,6 +121,32 @@ test('modifier : nom, zone, famille et définition, seuls ceux donnés ; doublon
   assert.deepEqual(modifierMot(perso, A, { archive: true, createdAt: 'x', autre: 1 })[A], perso[A], 'rien d\'autre ne change ici');
 });
 
+// Contre-relecture : un mot qui n'est pas mis de côté mais n'a pas de zone de la carte (une méta écrite à la main, que
+// l'app n'écrit jamais) entre sur la carte au choix de sa couleur. Son nom est vérifié, comme par remettreSurLaCarte :
+// une seule bulle par nom. Un mot mis de côté qui reçoit sa couleur reste de côté, sans vérification.
+test('modifier : un mot sans zone, pas mis de côté, n\'entre pas sur la carte par sa couleur avec un nom déjà pris', () => {
+  const sansZone = (libelle, champs = {}) => ({ libelle, zone: null, famille: null, definition: null, archive: false, createdAt: LE_2, ...champs });
+  const perso = { ...deuxMots(), [C]: sansZone('Calme') };
+  const avant = structuredClone(perso);
+  assert.throws(() => modifierMot(perso, C, { zone: 'vert' }), code('LIBELLE_EXISTANT'), 'Calme est un des 144');
+  assert.throws(() => modifierMot({ ...perso, [C]: sansZone(' FLOTTANT ') }, C, { zone: 'jaune' }), code('LIBELLE_EXISTANT'), 'un mot à soi de la carte');
+  assert.deepEqual(perso, avant, 'rien d\'écrit');
+  // Un nom libre : il entre sur la carte.
+  const libre = modifierMot({ ...perso, [C]: sansZone('Ailleurs') }, C, { zone: 'vert' });
+  assert.ok(motsDeLaCarte(libre).some((m) => m.id === C));
+  // Renommé et coloré d'un coup : le nouveau nom est vérifié.
+  assert.equal(modifierMot(perso, C, { libelle: 'Calme à moi', zone: 'vert' })[C].zone, 'vert');
+  // Mis de côté, il reçoit sa couleur sans quitter le côté : « Remettre sur la carte » vérifiera son nom.
+  const deCote = modifierMot({ ...perso, [C]: sansZone('Calme', { archive: true }) }, C, { zone: 'vert' });
+  assert.deepEqual([deCote[C].zone, deCote[C].archive], ['vert', true]);
+  assert.throws(() => remettreSurLaCarte(deCote, C), code('LIBELLE_EXISTANT'));
+  // Un mot déjà sur la carte change de zone sans que son nom, déjà à lui, soit refusé.
+  assert.equal(modifierMot(perso, A, { zone: 'rouge' })[A].zone, 'rouge');
+  // Les 144 et les mots à soi de la carte : une seule bulle par nom.
+  const noms = motsDeLaCarte(libre).map((m) => normLabel(m.libelle));
+  assert.equal(new Set(noms).size, noms.length);
+});
+
 test('mettre de côté : le mot quitte la carte et la recherche, ses relevés le lisent toujours', () => {
   const perso = mettreDeCote(deuxMots(), B);
   assert.equal(perso[B].archive, true);

@@ -1110,6 +1110,7 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 - **L'écran de l'émotion laissé ouvert** (l'iPhone verrouillé après un mot, rouvert le lendemain) : après plus de 30 min d'absence, il se ferme comme les autres écrans. Avant, un mot touché le matin réécrivait le relevé de la veille.
 - **L'identifiant d'un relevé neuf** est tiré une seule fois, avant les essais d'écriture, comme en v8 : un essai qui a écrit sans réponse ne laisse plus de doublon.
 - **Import** : la méta `motsPerso` d'un fichier écrit à la main est remise dans la forme que l'app écrit (`normaliserPerso`) : libellé coupé à 40 signes, zone, famille et définition lisibles, seul `true` met de côté, un nom déjà pris sur la carte met le mot de côté. Aucun relevé n'est perdu.
+- **Contre-relecture, mot sans couleur** : un mot à soi importé sans zone de la carte est aussi mis de côté, comme un mot recréé. Il revient en deux temps (sa couleur, puis « Remettre sur la carte », qui refuse un nom déjà pris) : avant, il restait « pas mis de côté » sans être sur la carte, et le choix de sa couleur l'y faisait entrer sans vérifier son nom (deux bulles « Calme »). `modifierMot` vérifie aussi le nom d'un tel mot quand une couleur l'y fait entrer.
 - **Réglages › Me ressourcer** dit ce qui fait jouer la règle depuis la v9 : un mot d'énergie basse (les quatre rangs du bas de la carte, ou un mot à soi bleu ou vert), et non la bulle « Énergie basse » seule.
 
 ### Le format de l'Export PSY change (v9, à signaler)

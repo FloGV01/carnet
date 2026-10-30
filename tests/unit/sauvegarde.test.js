@@ -9,7 +9,9 @@ import {
 import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
-import { creerMot, mettreDeCote, motsActifs, chercher, normaliserPerso, LIBELLE_MAX, MOT_SANS_LIBELLE } from '../../public/js/domain/mots-perso.js';
+import {
+  creerMot, mettreDeCote, modifierMot, remettreSurLaCarte, motsActifs, chercher, normaliserPerso, ErreurMot, LIBELLE_MAX, MOT_SANS_LIBELLE,
+} from '../../public/js/domain/mots-perso.js';
 import { normLabel } from '../../public/js/domain/vocabulaire.js';
 import { libelleEmotion, familleDe } from '../../public/js/domain/roue.js';
 import { zoneDe, energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
@@ -818,7 +820,7 @@ test('v9 : l\'import remet en forme les mots à soi d\'un fichier écrit à la m
   assert.equal(perso[id(3)].archive, true, 'flou : le nom de Flou, créé avant lui');
   assert.equal(perso[id(4)].libelle.length, LIBELLE_MAX);
   assert.equal(perso[id(5)].archive, false, 'seul true met de côté');
-  assert.deepEqual([perso[id(6)].zone, perso[id(6)].famille, perso[id(6)].definition], [null, null, null]);
+  assert.deepEqual([perso[id(6)].zone, perso[id(6)].famille, perso[id(6)].definition, perso[id(6)].archive], [null, null, null, true], 'sans zone de la carte, mis de côté');
   assert.deepEqual([perso[id(7)].libelle, perso[id(7)].famille, perso[id(7)].definition], ['Ailleurs', 'serenite', 'Un peu loin.']);
   // Sur la carte : une bulle par nom (les 144, Flou, le long libellé coupé, « Pas de côté », Ailleurs) ; la loupe ne
   // trouve qu'un Calme.
@@ -833,6 +835,50 @@ test('v9 : l\'import remet en forme les mots à soi d\'un fichier écrit à la m
   assert.equal(libelleEmotion(id(3), lu), 'flou');
   assert.equal(zoneDe(id(6), lu), null);
   assert.deepEqual(normaliserPerso(lu), lu);
+});
+
+// Contre-relecture : un mot à soi d'un fichier écrit à la main, sans zone de la carte (absente, null ou inconnue) et pas
+// mis de côté, restait ainsi après l'import : hors de la carte, il échappait au contrôle « une seule bulle par nom », et
+// le choix de sa couleur (Réglages › Mes mots, modifierMot) l'y faisait entrer avec le nom d'un autre (deux « Calme »).
+// Il est maintenant mis de côté, comme un mot recréé : il revient par sa couleur, puis « Remettre sur la carte », qui
+// refuse un nom déjà pris.
+test('v9 : un mot à soi importé sans zone de la carte est mis de côté ; il ne revient pas sur la carte avec un nom déjà pris', async () => {
+  const id = (n) => `roue:perso:u-${String(n).padStart(8, '0')}`;
+  const brut = {
+    [id(1)]: { libelle: 'Calme', zone: 'violet', famille: null, definition: null, archive: false, createdAt: '2026-11-01T08:00:00.000Z' },
+    [id(2)]: { libelle: 'Flou', zone: null, archive: false, createdAt: '2026-11-02T08:00:00.000Z' },
+    [id(3)]: { libelle: 'flou', archive: false, createdAt: '2026-11-03T08:00:00.000Z' },
+    [id(4)]: { libelle: 'Ailleurs', zone: 'orange', archive: false, createdAt: '2026-11-04T08:00:00.000Z' },
+  };
+  const fichier = {
+    format: 'carnet-sauvegarde', formatVersion: 7, schemaVersion: 6, exportedAt: '2026-11-05T19:00:00.000Z',
+    counts: { humeurs: 1, meta: 1 }, data: { humeurs: [{ id: 'hu_1', date: '2026-11-04', heure: '10:00', emotion: id(1) }], meta: [{ cle: 'motsPerso', valeur: brut }] },
+  };
+  const a = analyserFichiers(json(fichier));
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(a.valides.humeurs.map((h) => h.emotion), [id(1)], 'le relevé est gardé');
+  const perso = motsPersoDe(a.valides.meta);
+  for (const n of [1, 2, 3, 4]) assert.deepEqual([perso[id(n)].zone, perso[id(n)].archive], [null, true], id(n));
+  assert.deepEqual(normaliserPerso(perso), perso);
+  assert.equal(motsDeLaCarte(perso).length, 144);
+  assert.deepEqual(motsActifs(perso), []);
+
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  const lu = await repo.meta.lire('motsPerso');
+  assert.equal(libelleEmotion(id(1), lu), 'Calme', 'ses relevés le lisent toujours');
+  // Sa couleur choisie, il reste de côté ; « Remettre sur la carte » refuse un nom déjà pris.
+  const pris = (e) => e instanceof ErreurMot && e.code === 'LIBELLE_EXISTANT';
+  let suite = modifierMot(lu, id(1), { zone: 'vert' });
+  assert.deepEqual([suite[id(1)].zone, suite[id(1)].archive], ['vert', true]);
+  assert.ok(!motsDeLaCarte(suite).some((m) => m.id === id(1)), 'pas sur la carte');
+  assert.throws(() => remettreSurLaCarte(suite, id(1)), pris, 'Calme est un des 144');
+  // Flou revient, puis flou, même nom sans casse, est refusé.
+  suite = remettreSurLaCarte(modifierMot(modifierMot(suite, id(2), { zone: 'bleu' }), id(3), { zone: 'jaune' }), id(2));
+  assert.throws(() => remettreSurLaCarte(suite, id(3)), pris);
+  const carte = motsDeLaCarte(suite);
+  assert.equal(carte.length, 145);
+  assert.equal(new Set(carte.map((m) => normLabel(m.libelle))).size, carte.length, 'une seule bulle par nom');
 });
 
 test('v9 : l\'import remplace les mots à soi, l\'aperçu le dit, « Revenir » les remet', async () => {
