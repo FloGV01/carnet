@@ -76,11 +76,19 @@ test('l\'Analyse avec des émotions : portes, Ma semaine « Tes émotions », Me
   await expect(mesJours(page).locator('.legende-frise')).not.toContainText('Colère');
   // Un jour touché : ses émotions, dans l'ordre des heures, avec le mot ou la famille seule.
   await graphe(page).locator('rect.g-zone').last().click();
-  await expect(mesJours(page).locator('.detail-colonne')).toContainText(/^dimanche 18 oct\. · émotions : joie, préoccupé/);
+  // v8 (Q29) : « · » et « : » tiennent à ce qui les précède (espace insécable), jusqu'à « Voir ce jour » : ni l'un ni
+  // l'autre ne commence une ligne, même en très grand texte.
+  const detailJour = mesJours(page).locator('.detail-colonne');
+  await expect(detailJour).toContainText(/^dimanche 18 oct\.\u00a0· émotions\u00a0: joie, préoccupé.*\u00a0· Voir ce jour$/);
+  expect(await detailJour.textContent()).not.toMatch(/(^|[^\u00a0])·| :/);
 
-  // Ta journée heure par heure : les familles par créneau, puis l'énergie.
+  // Ta journée heure par heure : les familles par créneau, puis l'énergie. Un créneau touché : son détail, collé de même.
   const journee = page.getByRole('figure').filter({ hasText: 'Ta journée heure par heure' });
   await expect(journee.locator('text.g-etiquette')).toHaveText(['Émotions', 'Énergie']);
+  await journee.locator('rect.g-zone').first().click();
+  const detailCreneau = await journee.locator('.detail-colonne').textContent();
+  expect(detailCreneau).toMatch(/^8 h – 10 h\u00a0· émotions\u00a0: .+\u00a0· énergie\u00a0: /);
+  expect(detailCreneau).not.toMatch(/(^|[^\u00a0])·| :/);
   await journee.getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(journee.getByRole('row', { name: /^8 h – 10 h/ })).toContainText('émotions : ');
 

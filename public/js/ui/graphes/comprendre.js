@@ -19,6 +19,7 @@ import { nombreDeReleves } from '../../analyse/emotions.js';
 import { FAMILLES } from '../../domain/roue.js';
 import { formaterJour, formaterJourCourt, JOURS, JOURS_COURTS, MOIS, MOIS_COURTS } from '../../domain/dates.js';
 import { versHash } from '../../routeur.js';
+import { pourAffichage } from '../../domain/typographie.js';
 
 // Le même pied que « Tes moments » dans l'Analyse.
 const PIED = PIED_EXPLOSIONS;
@@ -137,9 +138,9 @@ function LienJour({ date, aujourdhui }) {
 }
 
 // Le détail d'une barre touchée, sous son bloc : son compte, puis les jours repères où le facteur vaut oui
-// (les 6 de « 6 sur 10 »), chacun ouvre son jour.
+// (les 6 de « 6 sur 10 »), chacun ouvre son jour. « · » tient au titre (v8, Q29) : il ne commence jamais une ligne.
 const DetailBarre = ({ titre, barre, aujourdhui }) => html`<div class="detail-colonne" role="status">
-  <p><strong>${titre}</strong> · ${libelleCompte(barre)}</p>
+  <p><strong>${titre}</strong>\u00a0· ${pourAffichage(libelleCompte(barre))}</p>
   ${barre.dates.length > 0 && html`<ul class="dates-barre">${barre.dates.map((date) => html`<li><${LienJour} date=${date} aujourdhui=${aujourdhui} /></li>`)}</ul>`}
 </div>`;
 

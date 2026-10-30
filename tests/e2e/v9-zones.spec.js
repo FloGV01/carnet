@@ -131,7 +131,7 @@ test('Mes jours en mode jour : un point par relevé à la couleur de sa zone, cr
     ].sort());
     // Le détail du 15 dit le nom du mot à soi, jamais son identifiant.
     await graphe.locator('rect.g-zone').last().click();
-    await expect(mesJours.locator('.detail-colonne')).toContainText(/^jeudi 15 oct\. · émotions : calme, furieux, sérénité, fier, accablé, flottant/);
+    await expect(mesJours.locator('.detail-colonne')).toContainText(/^jeudi 15 oct\.\u00a0· émotions\u00a0: calme, furieux, sérénité, fier, accablé, flottant/);
     await expect(graphe.locator('[class*="emo-"]')).toHaveCount(0);
     const legende = mesJours.locator('.legende-frise');
     await expect(legende.locator(':scope > span')).toContainText([

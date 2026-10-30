@@ -150,8 +150,9 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, perso = null,
     ${legendeNotes}
     <${LegendeNuits} lib=${lib} />
   </p>${legendeReperes}`;
-  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib, perso).join(' · ')}
-    ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
+  // Le détail touché : « · » et « : » tiennent à ce qui les précède (v8, Q29), même en très grand texte.
+  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong>\u00a0· ${pourAffichage(detailColonne(f.pas, col, lib, perso).join(' · '))}
+    ${f.pas === 'jour' && html`\u00a0· <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
   return html`<${Cadre} titre="Mes jours" tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Mes jours, ${UNITE[f.pas]} : ${rangees}. Touche une colonne pour son détail, ou « Voir en tableau ».`}>
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${d.hauteur} rx="3" />`}
@@ -202,7 +203,7 @@ export function TaJournee({ parHeure, profil, carte }) {
     <${LegendeFamilles} familles=${familles} />
     ${g.energies.length > 0 && html`<${LegendeEnergie} lib=${lib} unite="(en jours)" />`}
   </p>`;
-  const detail = choix != null && html`<p class="detail-colonne" role="status"><strong>${nomCreneau(choix)}</strong> · ${texte(choix)}</p>`;
+  const detail = choix != null && html`<p class="detail-colonne" role="status"><strong>${nomCreneau(choix)}</strong>\u00a0· ${pourAffichage(texte(choix))}</p>`;
   const quoi = [parHeure && 'les émotions du moment, par famille', creneaux.length > 0 && "l'énergie, en jours"].filter(Boolean).join(', puis ');
   return html`<${Cadre} titre="Ta journée heure par heure" tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Ta journée heure par heure, par créneau de 2 heures : ${quoi}. Touche un créneau pour son détail, ou « Voir en tableau ».`}>
@@ -257,7 +258,7 @@ export function ZonesParSemaine({ semaines }) {
   const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Semaine</th><th scope="col">Zones</th><th scope="col">Relevés</th></tr></thead>
     <tbody>${avec.map((s) => html`<tr><td>${nomSemaine(s.semaine)}</td><td>${lisible(texteZones(s))}</td><td>${nombreParZone(s)}</td></tr>`)}</tbody></table>`;
   const legende = html`<p class="legende-graphe legende-frise"><${LegendeZones} /></p>`;
-  const detail = semaine && html`<p class="detail-colonne" role="status"><strong>${nomSemaine(semaine.semaine)}</strong> · ${lisible(texteZones(semaine))}</p>`;
+  const detail = semaine && html`<p class="detail-colonne" role="status"><strong>${nomSemaine(semaine.semaine)}</strong>\u00a0· ${lisible(texteZones(semaine))}</p>`;
   return html`<${Cadre} titre="Par semaine" classe="g-zones-semaines" droite=${`${semaines.length} dernières semaines`} resume=${lisible(`Relevés de ces ${semaines.length} semaines : ${texteZones(total)}.`)}
     tableau=${tableau} legende=${legende} detail=${detail} dim=${d} pied=${NOTE_ZONES}
     aria=${`Tes zones par semaine, sur les ${semaines.length} dernières semaines : une barre par semaine, découpée par zone, longue comme le nombre de relevés. Touche une semaine pour son détail, ou « Voir en tableau ».`}>

@@ -104,8 +104,11 @@ test('avec 180 jours inventés : Tes zones après le sélecteur, 4 bulles et leu
   // Une semaine touchée : ses comptes, dans l'ordre des zones, sans zéro.
   await figure.locator('rect.g-zone').last().click();
   const semaine = attendu('2026-10-12');
-  expect(sansInsecable(await figure.locator('.detail-colonne').textContent()))
-    .toBe(`semaine du 12/10 · ${ZONES.filter((z) => semaine[z]).map((z) => `${z} ${semaine[z]}`).join(' · ')}`);
+  const detail = await figure.locator('.detail-colonne').textContent();
+  expect(sansInsecable(detail)).toBe(`semaine du 12/10 · ${ZONES.filter((z) => semaine[z]).map((z) => `${z} ${semaine[z]}`).join(' · ')}`);
+  // v8 (Q29) : « · » tient à ce qui le précède, le premier aussi (espace insécable) : il ne commence jamais une ligne.
+  expect(detail).toContain('12/10\u00a0·');
+  expect(detail).not.toMatch(/(^|[^\u00a0])·/);
   // « Voir en tableau » : une ligne par semaine, son nombre de relevés.
   await figure.getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(figure.getByRole('row')).toHaveCount(13);
