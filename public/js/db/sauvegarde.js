@@ -11,7 +11,7 @@ import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } fr
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
-import { persoDe, recreerSiAbsent } from '../domain/mots-perso.js';
+import { normaliserPerso, recreerSiAbsent } from '../domain/mots-perso.js';
 
 export const FORMAT = 'carnet-sauvegarde';
 export const FORMAT_VERSION = 7;
@@ -238,7 +238,10 @@ export function analyserFichiers(fichiers) {
   const metaFichier = (data.meta || []).filter((m) => m && typeof m.cle === 'string' && !META_NON_EXPORTEES.has(m.cle));
   // v9 : les mots à soi du fichier valident les relevés qui en citent un. Un relevé qui cite un mot à soi absent du
   // fichier (ou illisible) le recrée mis de côté, « Mot sans libellé » : rien n'est perdu (point de vigilance 4).
-  const persoFichier = persoDe((metaFichier.find((m) => m.cle === 'motsPerso') || {}).valeur);
+  // Relecture finale : la méta du fichier est d'abord remise dans la forme que l'app écrit (normaliserPerso : zone,
+  // famille, mise de côté, une seule bulle par nom), avant la lecture des relevés.
+  const metaPerso = metaFichier.find((m) => m.cle === 'motsPerso');
+  const persoFichier = normaliserPerso(metaPerso ? metaPerso.valeur : null);
   let perso = persoFichier;
   for (const store of Object.keys(SCHEMAS)) {
     valides[store] = [];
@@ -270,8 +273,9 @@ export function analyserFichiers(fichiers) {
     audios.push({ ...meta, data: octets.slice().buffer });
   }
   const dates = valides.journal.map((j) => j.date).concat(valides.episodes.map((e) => e.date)).sort();
-  const metaImportee = perso === persoFichier ? metaFichier
-    : [...metaFichier.filter((m) => m.cle !== 'motsPerso'), { cle: 'motsPerso', valeur: perso }];
+  const metaImportee = metaPerso
+    ? metaFichier.filter((m) => m.cle !== 'motsPerso' || m === metaPerso).map((m) => (m === metaPerso ? { ...m, valeur: perso } : m))
+    : perso === persoFichier ? metaFichier : [...metaFichier, { cle: 'motsPerso', valeur: perso }];
   return {
     sauvegarde: s,
     valides: { ...valides, listes: [...listes, ...ajoutsListes], meta: metaImportee, audios },

@@ -140,14 +140,19 @@ test('Tes zones en clair et en sombre : bulles aux couleurs de l\'écran 1, text
       expect(Math.abs(f.l - f.h)).toBeLessThan(0.5);
       expect(f.rond).toBe('50%');
     }
-    // Les barres : la couleur de leur zone (jetons de tokens.css), sur la carte ; la légende aussi.
+    // Les barres et les ronds de la légende : la couleur des bulles au-dessus (-fill, dans les deux thèmes ; relecture
+    // finale : en clair, l'accent seul rendait le jaune olive sous une bulle jaune vif), avec un liseré à l'accent, à 3:1
+    // sur la carte.
     const figure = parSemaine(page);
-    for (const z of ZONES) {
-      const fill = await figure.locator(`rect.g-emo.zone-${z}`).first().evaluate((e) => getComputedStyle(e).fill);
-      expect(fill, `${schema} ${z}`).toBe(rgb(t[`c-zone-${z}`]));
-    }
     const fond = await carteZones(page).evaluate((e) => getComputedStyle(e).backgroundColor);
-    for (const z of ZONES) expect(contraste(rgb(t[`c-zone-${z}`]), fond), `${schema} ${z}`).toBeGreaterThanOrEqual(3);
+    for (const z of ZONES) {
+      for (const marque of [figure.locator(`rect.g-emo.zone-${z}`).first(), figure.locator(`.legende-frise .zone-${z} circle`)]) {
+        const [fill, stroke] = await marque.evaluate((e) => [getComputedStyle(e).fill, getComputedStyle(e).stroke]);
+        expect(fill, `${schema} ${z}`).toBe(faces[ZONES.indexOf(z)].fond);
+        expect(stroke, `${schema} ${z}`).toBe(rgb(t[`c-zone-${z}`]));
+        expect(contraste(stroke, fond), `${schema} ${z}`).toBeGreaterThanOrEqual(3);
+      }
+    }
   }
 });
 

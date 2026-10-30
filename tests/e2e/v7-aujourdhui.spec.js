@@ -315,15 +315,17 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
         point: s.backgroundColor === 'rgba(0, 0, 0, 0)' ? `creux ${s.borderTopColor}` : s.backgroundColor,
       };
     }));
+    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent.
     expect(lignes, schema).toEqual([
-      { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge']) },
+      { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, point: `creux ${rgb(t['text-2'])}` },
       { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['c-episode']) },
-      { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge']) },
+      { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '18:30', texte: 'Sérénité', lien: true, point: `creux ${rgb(t['text-2'])}` },
-      { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge']) },
+      { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge-fill']) },
     ]);
-    // Colonne d'heures fixe de 70, textes alignés ; AA du texte et de l'heure sur la carte.
+    // Colonne d'heures de 70 au texte par défaut (elle suit le corps en grand texte), textes alignés ; AA du texte et de
+    // l'heure sur la carte.
     const colonnes = await page.locator('.liste-evenements > li').evaluateAll((els) => els.map((li) => {
       const h = li.querySelector('.heure');
       const fond = getComputedStyle(li.closest('.liste-evenements')).backgroundColor;
@@ -342,7 +344,7 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
     const zones = page.getByRole('img', { name: 'Émotions : énergie haute · désagréable' });
     await expect(zones).toBeVisible();
     expect(await zones.locator('i').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor)), schema)
-      .toEqual([rgb(t['c-zone-rouge'])]);
+      .toEqual([rgb(t['c-zone-rouge-fill'])]);
     await expect(page.locator('.resume-jour')).toHaveText('Bureau · humeur 6');
     const [points, resume] = await Promise.all([boite(page, '.zones-jour'), boite(page, '.resume-jour')]);
     expect(points.x + points.width).toBeLessThanOrEqual(resume.x);

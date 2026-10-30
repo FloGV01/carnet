@@ -2,6 +2,7 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { espionnerAudio, audio } from '../aides/audio.js';
 import { vueMoment, bulle, mot, retour, noter, continuer, fermer, terminer, faisais, NOTEE } from '../aides/emotion.js';
+import { motsDeLaCarte, energieDe } from '../../public/js/domain/carte-roue.js';
 
 // v6 · « Me ressourcer » (spec §5) : la règle, éteinte au départ. Quand l'utilisateur note lui-même, maintenant,
 // une énergie basse, « Pour récupérer, je… » s'affiche tel qu'écrit dans l'Émotion du moment (v7 : juste au-dessus
@@ -264,7 +265,7 @@ test('Réglages › Me ressourcer : éteint par défaut, chaque toucher s\'enreg
   await page.getByRole('link', { name: 'Me ressourcer', exact: true }).click();
   await expect(page).toHaveURL(/#\/reglages\/ressourcer$/);
   await expect(page.getByRole('heading', { name: 'Me ressourcer', level: 1 })).toBeVisible();
-  const interrupteur = page.getByRole('switch', { name: 'Quand je note une énergie basse, montre-moi ma liste.', exact: true });
+  const interrupteur = page.getByRole('switch', { name: 'Quand je choisis un mot d\'énergie basse, montre-moi ma liste.', exact: true });
   await expect(interrupteur).toHaveAttribute('aria-checked', 'false');
   // Les défauts s'appliquent à la lecture : rien n'est écrit tant que rien n'est changé.
   expect(await lireRegle(page)).toBeNull();
@@ -287,7 +288,7 @@ test('Réglages › Me ressourcer : éteint par défaut, chaque toucher s\'enreg
 test('Réglages › Me ressourcer : l\'interrupteur allumé suffit à faire jouer la règle', async ({ page }) => {
   await ecrirePlan(page);
   await aller(page, '#/reglages/ressourcer');
-  await page.getByRole('switch', { name: 'Quand je note une énergie basse, montre-moi ma liste.', exact: true }).click();
+  await page.getByRole('switch', { name: 'Quand je choisis un mot d\'énergie basse, montre-moi ma liste.', exact: true }).click();
   await expect.poll(() => lireRegle(page)).toEqual({ energieBasse: true });
   const vue = await noterBasse(page);
   await expect(carte(vue)).toBeVisible();
@@ -303,6 +304,24 @@ test('Réglages › Me ressourcer : le texte ne dit ni alerte ni conseil, et la 
   expect(await lireRegle(page)).toBeNull();
 });
 
+// Relecture finale de la v9 : on ne note plus l'énergie, elle vient de la case du mot. Le texte dit ce qui fait jouer la
+// règle (un mot des quatre rangs du bas, ou un mot à soi bleu ou vert ; pas la bulle « Énergie basse » seule), et ses
+// exemples sont justes.
+test('Réglages › Me ressourcer : le texte dit que l\'énergie vient de la case du mot, avec des exemples justes', async ({ page }) => {
+  await aller(page, '#/reglages/ressourcer');
+  const aide = page.locator('main .aide-carte');
+  await expect(aide).toHaveText('Ma liste est « Pour récupérer, je… », dans Mon plan. Un mot est d\'énergie basse dans les quatre rangs du bas '
+    + 'de la carte (Épuisé, Vide, Reposé, Serein…), ou si c\'est un mot à moi, en bleu ou en vert ; Fatigué et Calme, un peu plus haut, '
+    + 'sont d\'énergie moyenne. La liste ne s\'affiche pas pour un relevé noté « C\'était vers… ».');
+  await expect(page.locator('main')).not.toContainText(/je note .*énergie|note moi-même/);
+  const mots = motsDeLaCarte(null);
+  const energie = (libelle) => energieDe(mots.find((m) => m.libelle === libelle).id);
+  for (const libelle of ['Épuisé', 'Vide', 'Reposé', 'Serein']) expect(energie(libelle), libelle).toBe('energie:basse');
+  for (const libelle of ['Fatigué', 'Calme']) expect(energie(libelle), libelle).toBe('energie:moyenne');
+  expect(['bleu', 'vert'].map((zone) => energieDe('roue:perso:u-0a1b2c3d', { 'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone } })))
+    .toEqual(['energie:basse', 'energie:basse']);
+});
+
 test('Réglages › Me ressourcer : lecture impossible, les défauts s\'appliquent et la page s\'affiche', async ({ page }) => {
   await page.evaluate(() => {
     const meta = window.__carnet.repo.meta;
@@ -310,5 +329,5 @@ test('Réglages › Me ressourcer : lecture impossible, les défauts s\'applique
     meta.lire = (cle) => (cle === 'ressourcer' ? Promise.reject(new Error('lecture refusée')) : lireVraiment(cle));
   });
   await aller(page, '#/reglages/ressourcer');
-  await expect(page.getByRole('switch', { name: 'Quand je note une énergie basse, montre-moi ma liste.', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByRole('switch', { name: 'Quand je choisis un mot d\'énergie basse, montre-moi ma liste.', exact: true })).toHaveAttribute('aria-checked', 'false');
 });

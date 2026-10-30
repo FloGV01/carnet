@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { couleurCase, couleurLisible, contraste, disposition, etendue, pointDe, PAS, FOND_CARTE_DU_BAS } from '../../public/js/ui/carte-geometrie.js';
-import { motsDeLaCarte, zoneDe } from '../../public/js/domain/carte-roue.js';
+import { motsDeLaCarte, zoneDe, zoneDeCase } from '../../public/js/domain/carte-roue.js';
+import { jetons } from '../aides/couleurs.js';
+import { RACINE, lire } from '../aides/fichiers.js';
+import { join } from 'node:path';
 
 // v9 (4/8) · La carte des émotions en nombres (ui/carte-geometrie.js ; visuel-hwf.md §2.2 à §2.5) : la couleur de chaque
 // case, lisible avec son texte noir ; la lentille autour du mot choisi, sans chevauchement. Mots à soi inventés.
@@ -48,6 +51,19 @@ test('AA : le texte noir sur chaque case (144 et les colonnes des mots à soi) ;
   assert.ok(r > g && r > b, enrage);
 });
 
+// Relecture finale : à l'écran 3, une activité choisie prend la couleur de la case du mot (moment.js, --c-fill), avec
+// le texte -on de sa zone (tokens.css, le même dans les deux thèmes) : AA sur chaque case de la zone.
+test('AA : le texte -on de chaque zone sur chaque case de cette zone (une activité choisie à l\'écran 3)', () => {
+  const { clair } = jetons(lire(join(RACINE, 'public', 'css', 'tokens.css')));
+  for (let col = -2; col <= 15; col++) {
+    for (let rang = 1; rang <= 12; rang++) {
+      const zone = zoneDeCase(Math.min(12, Math.max(1, col)), rang);
+      const c = couleurCase(col, rang);
+      assert.ok(contraste(clair[`c-zone-${zone}-on`], c) >= 4.5, `${col}, ${rang} : ${c}`);
+    }
+  }
+});
+
 test('disposition sans mot choisi : une grille carrée au pas de 106, échelle 1 ; avec des mots à soi, elle s\'élargit de leur côté', () => {
   const p = disposition(MOTS);
   assert.deepEqual(p.get(id('Enragé')), { x: 0, y: 0, echelle: 1 });
@@ -66,17 +82,44 @@ test('disposition avec un mot choisi : il garde sa place, ses voisines à 120 pu
   const p = disposition(MOTS, calme);
   const c = p.get(calme);
   assert.deepEqual(c, { x: 6 * PAS, y: 6 * PAS, echelle: 1.625 });
-  const rel = (libelle) => { const q = p.get(id(libelle)); return [q.x - c.x, q.y - c.y, q.echelle]; };
-  // Au-dessus, en dessous, à gauche, à droite : 78 + 4 + 60 = 142 (capture : 142,1).
-  assert.deepEqual(rel('Réjoui'), [0, -142, 1.25]);
-  assert.deepEqual(rel('Bien'), [0, 142, 1.25]);
-  assert.deepEqual(rel('Ennui'), [-142, 0, 1.25]);
-  assert.deepEqual(rel('À l\'aise'), [142, 0, 1.25]);
-  // En diagonale : 118 (capture : 117,1) ; deux cases plus haut : 260 (capture : 260,3).
-  assert.deepEqual(rel('Mal à l\'aise'), [-118, -118, 1.125]);
-  assert.deepEqual(rel('Pensif'), [118, 118, 1.125]);
-  assert.deepEqual(rel('Gai'), [0, -260, 1.125]);
+  const rel = (libelle) => { const q = p.get(id(libelle)); return [+(q.x - c.x).toFixed(1), +(q.y - c.y).toFixed(1), q.echelle]; };
+  // Au-dessus, en dessous, à gauche, à droite : 142,1 (78 + 4 + 60, mesuré sur la capture).
+  assert.deepEqual(rel('Réjoui'), [0, -142.1, 1.25]);
+  assert.deepEqual(rel('Bien'), [0, 142.1, 1.25]);
+  assert.deepEqual(rel('Ennui'), [-142.1, 0, 1.25]);
+  assert.deepEqual(rel('À l\'aise'), [142.1, 0, 1.25]);
+  // En diagonale : 117,1 ; deux cases plus haut : 260,3.
+  assert.deepEqual(rel('Mal à l\'aise'), [-117.1, -117.1, 1.125]);
+  assert.deepEqual(rel('Pensif'), [117.1, 117.1, 1.125]);
+  assert.deepEqual(rel('Gai'), [0, -260.3, 1.125]);
   assert.equal(rel('Tendu')[2], 1);
+});
+
+// Relecture finale : la fenêtre visible autour du mot choisi (|Δcol| ≤ 2 et |Δrang| ≤ 4, et sa transposée) reprend la
+// table mesurée de visuel §2.2 au dixième de pt près ; au-delà, les colonnes restent droites et le pas lointain est de
+// 106. Calme (col 7, rang 6) a ses voisines des deux côtés jusqu'à 4 cases : toute la fenêtre est sur la carte.
+const TABLE_VISUEL = {
+  '0,1': [0, 142.1], '1,0': [142.1, 0], '1,1': [117.1, 117.1], '0,2': [0, 260.3], '2,0': [260.3, 0],
+  '1,2': [100.3, 222.3], '2,1': [222.3, 100.3], '2,2': [202.4, 202.4], '0,3': [0, 366.5], '1,3': [95.1, 328.8],
+  '2,3': [192.2, 308.3], '1,4': [93.7, 434.3], '2,4': [188.8, 415.3], '0,4': [0, 472.5],
+};
+test('disposition avec un mot choisi : la fenêtre visible suit la table mesurée de visuel §2.2, transposée comprise ; au-delà, le pas de 106', () => {
+  const calme = MOTS.find((m) => m.libelle === 'Calme');
+  const p = disposition(MOTS, calme.id);
+  const c = p.get(calme.id);
+  const a = (di, dj) => { const m = MOTS.find((x) => x.col === calme.col + di && x.rang === calme.rang - dj); const q = p.get(m.id); return [q.x - c.x, q.y - c.y]; };
+  const proche = ([x, y], [ex, ey], msg) => assert.ok(Math.abs(x - ex) < 0.05 && Math.abs(y - ey) < 0.05, `${msg} : (${x.toFixed(1)} ; ${y.toFixed(1)}) au lieu de (${ex} ; ${ey})`);
+  for (const [cle, [x, y]] of Object.entries(TABLE_VISUEL)) {
+    const [i, j] = cle.split(',').map(Number);
+    for (const [si, sj] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      proche(a(si * i, sj * j), [si * x, sj * y], `(${si * i}, ${sj * j})`);
+      proche(a(si * j, sj * i), [si * y, sj * x], `transposée (${si * j}, ${sj * i})`);
+    }
+  }
+  // Au-delà de la fenêtre : la colonne de (1, 4) reste droite, au pas de 106 ; la rangée de (4, 1) aussi.
+  proche(a(1, 5), [93.7, 434.3 + PAS], '(1, 5)');
+  proche(a(5, 1), [434.3 + PAS, 93.7], '(5, 1)');
+  proche(a(3, 3), [192.2 + PAS, 192.2 + PAS], '(3, 3)');
 });
 
 // Le mot choisi est une double capsule : deux capsules verticales de 78 × 156 (rayon 39) accolées ; les autres, des disques.

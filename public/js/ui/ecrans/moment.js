@@ -232,9 +232,11 @@ export function Moment({ id = null }) {
         if (etat.emotion == null && !(etat.faisais && etat.faisais.length)) return;
         const depart = avant.current;
         const quand = depart ? { date: depart.date, heure: depart.heure ?? null, vers: depart.vers ?? null } : horaire(etat.quand, repo.maintenant());
+        // L'id est tiré une seule fois, avant les essais : un nouvel essai réécrit la même clé, sans doublon (comme en v8).
+        const idNeuf = depart ? depart.id : nouvelId('hu');
         const cree = await ecrireAvecEssais(() => repo.humeurs.creer({
           ...quand, emotion: etat.emotion, energie: etat.energie, faisais: etat.faisais,
-        }, { id: depart ? depart.id : nouvelId('hu') }), signaler);
+        }, { id: idNeuf }), signaler);
         if (cree) idRef.current = cree.id;
         return;
       }
@@ -377,22 +379,24 @@ export function Moment({ id = null }) {
       </div>`}
     </div>`;
   } else {
-    // L'écran 3. Le mot dans la couleur de sa case (éclaircie, comme dans la carte du bas) ; un mot à soi mis de côté, qui
-    // a quitté la carte, dans celle de sa zone ; un mot à soi sans zone, en blanc.
+    // L'écran 3. Le mot dans la couleur de sa case (éclaircie, comme dans la carte du bas), et une activité choisie dans
+    // celle de la case même (relecture finale : un seul bleu pour Vide, pas l'azur de sa case et le pervenche de sa
+    // zone) ; le texte d'une activité choisie reste le -on de la zone, à 4,5:1 sur toutes ses cases. Un mot à soi mis de
+    // côté, qui a quitté la carte, prend la couleur de sa zone (-fill) ; un mot à soi sans zone, le blanc.
     const libelle = IDS_FAMILLES.has(releve.emotion) ? null : libelleEmotion(releve.emotion, perso);
     const surCarte = libelle && mots.find((m) => m.id === releve.emotion);
     const zone = libelle ? zoneDe(releve.emotion, perso) : null;
-    const couleur = surCarte ? { '--c-mot': couleurLisible(surCarte.couleur) } : null;
+    const couleur = surCarte ? { '--c-mot': couleurLisible(surCarte.couleur), '--c-fill': surCarte.couleur } : null;
     // Sous un ancien relevé sans mot, ce qu'il porte : « Colère · énergie basse », « humeur 6 », « énergie basse ».
     const ancien = !libelle && donnees ? texteReleve({ ...releve, faisais: null, vers: null }, donnees.carte, perso) : '';
     const regle = !rouvert && donnees && regleRessourcer({
       reglage: donnees.reglage, releve: { vers: releve.quand ? true : null, energie: releve.energie }, plan: donnees.plan,
     });
-    ecran = html`<div class=${`ecran-faisais${zone ? ` zone-${zone}` : ''}`} key="faisais">
+    ecran = html`<div class=${`ecran-faisais${zone ? ` zone-${zone}` : ''}`} key="faisais" style=${couleur}>
       ${fermer}
       <div class="corps-faisais">
         <div class="rappel-faisais">
-          <h1 class=${`mot-rappel${libelle ? '' : ' sans-mot'}`} ref=${titre} tabindex="-1" style=${couleur}>${libelle || 'Aucun mot'}</h1>
+          <h1 class=${`mot-rappel${libelle ? '' : ' sans-mot'}`} ref=${titre} tabindex="-1">${libelle || 'Aucun mot'}</h1>
           ${rouvert && avant.current && html`<p class="detail-rappel">${quandDuReleve(avant.current, repo.aujourdhui())}</p>`}
           ${ancien && html`<p class="detail-rappel">${ancien}</p>`}
           ${rouvert && html`<button type="button" class="btn-lien changer-mot" aria-disabled=${ariaGarde}

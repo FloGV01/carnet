@@ -58,48 +58,51 @@ export function couleurLisible(couleur, fond = FOND_CARTE_DU_BAS) {
 // ---------- Disposition (visuel §2.2 et §2.3) ----------
 
 // Autour du mot choisi, la taille suit la distance de Manhattan d = |Δcol| + |Δrang| : d = 0, la double capsule de
-// 156 ; 1, 120 ; 2, 108 ; 3 et plus, 96. RAYONS : la demi-taille ; ECHELLES : le facteur sur une bulle de 96.
-const RAYONS = [78, 60, 54, 48];
+// 156 ; 1, 120 ; 2, 108 ; 3 et plus, 96. ECHELLES : le facteur sur une bulle de 96.
 const ECHELLES = [1.625, 1.25, 1.125, 1];
-// Écart entre deux bords voisins : 4 près du mot choisi (jusqu'à d = 2), 10 au-delà.
-const ecart = (a, b) => (Math.min(a, b) <= 2 ? 4 : 10);
 
-// Les colonnes de la carte : de 1 à 12, élargies par les mots à soi (motsDeLaCarte, domain/carte-roue.js).
-function bornes(mots) {
-  let cmin = 1;
-  let cmax = COTE;
-  for (const m of mots) { cmin = Math.min(cmin, m.col); cmax = Math.max(cmax, m.col); }
-  return { cmin, nc: cmax - cmin + 1 };
+// La lentille mesurée sur la capture de How We Feel (visuel §2.2), codée en dur comme il le conseille : le centre de
+// chaque bulle de la fenêtre visible autour du mot choisi, par rapport à lui, en pt. LENTILLE[a][b] = [x, y] pour
+// a = |Δcol| ≤ 2 et b = |Δrang| ≤ 4 ; sa transposée (x et y échangés) vaut pour |Δcol| ≤ 4 et |Δrang| ≤ 2, et les
+// signes suivent ceux de Δcol et de Δrang. (2, 1) est la transposée de (1, 2) (222,3 ; mesuré 222,6) ; (0, 4), hors de
+// la capture, est extrapolé : 366,5 + 48 + 10 + 48.
+const LENTILLE = [
+  [[0, 0], [0, 142.1], [0, 260.3], [0, 366.5], [0, 472.5]],
+  [[142.1, 0], [117.1, 117.1], [100.3, 222.3], [95.1, 328.8], [93.7, 434.3]],
+  [[260.3, 0], [222.3, 100.3], [202.4, 202.4], [192.2, 308.3], [188.8, 415.3]],
+];
+const lentille = (a, b) => (a <= 2 ? LENTILLE[a][b] : [LENTILLE[b][a][1], LENTILLE[b][a][0]]);
+
+// L'écart horizontal à un mot choisi (a = |Δcol|, b = |Δrang|) : celui de la lentille dans la fenêtre ; au-delà, le
+// long de la rangée (celle du bord de la fenêtre pour b > 4 : les colonnes y restent droites), depuis la dernière case
+// de la fenêtre, au pas lointain de 106 (96 + 10). L'écart vertical est le même, transposé : dy(a, b) = dx(b, a).
+function dx(a, b) {
+  const r = Math.min(b, 4);
+  const amax = r <= 2 ? 4 : 2;
+  return a <= amax ? lentille(a, r)[0] : lentille(amax, r)[0] + (a - amax) * PAS;
 }
+
+// Les colonnes de la carte : la première est la colonne 1, ou celle du mot à soi le plus à gauche (motsDeLaCarte,
+// domain/carte-roue.js).
+const premiereColonne = (mots) => mots.reduce((c, m) => Math.min(c, m.col), 1);
 
 // La place régulière d'une case (sans mot choisi).
 const placeReguliere = (col, rang, cmin) => ({ x: (col - cmin) * PAS, y: (COTE - rang) * PAS });
 
 // La place de chaque mot : Map id → { x, y, echelle }. Sans mot choisi (ou un id absent), le pas régulier, échelle 1.
-// Avec un mot choisi, la lentille de How We Feel : il garde sa place régulière, et les positions se cumulent depuis lui,
-// le long de chaque rangée (x) puis de chaque colonne (y), bord à bord, avec les tailles et les écarts ci-dessus. Les
-// bulles ne se chevauchent jamais ; les rangées paraissent courbes autour du mot choisi, comme sur la capture.
+// Avec un mot choisi, la lentille de How We Feel : il garde sa place régulière, ses voisines de la fenêtre visible
+// prennent les places mesurées (LENTILLE), et les autres suivent au pas lointain. Les bulles ne se chevauchent jamais ;
+// les rangées paraissent courbes autour du mot choisi, et les colonnes s'y resserrent, comme sur la capture.
 export function disposition(mots, choisi = null) {
-  const { cmin, nc } = bornes(mots);
+  const cmin = premiereColonne(mots);
   const sel = choisi ? mots.find((m) => m.id === choisi) : null;
   if (!sel) return new Map(mots.map((m) => [m.id, { ...placeReguliere(m.col, m.rang, cmin), echelle: 1 }]));
-  const [si, sj] = [sel.col - cmin, COTE - sel.rang];
-  const d = (i, j) => Math.min(3, Math.abs(i - si) + Math.abs(j - sj));
-  const x = Array.from({ length: nc }, () => new Array(COTE).fill(0));
-  const y = Array.from({ length: nc }, () => new Array(COTE).fill(0));
-  for (let j = 0; j < COTE; j++) {
-    x[si][j] = si * PAS;
-    for (let i = si + 1; i < nc; i++) { const [a, b] = [d(i - 1, j), d(i, j)]; x[i][j] = x[i - 1][j] + RAYONS[a] + ecart(a, b) + RAYONS[b]; }
-    for (let i = si - 1; i >= 0; i--) { const [a, b] = [d(i + 1, j), d(i, j)]; x[i][j] = x[i + 1][j] - RAYONS[a] - ecart(a, b) - RAYONS[b]; }
-  }
-  for (let i = 0; i < nc; i++) {
-    y[i][sj] = sj * PAS;
-    for (let j = sj + 1; j < COTE; j++) { const [a, b] = [d(i, j - 1), d(i, j)]; y[i][j] = y[i][j - 1] + RAYONS[a] + ecart(a, b) + RAYONS[b]; }
-    for (let j = sj - 1; j >= 0; j--) { const [a, b] = [d(i, j + 1), d(i, j)]; y[i][j] = y[i][j + 1] - RAYONS[a] - ecart(a, b) - RAYONS[b]; }
-  }
+  const o = placeReguliere(sel.col, sel.rang, cmin);
   return new Map(mots.map((m) => {
-    const [i, j] = [m.col - cmin, COTE - m.rang];
-    return [m.id, { x: x[i][j], y: y[i][j], echelle: ECHELLES[d(i, j)] }];
+    // Δrang compté vers le bas, comme y : un rang plus bas est une énergie plus basse.
+    const [i, j] = [m.col - sel.col, sel.rang - m.rang];
+    const [a, b] = [Math.abs(i), Math.abs(j)];
+    return [m.id, { x: o.x + Math.sign(i) * dx(a, b), y: o.y + Math.sign(j) * dx(b, a), echelle: ECHELLES[Math.min(3, a + b)] }];
   }));
 }
 
@@ -123,7 +126,7 @@ export function etendue(mots) {
 // Le point où centrer la carte : la place régulière d'un mot (le mot choisi la garde), ou le milieu d'une zone de 6 × 6
 // (spec §4.1 : toucher une bulle ouvre la carte sur le milieu de sa zone), ou le milieu du carré.
 export function pointDe(mots, { id = null, zone = null } = {}) {
-  const { cmin } = bornes(mots);
+  const cmin = premiereColonne(mots);
   const m = id ? mots.find((x) => x.id === id) : null;
   if (m) return placeReguliere(m.col, m.rang, cmin);
   const col = zone === 'rouge' || zone === 'bleu' ? 3.5 : zone ? 9.5 : 6.5;

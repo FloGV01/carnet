@@ -6,7 +6,9 @@ import {
   supprimerReleve, NOMS_BULLES, NOTEE, SUPPRIME,
 } from '../aides/emotion.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
-import { energieDe } from '../../public/js/domain/carte-roue.js';
+import { energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
+import { couleurCase, couleurLisible } from '../../public/js/ui/carte-geometrie.js';
+import { canaux } from '../aides/couleurs.js';
 
 // v9 (4/8) · L'émotion comme How We Feel, en plein écran (spec §4.1, §4.2, §5 et §7 ; visuel-hwf.md §1, §2 et §4) :
 // l'écran 1 (quatre bulles, « Maintenant ▾ ») et l'écran 2 (la carte de 144 mots, la carte du bas, la flèche). Toucher
@@ -16,6 +18,11 @@ import { energieDe } from '../../public/js/domain/carte-roue.js';
 // (tests en fin de fichier, point de vigilance 1 compris). Données inventées. Horloge : jeudi 15 octobre 2026, 21:00
 // (390 × 844).
 const releves = (page) => () => page.evaluate(() => window.__carnet.repo.humeurs.tous());
+// La couleur de la case d'un mot de la carte (visuel §2.5), en « rgb(…) ».
+const MOTS_CARTE = motsDeLaCarte(null);
+const caseDe = (libelle) => { const m = MOTS_CARTE.find((x) => x.libelle === libelle); return couleurCase(m.col, m.rang); };
+const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
+const rgbCase = (libelle) => rgb(caseDe(libelle));
 const ouvrir = async (page) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
@@ -360,13 +367,14 @@ test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\
       expect(contraste(motCouleur, fond), `${schema} ${n}`).toBeGreaterThanOrEqual(4.5);
       expect(def).toBe('rgb(255, 255, 255)');
     }
-    // L'écran 3 : le mot en rappel (Calme, une case claire), le titre, une activité choisie (à la couleur de la zone), une
-    // autre non, « Terminer » ; chacun sur son fond rendu, le noir de l'écran pour les textes posés dessus.
+    // L'écran 3 : le mot en rappel (Calme, une case claire), le titre, une activité choisie (à la couleur de la case du
+    // mot, relecture finale), une autre non, « Terminer » ; chacun sur son fond rendu, le noir de l'écran pour les textes
+    // posés dessus.
     await continuer(vue).click();
     await activite(vue, 'Repos').click();
     await expect(activite(vue, 'Repos')).toHaveAttribute('aria-pressed', 'true');
-    // La couleur de la zone verte, une fois la transition finie.
-    await expect(activite(vue, 'Repos')).toHaveCSS('background-color', 'rgb(76, 227, 155)');
+    // La couleur de la case de Calme, une fois la transition finie.
+    await expect(activite(vue, 'Repos')).toHaveCSS('background-color', rgbCase('Calme'));
     await finMouvements(page);
     const textes = await page.evaluate(() => {
       const de = (sel, fond) => { const e = document.querySelector(sel); return [getComputedStyle(e).color, fond ? getComputedStyle(fond(e)).backgroundColor : 'rgb(0, 0, 0)']; };
@@ -441,15 +449,18 @@ test('point de vigilance 2 : en très grand texte (17, 19, 21, 23), chaque libel
     await expect(carte(vue).getByRole('button')).toHaveCount(144);
     await page.evaluate(() => document.fonts.ready);
     expect(await debordements(page), `carte, ${taille} px`).toEqual([]);
-    // Le mot le plus long de sa zone, à la définition longue, puis la définition la plus longue de toutes.
+    // Le mot le plus long de sa zone, à la définition longue, puis un mot long à la définition courte. À 23 px, la
+    // première ne tient plus dans la capsule de 100 (relecture finale : 17 sur 18,3 au texte par défaut, le mot et trois
+    // lignes y tiennent) : la carte du bas grandit au lieu de la couper.
+    const hauteurs = [];
     for (const n of ['Désillusionné', 'Reconnaissant']) {
       await mot(vue, n).click();
       await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(n);
       await finMouvements(page);
       expect(await debordements(page), `${n}, ${taille} px`).toEqual([]);
+      hauteurs.push(await carteDuBas(vue).evaluate((e) => e.getBoundingClientRect().height));
     }
-    const hauteur = await carteDuBas(vue).evaluate((e) => e.getBoundingClientRect().height);
-    if (taille === 23) expect(hauteur, 'la carte du bas a grandi').toBeGreaterThan(100);
+    if (taille === 23) expect(Math.max(...hauteurs), 'la carte du bas a grandi').toBeGreaterThan(100);
     await continuer(vue).click();
     await activite(vue, 'Courses / démarches').click();
     await expect(activite(vue, 'Courses / démarches')).toHaveAttribute('aria-pressed', 'true');
@@ -552,34 +563,35 @@ test('point de vigilance 5 : deux touchers rapides, sur une bulle puis au même 
 // le premier. Anxieux (col 3, rang 10) est près du milieu de la zone rouge, pas au milieu : choisi, il y vient.
 test('deux touchers rapides au même endroit sur un mot loin du milieu : le premier mot reste choisi, le relevé porte ce mot et son énergie (avec ou sans « Réduire les animations »)', async ({ page }) => {
   test.setTimeout(60000);
-  const anxieux = 'roue:peur:anxieux';
+  // Apeuré, ouvert sur le rouge : loin du milieu ; une fois au milieu, le point touché tombe sur sa voisine de gauche.
+  const apeure = MOTS_CARTE.find((x) => x.libelle === 'Apeuré').id;
   for (const mouvement of ['no-preference', 'reduce']) {
     await page.emulateMedia({ reducedMotion: mouvement });
     const vue = await ouvrir(page);
     await bulle(vue, 'rouge').click();
     await finGarde(carte(vue));
-    const b = await mot(vue, 'Anxieux').boundingBox();
+    const b = await mot(vue, 'Apeuré').boundingBox();
     const point = [b.x + b.width / 2, b.y + b.height / 2];
     expect(Math.hypot(point[0] - 195, point[1] - 422), mouvement).toBeGreaterThan(40);
     await toucherDeuxFois(page, point, point);
     await page.clock.runFor(400);
     await page.clock.resume();
-    await expect(carte(vue).getByRole('button', { pressed: true }), mouvement).toHaveText(['Anxieux']);
-    await expect.poll(releves(page), { message: mouvement }).toMatchObject([{ emotion: anxieux, energie: energieDe(anxieux) }]);
-    await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Anxieux');
-    // La carte posée (Anxieux au milieu), un autre mot est sous le doigt ; la garde passée, le même toucher le prend :
+    await expect(carte(vue).getByRole('button', { pressed: true }), mouvement).toHaveText(['Apeuré']);
+    await expect.poll(releves(page), { message: mouvement }).toMatchObject([{ emotion: apeure, energie: energieDe(apeure) }]);
+    await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Apeuré');
+    // La carte posée (Apeuré au milieu), un autre mot est sous le doigt ; la garde passée, le même toucher le prend :
     // c'est bien la garde qui a joué. Retouché, ce mot s'efface, et le relevé avec.
     await expect.poll(async () => {
-      const c = await mot(vue, 'Anxieux').boundingBox();
+      const c = await mot(vue, 'Apeuré').boundingBox();
       return Math.abs(c.x + c.width / 2 - 195) <= 1 && Math.abs(c.y + c.height / 2 - 422) <= 1;
     }, { message: mouvement }).toBe(true);
     await finMouvements(page);
     const sous = await page.evaluate(([x, y]) => document.elementFromPoint(x, y).closest('.bulle-mot').textContent, point);
-    expect(sous, mouvement).not.toBe('Anxieux');
+    expect(sous, mouvement).not.toBe('Apeuré');
     await finGarde(carte(vue));
     await page.touchscreen.tap(...point);
     await expect(mot(vue, sous), mouvement).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([anxieux]);
+    await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([apeure]);
     await mot(vue, sous).click();
     await expect.poll(async () => (await releves(page)()).length, { message: mouvement }).toBe(0);
     await retour(vue).click();
@@ -694,10 +706,10 @@ test('parcours complet : couleur, mot, flèche, puis « Ce que je faisais » éc
   await expect.poll(releves(page)).toMatchObject([{ faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
   await activite(vue, 'Travail').click();
   await expect.poll(releves(page)).toMatchObject([{ faisais: ['activiteMoment:trajet'] }]);
-  // Une activité choisie a sa coche, et la couleur de la zone du mot (le rouge).
+  // Une activité choisie a sa coche, et la couleur de la case du mot (relecture finale : celle du mot en rappel).
   await expect(activite(vue, 'Trajet')).toHaveAttribute('aria-pressed', 'true');
   await expect(activite(vue, 'Trajet').locator('.coche svg')).toBeVisible();
-  await expect(activite(vue, 'Trajet')).toHaveCSS('background-color', 'rgb(254, 76, 64)');
+  await expect(activite(vue, 'Trajet')).toHaveCSS('background-color', rgbCase('Irrité'));
   await terminer(vue).click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(page.getByText(NOTEE)).toBeVisible();
@@ -977,4 +989,163 @@ test('un id inconnu (#/moment/ID) renvoie sur Aujourd\'hui, comme #/moment/ seul
   await aller(page, '#/moment/');
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(vueMoment(page)).toHaveCount(0);
+});
+
+// ---------- Relecture finale de la v9 ----------
+
+// La carte du bas (visuel §2.8, dont les valeurs font foi) : le mot et sa définition au même corps, 17 pt, sur un pas de
+// 18,3, sans écart entre eux. Le mot et trois lignes tiennent dans la capsule de 100 pt : au texte par défaut, une seule
+// définition des 144, au plus, la fait grandir (mesurées sur une copie cachée de la carte du bas).
+test('relecture finale : la carte du bas, le mot et sa définition à 17 sur 18,3 ; trois lignes tiennent dans les 100 pt', async ({ page }) => {
+  const vue = await ouvrir(page);
+  await noter(vue, 'rouge', 'Enragé');
+  const bas = carteDuBas(vue);
+  await expect(bas.locator('.mot-carte-du-bas')).toHaveText('Enragé');
+  const m = await bas.evaluate((e) => {
+    const corps = (x) => { const s = getComputedStyle(x); return [s.fontSize, Math.round(parseFloat(s.lineHeight) * 10) / 10, s.fontWeight, s.marginTop]; };
+    return { mot: corps(e.querySelector('.mot-carte-du-bas')), def: corps(e.querySelector('.definition-carte-du-bas')), h: e.getBoundingClientRect().height };
+  });
+  expect(m.mot).toEqual(['17px', 18.3, '400', '0px']);
+  expect(m.def).toEqual(m.mot);
+  // Enragé : le mot et trois lignes, dans la capsule de 100.
+  expect(m.h).toBeCloseTo(100, 0);
+  const textes = MOTS_CARTE.map((x) => [x.libelle, DEFINITIONS[x.id]]);
+  const grandes = await bas.evaluate((e, liste) => {
+    const copie = e.cloneNode(true);
+    copie.style.visibility = 'hidden';
+    copie.style.animation = 'none';
+    e.parentNode.append(copie);
+    const trop = [];
+    for (const [libelle, def] of liste) {
+      copie.querySelector('.mot-carte-du-bas').textContent = libelle;
+      copie.querySelector('.definition-carte-du-bas').textContent = def;
+      if (copie.getBoundingClientRect().height > 100.5) trop.push(libelle);
+    }
+    copie.remove();
+    return trop;
+  }, textes);
+  expect(grandes.length, grandes.join(', ')).toBeLessThanOrEqual(1);
+});
+
+// Au clavier (Option+Tab dans Safari), le contour de la bulle qui a le focus passe au-delà de ses halos (16 pt) et
+// au-dessus des bulles voisines (z-index), blanc sur le noir.
+test('relecture finale : au clavier, le contour d\'une bulle de l\'écran 1 passe au-delà des halos, au-dessus des voisines', async ({ page }) => {
+  const vue = await ouvrir(page);
+  await finGarde(bulles(vue));
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Alt+Tab');
+    if (await bulle(vue, 'jaune').evaluate((b) => b === document.activeElement)) break;
+  }
+  await expect(bulle(vue, 'jaune')).toBeFocused();
+  const f = await bulle(vue, 'jaune').evaluate((b) => {
+    const s = getComputedStyle(b);
+    return [b.matches(':focus-visible'), s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset, s.zIndex];
+  });
+  expect(f).toEqual([true, 'solid', '2px', 'rgb(255, 255, 255)', '16px', '1']);
+  // Les halos tournent sur une orbite de 12 pt (le décalage de leur centre, lu sur leur transform) et débordent la face de
+  // 0,4 : le contour, à 16, est au-delà.
+  const ecart = await bulle(vue, 'jaune').evaluate((b) => Math.max(...[...b.querySelectorAll('.halo')].map((h) => {
+    const m = new DOMMatrix(getComputedStyle(h).transform);
+    return Math.hypot(m.e, m.f) + 0.4;
+  })));
+  expect(ecart).toBeGreaterThan(10);
+  expect(ecart).toBeLessThan(16);
+});
+
+// Ouverte depuis la bulle rouge ou jaune, la carte vient au milieu de la zone, et ne monte jamais au point de mettre les
+// mots du rang 12, les plus intenses, sous le voile et sous ← et la loupe : leur centre reste sous la zone sûre + 84 pt.
+test('relecture finale : ouverte sur le rouge ou le jaune, les mots du rang 12 restent sous le voile et les boutons', async ({ page }) => {
+  for (const zones of [false, true]) {
+    if (zones) { await simulerZonesSures(page); await page.reload(); await appPrete(page); }
+    const haut = zones ? 47 : 0;
+    for (const zone of ['rouge', 'jaune']) {
+      const vue = await ouvrir(page);
+      await bulle(vue, zone).click();
+      await expect(carte(vue).getByRole('button')).toHaveCount(144);
+      const rang12 = MOTS_CARTE.filter((x) => x.zone === zone && x.rang === 12).map((x) => x.libelle);
+      const centres = await carte(vue).getByRole('button').evaluateAll((bs, noms) => bs.filter((b) => noms.includes(b.textContent))
+        .map((b) => { const r = b.getBoundingClientRect(); return [b.textContent, r.top + r.height / 2, r.left + r.width / 2]; }), rang12);
+      const visibles = centres.filter(([, , x]) => x > 0 && x < 390);
+      expect(visibles.length, `${zone}, zones sûres ${haut}`).toBeGreaterThan(0);
+      for (const [nom, y] of centres) expect(y, `${zone} ${nom}, zones sûres ${haut}`).toBeGreaterThanOrEqual(haut + 84);
+      // Avec les zones sûres de l'iPhone, la place suffit : le milieu de l'écran est au milieu de la zone (rang 9,5).
+      if (zones) {
+        const y = await carte(vue).getByRole('button').evaluateAll((bs, noms) => bs.filter((b) => noms.includes(b.textContent))
+          .map((b) => { const r = b.getBoundingClientRect(); return r.top + r.height / 2; }), MOTS_CARTE.filter((x) => x.zone === zone && (x.rang === 9 || x.rang === 10)).map((x) => x.libelle));
+        const [y10, y9] = [Math.min(...y), Math.max(...y)];
+        expect(Math.abs((y10 + y9) / 2 - 422), zone).toBeLessThan(1.5);
+      }
+      await aller(page, '#/aujourdhui');
+    }
+  }
+});
+
+// À l'écran 3, le mot en rappel et une activité choisie ont la même couleur : celle de la case du mot (Vide, l'azur de
+// sa case, et non le pervenche de la zone bleue), éclaircie pour le mot ; le texte de l'activité reste lisible.
+test('relecture finale : à l\'écran 3, une activité choisie a la couleur de la case du mot, comme le mot en rappel', async ({ page }) => {
+  const vue = await ouvrir(page);
+  await noter(vue, 'bleu', 'Vide');
+  await continuer(vue).click();
+  await activite(vue, 'Travail').click();
+  await expect(activite(vue, 'Travail')).toHaveCSS('background-color', rgbCase('Vide'));
+  await expect(vue.getByRole('heading', { name: 'Vide', level: 1 })).toHaveCSS('color', rgb(couleurLisible(caseDe('Vide'))));
+  expect(rgbCase('Vide')).not.toBe('rgb(120, 159, 255)');
+  const [texte, fond] = await activite(vue, 'Travail').evaluate((b) => [getComputedStyle(b).color, getComputedStyle(b).backgroundColor]);
+  expect(contraste(texte, fond)).toBeGreaterThanOrEqual(4.5);
+});
+
+// L'écran de l'émotion laissé ouvert après un mot (l'iPhone verrouillé le soir, rouvert le matin) : après plus de 30 min
+// d'absence, l'app revient sur Aujourd'hui, comme ailleurs. Le mot du matin fait un second relevé, daté du matin ; celui
+// du soir garde son mot et son heure.
+test('relecture finale : l\'écran de l\'émotion laissé ouvert la nuit se ferme au retour ; le mot du matin fait un second relevé', async ({ page }) => {
+  const visibilite = (v) => page.evaluate((etat) => {
+    Object.defineProperty(document, 'visibilityState', { value: etat, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, v);
+  await page.clock.setSystemTime(new Date(2026, 9, 15, 22, 30));
+  let vue = await ouvrir(page);
+  await noter(vue, 'rouge', 'Irrité');
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '22:30', emotion: 'roue:colere:irrite' }]);
+  await visibilite('hidden');
+  await page.clock.fastForward('09:30:00');
+  await visibilite('visible');
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(vueMoment(page)).toHaveCount(0);
+  vue = await ouvrir(page);
+  await noter(vue, 'rouge', 'Choqué');
+  await expect.poll(async () => (await releves(page)()).length).toBe(2);
+  const tous = (await releves(page)()).sort((a, b) => a.date.localeCompare(b.date));
+  expect(tous).toMatchObject([
+    { date: '2026-10-15', heure: '22:30', emotion: 'roue:colere:irrite' },
+    { date: '2026-10-16', heure: '08:00', emotion: 'roue:surprise:choque' },
+  ]);
+  // Moins de 30 min : l'écran reste ouvert, sur le même relevé.
+  await visibilite('hidden');
+  await page.clock.fastForward('10:00');
+  await visibilite('visible');
+  await expect(page).toHaveURL(/#\/moment$/);
+  await expect(mot(vue, 'Choqué')).toHaveAttribute('aria-pressed', 'true');
+});
+
+// Un premier essai d'écriture qui a écrit mais dont la réponse s'est perdue : le nouvel essai réécrit la même clé (l'id
+// est tiré une seule fois, avant les essais), sans second relevé ; le mot suivant change ce relevé-là.
+test('relecture finale : une création qui écrit puis échoue une fois laisse un seul relevé, que le mot suivant modifie', async ({ page }) => {
+  await page.evaluate(() => {
+    const h = window.__carnet.repo.humeurs;
+    const creer = h.creer.bind(h);
+    let premier = true;
+    h.creer = async (...args) => {
+      const r = await creer(...args);
+      if (premier) { premier = false; throw new Error('réponse perdue'); }
+      return r;
+    };
+  });
+  const vue = await ouvrir(page);
+  await noter(vue, 'bleu', 'Vide');
+  await page.clock.runFor(1600);
+  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse:vide' }]);
+  const [{ id }] = await releves(page)();
+  await mot(vue, 'Épuisé').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, emotion: 'roue:aucune:epuise' }]);
+  expect(await releves(page)()).toHaveLength(1);
 });

@@ -7,11 +7,15 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 // d'Aujourd'hui, l'Historique et Après coup montrent un point par zone présente, sans doublon, dans l'ordre rouge, jaune,
 // bleu, vert ; « Mes jours » en mode jour colore ses points par zone, avec la légende des 4 zones, et garde ses barres par
 // famille par semaine. Point de vigilance 1 : un ancien relevé sans zone (famille seule de la v7, note de 1 à 10, énergie
-// seule) s'affiche sans erreur, au point creux. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
+// seule) s'affiche sans erreur, au point creux. Relecture finale : une marque de zone a la couleur des bulles (-fill),
+// dans les deux thèmes, avec un liseré à l'accent qui porte le 3:1 (en clair, l'accent seul rendait le jaune olive).
+// Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 const repo = (page, f, arg) => page.evaluate(f, arg);
 const THEMES = [['light', clair], ['dark', sombre]];
+// Une marque de zone : la couleur des bulles, puis celle de son liseré (box-shadow inset, ou contour en SVG).
+const attendue = (t, z) => [rgb(t[`c-zone-${z}-fill`]), rgb(t[`c-zone-${z}`])];
 const ZONE_HAUTE = 'Émotions : énergie haute · désagréable, énergie haute · agréable, énergie basse · agréable';
 // Un mot à soi (méta motsPerso), vert.
 const PERSO = 'roue:perso:u-0a1b2c3d';
@@ -51,30 +55,33 @@ test('Aujourd\'hui : un point par zone présente dans l\'en-tête, sans doublon,
     // L'en-tête : trois zones (le rouge noté deux fois n'a qu'un point), à leur couleur, lues par VoiceOver.
     const zones = page.getByRole('img', { name: ZONE_HAUTE });
     await expect(zones).toBeVisible();
-    const points = await zones.locator('i').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
-    expect(points, schema).toEqual([rgb(t['c-zone-rouge']), rgb(t['c-zone-jaune']), rgb(t['c-zone-vert'])]);
-    // Un point se voit sur le fond de l'écran (3:1 au moins).
+    const points = await zones.locator('i').evaluateAll((els) => els.map((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).boxShadow.match(/rgba?\([^)]+\)/)[0]]));
+    expect(points, schema).toEqual(['rouge', 'jaune', 'vert'].map((z) => attendue(t, z)));
+    // La couleur des bulles, le jaune vif de How We Feel, jamais l'olive de l'accent clair.
+    expect(points[1][0]).toBe('rgb(255, 208, 76)');
+    // Un point se voit sur le fond de l'écran (3:1 au moins) : son liseré.
     const fond = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    for (const p of points) expect(contraste(p, fond), `${schema} ${p}`).toBeGreaterThanOrEqual(3);
+    for (const [, lisere] of points) expect(contraste(lisere, fond), `${schema} ${lisere}`).toBeGreaterThanOrEqual(3);
 
     // Ma journée : le point de la zone du mot ; creux pour la note, la famille seule et l'énergie seule.
     await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
     const lignes = await page.locator('.liste-evenements > li .releve').evaluateAll((els) => els.map((li) => {
       const s = getComputedStyle(li.querySelector('.point-evenement'));
-      return [li.querySelector('.resume').textContent, s.backgroundColor === 'rgba(0, 0, 0, 0)' ? `creux ${s.borderTopColor}` : s.backgroundColor];
+      const lisere = (s.boxShadow.match(/rgba?\([^)]+\)/) || [''])[0];
+      return [li.querySelector('.resume').textContent, s.backgroundColor === 'rgba(0, 0, 0, 0)' ? [`creux ${s.borderTopColor}`] : [s.backgroundColor, lisere]];
     }));
-    const creux = `creux ${rgb(t['text-2'])}`;
+    const creux = [`creux ${rgb(t['text-2'])}`];
     expect(lignes, schema).toEqual([
-      ['Calme · énergie moyenne', rgb(t['c-zone-vert'])],
-      ['Furieux · énergie haute', rgb(t['c-zone-rouge'])],
+      ['Calme · énergie moyenne', attendue(t, 'vert')],
+      ['Furieux · énergie haute', attendue(t, 'rouge')],
       ['humeur 6', creux],
       ['Sérénité', creux],
-      ['Fier · énergie haute', rgb(t['c-zone-jaune'])],
+      ['Fier · énergie haute', attendue(t, 'jaune')],
       ['énergie basse', creux],
       // Accablé, bleu en v8, est rouge en v9.
-      ['Accablé · énergie haute', rgb(t['c-zone-rouge'])],
+      ['Accablé · énergie haute', attendue(t, 'rouge')],
       // Le mot à soi : son nom et sa zone, lus dans la méta.
-      ['Flottant · énergie basse', rgb(t['c-zone-vert'])],
+      ['Flottant · énergie basse', attendue(t, 'vert')],
     ]);
   }
   // Un jour qui n'a qu'une famille seule (v7) : ni point dans l'en-tête, ni erreur ; sa ligne au point creux.
@@ -94,8 +101,8 @@ test('Historique et Après coup : les points des zones du jour, dans le même or
     await expect(ligne.locator('.mots-jour')).toHaveText('calme, furieux…');
     const points = ligne.locator('.zones-jour');
     await expect(points).toHaveAttribute('aria-hidden', 'true');
-    expect(await points.locator('i').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor)), schema)
-      .toEqual([rgb(t['c-zone-rouge']), rgb(t['c-zone-jaune']), rgb(t['c-zone-vert'])]);
+    expect(await points.locator('i').evaluateAll((els) => els.map((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).boxShadow.match(/rgba?\([^)]+\)/)[0]])), schema)
+      .toEqual(['rouge', 'jaune', 'vert'].map((z) => attendue(t, z)));
     // Le 14 n'a qu'une famille seule : son mot, sans point.
     const veille = page.getByRole('link', { name: /mercredi 14 oct\./ });
     await expect(veille.locator('.mots-jour')).toHaveText('colère');
@@ -123,11 +130,11 @@ test('Mes jours en mode jour : un point par relevé à la couleur de sa zone, cr
     // méta motsPerso entre dans l'Analyse). Le 14 : Colère (creux).
     const points = await graphe.locator('circle.g-emo, circle.g-creux').evaluateAll((els) => els.map((c) => {
       const s = getComputedStyle(c);
-      return c.classList.contains('g-creux') ? `creux ${s.stroke}` : s.fill;
+      return c.classList.contains('g-creux') ? `creux ${s.stroke}` : `${s.fill} ${s.stroke} ${s.strokeWidth}`;
     }));
+    const point = (z) => `${rgb(t[`c-zone-${z}-fill`])} ${rgb(t[`c-zone-${z}`])} 1px`;
     expect(points.sort(), schema).toEqual([
-      rgb(t['c-zone-vert']), rgb(t['c-zone-rouge']), `creux ${rgb(t['text-2'])}`, rgb(t['c-zone-jaune']), rgb(t['c-zone-rouge']), rgb(t['c-zone-vert']),
-      `creux ${rgb(t['text-2'])}`,
+      point('vert'), point('rouge'), `creux ${rgb(t['text-2'])}`, point('jaune'), point('rouge'), point('vert'), `creux ${rgb(t['text-2'])}`,
     ].sort());
     // Le détail du 15 dit le nom du mot à soi, jamais son identifiant.
     await graphe.locator('rect.g-zone').last().click();
@@ -137,8 +144,8 @@ test('Mes jours en mode jour : un point par relevé à la couleur de sa zone, cr
     await expect(legende.locator(':scope > span')).toContainText([
       'Énergie haute · désagréable', 'Énergie haute · agréable', 'Énergie basse · désagréable', 'Énergie basse · agréable', 'sans zone',
     ]);
-    expect(await legende.locator(':scope > span[class^="zone-"] circle').evaluateAll((els) => els.map((c) => getComputedStyle(c).fill)), schema)
-      .toEqual(['rouge', 'jaune', 'bleu', 'vert'].map((z) => rgb(t[`c-zone-${z}`])));
+    expect(await legende.locator(':scope > span[class^="zone-"] circle').evaluateAll((els) => els.map((c) => [getComputedStyle(c).fill, getComputedStyle(c).stroke])), schema)
+      .toEqual(['rouge', 'jaune', 'bleu', 'vert'].map((z) => attendue(t, z)));
     await expect(legende).not.toContainText('Colère');
     // Par semaine : des barres par famille (Colère, Joie, Peur, Sérénité), aucune couleur de zone, la légende des familles.
     await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: '3 mois' }).click();
@@ -205,4 +212,29 @@ test('Un mot à soi qui a une famille : son nom et sa famille dans l\'Analyse, C
   const emotion = page.getByRole('dialog', { name: 'Émotion du moment' });
   await emotion.getByRole('button', { name: 'Énergie basse, agréable', exact: true }).click();
   await expect(emotion.getByRole('group', { name: 'Énergie basse · agréable', exact: true }).getByRole('button', { name: 'Flottant', exact: true })).toHaveCount(1);
+});
+
+// Relecture finale : en très grand texte (23 px), « vers 12 h » débordait sa colonne de 70 et passait sous le point de
+// zone du relevé. La colonne suit le corps : l'heure ne déborde jamais, reste avant le point, et toutes les heures
+// restent alignées, au texte par défaut comme à 23 px.
+test('Ma journée : « vers 12 h » tient dans sa colonne et reste avant le point de zone, à 17 comme à 23 px ; les heures restent alignées', async ({ page }) => {
+  await journee(page);
+  await repo(page, () => window.__carnet.repo.humeurs.creer({ date: '2026-10-15', heure: '12:00', vers: true, emotion: 'roue:colere:irrite', energie: 'energie:haute' }));
+  for (const taille of ['', '23px']) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = t; }, taille);
+    await aller(page, '#/jour/2026-10-15');
+    await expect(page.locator('.liste-evenements .heure', { hasText: 'vers 12 h' })).toBeVisible();
+    const lignes = await page.locator('.liste-evenements > li .releve').evaluateAll((els) => els.map((li) => {
+      const h = li.querySelector('.heure');
+      const [rh, rp] = [h.getBoundingClientRect(), li.querySelector('.point-evenement').getBoundingClientRect()];
+      return { texte: h.textContent, deborde: h.scrollWidth > h.clientWidth + 0.5, avant: rh.right <= rp.left + 0.5, gauche: Math.round(rh.left), largeur: Math.round(rh.width) };
+    }));
+    expect(lignes.map((l) => l.texte)).toContain('vers 12 h');
+    for (const l of lignes) {
+      expect(l.deborde, `${taille || '17 px'} ${l.texte}`).toBe(false);
+      expect(l.avant, `${taille || '17 px'} ${l.texte}`).toBe(true);
+    }
+    expect(new Set(lignes.map((l) => `${l.gauche} ${l.largeur}`)).size, taille || '17 px').toBe(1);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });

@@ -105,5 +105,5 @@ test('la règle reste : Réglages › Me ressourcer s\'ouvre toujours', async ({
   await aller(page, '#/reglages');
   await page.getByRole('link', { name: 'Me ressourcer', exact: true }).click();
   await expect(page).toHaveURL(/#\/reglages\/ressourcer$/);
-  await expect(page.getByRole('switch', { name: 'Quand je note une énergie basse, montre-moi ma liste.', exact: true })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Quand je choisis un mot d\'énergie basse, montre-moi ma liste.', exact: true })).toBeVisible();
 });

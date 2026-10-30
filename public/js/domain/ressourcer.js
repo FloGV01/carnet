@@ -1,5 +1,7 @@
-// « Me ressourcer » (v6) : la règle qui montre « Pour récupérer, je… » quand l'utilisateur note lui-même
-// une énergie basse. Elle est éteinte au départ (méta `ressourcer`, réglée dans Réglages › Me ressourcer).
+// « Me ressourcer » (v6) : la règle qui montre « Pour récupérer, je… » quand l'utilisateur note, maintenant, un relevé
+// d'énergie basse. Elle est éteinte au départ (méta `ressourcer`, réglée dans Réglages › Me ressourcer). Jusqu'à la v8,
+// il choisissait l'énergie lui-même ; depuis la v9, elle vient de la case du mot choisi (domain/carte-roue.js,
+// energieDe : rangs 1 à 4 basse, 5 à 8 moyenne ; un mot à soi, basse en bleu et en vert).
 // Pur : rien n'est calculé sur plusieurs jours, rien n'est compté, et l'affichage ne laisse aucune trace.
 import { normaliserPlan, RUBRIQUES_PLAN } from './mon-plan.js';
 

@@ -9,7 +9,8 @@ import {
 import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
-import { creerMot, mettreDeCote, motsActifs, MOT_SANS_LIBELLE } from '../../public/js/domain/mots-perso.js';
+import { creerMot, mettreDeCote, motsActifs, chercher, normaliserPerso, LIBELLE_MAX, MOT_SANS_LIBELLE } from '../../public/js/domain/mots-perso.js';
+import { normLabel } from '../../public/js/domain/vocabulaire.js';
 import { libelleEmotion, familleDe } from '../../public/js/domain/roue.js';
 import { zoneDe, energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 
@@ -774,12 +775,64 @@ test('v9 : un relevé qui cite un mot à soi absent du fichier le recrée, mis d
   // Le relevé reste modifiable : le mot recréé est connu de la validation.
   assert.deepEqual((await repo.humeurs.modifier('hu_3', { vers: true })).emotion, absent);
 
-  // Sans méta du tout, la méta est créée avec le seul mot recréé ; sans rien à recréer, la méta du fichier reste telle quelle.
+  // Sans méta du tout, la méta est créée avec le seul mot recréé ; sans rien à recréer, la méta du fichier reste, remise en
+  // forme (relecture finale) : l'entrée illisible, qu'aucun relevé ne cite plus, s'en va.
   const sansMeta = analyserFichiers(json({ ...v7, counts: { humeurs: 1 }, data: { humeurs: [v7.data.humeurs[1]] } }));
   assert.deepEqual(sansMeta.erreurs, []);
   assert.deepEqual(sansMeta.valides.meta, [{ cle: 'motsPerso', valeur: { [absent]: recree } }]);
   const rienARecreer = analyserFichiers(json({ ...v7, counts: { humeurs: 1, meta: 1 }, data: { humeurs: [v7.data.humeurs[0]], meta: v7.data.meta } }));
-  assert.deepEqual(rienARecreer.valides.meta, v7.data.meta);
+  assert.deepEqual(rienARecreer.valides.meta, [{ cle: 'motsPerso', valeur: { [FLOTTANT]: flottant } }]);
+});
+
+// Relecture finale : la méta `motsPerso` d'un fichier qui ne vient pas de Carnet (écrite à la main) est remise dans la
+// forme que l'app écrit avant la lecture des relevés : une seule bulle par nom sur la carte et dans la loupe, un libellé
+// à la longueur du clavier, zone, famille, définition et mise de côté lisibles. Aucun relevé n'est perdu.
+test('v9 : l\'import remet en forme les mots à soi d\'un fichier écrit à la main ; une seule bulle par nom, les relevés gardés', async () => {
+  const id = (n) => `roue:perso:u-${String(n).padStart(8, '0')}`;
+  const mot = (libelle, champs = {}) => ({ libelle, zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-11-01T08:00:00.000Z', ...champs });
+  const brut = {
+    [id(1)]: mot('Calme'), // le nom d'un des 144
+    [id(2)]: mot('Flou', { zone: 'bleu', createdAt: '2026-11-02T08:00:00.000Z' }),
+    [id(3)]: mot('flou', { zone: 'jaune', createdAt: '2026-11-03T08:00:00.000Z' }), // le même nom, créé après
+    [id(4)]: mot('Très long'.padEnd(5000, '.'), { zone: 'rouge' }),
+    [id(5)]: mot('Pas de côté', { archive: 'non' }),
+    [id(6)]: mot('Violet', { zone: 'violet', famille: 'amour', definition: 12 }),
+    [id(7)]: mot('  Ailleurs  ', { famille: 'serenite', definition: '  Un peu loin.  ' }),
+    'roue:perso:zzz': mot('Mal formé'),
+  };
+  const humeurs = Object.keys(brut).filter((k) => k !== 'roue:perso:zzz')
+    .map((emotion, i) => ({ id: `hu_${i + 1}`, date: '2026-11-04', heure: `1${i}:00`, emotion }));
+  const fichier = {
+    format: 'carnet-sauvegarde', formatVersion: 7, schemaVersion: 6, exportedAt: '2026-11-05T19:00:00.000Z',
+    counts: { humeurs: humeurs.length, meta: 1 }, data: { humeurs, meta: [{ cle: 'motsPerso', valeur: brut }] },
+  };
+  const avant = structuredClone(fichier);
+  const a = analyserFichiers(json(fichier));
+  assert.deepEqual(fichier, avant, 'le fichier lu n\'est pas modifié');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(a.valides.humeurs.map((h) => h.emotion), humeurs.map((h) => h.emotion), 'aucun relevé perdu');
+  const perso = motsPersoDe(a.valides.meta);
+  assert.equal(perso['roue:perso:zzz'], undefined, 'un id mal formé n\'est pas un mot à soi');
+  assert.equal(perso[id(1)].archive, true, 'Calme est déjà sur la carte');
+  assert.equal(perso[id(2)].archive, false);
+  assert.equal(perso[id(3)].archive, true, 'flou : le nom de Flou, créé avant lui');
+  assert.equal(perso[id(4)].libelle.length, LIBELLE_MAX);
+  assert.equal(perso[id(5)].archive, false, 'seul true met de côté');
+  assert.deepEqual([perso[id(6)].zone, perso[id(6)].famille, perso[id(6)].definition], [null, null, null]);
+  assert.deepEqual([perso[id(7)].libelle, perso[id(7)].famille, perso[id(7)].definition], ['Ailleurs', 'serenite', 'Un peu loin.']);
+  // Sur la carte : une bulle par nom (les 144, Flou, le long libellé coupé, « Pas de côté », Ailleurs) ; la loupe ne
+  // trouve qu'un Calme.
+  const carte = motsDeLaCarte(perso);
+  assert.equal(carte.length, 148);
+  assert.equal(new Set(carte.map((m) => normLabel(m.libelle))).size, carte.length);
+  assert.deepEqual(chercher(perso, 'calme').filter((r) => normLabel(r.libelle) === 'calme').map((r) => r.id), ['roue:serenite:calme']);
+  // Écrits tels quels, les relevés relisent leur mot ; une méta déjà propre ne change pas.
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  const lu = await repo.meta.lire('motsPerso');
+  assert.equal(libelleEmotion(id(3), lu), 'flou');
+  assert.equal(zoneDe(id(6), lu), null);
+  assert.deepEqual(normaliserPerso(lu), lu);
 });
 
 test('v9 : l\'import remplace les mots à soi, l\'aperçu le dit, « Revenir » les remet', async () => {

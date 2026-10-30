@@ -14,9 +14,11 @@
 import { html, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from '../lib.js';
 import { ZONES, NOMS_ZONES } from '../../domain/carte-roue.js';
 import { couleurCase, disposition, etendue, pointDe, DIAMETRE } from '../carte-geometrie.js';
-import { ajusterEtiquettes } from '../mesures.js';
+import { ajusterEtiquettes, zonesSures } from '../mesures.js';
 
 const RAYON = DIAMETRE / 2;
+// La hauteur du voile noir du haut sous la zone sûre (.carte-fondu, visuel §2.7), qui couvre aussi les boutons.
+const VOILE_PX = 84;
 // Le plus petit corps d'un libellé de bulle (12 pt au texte par défaut ; visuel §2.6), et la marge gardée au bord du disque.
 const PLANCHER_PX = 9;
 const MARGE_PX = 3;
@@ -37,13 +39,18 @@ export function CarteEmotions({ mots, choisi = null, centre = null, enGarde = fa
   const [, redessiner] = useReducer((n) => n + 1, 0);
   const geo = useMemo(() => etendue(mots), [mots]);
   const places = useMemo(() => disposition(mots, choisi), [mots, choisi]);
-  // Une demi-fenêtre de marge autour de toutes les places : la carte occupe tout l'écran (inset 0).
+  // Une demi-fenêtre de marge autour de toutes les places : la carte occupe tout l'écran (inset 0). Les bords en pt
+  // entiers (la lentille mesurée a des dixièmes) : la place régulière d'un mot l'est aussi, et le défilement, entier,
+  // amène le mot choisi pile au milieu.
   const [mx, my] = [Math.ceil(window.innerWidth / 2), Math.ceil(window.innerHeight / 2)];
-  const [ox, oy] = [mx - geo.minX, my - geo.minY];
-  const taille = { width: `${geo.maxX - geo.minX + 2 * mx}px`, height: `${geo.maxY - geo.minY + 2 * my}px` };
+  const [x0, y0] = [Math.floor(geo.minX), Math.floor(geo.minY)];
+  const [ox, oy] = [mx - x0, my - y0];
+  const taille = { width: `${Math.ceil(geo.maxX) - x0 + 2 * mx}px`, height: `${Math.ceil(geo.maxY) - y0 + 2 * my}px` };
   // Amène un point au milieu de l'écran. `borne` : sans dépasser le bord des bulles (plus la moitié d'un écart), pour
   // l'ouverture sur une zone, qui montre ainsi des bulles jusqu'aux bords de l'écran ; un mot choisi, lui, vient
-  // toujours au milieu, même au bord de la carte (visuel §2.1).
+  // toujours au milieu, même au bord de la carte (visuel §2.1). En haut, la borne laisse la place du voile et des
+  // boutons (la zone sûre et 84 pt, visuel §2.7) : ouverte sur le rouge ou le jaune, la carte vient au milieu de la
+  // zone, et les mots du rang 12, les plus intenses, ne passent ni sous ← et la loupe ni sous le voile (relecture finale).
   const centrer = ({ x, y }, { doux = false, borne = false } = {}) => {
     const c = cadre.current;
     if (!c) return;
@@ -51,8 +58,9 @@ export function CarteEmotions({ mots, choisi = null, centre = null, enGarde = fa
     if (borne) {
       const r = geo.regulier;
       const pad = RAYON + 5;
+      const voile = zonesSures().haut + VOILE_PX;
       left = Math.max(r.minX + ox - pad, Math.min(left, r.maxX + ox + pad - c.clientWidth));
-      top = Math.max(r.minY + oy - pad, Math.min(top, r.maxY + oy + pad - c.clientHeight));
+      top = Math.max(r.minY + oy - pad - voile, Math.min(top, r.maxY + oy + pad - c.clientHeight));
     }
     c.scrollTo({ left, top, behavior: doux && !reduit() ? 'smooth' : 'auto' });
   };

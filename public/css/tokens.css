@@ -62,7 +62,9 @@
      jours en mode jour), dans toute l'app ; les comptes par famille gardent les couleurs de famille. -fill est la couleur
      médiane de la bulle de How We Feel (visuel-hwf.md §1.5) ; les autres rôles suivent la recette des familles sur sa
      teinte (OKLCH : accent L 0,60 en clair, texte 0,46 et 0,80). En sombre, l'accent est la couleur de How We Feel
-     elle-même, sur noir comme chez elle (6,3:1 au moins). Une zone dit une énergie et un ressenti, jamais bien ou mal. */
+     elle-même, sur noir comme chez elle (6,3:1 au moins). Un point, une barre ou un rond de légende (ecrans.css) est
+     peint en -fill dans les deux thèmes, la couleur des bulles, avec un liseré à l'accent qui porte le 3:1 en clair.
+     Une zone dit une énergie et un ressenti, jamais bien ou mal. */
   --c-zone-rouge: #e53029; --c-zone-rouge-fill: #fe4c40; --c-zone-rouge-on: #1a0e0c; --c-zone-rouge-tint: #ffe9e5; --c-zone-rouge-tint-2: #ffd4ce; --c-zone-rouge-text: #a80007;
   --c-zone-jaune: #9e7b00; --c-zone-jaune-fill: #ffd04c; --c-zone-jaune-on: #151107; --c-zone-jaune-tint: #f7eed8; --c-zone-jaune-tint-2: #eedeb7; --c-zone-jaune-text: #6d5400;
   --c-zone-bleu: #577bd7; --c-zone-bleu-fill: #789fff; --c-zone-bleu-on: #0d111b; --c-zone-bleu-tint: #e7efff; --c-zone-bleu-tint-2: #d2e0ff; --c-zone-bleu-text: #3150a9;

@@ -277,6 +277,12 @@
    de Mes jours en mode jour, celle de la zone de son mot (.zone-*, v9). Un relevé sans zone (famille seule de la v7) :
    un point creux, neutre, comme dans Ma journée. */
 .g-emo { fill: var(--c); }
+/* Une marque de zone (v9, relecture finale) : les points de Mes jours, les barres de Tes zones et les ronds de leur
+   légende ont la couleur des bulles (-fill, celle de How We Feel), dans les deux thèmes, comme les bulles de la même
+   carte ; un liseré à l'accent porte le 3:1 sur le fond clair. En sombre, l'accent est la couleur de la bulle : le
+   liseré s'y fond. Assombri pour le 3:1, le jaune devenait olive, voisin de la Tristesse. */
+.g-emo:is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert),
+:is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert) > svg > .g-emo { fill: var(--c-fill); stroke: var(--c); stroke-width: 1; }
 .g-creux { fill: var(--surface); stroke: var(--text-2); stroke-width: 1.5; }
 .g-zone { fill: transparent; cursor: pointer; }
 .g-sommeil-1 { fill: var(--chart-sommeil-1); background: var(--chart-sommeil-1); }
@@ -377,9 +383,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .sous-jour { display: flex; align-items: center; gap: 8px; margin-top: -6px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; }
 /* Avant 4 h : en entier, avant les points et le résumé (qui se coupe) ; en grand texte, sur deux lignes au besoin. */
 .veille-jour { flex: 0 1 auto; min-width: 0; color: var(--text-2); }
-/* Les zones des émotions du jour (v9 ; leurs familles en v7 et v8) : un point par zone présente, à sa couleur (.zone-*). */
+/* Les zones des émotions du jour (v9 ; leurs familles en v7 et v8) : un point par zone présente, à sa couleur (.zone-*) :
+   celle des bulles, avec un liseré à l'accent (comme .g-emo, plus haut). */
 .zones-jour { flex: none; display: inline-flex; align-items: center; gap: 3px; }
-.zones-jour i { width: 8px; height: 8px; border-radius: 4px; background: var(--c); }
+.zones-jour i { width: 8px; height: 8px; border-radius: 4px; background: var(--c-fill); box-shadow: inset 0 0 0 1px var(--c); }
 .resume-jour { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .indicateur { flex: none; margin-left: auto; color: var(--text); font-weight: 600; }
 .sous-jour.echec .indicateur { flex: 1; white-space: normal; font-weight: 400; }
@@ -484,8 +491,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .replis > .repli .repli-fleche { flex: none; margin-left: auto; }
 .replis > .repli .repli-corps { padding: 2px 0 14px; }
 
-/* Ma journée : une carte, une rangée de 48 par relevé, épisode ou symptôme ; l'heure dans une colonne fixe de 70
-   (« vers 23 h » y tient), le repère, le texte, puis le chevron. Le repère d'un relevé est un rond à la couleur de la
+/* Ma journée : une carte, une rangée de 48 par relevé, épisode ou symptôme ; l'heure dans une colonne de 70, qui suit
+   le corps en grand texte (« vers 23 h » fait environ 4,3 em : il ne passe jamais sous le repère), le repère, le texte,
+   puis le chevron. Le repère d'un relevé est un rond à la couleur de la
    zone de son mot (v9 ; de sa famille en v7 et v8), creux sans zone ; celui d'un épisode ou d'un symptôme, un petit
    carré à la couleur de son parcours. Toutes les lignes, relevés compris (v9, spec §13.1), sont des liens, avec leur
    chevron. */
@@ -499,13 +507,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   min-height: var(--cible-grille); display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 0;
   color: var(--text); text-decoration: none; font-size: var(--t-corps);
 }
-.ligne-evenement .heure { width: 70px; flex: none; white-space: nowrap; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ligne-evenement .heure { width: max(70px, 4.6em); flex: none; white-space: nowrap; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
 .ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
 .point-evenement { width: 10px; height: 10px; border-radius: 5px; background: var(--c); flex: none; }
 /* Un épisode ou un symptôme : un petit carré, pour ne pas le confondre avec le rond d'un relevé de couleur voisine. */
 .point-evenement.point-parcours { border-radius: 2px; }
 .point-releve.point-creux { background: none; border: 1.5px solid var(--text-2); }
+/* Le rond d'un relevé à zone : la couleur des bulles, le liseré à l'accent (comme .g-emo). */
+.point-releve:is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert) { background: var(--c-fill); box-shadow: inset 0 0 0 1px var(--c); }
 .ajout-symptome { align-self: flex-start; font-size: var(--t-corps); }
 .ligne-rdv {
   display: flex; align-items: center; gap: 10px; min-height: var(--cible-grille); margin-top: 2px; padding: 8px 12px; border-radius: var(--r-carte);
@@ -692,6 +702,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .verre svg { display: block; }
 .verre:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .bulle-zone:focus-visible { outline: 2px solid var(--anneau, var(--text)); outline-offset: 3px; }
+/* Les grandes bulles de l'écran 1 : le contour passe au-delà de leurs halos (environ 12 pt hors de la face), au-dessus
+   des bulles voisines. Les petites, sans halo, le gardent à 3. */
+.quatre-bulles:not(.petites):not(.comptes) .bulle-zone:focus-visible { z-index: 1; outline-offset: 16px; }
 .ecran-carte .verre { background: rgba(32, 32, 32, .85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 
 /* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en New York grasse), les quatre bulles (haut à 306), puis
@@ -815,8 +828,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 @keyframes arrivee-carte-du-bas { from { transform: translateY(130%); opacity: 0; } to { transform: none; opacity: 1; } }
 .texte-carte-du-bas { flex: 1; min-width: 0; }
-.mot-carte-du-bas { font: 400 1rem/1.2 var(--police); color: var(--c); overflow-wrap: anywhere; }
-.definition-carte-du-bas { margin-top: 3px; font: 400 0.912rem/1.3 var(--police); color: #fff; text-wrap: pretty; }
+/* Le mot et sa définition au même corps, 17 pt, sur un pas de 18,3 (visuel §2.8 ; en rem, pour suivre le grand texte) :
+   le mot et trois lignes tiennent dans les 76 pt utiles. */
+.mot-carte-du-bas, .definition-carte-du-bas { font: 400 1rem/1.076rem var(--police); }
+.mot-carte-du-bas { color: var(--c); overflow-wrap: anywhere; }
+.definition-carte-du-bas { margin-top: 0; color: #fff; text-wrap: pretty; }
 .continuer {
   flex: 0 0 76px; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #000;
   display: grid; place-items: center;
@@ -826,8 +842,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    flèche de l'écran 2 (la garde de 350 ms l'y protège d'un second toucher). Tout est centré, comme l'écran 1 : le mot en
    rappel, en New York grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie comme dans la carte du
    bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone ; « Aucun mot » en gris ; « Ce que je faisais » en titre serif, ses pastilles sur
-   #2c2c2e (la surface de la carte du bas), un choix fait à la couleur de la zone du mot (.zone-* : -fill et -on, les
-   mêmes dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090. */
+   #2c2c2e (la surface de la carte du bas), un choix fait à la couleur de la case du mot (--c-fill, posé aussi par
+   moment.js : la même que le mot en rappel), sinon de sa zone (.zone-* : -fill), le texte en -on de la zone (les mêmes
+   dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090. */
 .ecran-faisais {
   position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; --c-mot: var(--c-fill, #fff);
   animation: apparition-carte var(--duree-anim) ease-out;

@@ -145,6 +145,37 @@ export function effacerMot(perso, id, estUtilise) {
   return reste;
 }
 
+// Import (relecture finale) : la méta `motsPerso` d'un fichier, telle que l'app l'aurait écrite. Un fichier qui ne vient
+// pas de Carnet peut tout y mettre ; creerMot, modifierMot et remettreSurLaCarte l'empêchent dans l'app. Sont gardées
+// les entrées dont l'id est celui d'un mot à soi et le libellé un texte non vide (NFC, sans espaces autour, coupé à
+// LIBELLE_MAX comme au clavier) ; une zone hors de la carte, une famille inconnue ou une définition qui n'est pas un
+// texte deviennent null ; seul `true` met de côté. Enfin, un mot de la carte dont le nom est déjà pris (par un des 144,
+// ou par un mot à soi de la carte créé avant lui, sans accents ni casse) est mis de côté : une seule bulle par nom.
+// Les autres champs restent tels quels. Une entrée écartée n'emporte aucun relevé : recreerSiAbsent, ensuite, recrée
+// le mot qu'un relevé cite encore.
+export function normaliserPerso(perso) {
+  const propres = Object.entries(persoDe(perso)).flatMap(([id, mot]) => {
+    if (!estIdPerso(id) || !estObjet(mot) || typeof mot.libelle !== 'string') return [];
+    const libelle = mot.libelle.normalize('NFC').trim().slice(0, LIBELLE_MAX).trim();
+    if (!libelle) return [];
+    return [[id, {
+      ...mot, libelle, zone: ZONES.includes(mot.zone) ? mot.zone : null, famille: CLES_FAMILLES.has(mot.famille) ? mot.famille : null,
+      definition: typeof mot.definition === 'string' ? definitionPropre(mot.definition) : null, archive: mot.archive === true,
+    }]];
+  });
+  const sortie = Object.fromEntries(propres);
+  // Les noms pris : d'abord les 144, puis les mots à soi de la carte, dans l'ordre de création (celui de motsDeLaCarte).
+  const pris = new Set(motsDeLaCarte(null).map((m) => normLabel(m.libelle)));
+  const actifs = propres.filter(([, mot]) => !mot.archive && mot.zone)
+    .sort(([a, x], [b, y]) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')) || a.localeCompare(b));
+  for (const [id, mot] of actifs) {
+    const nom = normLabel(mot.libelle);
+    if (pris.has(nom)) sortie[id] = { ...mot, archive: true };
+    else pris.add(nom);
+  }
+  return sortie;
+}
+
 // Import (point de vigilance 4) : un relevé cite un mot à soi que la sauvegarde ne connaît pas, ou plus lisible. Le mot
 // est recréé mis de côté, « Mot sans libellé », sans zone ni famille, daté du fichier : le relevé n'est pas perdu. Rend
 // perso tel quel pour tout autre id (mot de la roue, mot à soi connu, id inconnu d'une autre forme).

@@ -1022,7 +1022,7 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 - Toucher une couleur n'écrit rien ; toucher un mot écrit. Retoucher le mot choisi l'efface, énergie comprise (règle de Carnet, pas de How We Feel).
 - Un relevé se rouvre depuis Ma journée de n'importe quel jour, Historique compris, directement sur l'écran 3 ; il s'y supprime.
 - « Aucune » parmi les familles d'un mot à soi.
-- Énergie d'un mot : rangs 1 à 4 basse, 5 à 8 moyenne, 9 à 12 haute.
+- Énergie d'un mot : rangs 1 à 4 basse, 5 à 8 moyenne, 9 à 12 haute (son effet est à trancher : « En attente de l'utilisateur »).
 - Les graphiques par famille gardent leurs couleurs de famille ; ce qui montre des relevés ou des mots prend la couleur de zone.
 - Ligne de zones nommée par couleurs (rouge, jaune, bleu, vert), avec une légende sur la page A4.
 - `FORMAT_VERSION` 7.
@@ -1041,6 +1041,7 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 - **Les mots à soi sur la carte** : hors du carré, du côté extérieur de leur zone (rouge et bleu à gauche, jaune et vert à droite), colonne par colonne vers l'extérieur, en partant du bord d'énergie extérieur, dans l'ordre de création. Ils prennent la couleur de la case du bord de leur zone, sur leur rang.
 - **Les définitions** (`domain/definitions-roue.js`) : 144. Les 64 ajouts de la proposition gardent leur texte ; celui d'Insouciant est écrit pour Carnet. Six textes de Carnet changent (plus bas, « Textes à relire »).
 - **Relecture** : les mots sans famille ne comptent dans aucune vue par famille (Mes jours par semaine et par mois, la page A4, Comprendre, « Émotions selon ce que je faisais ») : plus de clé « null », plus de relevé compté en trop. Réglages › Émotions gagne une section « Sans famille » (Fatigué, Épuisé), au point creux. Tranquille garde le « rien ne presse » de la v8 et laisse « sans souci » à Insouciant.
+- **Rupture de vocabulaire (30/10/2026)**, comme le demande la proposition validée (`carte-proposee.json`, règle 4) : à partir de cette date, les comptes par famille (Ma semaine, Comprendre « Selon le mois », la Vue soignants, les COMPTEURS de l'Export PSY) mêlent deux vocabulaires, celui de la v8 avant, celui de la v9 après. La Joie passe de 16 à 51 mots ; dans la zone verte, 21 mots de joie pour 15 de sérénité (v8 : 4 pour 8 dans la moitié basse agréable de la carte). Concentré, Productif, Compétent, Fort et Déterminé sont en joie : une longue concentration notée « Concentré » compte en Joie. Fatigué et Épuisé, nouveaux, ne comptent dans aucune famille. Une hausse de la Joie après le 30/10 peut donc venir du vocabulaire seul. L'énergie, elle aussi, se lit autrement : elle vient du rang du mot (« En attente de l'utilisateur », plus bas).
 
 ### Mots à soi, validation et sauvegarde (tâche 2)
 
@@ -1097,16 +1098,34 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 - **Version 9.0.0** (package.json, precache).
 - **CLAUDE.md** : la règle du vocabulaire de la roue vaut pour les 144 mots ; préfixe réservé `roue:aucune:` des mots sans famille, identifiant `roue:perso:u-<8 hexa>` des mots à soi, dont le libellé, la zone et la famille vivent dans `motsPerso` (ajouté le 30/10, avec l'accord de l'utilisateur).
 
+### Relecture finale (trois relecteurs : écrans, données, règles)
+
+- **Couleurs de zone en clair** : l'accent assombri pour le 3:1 rendait le jaune olive (voisin de la Tristesse), le rouge et le bleu voisins de la Colère et de la Surprise, alors que les bulles de la même carte gardaient les couleurs de How We Feel. Une marque de zone (point du jour, rond d'un relevé, point de Mes jours, barre de Tes zones, rond de légende) est maintenant peinte à la couleur des bulles (`-fill`), dans les deux thèmes, avec un liseré à l'accent qui porte le 3:1 sur le fond clair ; en sombre, il s'y fond.
+- **La carte du bas** : le mot et sa définition au même corps, 17 sur 18,3 (visuel §2.8, au lieu de 17 et 15,5 de la maquette) ; le mot et trois lignes tiennent dans la capsule de 100 pt (au texte par défaut, seule la définition de Jaloux la fait grandir).
+- **La carte autour du mot choisi** : la fenêtre visible (deux colonnes et quatre rangs de chaque côté, et sa transposée) reprend la table mesurée de visuel §2.2 ; au-delà, les colonnes restent droites, au pas de 106. Les colonnes se resserrent comme sur la capture de How We Feel.
+- **Ouverte sur le rouge ou le jaune**, la carte vient au milieu de la zone et laisse la place du voile et des boutons : les mots du rang 12 (Terrifié, Paniqué, Euphorique…) ne passent plus sous ← et la loupe.
+- **Au clavier**, le contour d'une grande bulle de l'écran 1 passe au-delà de ses halos (16 pt) et au-dessus des voisines.
+- **Écran 3** : une activité choisie a la couleur de la case du mot, la même que le mot en rappel (Vide : un seul bleu).
+- **Ma journée en très grand texte** : la colonne de l'heure suit le corps, « vers 12 h » ne passe plus sous le point de zone.
+- **L'écran de l'émotion laissé ouvert** (l'iPhone verrouillé après un mot, rouvert le lendemain) : après plus de 30 min d'absence, il se ferme comme les autres écrans. Avant, un mot touché le matin réécrivait le relevé de la veille.
+- **L'identifiant d'un relevé neuf** est tiré une seule fois, avant les essais d'écriture, comme en v8 : un essai qui a écrit sans réponse ne laisse plus de doublon.
+- **Import** : la méta `motsPerso` d'un fichier écrit à la main est remise dans la forme que l'app écrit (`normaliserPerso`) : libellé coupé à 40 signes, zone, famille et définition lisibles, seul `true` met de côté, un nom déjà pris sur la carte met le mot de côté. Aucun relevé n'est perdu.
+- **Réglages › Me ressourcer** dit ce qui fait jouer la règle depuis la v9 : un mot d'énergie basse (les quatre rangs du bas de la carte, ou un mot à soi bleu ou vert), et non la bulle « Énergie basse » seule.
+
 ### Le format de l'Export PSY change (v9, à signaler)
 
 Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à mettre à jour :
 - sous chaque semaine, une ligne « zones : rouge 3 · jaune 2 · bleu 9 · vert 5 » : rouge = énergie haute, désagréable ; jaune = haute, agréable ; bleu = basse, désagréable ; vert = basse, agréable. Zones à zéro omises, ligne absente sans relevé à zone ;
 - les 65 mots nouveaux et les mots à soi apparaissent par leur nom dans les lignes du jour (« émotions : … », « humeur du moment ») ;
-- Fatigué, Épuisé et un mot à soi sans famille n'entrent dans aucun compte par famille des COMPTEURS (« émotions : colère 2 · … ») ; ils comptent dans la ligne des zones.
+- Fatigué, Épuisé et un mot à soi sans famille n'entrent dans aucun compte par famille des COMPTEURS (« émotions : colère 2 · … ») ; ils comptent dans la ligne des zones ;
+- un relevé dont le mot a été effacé, mais qui garde son heure « C'était vers… », reste (spec §13.5 ; de la v6 à la v8, il était supprimé) : il se lit « vers 12 h » seul dans « humeur du moment », sans mot ni énergie, et son jour paraît même sans autre saisie ;
+- les comptes par famille changent de vocabulaire le 30/10/2026 (« Rupture de vocabulaire », plus haut) : une hausse de la Joie peut venir des mots seuls.
 
 ### En attente de l'utilisateur
 
 - **Les textes à relire** (plus bas), dans l'app, après la publication : Réglages › Émotions, où une définition se corrige.
+- **L'énergie déduite du rang du mot** (spec §7 et §11) : les 48 mots des rangs 5 à 8 enregistrent « énergie moyenne », alors que leur bulle dit « Énergie haute » ou « Énergie basse » : Fatigué et Calme sont sous « Énergie basse », Inquiet et Concentré sous « Énergie haute ». Ma journée affiche « Fatigué · énergie moyenne ». La règle « Me ressourcer » ne joue pas pour Fatigué ni pour Calme, mais joue pour Reconnaissant ou Serein (Réglages › Me ressourcer le dit maintenant) ; Comprendre « Avant mes jours à énergie basse », la rangée « Énergie basse » de Mes jours et Ta journée ne comptent pas un jour qui n'a que Fatigué, et comptent un jour avec Reconnaissant. Deux voies : garder les trois bandes (spec §7, l'état actuel), ou suivre les bulles (rangs 1 à 6 basse, 7 à 12 haute). La seconde change `energieDe` (`domain/carte-roue.js`) et ses tests ; les relevés déjà notés gardent l'énergie enregistrée.
+- **Un relevé « vers » dont le mot est effacé** : garder la règle de la spec §13.5 (il reste, « Aucun mot » dans Ma journée, « vers 12 h » seul dans l'Export PSY), ou revenir à celle des v6 à v8 (il part avec son mot). Pour revenir : `CONTEXTE.humeurs = ['vers']` dans `domain/champs.js`, retirer « Aucun mot » de `texteReleve` (`domain/releves.js`), et reprendre les tests du commit b10fe4f (champs, repository, releves, v6-saisie, v9-emotion).
 - **Les points en attente de la v7 et de la v8 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie…).
 
 ### À essayer sur l'iPhone

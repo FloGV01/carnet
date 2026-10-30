@@ -164,12 +164,44 @@ test('zones : AA de -on sur -fill et de -text sur le fond, les cartes, la surfac
       for (const [nom, fond] of [['fond', t.bg], ['carte', t.surface], ['surface 2', t['surface-2']], ['teinte', v('-tint')], ['teinte 2', v('-tint-2')]]) {
         assert.ok(contraste(v('-text'), fond) >= 4.5, `${theme} ${z} : -text sur ${nom} (${contraste(v('-text'), fond).toFixed(2)})`);
       }
-      // Un point de zone se pose sur le fond (en-tête du jour) ou sur une carte (Ma journée, Historique, Mes jours).
+      // Un point de zone se pose sur le fond (en-tête du jour) ou sur une carte (Ma journée, Historique, Mes jours) : son
+      // liseré, à l'accent, y porte le 3:1 (relecture finale ; le test suivant).
       for (const [nom, fond] of [['fond', t.bg], ['carte', t.surface]]) {
         assert.ok(contraste(v(''), fond) >= 3, `${theme} ${z} : accent sur ${nom} (${contraste(v(''), fond).toFixed(2)})`);
       }
     }
   }
+});
+
+// Relecture finale : en clair, l'accent assombri pour le 3:1 n'était plus la couleur de How We Feel (le jaune devenait
+// olive, voisin de la Tristesse), alors que les bulles de la même carte la gardaient. Une marque de zone (le point d'un
+// jour, le rond d'un relevé, un point ou une barre de graphique, un rond de légende) est donc peinte en -fill, la couleur
+// des bulles, dans les deux thèmes, et un liseré à l'accent porte le 3:1 sur le fond clair. En sombre, l'accent est
+// -fill : le liseré s'y fond.
+test('zones : une marque de zone a la couleur des bulles (-fill) et un liseré à l\'accent ; -fill seul n\'a pas le 3:1 en clair', () => {
+  const regles = [...sansCommentaires(lire(join(RACINE, 'public', 'css', 'ecrans.css'))).matchAll(/([^{}]+)\{([^}]*)\}/g)]
+    .map((m) => [m[1].replace(/\s+/g, ' ').trim(), m[2]]);
+  // Les sélecteurs d'une règle, coupés aux virgules hors des parenthèses (celles de :is() restent).
+  const selecteurs = (sel) => sel.split(/,(?![^(]*\))/).map((x) => x.trim());
+  const decl = (selecteur) => {
+    const r = regles.filter(([sel]) => selecteurs(sel).includes(selecteur));
+    assert.equal(r.length, 1, selecteur);
+    return r[0][1].replace(/\s+/g, ' ');
+  };
+  const zones = ':is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert)';
+  for (const sel of ['.zones-jour i', `.point-releve${zones}`]) {
+    const d = decl(sel);
+    assert.match(d, /background: var\(--c-fill\);/, sel);
+    assert.match(d, /box-shadow: inset 0 0 0 1px var\(--c\);/, sel);
+  }
+  for (const sel of [`.g-emo${zones}`, `${zones} > svg > .g-emo`]) {
+    const d = decl(sel);
+    assert.match(d, /fill: var\(--c-fill\);/, sel);
+    assert.match(d, /stroke: var\(--c\); stroke-width: 1;/, sel);
+  }
+  // Le jaune des bulles sur le fond clair : sans liseré, il ne se verrait pas assez.
+  assert.ok(contraste(clair['c-zone-jaune-fill'], clair.surface) < 3);
+  for (const z of ZONES_ROUE) assert.equal(sombre[`c-zone-${z}`], clair[`c-zone-${z}-fill`], `${z} : en sombre, le liseré est la couleur de la bulle`);
 });
 
 test('zones : chaque rôle garde la teinte de sa bulle (à 12° près), et les quatre zones restent bien distinctes', () => {
