@@ -1,15 +1,17 @@
 // Vérification des données (écran Diagnostic). Pur : ni DOM, ni horloge, rien n'est écrit.
 // Ne rend que des nombres, jamais un libellé ni un texte de l'utilisateur.
 import { normaliser, SCHEMAS } from './champs.js';
+import { persoDe } from './mots-perso.js';
 
 // Clé qui désigne la fiche à laquelle un mémo est attaché, selon sa table (le journal par date).
 const CLE_PARENT = { journal: 'date', episodes: 'id', symptomes: 'id', traitements: 'id', rdv: 'id' };
 
 const tableau = (v) => (Array.isArray(v) ? v : []);
 
-// Une fiche est illisible si la normalisation d'une sauvegarde la refuse, comme à l'import.
-function illisible(store, brut) {
-  try { return normaliser(store, brut, { origine: 'sauvegarde' }).erreurs.length > 0; } catch { return true; }
+// Une fiche est illisible si la normalisation d'une sauvegarde la refuse, comme à l'import. perso (v9) : la méta
+// `motsPerso`, pour qu'un relevé qui cite un mot à soi connu reste lisible.
+function illisible(store, brut, perso) {
+  try { return normaliser(store, brut, { origine: 'sauvegarde', perso }).erreurs.length > 0; } catch { return true; }
 }
 
 // instantane : une liste par table, telle que la rend lireTout (db/sauvegarde.js).
@@ -19,9 +21,10 @@ export function verifierDonnees(instantane) {
   const parTable = {};
   for (const [store, lignes] of Object.entries(donnees)) if (Array.isArray(lignes)) parTable[store] = lignes.length;
 
+  const perso = persoDe((tableau(donnees.meta).find((m) => m && m.cle === 'motsPerso') || {}).valeur);
   let fichesIllisibles = 0;
   for (const store of Object.keys(SCHEMAS)) {
-    for (const brut of tableau(donnees[store])) if (illisible(store, brut)) fichesIllisibles += 1;
+    for (const brut of tableau(donnees[store])) if (illisible(store, brut, perso)) fichesIllisibles += 1;
   }
 
   // Une fiche illisible reste la fiche de son mémo : seule son absence rend le mémo orphelin.

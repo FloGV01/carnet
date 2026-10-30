@@ -46,7 +46,9 @@ export function jetons(css) {
   return { clair: resoudre(clair), sombre: resoudre(sombre), sombreSeul: declarations(sansCom.match(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([\s\S]*?)\}\s*\}/)[1]) };
 }
 
-// Les couleurs du système : les 12 du lot 2b, puis les 7 familles de la roue des émotions (v7), dans leur ordre.
+// Les couleurs du système : les 12 du lot 2b, puis les 7 familles de la roue des émotions (v7), puis les 4 zones de la
+// carte des émotions (v9), dans leur ordre.
 export const COULEURS_LOT = ['lieu', 'sommeil', 'contact', 'sport', 'traitement', 'positifs', 'humeur', 'episode', 'symptome', 'difficile', 'energie', 'explosions'];
 export const FAMILLES_ROUE = ['colere', 'degout', 'tristesse', 'joie', 'surprise', 'peur', 'serenite'];
+export const ZONES_ROUE = ['rouge', 'jaune', 'bleu', 'vert'];
 export const ROLES = ['', '-fill', '-on', '-tint', '-tint-2', '-text'];

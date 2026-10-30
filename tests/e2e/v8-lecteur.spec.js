@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
-import { tuile, mot } from '../aides/emotion.js';
+import { noter, continuer } from '../aides/emotion.js';
 import { espionnerAudio, audio, notes } from '../aides/audio.js';
 import {
   installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ, bols, frequencesBols, souffles, horloge,
@@ -502,7 +502,7 @@ test('point de vigilance 4 : après le lecteur (« Repères + souffle », mode s
   await page.clock.runFor(30000);
   await expect(md.locator('.phase-respiration')).toHaveText(/^(Inspire|Expire)$/);
   await md.getByRole('button', { name: 'Arrêter' }).click();
-  // « Respirer », dans la carte « Pour récupérer, je… ».
+  // « Respirer », dans la carte « Pour récupérer, je… » (v9 : en tête de l'écran 3 de l'émotion, après la flèche).
   await page.evaluate(async () => {
     const m = window.__carnet.repo.meta;
     await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
@@ -510,8 +510,8 @@ test('point de vigilance 4 : après le lecteur (« Repères + souffle », mode s
   });
   await aller(page, '#/moment');
   const emo = vue(page, 'Émotion du moment');
-  await tuile(emo, 'Basse').click();
-  await mot(emo, 'Vide', 'Tristesse').click();
+  await noter(emo, 'bleu', 'Vide');
+  await continuer(emo).click();
   const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   // Le toucher prépare le contexte en session « ambiante » (jamais celle du lecteur), puis la respiration le rendort.

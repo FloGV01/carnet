@@ -74,12 +74,15 @@ ven 25/09 · Ruminations 6/10 · durée : Quelques heures · contexte : après l
 
 COMPTEURS
 cette semaine : humeur moyenne 6 (de 4 à 8) · explosions 2 · jours au bureau 2 · contact humain 4 jours · sport 3 jours · nuits Mal 2 · émotions : colère 2 · tristesse 1 · joie 1 · sérénité 2
+  zones : rouge 2 · jaune 1 · vert 2
 semaine d'avant : humeur moyenne 5,4 · explosions 3 · jours au bureau 1 · émotions : peur 1
+  zones : rouge 1
 
 PSY : fais-moi le récap de la semaine, format habituel.`;
 
 // v8 : la nuit en heures (« nuit Moyen · 6 h ») ; les nuits anciennes gardent leurs réveils, leur coucher et leur lever.
-test('instantané exact de l\'exemple du plan ; v7 : les émotions du jour et par famille, sans « REPÈRES DE L\'APP » ; v8 : les heures de la nuit', () => {
+// v9 : sous chaque semaine des COMPTEURS, sa ligne de zones (la famille seule « tristesse » n'a pas de zone).
+test('instantané exact de l\'exemple du plan ; v7 : les émotions du jour et par famille, sans « REPÈRES DE L\'APP » ; v8 : les heures de la nuit ; v9 : les zones', () => {
   assert.equal(exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui: '2026-09-27', carte }), ATTENDU);
 });
 
@@ -228,7 +231,7 @@ test('v7 : COMPTEURS « émotions : colère 3 · sérénité 2 », dans l\'ordre
     rel('2026-09-15', '09:00', 'roue:joie:amuse'), rel('2026-09-21', '01:00', 'roue:peur:craintif'),
   ]);
   const compteurs = t.split('COMPTEURS\n')[1].split('\n\n')[0];
-  assert.equal(compteurs, 'cette semaine : émotions : colère 3 · sérénité 2\nsemaine d\'avant : émotions : joie 1 · peur 1');
+  assert.equal(compteurs, 'cette semaine : émotions : colère 3 · sérénité 2\n  zones : rouge 2 · vert 2\nsemaine d\'avant : émotions : joie 1 · peur 1\n  zones : rouge 1 · jaune 1');
   assert.ok(!/humeur moyenne|dégoût 0|0 ·/.test(compteurs), 'sans note, pas d\'humeur moyenne ; aucune famille à zéro');
 });
 
@@ -236,6 +239,68 @@ test('v7 : sans aucune émotion, ni la ligne du jour ni les COMPTEURS ne parlent
   const t = exportEmotions([rel('2026-09-26', '09:00', null, { humeur: 5, energie: 'energie:basse' })]);
   assert.doesNotMatch(t, /émotion/);
   assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · humeur 5');
+});
+
+// v9 · relecture de la tâche 3 : un relevé de mot à soi (méta motsPerso) garde son nom dans la ligne du jour et dans
+// « humeur du moment », compte dans sa famille s'il en a une, et le texte ne montre jamais un identifiant « roue: ».
+// Un jour qui n'a que ce relevé a sa ligne « émotions ». Mots inventés.
+test('v9 : un mot à soi garde son nom dans la ligne du jour et ses relevés, compte dans sa famille ; jamais « roue: » dans le texte', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+  const perso = {
+    [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-09-01T08:00:00.000Z' },
+    [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: true, createdAt: '2026-09-02T08:00:00.000Z' },
+  };
+  const humeurs = [
+    rel('2026-09-25', '17:00', FLOTTANT, { energie: 'energie:basse' }),
+    rel('2026-09-26', '09:00', 'roue:colere:irrite'), rel('2026-09-26', '14:00', BRUMEUX, { energie: 'energie:basse' }),
+    rel('2026-09-26', '18:00', FLOTTANT),
+  ];
+  const t = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs, perso }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.equal(ligneDu(t, 'ven 25/09'), 'ven 25/09 · émotions : flottant', 'un jour qui n\'a que le mot à soi');
+  assert.equal(ligneDu(t, 'sam 26/09'), 'sam 26/09 · émotions : irrité, brumeux, flottant');
+  assert.equal(t.split('\n').filter((l) => l.startsWith('  humeur du moment : ')).join('\n'),
+    '  humeur du moment : 17:00 flottant (énergie basse)\n  humeur du moment : 09:00 irrité · 14:00 brumeux (énergie basse) · 18:00 flottant');
+  // Flottant compte dans la joie ; Brumeux, sans famille, dans aucune.
+  assert.match(t, /cette semaine : émotions : colère 1 · joie 2\n/);
+  assert.doesNotMatch(t, /roue:|null|undefined/);
+  // Sans la méta, rien n'est inventé : ni nom, ni famille, ni identifiant.
+  const sans = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.equal(ligneDu(sans, 'sam 26/09'), 'sam 26/09 · émotions : irrité');
+  assert.doesNotMatch(sans, /roue:|flottant|brumeux|joie/);
+});
+
+// v9 (spec §8) : sous chaque semaine des COMPTEURS, « zones : rouge 2 · bleu 1 · vert 1 », dans l'ordre des zones, sans
+// zone à zéro. Seuls comptent les relevés qui ont une zone : Fatigué (sans famille) compte en bleu, un mot à soi dans sa
+// zone, une famille seule (v7) et une ancienne note nulle part. La ligne est absente sans relevé qui ait une zone ; une
+// semaine qui n'a que des mots sans famille garde son nom seul, comme un jour qui n'a que des relevés. Mots inventés.
+test('v9 : COMPTEURS, une ligne « zones : … » sous chaque semaine, dans l\'ordre des zones, sans zéro ; absente sans zone', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const perso = { [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-09-01T08:00:00.000Z' } };
+  const compteursDe = (t) => t.split('COMPTEURS\n')[1].split('\n\n')[0];
+  const humeurs = [
+    rel('2026-09-21', '09:00', 'roue:colere:irrite'), rel('2026-09-22', '09:00', 'roue:aucune:fatigue', { energie: 'energie:basse' }),
+    rel('2026-09-23', '09:00', FLOTTANT), rel('2026-09-24', '09:00', 'roue:peur:craintif'), rel('2026-09-25', '09:00', 'roue:colere'),
+    rel('2026-09-26', '09:00', null, { humeur: 6 }),
+    // La semaine d'avant : Épuisé seul, sans famille.
+    rel('2026-09-16', '09:00', 'roue:aucune:epuise'),
+  ];
+  const t = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs, perso }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.equal(compteursDe(t), [
+    'cette semaine : humeur moyenne 6 (de 6 à 6) · émotions : colère 2 · peur 1',
+    '  zones : rouge 2 · bleu 1 · vert 1',
+    'semaine d\'avant',
+    '  zones : bleu 1',
+  ].join('\n'));
+  // Sans la méta : le mot à soi n'a pas de zone connue.
+  const sans = exportPsy({ journal: [], episodes: [], symptomes: [], humeurs }, { aujourdhui: '2026-09-27', carte: carteMoments });
+  assert.match(compteursDe(sans), /\n  zones : rouge 2 · bleu 1\n/);
+  // Aucun relevé qui ait une zone (une famille seule, une note) : ni ligne de zones, ni « zones » nulle part.
+  const vide = exportEmotions([rel('2026-09-25', '09:00', 'roue:colere'), rel('2026-09-26', '09:00', null, { humeur: 5 })]);
+  assert.equal(compteursDe(vide), 'cette semaine : humeur moyenne 5 (de 5 à 5) · émotions : colère 1');
+  assert.doesNotMatch(vide, /zone/);
+  assert.doesNotMatch(t, /null|undefined|NaN|roue:|%| 0\b/);
+  assert.deepEqual(trouverInterdits(t), []);
 });
 
 // v8 (spec §7 bis) : « nuit Mal · 6 h » ; la qualité ou les heures seules ; les réveils et le coucher ne restent que pour une

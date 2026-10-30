@@ -1,17 +1,20 @@
 // Graphiques de l'écran Analyse (v5), rendus en SVG. Couleurs par classes (aucun style dans le
 // SVG ni en ligne) : chaque rangée porte la teinte de sa rubrique ; les émotions du moment, la couleur de
-// leur famille (.emo-*, roue et graphiques d'émotions seulement). Toucher une colonne affiche
+// leur famille (.emo-*, roue et graphiques d'émotions seulement), sauf les points de Mes jours en mode jour, à la
+// couleur de la zone de leur mot (.zone-*, v9 : un point montre un relevé, pas une famille). Toucher une colonne affiche
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
-import { geometrieMesJours, geometrieJournee } from './geometrie.js';
-import { nombre, uneDecimale } from '../../analyse/textes.js';
-import { texteFamilles } from '../../analyse/emotions.js';
+import { geometrieMesJours, geometrieJournee, geometrieZonesSemaines } from './geometrie.js';
+import { nombre, uneDecimale, NOTE_ZONES } from '../../analyse/textes.js';
+import { texteFamilles, texteZones, nombreParZone, zonesVides } from '../../analyse/emotions.js';
 import { formaterJour, formaterDateNumerique, MOIS } from '../../domain/dates.js';
-import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
+import { FAMILLES, libelleEmotion } from '../../domain/roue.js';
+import { ZONES, NOMS_ZONES, zoneDe } from '../../domain/carte-roue.js';
 import { minusculeInitiale } from '../../domain/phrase.js';
 import { versHash } from '../../routeur.js';
 import { resumeContacts } from '../../domain/contacts.js';
+import { pourAffichage } from '../../domain/typographie.js';
 import { texteHeuresSommeil } from '../../domain/champs.js';
 
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
@@ -48,6 +51,11 @@ export function famillesPresentes(familles) {
   return FAMILLES.filter((f) => vues.has(f.cle));
 }
 export const LegendeFamilles = ({ familles }) => familles.map((f) => html`<span class=${`emo-${f.cle}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${f.libelle}</span>`);
+// Les zones (v9, Mes jours en mode jour, Tes zones par semaine) : les quatre, dans leur ordre, comme un repère fixe (la
+// rampe des nuits aussi montre tous ses pas) ; « sans zone » en plus, au point creux, pour un ancien relevé qui n'a que sa
+// famille (v7).
+export const LegendeZones = ({ creux = false }) => html`${ZONES.map((z) => html`<span class=${`zone-${z}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${NOMS_ZONES[z]}</span>`)}
+  ${creux && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-creux" cx="6" cy="6" r="3.5" /></svg>sans zone</span>`}`;
 // La rampe du sommeil et celle de l'énergie, une case par niveau : « du clair au foncé » serait faux en sombre, où la
 // rampe va du foncé au clair (v7).
 export const LegendeRampe = ({ classes, libelles, teinte = null, prefixe = '', suffixe = '' }) => html`<span class=${teinte ? `rampe teinte-${teinte}` : 'rampe'}>${prefixe}
@@ -59,14 +67,15 @@ export const LegendeEnergie = ({ lib, unite }) => html`<${LegendeRampe} classes=
 
 // « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro (analyse/emotions.js).
 export { texteFamilles };
-// « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures.
-export const texteEmotions = (ids) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id) || id)).join(', ');
+// « irrité, calme » : les émotions notées un jour (le mot, ou la famille seule), dans l'ordre des heures. perso (v9) : la
+// méta `motsPerso`, pour le nom d'un mot à soi.
+export const texteEmotions = (ids, perso) => (ids || []).map((id) => minusculeInitiale(libelleEmotion(id, perso) || id)).join(', ');
 
 // Détail d'une colonne touchée : seulement ce qui est noté. Les anciennes notes de 1 à 10 restent dites (« humeur 6 »). Les
 // séances de Bien-être sont dites sans leur nombre (v7).
-export function detailColonne(pas, c, lib) {
+export function detailColonne(pas, c, lib, perso) {
   const m = [];
-  if (pas === 'jour' && (c.emotions || []).length) m.push(`émotions : ${texteEmotions(c.emotions)}`);
+  if (pas === 'jour' && (c.emotions || []).length) m.push(`émotions : ${texteEmotions(c.emotions, perso)}`);
   if (pas !== 'jour' && c.nEmotions > 0) m.push(`émotions : ${texteFamilles(c.familles)}`);
   if (c.humeur != null) {
     m.push(pas === 'jour' ? `humeur ${nombre(c.humeur)}${c.humeurMin != null && c.humeurMax > c.humeurMin ? ` (de ${c.humeurMin} à ${c.humeurMax})` : ''}`
@@ -111,13 +120,16 @@ const Etiquettes = ({ g }) => g.libelles.map((r) => r.lignes.map((l) => html`<te
 
 // reperes (v6, analyse/reperes.js) : les changements de traitement de la période, en traits numérotés.
 // v7 (2b) : une étiquette au début de chaque rangée ; la rangée Émotions en tête (un point par relevé, à la couleur de
-// sa famille), la rangée « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10.
-export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui }) {
+// la zone de son mot depuis la v9, de sa famille avant ; par semaine ou par mois, des barres par famille), la rangée
+// « Humeur (notes) » seulement si la période a des anciennes notes de 1 à 10. perso (v9) : la méta `motsPerso`, pour le
+// nom et la zone d'un relevé de mot à soi.
+export function MesJours({ frise: f, reperes = SANS_REPERE, carte, perso = null, aujourdhui }) {
   const [choix, setChoix] = useState(null);
   const lib = (id) => carte.get(id) || id;
-  const g = geometrieMesJours(f, { reperes: reperes.traits });
+  const g = geometrieMesJours(f, { reperes: reperes.traits, zoneDe: (id) => zoneDe(id, perso) });
   const d = g.dim;
-  const familles = famillesPresentes(f.pas === 'jour' ? f.colonnes.flatMap((c) => (c.emotions || []).map(familleDe)) : f.colonnes.flatMap((c) => Object.keys(c.familles || {}).filter((k) => c.familles[k] > 0)));
+  // La légende des émotions : les zones en mode jour (dès un point), les familles des barres sinon.
+  const familles = f.pas === 'jour' ? [] : famillesPresentes(f.colonnes.flatMap((c) => Object.keys(c.familles || {}).filter((k) => c.familles[k] > 0)));
   const col = choix != null ? f.colonnes.find((c) => c.cle === choix) : null;
   const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
   const avec = f.colonnes.filter((c) => c.aDonnee);
@@ -126,7 +138,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
   const legendeReperes = reperes.legende.length > 0 && html`<ul class="legende-reperes" aria-label="Changements de traitement">
     ${reperes.legende.map((r) => html`<li>${r.texte}</li>`)}</ul>`;
   const tableau = html`<table class="tableau-lignes"><thead><tr><th scope="col">${{ jour: 'Jour', semaine: 'Semaine', mois: 'Mois' }[f.pas]}</th><th scope="col">Détail</th></tr></thead>
-    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
+    <tbody>${avec.map((c) => html`<tr><td>${nomColonne(f.pas, c)}</td><td>${detailColonne(f.pas, c, lib, perso).join(' · ')}</td></tr>`)}</tbody></table>${legendeReperes}`;
   // Les anciennes notes : par semaine ou par mois, le point est une moyenne, et un anneau la dit faite de peu de
   // valeurs. Des libellés fixes, sans valeur calculée.
   const legendeNotes = g.notes.points.length > 0 && html`
@@ -134,12 +146,13 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     ${g.notes.points.some((p) => !p.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-anneau" cx="6" cy="6" r="3.5" /></svg>peu de valeurs</span>`}
     ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}`;
   const legende = html`<p class="legende-graphe legende-frise">
-    <${LegendeFamilles} familles=${familles} />
+    ${g.points.length > 0 ? html`<${LegendeZones} creux=${g.points.some((p) => !p.zone)} />` : html`<${LegendeFamilles} familles=${familles} />`}
     ${legendeNotes}
     <${LegendeNuits} lib=${lib} />
   </p>${legendeReperes}`;
-  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong> · ${detailColonne(f.pas, col, lib).join(' · ')}
-    ${f.pas === 'jour' && html` · <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
+  // Le détail touché : « · » et « : » tiennent à ce qui les précède (v8, Q29), même en très grand texte.
+  const detail = col && html`<p class="detail-colonne" role="status"><strong>${nomColonne(f.pas, col)}</strong>\u00a0· ${pourAffichage(detailColonne(f.pas, col, lib, perso).join(' · '))}
+    ${f.pas === 'jour' && html`\u00a0· <a class="lien" href=${col.cle === aujourdhui ? '#/aujourdhui' : versHash('jour', { date: col.cle })}>Voir ce jour</a>`}</p>`;
   return html`<${Cadre} titre="Mes jours" tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Mes jours, ${UNITE[f.pas]} : ${rangees}. Touche une colonne pour son détail, ou « Voir en tableau ».`}>
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${d.hauteur} rx="3" />`}
@@ -148,7 +161,7 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, aujourdhui })
     <${Etiquettes} g=${g} />
     ${g.reperes.map((r) => html`<line class="g-changement" x1=${r.x} x2=${r.x} y1=${r.y1} y2=${r.y2} />
       <text class="g-changement-num" x=${r.texteX} y=${r.texteY} text-anchor="middle">${r.etiquette}</text>`)}
-    ${g.points.map((p) => html`<circle class=${`g-emo emo-${p.famille}`} cx=${p.x} cy=${p.y} r=${p.r} />`)}
+    ${g.points.map((p) => html`<circle class=${p.zone ? `g-emo zone-${p.zone}` : 'g-creux'} cx=${p.x} cy=${p.y} r=${p.r} />`)}
     ${g.barres.map((b) => html`<rect class=${`g-emo emo-${b.famille}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
     <g class="teinte-humeur">
       ${g.notes.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
@@ -190,7 +203,7 @@ export function TaJournee({ parHeure, profil, carte }) {
     <${LegendeFamilles} familles=${familles} />
     ${g.energies.length > 0 && html`<${LegendeEnergie} lib=${lib} unite="(en jours)" />`}
   </p>`;
-  const detail = choix != null && html`<p class="detail-colonne" role="status"><strong>${nomCreneau(choix)}</strong> · ${texte(choix)}</p>`;
+  const detail = choix != null && html`<p class="detail-colonne" role="status"><strong>${nomCreneau(choix)}</strong>\u00a0· ${pourAffichage(texte(choix))}</p>`;
   const quoi = [parHeure && 'les émotions du moment, par famille', creneaux.length > 0 && "l'énergie, en jours"].filter(Boolean).join(', puis ');
   return html`<${Cadre} titre="Ta journée heure par heure" tableau=${tableau} legende=${legende} detail=${detail} dim=${d}
     aria=${`Ta journée heure par heure, par créneau de 2 heures : ${quoi}. Touche un créneau pour son détail, ou « Voir en tableau ».`}>
@@ -224,4 +237,35 @@ export function Barres({ titre, rubrique, lignes, precisions, lib, pied }) {
     })}</ul>
     ${pied && html`<p class="legende-graphe">${pied}</p>`}
   </figure>`;
+}
+
+// Tes zones par semaine (v9, spec §8 et §13.2) : sur les 12 dernières semaines, une barre par semaine, empilée par zone
+// (rouge, jaune, bleu, vert, de bas en haut), longue comme le nombre de relevés. En tête, la phrase-résumé : les relevés
+// de chaque zone sur les 12 semaines, sans zone à zéro, jamais une part. Toucher une semaine dit ses comptes ; « Voir en
+// tableau » les donne toutes. semaines : zonesParSemaine (analyse/emotions.js), au-dessus du seuil.
+const nomSemaine = (cle) => `semaine du ${formaterDateNumerique(cle).slice(0, 5)}`;
+// « rouge 4 · jaune 1 » à l'écran : une zone ne quitte jamais son nombre, et « · » ni « : » ne commencent une ligne.
+const lisible = (t) => pourAffichage(t).replace(/(rouge|jaune|bleu|vert) (\d)/g, '$1\u00a0$2');
+export function ZonesParSemaine({ semaines }) {
+  const [choix, setChoix] = useState(null);
+  const g = geometrieZonesSemaines(semaines);
+  const d = g.dim;
+  const total = zonesVides();
+  for (const s of semaines) for (const z of ZONES) total[z] += s[z] || 0;
+  const avec = semaines.filter((s) => nombreParZone(s) > 0);
+  const zone = choix != null ? g.zones.find((z) => z.cle === choix) : null;
+  const semaine = zone && semaines.find((s) => s.semaine === choix);
+  const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Semaine</th><th scope="col">Zones</th><th scope="col">Relevés</th></tr></thead>
+    <tbody>${avec.map((s) => html`<tr><td>${nomSemaine(s.semaine)}</td><td>${lisible(texteZones(s))}</td><td>${nombreParZone(s)}</td></tr>`)}</tbody></table>`;
+  const legende = html`<p class="legende-graphe legende-frise"><${LegendeZones} /></p>`;
+  const detail = semaine && html`<p class="detail-colonne" role="status"><strong>${nomSemaine(semaine.semaine)}</strong>\u00a0· ${lisible(texteZones(semaine))}</p>`;
+  return html`<${Cadre} titre="Par semaine" classe="g-zones-semaines" droite=${`${semaines.length} dernières semaines`} resume=${lisible(`Relevés de ces ${semaines.length} semaines : ${texteZones(total)}.`)}
+    tableau=${tableau} legende=${legende} detail=${detail} dim=${d} pied=${NOTE_ZONES}
+    aria=${`Tes zones par semaine, sur les ${semaines.length} dernières semaines : une barre par semaine, découpée par zone, longue comme le nombre de relevés. Touche une semaine pour son détail, ou « Voir en tableau ».`}>
+    ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${g.base.y} rx="3" />`}
+    <line class="g-filet" x1=${g.base.x1} x2=${g.base.x2} y1=${g.base.y} y2=${g.base.y} />
+    ${g.barres.map((b) => html`<rect class=${`g-emo zone-${b.zone}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
+    ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${g.axeY} text-anchor="middle">${e.texte}</text>`)}
+    ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
+  </${Cadre}>`;
 }

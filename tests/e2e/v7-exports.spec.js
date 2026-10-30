@@ -50,7 +50,7 @@ test('Export PSY : les émotions de chaque jour, l\'ancienne note gardée (vigil
   expect(texte).not.toMatch(RETIREES);
 });
 
-test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du jour (bascule à 4 h), avec les points de leurs familles', async ({ page }) => {
+test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du jour (bascule à 4 h), avec les points de leurs zones (v9)', async ({ page }) => {
   await journeeMelee(page);
   const id = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-14', heure: '20:00', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 6 })).id);
   await aller(page, `#/apres-coup/${id}`);
@@ -60,9 +60,10 @@ test('Après coup : « Ce jour-là » donne l\'ancienne note et les émotions du
   const phrase = vue.locator('.phrase-resume');
   // Le 15 à 1 h (craintif) en est, le 14 à 3 h (amusé) n'en est pas.
   await expect(phrase).toHaveText('Ce jour-là : Bureau · humeur 6 · irrité, calme, craintif');
-  const points = phrase.locator('.familles-jour');
+  // Irrité et Craintif sont rouges, Calme vert : un point par zone, dans l'ordre rouge, jaune, bleu, vert.
+  const points = phrase.locator('.zones-jour');
   await expect(points).toHaveAttribute('aria-hidden', 'true');
-  expect(await points.locator('i').evaluateAll((els) => els.map((e) => e.className))).toEqual(['emo-colere', 'emo-serenite', 'emo-peur']);
+  expect(await points.locator('i').evaluateAll((els) => els.map((e) => e.className))).toEqual(['zone-rouge', 'zone-vert']);
   // Un jour sans émotion ne parle pas d'émotions.
   const autre = await repo(page, async () => (await window.__carnet.repo.episodes.creer({ date: '2026-10-08', heure: '20:00', emotion: 'emotion:colere' })).id);
   await aller(page, `#/apres-coup/${autre}`);

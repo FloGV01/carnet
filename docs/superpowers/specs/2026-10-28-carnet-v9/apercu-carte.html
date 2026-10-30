@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Aperçu carte v9</title>
+<style>
+:root {
+  color-scheme: dark;
+  --fond: #000;
+  --texte: #ececec;
+  --doux: #9a9a9a;
+  --trait: #222;
+  --surface: #2c2c2e;
+  --serif: ui-serif, "New York", Georgia, serif;
+  --sans: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--fond); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fond); color: var(--texte);
+  font: 400 16px/1.5 var(--sans); -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+.colonne { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+h1, h2, h3, h4 { font-family: var(--serif); font-weight: 700; letter-spacing: -0.01em; }
+h1 { font-size: 28px; line-height: 1.15; margin: 28px 0 10px; }
+h2 { font-size: 22px; line-height: 1.2; margin: 44px 0 6px; }
+h3 { font-size: 19px; line-height: 1.25; margin: 30px 0 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+h4 { font-size: 16px; margin: 18px 0 2px; color: #d6d6d6; }
+.intro p { margin: 0 0 8px; color: #d0d0d0; }
+.legende { color: var(--doux); font-size: 15px; margin: 0 0 14px; }
+.exemple-point { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #fff; vertical-align: middle; margin: 0 2px; box-shadow: 0 0 0 1.5px #555; }
+
+/* Les deux écrans, au format d'un iPhone de 390 pt */
+.ecran {
+  position: relative; width: min(390px, 100%); margin: 0 auto; overflow: hidden;
+  border-radius: 34px; background: #000; box-shadow: 0 0 0 1px var(--trait);
+}
+.verre {
+  position: absolute; width: 48px; height: 44px; border-radius: 22px; border: 0; padding: 0;
+  background: #1b1b1b; color: #f2f2f2; display: grid; place-items: center;
+  box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14), inset 0 0 3px rgba(0,0,0,.35);
+}
+.verre svg { display: block; }
+
+/* Écran 1 : les quatre bulles */
+.ecran-quatre { height: 640px; }
+.toile5 { position: absolute; top: -30px; left: 50%; width: 390px; height: 844px; margin-left: -195px; }
+.toile5 .verre { top: 47.3px; }
+.toile5 .verre.g { left: 16px; }
+.toile5 .verre.d { right: 16px; }
+.titre5 {
+  position: absolute; left: 16px; right: 16px; top: 121px; margin: 0; text-align: center; color: #fff;
+  font: 700 27px/32px var(--serif); letter-spacing: -0.01em;
+}
+.bulle {
+  position: absolute; width: 145px; height: 145px; border: 0; padding: 0; background: none; cursor: pointer;
+  border-radius: 50%; transition: transform .15s ease-out;
+}
+.bulle:active { transform: scale(.96); }
+.bulle:focus-visible { outline: 2px solid #fff; outline-offset: 16px; }
+.bulle .halo {
+  position: absolute; inset: -0.4px; border-radius: 50%; background: var(--m); opacity: .8;
+  animation: orbite var(--t, 9.5s) linear infinite;
+}
+.bulle .halo:nth-child(2) { animation-direction: reverse; }
+@keyframes orbite {
+  from { transform: rotate(0deg) translateX(12px); }
+  to { transform: rotate(360deg) translateX(12px); }
+}
+.bulle .face {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: linear-gradient(180deg, var(--h) 0%, var(--m) 50%, var(--b) 100%);
+  display: grid; place-items: center; text-align: center; padding: 0 5px;
+  color: #000; font: 700 16.5px/19px var(--serif); letter-spacing: -0.01em;
+}
+.rouge5 { left: 39.1px; top: 306.3px; --h: #ff8040; --m: #fe4c40; --b: #f3375f; }
+.jaune5 { left: 205.5px; top: 306.1px; --h: #f9e46d; --m: #ffd04c; --b: #ffb219; }
+.bleu5 { left: 39.1px; top: 472.8px; --h: #87c3fa; --m: #789fff; --b: #717fff; }
+.vert5 { left: 205.5px; top: 473.1px; --h: #8bf0a4; --m: #4ce39b; --b: #40c785; }
+
+/* Écran 2 : la carte */
+.ecran-carte { height: min(680px, 80svh); min-height: 460px; }
+.defile {
+  position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.defile::-webkit-scrollbar { display: none; }
+.plan { position: relative; }
+.b {
+  position: absolute; left: 0; top: 0; width: 96px; height: 96px; margin: 0; padding: 0; border: 0;
+  background: none; color: #000; cursor: pointer; border-radius: 50%;
+  transform-origin: 48px 48px; transition: transform .45s cubic-bezier(.2,.8,.2,1);
+}
+.b:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.b.choisi { z-index: 2; border-radius: 24px; }
+.b .demi { position: absolute; top: 0; width: 48.5px; height: 96px; background: var(--c); transition: border-radius .45s cubic-bezier(.2,.8,.2,1); }
+.b .demi.g { left: 0; border-radius: 48px 0 0 48px / 48px 0 0 48px; }
+.b .demi.d { right: 0; border-radius: 0 48px 48px 0 / 0 48px 48px 0; }
+.b.choisi .demi.g, .b.choisi .demi.d { border-radius: 24px; }
+.b .etiq {
+  position: absolute; left: 50%; top: 50%; width: 78px; transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none; transition: transform .45s cubic-bezier(.2,.8,.2,1);
+}
+.b.choisi .etiq { transform: translate(-50%, -50%) scale(.923); }
+.b .mot {
+  display: block; font: 700 12px/1.12 var(--serif); letter-spacing: -0.01em;
+  overflow-wrap: normal; hyphens: manual;
+}
+.b .point {
+  position: absolute; left: 50%; top: 100%; width: 4.5px; height: 4.5px; margin: 3px 0 0 -2.25px;
+  border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.55);
+}
+.fondu {
+  position: absolute; inset: 0 0 auto 0; height: 96px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.6) 0, rgba(0,0,0,.6) 6px, rgba(0,0,0,.44) 32px,
+    rgba(0,0,0,.28) 49px, rgba(0,0,0,.12) 66px, rgba(0,0,0,.04) 83px, rgba(0,0,0,0) 96px);
+}
+.ecran-carte .verre {
+  top: 12px; background: rgba(32,32,32,.85);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+.ecran-carte .verre.g { left: 16px; cursor: pointer; }
+.ecran-carte .verre.d { right: 16px; pointer-events: none; }
+.fiche {
+  position: absolute; left: 12.7px; right: 12.7px; bottom: 12px; min-height: 100px; border-radius: 50px;
+  background: var(--surface); box-shadow: 0 3px 16px rgba(0,0,0,.5);
+  display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 32px;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .3s;
+}
+.fiche.cachee { transform: translateY(130%); opacity: 0; pointer-events: none; }
+.fiche .t { flex: 1; min-width: 0; }
+.fiche .l1 { margin: 0; line-height: 1.2; }
+.fiche .fmot { font: 400 17px/1.2 var(--sans); color: var(--c); }
+.fiche .ffam { font-size: 13px; color: var(--doux); margin-left: 6px; white-space: nowrap; }
+.fiche .fdef { margin: 3px 0 0; font: 400 15.5px/1.3 var(--sans); color: #fff; }
+.fiche .aller {
+  flex: 0 0 76px; height: 76px; border-radius: 50%; background: #fff;
+  display: grid; place-items: center;
+}
+
+/* Tableaux des ajouts */
+.pastille { width: 14px; height: 14px; border-radius: 50%; background: var(--z); flex: 0 0 auto; }
+.compte { font: 400 14px/1.3 var(--sans); color: var(--doux); flex-basis: 100%; padding-left: 24px; }
+.mots { width: 100%; border-collapse: collapse; }
+.mots, .mots tbody { display: block; }
+.mots thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mots tr {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: baseline;
+  padding: 10px 0 11px; border-top: 1px solid #1d1d1d;
+}
+.mots th, .mots td { padding: 0; text-align: left; font-weight: 400; }
+.mots .cmot { grid-column: 1; }
+.mots .cen { grid-column: 2; min-width: 0; overflow-wrap: anywhere; color: var(--doux); font-size: 14px; font-style: italic; }
+.mots .cfam { grid-column: 3; justify-self: end; color: var(--doux); font-size: 14px; }
+.mots .cdef { grid-column: 1 / -1; margin-top: 3px; color: #e2e2e2; font-size: 15.5px; line-height: 1.4; }
+.mots .cnote { grid-column: 1 / -1; margin-top: 4px; color: #e7c873; font-size: 14px; line-height: 1.35; }
+.voir {
+  border: 0; background: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  font: 700 17px/1.25 var(--serif); letter-spacing: -0.01em; color: #fff; text-align: left;
+}
+.voir .rond { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: 0 0 auto; }
+.voir:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 4px; }
+
+/* Changements de la roue */
+.change { border-top: 1px solid #1d1d1d; padding: 12px 0 14px; }
+.change p { margin: 4px 0 0; }
+.change .avant { color: var(--doux); text-decoration: line-through; text-decoration-color: #666; }
+.change .tete { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.change .zones { font-size: 14px; color: var(--doux); }
+.fleche-zone { display: inline-flex; align-items: center; gap: 6px; }
+.fleche-zone i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.liste-echange { margin: 6px 0 0; padding-left: 20px; color: #d6d6d6; }
+.liste-echange li { margin: 4px 0; }
+.pied { color: #6f6f6f; font-size: 13px; margin: 48px 0 40px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bulle, .b, .b .demi, .b .etiq, .fiche { transition: none; }
+  .bulle .halo { animation: none; transform: translate(var(--dx), var(--dy)); }
+}
+</style>
+</head>
+<body>
+
+<header class="colonne intro">
+  <h1>Carte des émotions, v9</h1>
+  <p>Ceci est un aperçu de la future carte de l'écran Émotion : rien n'est encore construit, la page sert seulement à relire les mots avant de les valider.</p>
+  <p>Un petit point clair <span class="exemple-point" aria-hidden="true"></span> sous un mot signale un ajout (<span id="nb-ajouts">65</span>) ; les autres viennent de la roue actuelle. Touche une bulle pour lire sa définition et sa famille.</p>
+</header>
+
+<section aria-labelledby="t-quatre">
+  <div class="colonne">
+    <h2 id="t-quatre">1. Le choix de la couleur</h2>
+    <p class="legende">Le premier écran. Ici, toucher une couleur ouvre la carte plus bas, centrée sur sa zone.</p>
+  </div>
+  <div class="ecran ecran-quatre">
+    <div class="toile5">
+      <span class="verre g" aria-hidden="true">
+        <svg width="19" height="19" viewBox="0 0 19 19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 3l13 13M16 3L3 16"/></svg>
+      </span>
+      <span class="verre d" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9.2" cy="9.2" r="7"/><path d="M14.4 14.4l5.6 5.6"/></svg>
+      </span>
+      <p class="titre5">Touche la couleur la plus proche de ce moment</p>
+      <button type="button" class="bulle rouge5" data-zone="rouge" aria-label="Énergie haute, désagréable">
+        <span class="halo" style="--dx:-13px;--dy:-13.1px;--t:7s"></span>
+        <span class="halo" style="--dx:-10.5px;--dy:10px;--t:9.5s"></span>
+        <span class="halo" style="--dx:13.2px;--dy:-4.6px;--t:12s"></span>
+        <span class="face">Énergie haute<br>Désagréable</span>
+      </button>
+      <button type="button" class="bulle jaune5" data-zone="jaune" aria-label="Énergie haute, agréable">
+        <span class="halo" style="--dx:-13.5px;--dy:-13.5px;--t:7s"></span>
+        <span class="halo" style="--dx:9.8px;--dy:2.8px;--t:9.5s"></span>
+        <span class="halo" style="--dx:-3px;--dy:2.2px;--t:12s"></span>
+        <span class="face">Énergie haute<br>Agréable</span>
+      </button>
+      <button type="button" class="bulle bleu5" data-zone="bleu" aria-label="Énergie basse, désagréable">
+        <span class="halo" style="--dx:-9px;--dy:8.8px;--t:7s"></span>
+        <span class="halo" style="--dx:8.3px;--dy:-10.7px;--t:9.5s"></span>
+        <span class="halo" style="--dx:7px;--dy:8.8px;--t:12s"></span>
+        <span class="face">Énergie basse<br>Désagréable</span>
+      </button>
+      <button type="button" class="bulle vert5" data-zone="vert" aria-label="Énergie basse, agréable">
+        <span class="halo" style="--dx:5.7px;--dy:11.3px;--t:7s"></span>
+        <span class="halo" style="--dx:5.1px;--dy:-11.2px;--t:9.5s"></span>
+        <span class="halo" style="--dx:-6.2px;--dy:5.7px;--t:12s"></span>
+        <span class="face">Énergie basse<br>Agréable</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-carte" id="section-carte">
+  <div class="colonne">
+    <h2 id="t-carte">2. La carte des 144 mots</h2>
+    <p class="legende">Elle défile dans les deux sens. Touche une bulle : ses voisines grandissent et la carte du bas affiche le mot, sa famille et sa définition. Touche le noir pour fermer.</p>
+  </div>
+  <div class="ecran ecran-carte">
+    <div class="defile" id="defile"><div class="plan" id="plan"></div></div>
+    <div class="fondu" aria-hidden="true"></div>
+    <button type="button" class="verre g" id="retour" aria-label="Revenir au choix de la couleur">
+      <svg width="21" height="21" viewBox="0 0 21 21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10.5H3M9.5 4l-6.5 6.5 6.5 6.5"/></svg>
+    </button>
+    <span class="verre d" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9.2" cy="9.2" r="7"/><path d="M14.4 14.4l5.6 5.6"/></svg>
+    </span>
+    <div class="fiche cachee" id="fiche" aria-live="polite">
+      <div class="t">
+        <p class="l1"><span class="fmot" id="fiche-mot"></span><span class="ffam" id="fiche-fam"></span></p>
+        <p class="fdef" id="fiche-def"></p>
+      </div>
+      <span class="aller" aria-hidden="true">
+        <svg width="30" height="28" viewBox="0 0 30 28" fill="none" stroke="#000" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h23M16 4l10 10-10 10"/></svg>
+      </span>
+    </div>
+  </div>
+</section>
+
+<section class="colonne" aria-labelledby="t-ajouts">
+  <h2 id="t-ajouts">3. Les <span id="nb-ajouts-2">65</span> mots ajoutés</h2>
+  <p class="legende">Rangés par zone, puis par famille. Touche un mot pour le voir sur la carte. Les définitions sont écrites pour Carnet ; le mot anglais est celui de la case qu'il occupe.</p>
+  <div id="ajouts"></div>
+</section>
+
+<section class="colonne" aria-labelledby="t-roue">
+  <h2 id="t-roue">4. Ce qui change pour les mots de la roue</h2>
+  <div id="changements"></div>
+  <h3>Échanges possibles</h3>
+  <p class="legende" style="margin-bottom:0">Ces mots How We Feel ont été écartés faute de place, alors que leur sens manque à la roue. Pour en prendre un, on retire un ajout de la même zone (36 cases par zone).</p>
+  <ul class="liste-echange">
+    <li><strong>Rouge</strong> : Fébrile (<i lang="en">Jittery</i>), Peur de rater (<i lang="en">Fomo</i>).</li>
+    <li><strong>Bleu</strong> : Pris au piège (<i lang="en">Trapped</i>), Perdu (<i lang="en">Lost</i>), Pessimiste (<i lang="en">Pessimistic</i>), Déconnecté (<i lang="en">Disconnected</i>), Déprimé (<i lang="en">Depressed</i>), Sans espoir (<i lang="en">Hopeless</i>), Malheureux (<i lang="en">Miserable</i>).</li>
+  </ul>
+  <p class="pied">Sources : carte-proposee.json (version finale après les trois relectures) et definitions-roue.js. Couleurs et tailles d'après visuel-hwf.md. Page autonome, sans aucune ressource externe.</p>
+</section>
+
+<script type="application/json" id="donnees">{"familles":{"colere":"Colère","degout":"Dégoût","tristesse":"Tristesse","joie":"Joie","surprise":"Surprise","peur":"Peur","serenite":"Sérénité"},"mots":[{"id":"roue:colere:enrage","libelle":"Enragé","famille":"colere","nouveau":false,"en":"Enraged","col":1,"rang":12,"source":"roue","def":"Submergé par la colère, au point de ne plus penser à autre chose."},{"id":"roue:peur:terrifie","libelle":"Terrifié","famille":"peur","nouveau":false,"en":"Terrified","col":2,"rang":12,"source":"roue","def":"Envahi par une peur très forte."},{"id":"roue:peur:panique","libelle":"Paniqué","famille":"peur","nouveau":true,"en":"Panicked","col":3,"rang":12,"source":"les deux","def":"La peur fait perdre ses moyens, on ne sait plus quoi faire."},{"id":"roue:surprise:choque","libelle":"Choqué","famille":"surprise","nouveau":false,"en":"Shocked","col":4,"rang":12,"source":"roue","def":"Secoué par quelque chose de brutal ou d'inattendu."},{"id":"roue:surprise:abasourdi","libelle":"Abasourdi","famille":"surprise","nouveau":false,"en":null,"col":5,"rang":12,"source":"roue","def":"Sonné par une nouvelle inattendue, sans voix."},{"id":"roue:peur:survolte","libelle":"Survolté","famille":"peur","nouveau":true,"en":"Hyper","col":6,"rang":12,"source":"les deux","def":"Trop d'énergie, le corps et la tête n'arrivent plus à ralentir."},{"id":"roue:surprise:surpris","libelle":"Surpris","famille":"surprise","nouveau":true,"en":"Surprised","col":7,"rang":12,"source":"les deux","def":"Pris de court par quelque chose d'inattendu."},{"id":"roue:surprise:emerveille","libelle":"Émerveillé","famille":"surprise","nouveau":true,"en":"In Awe","col":8,"rang":12,"source":"hwf","def":"Saisi par quelque chose de grand ou de beau, qui dépasse."},{"id":"roue:joie:euphorique","libelle":"Euphorique","famille":"joie","nouveau":true,"en":"Exhilarated","col":9,"rang":12,"source":"les deux","def":"Une joie vive, un peu étourdissante."},{"id":"roue:joie:electrise","libelle":"Électrisé","famille":"joie","nouveau":true,"en":"Thrilled","col":10,"rang":12,"source":"les deux","def":"Un frisson de joie qui parcourt tout le corps."},{"id":"roue:joie:aux-anges","libelle":"Aux anges","famille":"joie","nouveau":true,"en":"Elated","col":11,"rang":12,"source":"les deux","def":"Débordant de bonheur, comme en apesanteur."},{"id":"roue:joie:extasie","libelle":"Extasié","famille":"joie","nouveau":false,"en":"Ecstatic","col":12,"rang":12,"source":"roue","def":"Transporté par une joie immense.","def8":"Émerveillé, transporté de joie.","raisonDef":"La définition v8 commence par « Émerveillé », qui devient une bulle du même rang (col 8, rang 12)."},{"id":"roue:degout:revolte","libelle":"Révolté","famille":"degout","nouveau":false,"en":null,"col":1,"rang":11,"source":"roue","def":"Choqué par ce qui paraît injuste, au point de vouloir s'y opposer."},{"id":"roue:colere:hostile","libelle":"Hostile","famille":"colere","nouveau":false,"en":null,"col":2,"rang":11,"source":"roue","def":"Fermé, prêt à se défendre ou à attaquer face à quelqu'un."},{"id":"roue:peur:accable","libelle":"Accablé","famille":"peur","nouveau":false,"en":"Overwhelmed","col":3,"rang":11,"source":"roue","def":"Écrasé par trop de choses à la fois."},{"id":"roue:peur:stresse","libelle":"Stressé","famille":"peur","nouveau":true,"en":"Stressed","col":4,"rang":11,"source":"les deux","def":"Mobilisé sans relâche, sans pouvoir souffler."},{"id":"roue:colere:provocateur","libelle":"Provocateur","famille":"colere","nouveau":false,"en":null,"col":5,"rang":11,"source":"roue","def":"Qui cherche à piquer les autres ou à les faire réagir."},{"id":"roue:peur:sous-pression","libelle":"Sous pression","famille":"peur","nouveau":true,"en":"Pressured","col":6,"rang":11,"source":"hwf","def":"Poussé par ce que les autres attendent ou par un délai qui approche."},{"id":"roue:surprise:emballe","libelle":"Emballé","famille":"surprise","nouveau":true,"en":"Excited","col":7,"rang":11,"source":"les deux","def":"Conquis par une idée ou un projet, l'envie de s'y lancer tout de suite."},{"id":"roue:joie:determine","libelle":"Déterminé","famille":"joie","nouveau":true,"en":"Determined","col":8,"rang":11,"source":"hwf","def":"Décidé à aller au bout de ce qu'on a choisi."},{"id":"roue:joie:courageux","libelle":"Courageux","famille":"joie","nouveau":false,"en":null,"col":9,"rang":11,"source":"roue","def":"Prêt à faire face à quelque chose de difficile."},{"id":"roue:surprise:epate","libelle":"Épaté","famille":"surprise","nouveau":true,"en":"Amazed","col":10,"rang":11,"source":"hwf","def":"Impressionné par quelque chose qu'on n'aurait pas cru possible."},{"id":"roue:joie:inspire","libelle":"Inspiré","famille":"joie","nouveau":false,"en":"Inspired","col":11,"rang":11,"source":"roue","def":"Plein d'idées et d'élan, l'envie de créer ou d'agir."},{"id":"roue:joie:fort","libelle":"Fort","famille":"joie","nouveau":true,"en":"Empowered","col":12,"rang":11,"source":"hwf","def":"Avec prise sur ce qui arrive, on peut agir."},{"id":"roue:colere:furieux","libelle":"Furieux","famille":"colere","nouveau":false,"en":"Furious","col":1,"rang":10,"source":"roue","def":"En très grande colère, avec du mal à se contenir."},{"id":"roue:surprise:effraye","libelle":"Effrayé","famille":"surprise","nouveau":false,"en":"Frightened","col":2,"rang":10,"source":"roue","def":"Saisi d'un coup, le sursaut de la peur."},{"id":"roue:peur:anxieux","libelle":"Anxieux","famille":"peur","nouveau":true,"en":"Anxious","col":3,"rang":10,"source":"les deux","def":"Une peur sans objet précis, qui serre la gorge ou le ventre."},{"id":"roue:peur:craintif","libelle":"Craintif","famille":"peur","nouveau":false,"en":"Apprehensive","col":4,"rang":10,"source":"roue","def":"Inquiet de ce qui pourrait arriver, sur la réserve."},{"id":"roue:colere:irrite","libelle":"Irrité","famille":"colere","nouveau":false,"en":"Irritated","col":5,"rang":10,"source":"roue","def":"Agacé par quelque chose qui gêne ou qui se répète."},{"id":"roue:peur:agite","libelle":"Agité","famille":"peur","nouveau":true,"en":"Restless","col":6,"rang":10,"source":"les deux","def":"Impossible de tenir en place, le corps a besoin de bouger."},{"id":"roue:surprise:energique","libelle":"Énergique","famille":"surprise","nouveau":false,"en":"Energized","col":7,"rang":10,"source":"roue","def":"Plein d'élan, le corps prêt à bouger."},{"id":"roue:surprise:avide","libelle":"Avide","famille":"surprise","nouveau":false,"en":"Eager","col":8,"rang":10,"source":"roue","def":"Impatient, plein d'envie pour ce qui arrive."},{"id":"roue:joie:enthousiaste","libelle":"Enthousiaste","famille":"joie","nouveau":true,"en":"Enthusiastic","col":9,"rang":10,"source":"les deux","def":"Plein d'ardeur pour ce qu'on est en train de faire."},{"id":"roue:joie:joyeux","libelle":"Joyeux","famille":"joie","nouveau":true,"en":"Joyful","col":10,"rang":10,"source":"les deux","def":"Le sourire facile, une joie qui se voit."},{"id":"roue:joie:productif","libelle":"Productif","famille":"joie","nouveau":true,"en":"Productive","col":11,"rang":10,"source":"hwf","def":"Les choses avancent, on fait ce qu'on voulait faire."},{"id":"roue:joie:fier","libelle":"Fier","famille":"joie","nouveau":true,"en":"Proud","col":12,"rang":10,"source":"les deux","def":"La tête haute pour ce qu'on a fait ou ce qu'on est."},{"id":"roue:colere:jaloux","libelle":"Jaloux","famille":"colere","nouveau":false,"en":"Jealous","col":1,"rang":9,"source":"roue","def":"Contrarié de voir un autre avoir ce qu'on voudrait, ou de craindre de perdre quelqu'un."},{"id":"roue:peur:apeure","libelle":"Apeuré","famille":"peur","nouveau":true,"en":"Scared","col":2,"rang":9,"source":"hwf","def":"Face à quelque chose ou à quelqu'un qui fait peur."},{"id":"roue:colere:en-colere","libelle":"En colère","famille":"colere","nouveau":true,"en":"Angry","col":3,"rang":9,"source":"les deux","def":"Remonté contre quelqu'un ou quelque chose, ça chauffe à l'intérieur."},{"id":"roue:colere:defiant","libelle":"Défiant","famille":"colere","nouveau":false,"en":null,"col":4,"rang":9,"source":"roue","def":"Qui tient tête, prêt à s'opposer."},{"id":"roue:colere:suspect","libelle":"Suspect","famille":"colere","nouveau":false,"en":null,"col":5,"rang":9,"source":"roue","def":"Soupçonneux, sur ses gardes, on doute des intentions des autres."},{"id":"roue:surprise:perplexe","libelle":"Perplexe","famille":"surprise","nouveau":false,"en":"Confused","col":6,"rang":9,"source":"roue","def":"Sans savoir quoi penser, les idées s'embrouillent."},{"id":"roue:joie:provocant","libelle":"Provocant","famille":"joie","nouveau":false,"en":null,"col":7,"rang":9,"source":"roue","def":"Audacieux et taquin, qui ose."},{"id":"roue:joie:curieux","libelle":"Curieux","famille":"joie","nouveau":false,"en":"Curious","col":8,"rang":9,"source":"roue","def":"L'envie de découvrir, de comprendre, d'en savoir plus."},{"id":"roue:joie:amuse","libelle":"Amusé","famille":"joie","nouveau":false,"en":null,"col":9,"rang":9,"source":"roue","def":"Quelque chose fait sourire ou rire."},{"id":"roue:joie:heureux","libelle":"Heureux","famille":"joie","nouveau":true,"en":"Happy","col":10,"rang":9,"source":"les deux","def":"La vie paraît belle en ce moment, on en profite."},{"id":"roue:joie:motive","libelle":"Motivé","famille":"joie","nouveau":true,"en":"Motivated","col":11,"rang":9,"source":"les deux","def":"Prêt à s'y mettre, avec l'envie de le faire."},{"id":"roue:joie:optimiste","libelle":"Optimiste","famille":"joie","nouveau":false,"en":"Optimistic","col":12,"rang":9,"source":"roue","def":"Confiant dans la suite de ce qui se passe."},{"id":"roue:peur:ridiculise","libelle":"Ridiculisé","famille":"peur","nouveau":false,"en":null,"col":1,"rang":8,"source":"roue","def":"Moqué devant les autres, rendu ridicule."},{"id":"roue:degout:repugnant","libelle":"Répugnant","famille":"degout","nouveau":false,"en":"Repulsed","col":2,"rang":8,"source":"roue","def":"Écœuré par quelque chose qui repousse."},{"id":"roue:colere:frustre","libelle":"Frustré","famille":"colere","nouveau":true,"en":"Frustrated","col":3,"rang":8,"source":"les deux","def":"Empêché d'arriver à ce qu'on voulait, l'envie reste coincée."},{"id":"roue:colere:embarrasse","libelle":"Embarrassé","famille":"colere","nouveau":false,"en":"Embarrassed","col":4,"rang":8,"source":"roue","def":"Gêné devant les autres, au point d'en rougir."},{"id":"roue:peur:preoccupe","libelle":"Préoccupé","famille":"peur","nouveau":false,"en":"Concerned","col":5,"rang":8,"source":"roue","def":"L'esprit pris par un souci qui revient."},{"id":"roue:peur:tendu","libelle":"Tendu","famille":"peur","nouveau":true,"en":"Tense","col":6,"rang":8,"source":"les deux","def":"Les muscles crispés, le corps prêt à réagir."},{"id":"roue:joie:gai","libelle":"Gai","famille":"joie","nouveau":true,"en":"Pleasant","col":7,"rang":8,"source":"les deux","def":"Une humeur légère et agréable, sans raison particulière."},{"id":"roue:joie:concentre","libelle":"Concentré","famille":"joie","nouveau":true,"en":"Focused","col":8,"rang":8,"source":"les deux","def":"L'esprit tout entier pris par ce qu'on fait."},{"id":"roue:joie:vivant","libelle":"Vivant","famille":"joie","nouveau":true,"en":"Alive","col":9,"rang":8,"source":"hwf","def":"Plein de vie, présent dans son corps et dans le moment."},{"id":"roue:joie:confiant","libelle":"Confiant","famille":"joie","nouveau":false,"en":"Confident","col":10,"rang":8,"source":"roue","def":"Sûr de soi ou des autres, on peut compter dessus."},{"id":"roue:joie:libere","libelle":"Libéré","famille":"joie","nouveau":false,"en":null,"col":11,"rang":8,"source":"roue","def":"Libre de ses mouvements, plus rien ne retient.","def8":"Soulagé d'un poids, plus léger.","raisonDef":"La définition v8 (« Soulagé d'un poids ») est le sens de Relieved, pris par l'ajout Soulagé (col 10, rang 1). Libéré prend le sens de Free et garde sa case (col 11, rang 8)."},{"id":"roue:joie:stimule","libelle":"Stimulé","famille":"joie","nouveau":true,"en":"Challenged","col":12,"rang":8,"source":"hwf","def":"Tiré vers le haut par quelque chose d'exigeant."},{"id":"roue:degout:mepris","libelle":"Mépris","famille":"degout","nouveau":true,"en":"Contempt","col":1,"rang":7,"source":"hwf","def":"On regarde quelqu'un ou quelque chose de haut, avec froideur."},{"id":"roue:degout:aversion","libelle":"Aversion","famille":"degout","nouveau":false,"en":null,"col":2,"rang":7,"source":"roue","def":"Une forte envie de s'éloigner de quelque chose ou de quelqu'un."},{"id":"roue:peur:inquiet","libelle":"Inquiet","famille":"peur","nouveau":true,"en":"Worried","col":3,"rang":7,"source":"les deux","def":"Dans l'attente, on se demande comment ça va tourner."},{"id":"roue:peur:non-respecte","libelle":"Non respecté","famille":"peur","nouveau":false,"en":null,"col":4,"rang":7,"source":"roue","def":"Pas considéré : ses limites ou sa parole sont mises de côté."},{"id":"roue:colere:sarcastique","libelle":"Sarcastique","famille":"colere","nouveau":false,"en":null,"col":5,"rang":7,"source":"roue","def":"Qui se moque avec des mots piquants, souvent pour dire un agacement."},{"id":"roue:peur:mal-a-l-aise","libelle":"Mal à l'aise","famille":"peur","nouveau":true,"en":"Uneasy","col":6,"rang":7,"source":"les deux","def":"Pas bien dans la situation, quelque chose cloche."},{"id":"roue:joie:rejoui","libelle":"Réjoui","famille":"joie","nouveau":true,"en":"Pleased","col":7,"rang":7,"source":"les deux","def":"Une petite joie, quelque chose fait plaisir."},{"id":"roue:joie:espiegle","libelle":"Espiègle","famille":"joie","nouveau":false,"en":"Playful","col":8,"rang":7,"source":"roue","def":"D'humeur joueuse, l'envie de taquiner gentiment."},{"id":"roue:joie:ravi","libelle":"Ravi","famille":"joie","nouveau":true,"en":"Delighted","col":9,"rang":7,"source":"hwf","def":"Enchanté par ce qui arrive, la joie est franche."},{"id":"roue:joie:important","libelle":"Important","famille":"joie","nouveau":false,"en":null,"col":10,"rang":7,"source":"roue","def":"Compter pour les autres, avoir sa place."},{"id":"roue:joie:competent","libelle":"Compétent","famille":"joie","nouveau":true,"en":"Competent","col":11,"rang":7,"source":"hwf","def":"Capable de faire ce qu'on a à faire, et on le sent."},{"id":"roue:joie:accompli","libelle":"Accompli","famille":"joie","nouveau":false,"en":"Accomplished","col":12,"rang":7,"source":"roue","def":"Satisfait d'avoir mené quelque chose au bout."},{"id":"roue:degout:degout","libelle":"Dégoût","famille":"degout","nouveau":false,"en":"Disgusted","col":1,"rang":6,"source":"roue","def":"Un écœurement, l'envie de se détourner de quelque chose."},{"id":"roue:degout:juge","libelle":"Jugé","famille":"degout","nouveau":false,"en":null,"col":2,"rang":6,"source":"roue","def":"Regardé et évalué par les autres, comme sous un examen."},{"id":"roue:colere:insecurise","libelle":"Insécurisé","famille":"colere","nouveau":false,"en":"Insecure","col":3,"rang":6,"source":"roue","def":"Pas sûr de soi ni de sa place, sur le qui-vive."},{"id":"roue:surprise:consterne","libelle":"Consterné","famille":"surprise","nouveau":false,"en":null,"col":4,"rang":6,"source":"roue","def":"Abattu et sans voix devant ce qui arrive."},{"id":"roue:degout:hesitant","libelle":"Hésitant","famille":"degout","nouveau":false,"en":null,"col":5,"rang":6,"source":"roue","def":"Partagé entre plusieurs choix, du mal à se décider."},{"id":"roue:tristesse:ennui","libelle":"Ennui","famille":"tristesse","nouveau":true,"en":"Bored","col":6,"rang":6,"source":"les deux","def":"Le temps paraît long, rien n'accroche."},{"id":"roue:serenite:calme","libelle":"Calme","famille":"serenite","nouveau":false,"en":"Calm","col":7,"rang":6,"source":"roue","def":"Rien ne s'agite, ni dedans ni autour."},{"id":"roue:serenite:a-l-aise","libelle":"À l'aise","famille":"serenite","nouveau":true,"en":"At Ease","col":8,"rang":6,"source":"les deux","def":"Bien dans la situation, rien ne gêne."},{"id":"roue:joie:compris","libelle":"Compris","famille":"joie","nouveau":true,"en":"Understood","col":9,"rang":6,"source":"hwf","def":"Ce qu'on vit ou ce qu'on pense est saisi par quelqu'un d'autre."},{"id":"roue:joie:respecte","libelle":"Respecté","famille":"joie","nouveau":false,"en":"Respected","col":10,"rang":6,"source":"roue","def":"Pris au sérieux et considéré par les autres."},{"id":"roue:joie:epanoui","libelle":"Épanoui","famille":"joie","nouveau":true,"en":"Fulfilled","col":11,"rang":6,"source":"les deux","def":"Avec le sentiment de grandir et d'être pleinement soi."},{"id":"roue:joie:comble","libelle":"Comblé","famille":"joie","nouveau":true,"en":"Blissful","col":12,"rang":6,"source":"les deux","def":"Un bonheur plein et doux, qui enveloppe tout."},{"id":"roue:degout:detestable","libelle":"Détestable","famille":"degout","nouveau":false,"en":null,"col":1,"rang":5,"source":"roue","def":"On se trouve, ou on trouve une chose, difficile à supporter."},{"id":"roue:tristesse:honteux","libelle":"Honteux","famille":"tristesse","nouveau":false,"en":"Ashamed","col":2,"rang":5,"source":"roue","def":"L'envie de se cacher, de disparaître du regard des autres."},{"id":"roue:colere:mecontent","libelle":"Mécontent","famille":"colere","nouveau":false,"en":null,"col":3,"rang":5,"source":"roue","def":"Pas satisfait de ce qui se passe ou de ce qu'on a reçu."},{"id":"roue:surprise:desillusionne","libelle":"Désillusionné","famille":"surprise","nouveau":false,"en":"Disappointed","col":4,"rang":5,"source":"roue","def":"Ce qu'on espérait ne s'est pas réalisé, l'élan retombe."},{"id":"roue:colere:sceptique","libelle":"Sceptique","famille":"colere","nouveau":false,"en":null,"col":5,"rang":5,"source":"roue","def":"Qui doute, pas convaincu par ce qu'on entend."},{"id":"roue:tristesse:fatigue","libelle":"Fatigué","famille":"tristesse","nouveau":true,"en":"Tired","col":6,"rang":5,"source":"les deux","def":"Le corps ou la tête demandent du repos.","note":"Famille à trancher avant publication : en tristesse, la fatigue comptera dans la barre Tristesse de Comprendre. Autre choix : retirer Fatigué et Épuisé au profit de Pessimiste et de Malheureux."},{"id":"roue:serenite:bien","libelle":"Bien","famille":"serenite","nouveau":true,"en":"Good","col":7,"rang":5,"source":"hwf","def":"Ça va, tout simplement."},{"id":"roue:serenite:pensif","libelle":"Pensif","famille":"serenite","nouveau":true,"en":"Thoughtful","col":8,"rang":5,"source":"les deux","def":"Absorbé par ses pensées, calmement, sans qu'elles tournent en rond."},{"id":"roue:joie:apprecie","libelle":"Apprécié","famille":"joie","nouveau":true,"en":"Appreciated","col":9,"rang":5,"source":"hwf","def":"Ce qu'on fait ou ce qu'on est plaît aux autres, et ils le montrent."},{"id":"roue:joie:soutenu","libelle":"Soutenu","famille":"joie","nouveau":true,"en":"Supported","col":10,"rang":5,"source":"hwf","def":"Quelqu'un est là, sur qui s'appuyer."},{"id":"roue:joie:aime","libelle":"Aimé","famille":"joie","nouveau":true,"en":"Loved","col":11,"rang":5,"source":"hwf","def":"Avec la sensation de recevoir l'affection de quelqu'un."},{"id":"roue:joie:relie","libelle":"Relié","famille":"joie","nouveau":true,"en":"Connected","col":12,"rang":5,"source":"hwf","def":"Proche des autres, quelque chose passe entre eux et soi."},{"id":"roue:colere:amer","libelle":"Amer","famille":"colere","nouveau":false,"en":null,"col":1,"rang":4,"source":"roue","def":"Plein de rancœur après une déception ou une injustice."},{"id":"roue:tristesse:vulnerable","libelle":"Vulnérable","famille":"tristesse","nouveau":false,"en":"Vulnerable","col":2,"rang":4,"source":"roue","def":"Exposé, à découvert, facile à blesser."},{"id":"roue:tristesse:fautif","libelle":"Fautif","famille":"tristesse","nouveau":false,"en":null,"col":3,"rang":4,"source":"roue","def":"Avec le sentiment d'avoir fait du tort ou d'être responsable de ce qui arrive."},{"id":"roue:tristesse:abandonne","libelle":"Abandonné","famille":"tristesse","nouveau":false,"en":"Forlorn","col":4,"rang":4,"source":"roue","def":"Laissé seul par quelqu'un sur qui on comptait."},{"id":"roue:tristesse:triste","libelle":"Triste","famille":"tristesse","nouveau":true,"en":"Sad","col":5,"rang":4,"source":"les deux","def":"Le cœur lourd, avec parfois l'envie de pleurer."},{"id":"roue:tristesse:replie","libelle":"Replié","famille":"tristesse","nouveau":false,"en":null,"col":6,"rang":4,"source":"roue","def":"Refermé sur soi, sans envie d'aller vers les autres."},{"id":"roue:serenite:detendu","libelle":"Détendu","famille":"serenite","nouveau":false,"en":"Relaxed","col":7,"rang":4,"source":"roue","def":"Les muscles et l'esprit relâchés."},{"id":"roue:serenite:repose","libelle":"Reposé","famille":"serenite","nouveau":false,"en":null,"col":8,"rang":4,"source":"roue","def":"Le corps a récupéré, l'énergie est revenue."},{"id":"roue:joie:compatissant","libelle":"Compatissant","famille":"joie","nouveau":true,"en":"Compassionate","col":9,"rang":4,"source":"hwf","def":"La peine d'un autre résonne en soi, avec l'envie de l'aider."},{"id":"roue:joie:inclus","libelle":"Inclus","famille":"joie","nouveau":true,"en":"Included","col":10,"rang":4,"source":"hwf","def":"Accueilli dans un groupe, on en fait partie."},{"id":"roue:joie:aimant","libelle":"Aimant","famille":"joie","nouveau":false,"en":null,"col":11,"rang":4,"source":"roue","def":"Plein d'affection pour quelqu'un."},{"id":"roue:joie:reconnaissant","libelle":"Reconnaissant","famille":"joie","nouveau":true,"en":"Grateful","col":12,"rang":4,"source":"les deux","def":"L'envie de dire merci pour ce qu'on a reçu."},{"id":"roue:colere:devaste","libelle":"Dévasté","famille":"colere","nouveau":false,"en":null,"col":1,"rang":3,"source":"roue","def":"Bouleversé, comme si tout s'était effondré d'un coup."},{"id":"roue:tristesse:minable","libelle":"Minable","famille":"tristesse","nouveau":false,"en":null,"col":2,"rang":3,"source":"roue","def":"Petit et piteux à ses propres yeux."},{"id":"roue:peur:exclus","libelle":"Exclus","famille":"peur","nouveau":false,"en":"Excluded","col":3,"rang":3,"source":"roue","def":"Laissé en dehors d'un groupe ou de ce qui se fait."},{"id":"roue:peur:incapable","libelle":"Incapable","famille":"peur","nouveau":false,"en":null,"col":4,"rang":3,"source":"roue","def":"Avec l'impression de ne pas pouvoir y arriver."},{"id":"roue:tristesse:decourage","libelle":"Découragé","famille":"tristesse","nouveau":true,"en":"Discouraged","col":5,"rang":3,"source":"les deux","def":"Plus le cœur à continuer, l'effort semble ne mener à rien."},{"id":"roue:colere:retire","libelle":"Retiré","famille":"colere","nouveau":false,"en":"Disengaged","col":6,"rang":3,"source":"roue","def":"En retrait, à distance des autres."},{"id":"roue:joie:bienveillant","libelle":"Bienveillant","famille":"joie","nouveau":true,"en":"Sympathetic","col":7,"rang":3,"source":"hwf","def":"Tourné vers les autres avec douceur, sans arrière-pensée."},{"id":"roue:joie:sensible","libelle":"Sensible","famille":"joie","nouveau":false,"en":null,"col":8,"rang":3,"source":"roue","def":"Touché, réceptif à ce qui se passe et aux autres."},{"id":"roue:joie:ecoute","libelle":"Écouté","famille":"joie","nouveau":true,"en":"Heard","col":9,"rang":3,"source":"hwf","def":"Ce qu'on dit est entendu et pris en compte."},{"id":"roue:joie:content","libelle":"Content","famille":"joie","nouveau":true,"en":"Content","col":10,"rang":3,"source":"les deux","def":"Ce qu'on a suffit, sans chercher plus loin."},{"id":"roue:joie:accepte","libelle":"Accepté","famille":"joie","nouveau":true,"en":"Accepted","col":11,"rang":3,"source":"hwf","def":"Reçu tel qu'on est, sans avoir à changer."},{"id":"roue:joie:emu","libelle":"Ému","famille":"joie","nouveau":true,"en":"Moved","col":12,"rang":3,"source":"hwf","def":"Le cœur chaviré par quelque chose de beau ou de tendre."},{"id":"roue:peur:inferieur","libelle":"Inférieur","famille":"peur","nouveau":false,"en":null,"col":1,"rang":2,"source":"roue","def":"Moins que les autres, à ses propres yeux."},{"id":"roue:peur:inadequat","libelle":"Inadéquat","famille":"peur","nouveau":false,"en":null,"col":2,"rang":2,"source":"roue","def":"Pas à la hauteur de ce qui est attendu."},{"id":"roue:tristesse:ignore","libelle":"Ignoré","famille":"tristesse","nouveau":false,"en":null,"col":3,"rang":2,"source":"roue","def":"Ni vu ni entendu par les autres, comme si on n'était pas là."},{"id":"roue:tristesse:isole","libelle":"Isolé","famille":"tristesse","nouveau":false,"en":"Isolated","col":4,"rang":2,"source":"roue","def":"Seul, à l'écart, loin des autres."},{"id":"roue:tristesse:amorphe","libelle":"Amorphe","famille":"tristesse","nouveau":false,"en":null,"col":5,"rang":2,"source":"roue","def":"Sans élan, le corps et l'esprit au ralenti."},{"id":"roue:tristesse:indifferent","libelle":"Indifférent","famille":"tristesse","nouveau":false,"en":"Apathetic","col":6,"rang":2,"source":"roue","def":"Rien ne touche ni n'intéresse vraiment, pour le moment."},{"id":"roue:serenite:pose","libelle":"Posé","famille":"serenite","nouveau":false,"en":"Mellow","col":7,"rang":2,"source":"roue","def":"Stable et réfléchi, on prend son temps."},{"id":"roue:joie:ouvert","libelle":"Ouvert","famille":"joie","nouveau":false,"en":null,"col":8,"rang":2,"source":"roue","def":"Disponible, prêt à accueillir les autres et ce qui vient."},{"id":"roue:serenite:equilibre","libelle":"Équilibré","famille":"serenite","nouveau":true,"en":"Balanced","col":9,"rang":2,"source":"les deux","def":"Chaque chose à sa place, ni trop ni trop peu."},{"id":"roue:serenite:en-securite","libelle":"En sécurité","famille":"serenite","nouveau":false,"en":"Safe","col":10,"rang":2,"source":"roue","def":"À l'abri, rien ne menace."},{"id":"roue:serenite:solide","libelle":"Solide","famille":"serenite","nouveau":true,"en":"Secure","col":11,"rang":2,"source":"les deux","def":"D'aplomb, sur des bases qui tiennent."},{"id":"roue:joie:chanceux","libelle":"Chanceux","famille":"joie","nouveau":true,"en":"Blessed","col":12,"rang":2,"source":"les deux","def":"La vie a été généreuse, on le mesure."},{"id":"roue:peur:sans-valeur","libelle":"Sans valeur","famille":"peur","nouveau":false,"en":null,"col":1,"rang":1,"source":"roue","def":"Avec l'impression de ne compter pour rien."},{"id":"roue:tristesse:desespere","libelle":"Désespéré","famille":"tristesse","nouveau":true,"en":"Despair","col":2,"rang":1,"source":"les deux","def":"Plus aucun espoir que les choses s'arrangent."},{"id":"roue:peur:insignifiant","libelle":"Insignifiant","famille":"peur","nouveau":false,"en":null,"col":3,"rang":1,"source":"roue","def":"Tout petit, comme si on ne comptait pas."},{"id":"roue:tristesse:vide","libelle":"Vide","famille":"tristesse","nouveau":false,"en":null,"col":4,"rang":1,"source":"roue","def":"Plus rien à l'intérieur, comme engourdi."},{"id":"roue:tristesse:epuise","libelle":"Épuisé","famille":"tristesse","nouveau":true,"en":"Exhausted","col":5,"rang":1,"source":"les deux","def":"À bout de forces, même les petites choses coûtent.","note":"Famille à trancher avec Fatigué (voir sa ligne)."},{"id":"roue:tristesse:impuissant","libelle":"Impuissant","famille":"tristesse","nouveau":false,"en":"Helpless","col":6,"rang":1,"source":"roue","def":"Sans prise sur ce qui arrive, rien ne semble possible."},{"id":"roue:serenite:ensommeille","libelle":"Ensommeillé","famille":"serenite","nouveau":true,"en":"Sleepy","col":7,"rang":1,"source":"mood-meter","def":"Une envie de dormir douce, le corps se laisse aller."},{"id":"roue:serenite:tranquille","libelle":"Tranquille","famille":"serenite","nouveau":false,"en":"Tranquil","col":8,"rang":1,"source":"roue","def":"Sans souci pour l'instant, rien ne presse."},{"id":"roue:serenite:apaise","libelle":"Apaisé","famille":"serenite","nouveau":false,"en":null,"col":9,"rang":1,"source":"roue","def":"La tension est retombée, le corps se relâche."},{"id":"roue:serenite:soulage","libelle":"Soulagé","famille":"serenite","nouveau":true,"en":"Relieved","col":10,"rang":1,"source":"hwf","def":"Ce qui pesait ou faisait mal vient de s'arrêter."},{"id":"roue:joie:satisfait","libelle":"Satisfait","famille":"joie","nouveau":true,"en":"Satisfied","col":11,"rang":1,"source":"les deux","def":"Ce qu'on attendait est arrivé, tel qu'on le voulait."},{"id":"roue:serenite:serein","libelle":"Serein","famille":"serenite","nouveau":false,"en":"Serene","col":12,"rang":1,"source":"roue","def":"En paix avec ce qui est, sans inquiétude."}],"changementsZone":[{"id":"roue:peur:accable","libelle":"Accablé","de":"bleu","vers":"rouge","raison":"Sa définition, « Écrasé par trop de choses à la fois », est le sens d'Overwhelmed, que How We Feel place nettement en énergie haute. Il prend la case d'Overwhelmed. En v8, c'était déjà le placement le plus incertain de la carte."}]}</script>
+<script>
+(() => {
+  'use strict';
+  const DONNEES = JSON.parse(document.getElementById('donnees').textContent);
+  const MOTS = DONNEES.mots;
+  const FAMILLES = DONNEES.familles; // { cle: libellé }, dans l'ordre de la roue
+  const reduit = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Couleurs de zone (visuel-hwf.md §2.5) : C00 au coin intérieur, un pas par case vers l'extérieur, bridé au-delà du rang 3.
+  const ZONES = {
+    rouge: { nom: 'Rouge', titre: 'énergie haute, désagréable', c00: [255, 134, 98], da: [-1.3, -14.3, 3.0], db: [-0.5, -12.2, -9.2] },
+    jaune: { nom: 'Jaune', titre: 'énergie haute, agréable', c00: [247, 228, 109], da: [1.9, 4.9, -9.0], db: [0.4, -13.4, -14.0] },
+    bleu: { nom: 'Bleu', titre: 'énergie basse, désagréable', c00: [128, 213, 255], da: [-2.4, -14.6, -0.6], db: [-25.1, -2.2, 0.1] },
+    vert: { nom: 'Vert', titre: 'énergie basse, agréable', c00: [149, 255, 174], da: [-8.6, -0.5, -13.3], db: [-26.7, -4.4, 4.7] },
+  };
+  const ORDRE_ZONES = ['rouge', 'jaune', 'bleu', 'vert'];
+  const zoneDe = (col, rang) => (col <= 6 ? (rang >= 7 ? 'rouge' : 'bleu') : (rang >= 7 ? 'jaune' : 'vert'));
+  const bride = (k) => Math.min(k, 3) + Math.max(0, k - 3) / 2;
+  const hex = (v) => '#' + v.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('');
+  function couleurCase(col, rang) {
+    const z = ZONES[zoneDe(col, rang)];
+    const a = bride(col <= 6 ? 6 - col : col - 7);
+    const b = bride(rang >= 7 ? rang - 7 : 6 - rang);
+    return hex(z.c00.map((c, k) => c + a * z.da[k] + b * z.db[k]));
+  }
+
+  // Grille carrée de 12 × 12 ; i = colonne (0 à gauche), j = ligne (0 en haut, l'énergie la plus haute).
+  const N = 12, D = 96, ECART_LOIN = 10, ECART_PRES = 4, PAS = D + ECART_LOIN;
+  const RAYON = [78, 60, 54, 48];
+  const ECHELLE = [1.625, 1.25, 1.125, 1];
+  const palier = (d) => Math.min(d, 3);
+  const PAR_ID = new Map();
+  const GRILLE = Array.from({ length: N }, () => new Array(N).fill(null));
+  for (const m of MOTS) {
+    m.i = m.col - 1; m.j = N - m.rang;
+    m.zone = zoneDe(m.col, m.rang);
+    m.couleur = couleurCase(m.col, m.rang);
+    PAR_ID.set(m.id, m);
+    GRILLE[m.i][m.j] = m;
+  }
+
+  // Disposition (visuel-hwf.md §2.2) : sans choix, pas régulier de 106 ; avec un mot choisi, les tailles suivent la distance
+  // de Manhattan (156, 120, 108, 96) et les positions se cumulent le long de chaque ligne et de chaque colonne, à partir du
+  // mot choisi, qui garde sa place. Écart de 4 près du mot choisi, de 10 au-delà : les bulles ne se chevauchent jamais.
+  function disposition(sel) {
+    const pos = Array.from({ length: N }, (_, i) => Array.from({ length: N }, (_, j) => ({ x: i * PAS, y: j * PAS, s: 1 })));
+    if (!sel) return pos;
+    const d = (i, j) => palier(Math.abs(i - sel.i) + Math.abs(j - sel.j));
+    const ecart = (a, b) => (Math.min(a, b) <= 2 ? ECART_PRES : ECART_LOIN);
+    for (let j = 0; j < N; j++) {
+      for (let i = sel.i + 1; i < N; i++) { const a = d(i - 1, j), b = d(i, j); pos[i][j].x = pos[i - 1][j].x + RAYON[a] + ecart(a, b) + RAYON[b]; }
+      for (let i = sel.i - 1; i >= 0; i--) { const a = d(i + 1, j), b = d(i, j); pos[i][j].x = pos[i + 1][j].x - RAYON[a] - ecart(a, b) - RAYON[b]; }
+    }
+    for (let i = 0; i < N; i++) {
+      for (let j = sel.j + 1; j < N; j++) { const a = d(i, j - 1), b = d(i, j); pos[i][j].y = pos[i][j - 1].y + RAYON[a] + ecart(a, b) + RAYON[b]; }
+      for (let j = sel.j - 1; j >= 0; j--) { const a = d(i, j + 1), b = d(i, j); pos[i][j].y = pos[i][j + 1].y - RAYON[a] - ecart(a, b) - RAYON[b]; }
+      for (let j = 0; j < N; j++) pos[i][j].s = ECHELLE[d(i, j)];
+    }
+    return pos;
+  }
+
+  // Taille du plan : assez grande pour toutes les dispositions, plus une marge pour centrer les mots du bord.
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  for (let si = 0; si < N; si++) for (let sj = 0; sj < N; sj++) {
+    const pos = disposition({ i: si, j: sj });
+    for (const col of pos) for (const p of col) {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+  }
+  const MARGE = 150;
+  const OX = MARGE - minX, OY = MARGE - minY;
+  const plan = document.getElementById('plan');
+  const defile = document.getElementById('defile');
+  plan.style.width = (maxX - minX + 2 * MARGE) + 'px';
+  plan.style.height = (maxY - minY + 2 * MARGE) + 'px';
+
+  const echapper = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fragment = document.createDocumentFragment();
+  for (const m of MOTS) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'b' + (m.nouveau ? ' ajout' : '');
+    el.dataset.id = m.id;
+    el.style.setProperty('--c', m.couleur);
+    el.setAttribute('aria-label', m.libelle + ', ' + FAMILLES[m.famille] + (m.nouveau ? ', ajout' : ''));
+    el.innerHTML = '<span class="demi g"></span><span class="demi d"></span><span class="etiq"><span class="mot">'
+      + echapper(m.libelle) + '</span>' + (m.nouveau ? '<span class="point"></span>' : '') + '</span>';
+    m.el = el;
+    fragment.appendChild(el);
+  }
+  plan.appendChild(fragment);
+
+  let choisi = null;
+  function appliquer() {
+    const pos = disposition(choisi ? { i: choisi.i, j: choisi.j } : null);
+    for (const m of MOTS) {
+      const p = pos[m.i][m.j];
+      m.el.style.transform = 'translate(' + (p.x + OX - 48).toFixed(1) + 'px,' + (p.y + OY - 48).toFixed(1) + 'px) scale(' + p.s + ')';
+      m.el.classList.toggle('choisi', m === choisi);
+      m.el.setAttribute('aria-pressed', m === choisi ? 'true' : 'false');
+    }
+  }
+
+  // Les libellés tiennent dans 78 pt (80 % de la bulle) : un mot trop long passe en corps plus petit, 9 pt au moins.
+  function ajusterEtiquettes() {
+    for (const m of MOTS) {
+      const e = m.el.querySelector('.mot');
+      let taille = 12;
+      e.style.fontSize = '';
+      while (e.scrollWidth > e.clientWidth + 0.5 && taille > 9) { taille -= 0.5; e.style.fontSize = taille + 'px'; }
+    }
+  }
+
+  const fiche = document.getElementById('fiche');
+  const ficheMot = document.getElementById('fiche-mot');
+  const ficheFam = document.getElementById('fiche-fam');
+  const ficheDef = document.getElementById('fiche-def');
+
+  function centrer(x, y, doux) {
+    const basFiche = choisi ? 70 : 0;
+    defile.scrollTo({
+      left: x - defile.clientWidth / 2,
+      top: y - (defile.clientHeight - basFiche) / 2,
+      behavior: doux && !reduit.matches ? 'smooth' : 'auto',
+    });
+  }
+
+  function choisir(m, doux = true) {
+    choisi = m;
+    appliquer();
+    fiche.style.setProperty('--c', m.couleur);
+    ficheMot.textContent = m.libelle;
+    let statut = FAMILLES[m.famille];
+    if (m.nouveau) statut += ' · ajout';
+    else if (m.def8) statut += ' · définition revue en v9';
+    ficheFam.textContent = statut;
+    ficheDef.textContent = m.def;
+    fiche.classList.remove('cachee');
+    centrer(m.i * PAS + OX, m.j * PAS + OY, doux);
+  }
+
+  function fermer() {
+    if (!choisi) return;
+    choisi = null;
+    appliquer();
+    fiche.classList.add('cachee');
+  }
+
+  plan.addEventListener('click', (e) => {
+    const b = e.target.closest('.b');
+    if (b) choisir(PAR_ID.get(b.dataset.id));
+    else fermer();
+  });
+  defile.addEventListener('click', (e) => { if (e.target === defile) fermer(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermer(); });
+
+  const sectionCarte = document.getElementById('section-carte');
+  const sectionQuatre = document.getElementById('t-quatre');
+  const glisser = () => (reduit.matches ? 'auto' : 'smooth');
+  for (const b of document.querySelectorAll('.bulle')) {
+    b.addEventListener('click', () => {
+      fermer();
+      const z = b.dataset.zone;
+      const ci = z === 'rouge' || z === 'bleu' ? 2.5 : 8.5;
+      const cj = z === 'rouge' || z === 'jaune' ? 2.5 : 8.5;
+      sectionCarte.scrollIntoView({ behavior: glisser(), block: 'start' });
+      centrer(ci * PAS + OX, cj * PAS + OY, false);
+    });
+  }
+  document.getElementById('retour').addEventListener('click', () => {
+    sectionQuatre.scrollIntoView({ behavior: glisser(), block: 'start' });
+  });
+
+  // Les halos de l'écran 1 tournent lentement : chaque halo part de son décalage mesuré (visuel-hwf.md §1.5 et §4).
+  for (const h of document.querySelectorAll('.halo')) {
+    const dx = parseFloat(h.style.getPropertyValue('--dx')), dy = parseFloat(h.style.getPropertyValue('--dy'));
+    const t = parseFloat(h.style.getPropertyValue('--t'));
+    let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (h.matches(':nth-child(2)')) angle = -angle;
+    h.style.animationDelay = (-(((angle % 360) + 360) % 360) / 360 * t).toFixed(2) + 's';
+  }
+
+  // Tableau des ajouts : par zone, puis par famille (ordre de la roue), puis par ordre alphabétique.
+  const ajouts = MOTS.filter((m) => m.nouveau);
+  document.getElementById('nb-ajouts').textContent = ajouts.length;
+  document.getElementById('nb-ajouts-2').textContent = ajouts.length;
+  const conteneur = document.getElementById('ajouts');
+  const ordreFam = Object.keys(FAMILLES);
+  let html = '';
+  for (const z of ORDRE_ZONES) {
+    const ici = ajouts.filter((m) => m.zone === z);
+    const deLaRoue = MOTS.filter((m) => m.zone === z && !m.nouveau).length;
+    const couleurZone = couleurCase(z === 'rouge' || z === 'bleu' ? 4 : 9, z === 'rouge' || z === 'jaune' ? 9 : 4);
+    html += '<section class="zone"><h3 style="--z:' + couleurZone + '"><span class="pastille"></span>' + ZONES[z].nom + ' · ' + ZONES[z].titre
+      + '<span class="compte">' + ici.length + ' ajout' + (ici.length > 1 ? 's' : '') + ', ' + deLaRoue + ' mots de la roue</span></h3>';
+    for (const f of ordreFam) {
+      const mots = ici.filter((m) => m.famille === f).sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+      if (!mots.length) continue;
+      html += '<h4>' + FAMILLES[f] + ' (' + mots.length + ')</h4><table class="mots"><thead><tr><th>Mot</th><th>Anglais</th><th>Famille</th><th>Définition</th></tr></thead><tbody>';
+      for (const m of mots) {
+        html += '<tr><th scope="row" class="cmot"><button type="button" class="voir" data-id="' + echapper(m.id) + '" style="--c:' + m.couleur + '">'
+          + '<span class="rond" aria-hidden="true"></span>' + echapper(m.libelle) + '</button></th>'
+          + '<td class="cen" lang="en">' + echapper(m.en) + (m.source === 'mood-meter' ? ' (Mood Meter)' : '') + '</td>'
+          + '<td class="cfam">' + FAMILLES[m.famille] + '</td>'
+          + '<td class="cdef">' + echapper(m.def) + '</td>'
+          + (m.note ? '<td class="cnote">' + echapper(m.note) + '</td>' : '') + '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+    html += '</section>';
+  }
+  conteneur.innerHTML = html;
+  conteneur.addEventListener('click', (e) => {
+    const b = e.target.closest('.voir');
+    if (!b) return;
+    sectionCarte.scrollIntoView({ behavior: glisser(), block: 'start' });
+    choisir(PAR_ID.get(b.dataset.id), false);
+  });
+
+  // Changements des mots de la roue : zone, puis définition.
+  const ch = document.getElementById('changements');
+  const pastilleZone = (z) => '<i style="background:' + couleurCase(z === 'rouge' || z === 'bleu' ? 4 : 9, z === 'rouge' || z === 'jaune' ? 9 : 4) + '"></i>';
+  let h2 = '<h3>Changent de zone : ' + DONNEES.changementsZone.length + '</h3>';
+  if (!DONNEES.changementsZone.length) h2 += '<p class="legende">Aucun mot de la roue ne change de zone.</p>';
+  for (const c of DONNEES.changementsZone) {
+    const m = PAR_ID.get(c.id);
+    h2 += '<div class="change"><div class="tete"><button type="button" class="voir" data-id="' + echapper(c.id) + '" style="--c:' + m.couleur + '"><span class="rond" aria-hidden="true"></span>'
+      + echapper(c.libelle) + '</button><span class="zones fleche-zone">' + pastilleZone(c.de) + ZONES[c.de].nom + ' → ' + pastilleZone(c.vers) + ZONES[c.vers].nom
+      + ' (colonne ' + m.col + ', rang ' + m.rang + ')</span></div><p>' + echapper(c.raison) + '</p></div>';
+  }
+  const revues = MOTS.filter((m) => m.def8);
+  h2 += '<h3>Changent de définition : ' + revues.length + '</h3>';
+  for (const m of revues) {
+    h2 += '<div class="change"><div class="tete"><button type="button" class="voir" data-id="' + echapper(m.id) + '" style="--c:' + m.couleur + '"><span class="rond" aria-hidden="true"></span>'
+      + echapper(m.libelle) + '</button><span class="zones">' + FAMILLES[m.famille] + '</span></div>'
+      + '<p class="avant">' + echapper(m.def8) + '</p><p>' + echapper(m.def) + '</p><p class="legende" style="margin:4px 0 0">' + echapper(m.raisonDef) + '</p></div>';
+  }
+  ch.innerHTML = h2;
+  ch.addEventListener('click', (e) => {
+    const b = e.target.closest('.voir');
+    if (!b) return;
+    sectionCarte.scrollIntoView({ behavior: glisser(), block: 'start' });
+    choisir(PAR_ID.get(b.dataset.id), false);
+  });
+
+  appliquer();
+  const demarrer = () => {
+    ajusterEtiquettes();
+    centrer(5.5 * PAS + OX, 5.5 * PAS + OY, false);
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(demarrer); else demarrer();
+  window.__apercu = { disposition, choisir, fermer, MOTS };
+})();
+</script>
+</body>
+</html>

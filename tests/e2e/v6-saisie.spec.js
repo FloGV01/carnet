@@ -1,6 +1,8 @@
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, entreeDuJour, viderBase, aller } from '../aides/saisie.js';
-import { vueMoment, tuile, mot, retourEnergie, NOTEE } from '../aides/emotion.js';
+import {
+  vueMoment, bulle, mot, noter, retour, fermer, continuer, finir, faisais, activite, terminer, changerMot, NOTEE, SUPPRIME,
+} from '../aides/emotion.js';
 
 // v6 : saisie du soir. « Ce qui a pesé · ce qui a rechargé » : un repli sous « Nuit en détail » (masqué par défaut depuis la
 // v8, comme « Sport en détail » et « Contact en détail », passés dans leur carte).
@@ -112,20 +114,17 @@ test('un long résumé replié reste dans la page : coupé par une ellipse, sans
   expect(mesures.debordePage).toBe(false);
 });
 
-// ---------- v6 : humeur du moment (émotion du moment en v7, en carte en v8), « C'était vers… » et « Ce que je faisais » ----------
+// ---------- v6 : humeur du moment (émotion du moment en v7, en carte en v8, plein écran en v9), « C'était vers… » ----------
+// v9 (4/8) : « Maintenant ▾ » est sous les quatre bulles de l'écran 1 ; le relevé est créé au mot, sur la carte. Une
+// couleur n'écrit rien. v9 (5/8) : la flèche mène à l'écran 3, « Ce que je faisais » ; « Terminer » ferme avec le message.
 
 const releves = (page) => () => repo(page, () => window.__carnet.repo.humeurs.tous());
-// Au-delà du délai de la fermeture automatique (1,5 s après le mot, v8).
-const APRES_DELAI = 1800;
-// Retoucher la tuile choisie (v8) : retour aux tuiles, puis la même tuile, qui efface l'énergie.
-const effacerEnergie = async (vue, energie, cote) => {
-  await retourEnergie(vue).click();
-  await tuile(vue, energie, cote).click();
-};
 const HEURES = ['Maintenant', '6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h'];
 const heure = (vue, h) => vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button', { name: h, exact: true });
 // Le bouton qui ouvre et ferme la liste : « Maintenant » ou « C'était vers 14 h » (la liste a aussi son « Maintenant »).
 const boutonQuand = (vue) => vue.locator('.ligne-date > .btn-lien');
+// La ligne d'un relevé dans « Ma journée », sur Aujourd'hui.
+const ligneDuJour = (page, texte) => page.locator('.liste-evenements > li').filter({ hasText: texte });
 
 test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, elle est posée à la création', async ({ page }) => {
   await aller(page, '#/moment');
@@ -143,49 +142,69 @@ test('C\'était vers… : l\'heure choisie avant toute valeur n\'écrit rien, el
   await page.clock.runFor(150);
   expect(await releves(page)()).toEqual([]);
 
-  await tuile(vue, 'Basse').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '14:00', vers: true, emotion: null, humeur: null, energie: 'energie:basse' }]);
-  await mot(vue, 'Vide', 'Tristesse').click();
+  // Une couleur n'écrit rien ; le mot crée le relevé, à l'heure choisie.
+  await bulle(vue, 'bleu').click();
+  await page.clock.runFor(150);
+  expect(await releves(page)()).toEqual([]);
+  await mot(vue, 'Vide').click();
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '14:00', vers: true, emotion: 'roue:tristesse:vide', humeur: null, energie: 'energie:basse' }]);
+  await finir(vue);
   await expect(page.getByText(NOTEE)).toBeVisible();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '14:00', vers: true, emotion: 'roue:tristesse:vide', energie: 'energie:basse' }]);
-
-  // La liste du jour l'écrit « vers 14 h » ; la suppression le dit aussi.
-  await aller(page, '#/moment');
-  const liste = vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' });
-  await expect(liste).toContainText('vers 14 h Vide · énergie basse');
-  await expect(liste.getByRole('button', { name: 'Supprimer le relevé vers 14 h' })).toBeVisible();
+  // « Ma journée » l'écrit « vers 14 h ».
+  await expect(ligneDuJour(page, 'Vide')).toContainText('vers 14 h');
 });
 
-test('C\'était vers… : le relevé déjà créé change d\'heure, revient à « maintenant », et se vide en disparaissant', async ({ page }) => {
+test('C\'était vers… : le relevé déjà créé change d\'heure et revient à « maintenant » ; le mot effacé, une heure « vers » le garde (v9, spec §13.5), « Maintenant » ensuite le supprime', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
-  await tuile(vue, 'Haute', 'agréable').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '21:00', vers: null, energie: 'energie:haute' }]);
+  await noter(vue, 'jaune', 'Curieux');
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '21:00', vers: null, emotion: 'roue:joie:curieux', energie: 'energie:haute' }]);
   const id = (await releves(page)())[0].id;
 
+  // De retour aux couleurs, « Maintenant ▾ » change l'heure du relevé.
+  await retour(vue).click();
   await vue.getByRole('button', { name: 'Maintenant' }).click();
   await heure(vue, '16 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '16:00', vers: true, energie: 'energie:haute' }]);
   // La liste reste ouverte : les heures se choisissent l'une après l'autre.
   await heure(vue, '8 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, heure: '08:00', vers: true }]);
-  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('vers 8 h énergie haute');
 
   // « Maintenant » remet l'heure réelle ; vers redevient null, jamais false.
   await heure(vue, 'Maintenant').click();
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '21:00', vers: null, energie: 'energie:haute' }]);
   await expect(boutonQuand(vue)).toHaveText('Maintenant');
 
-  // Retirer la seule valeur d'un relevé « vers » le supprime.
+  // v9 (spec §13.5) : effacer le mot d'un relevé « vers » (et son énergie avec lui) le garde, à son heure : il reste
+  // l'heure « vers ». Un nouveau mot y revient. (De la v6 à la v8, « vers » seul ne gardait pas le relevé.)
   await heure(vue, '12 h').click();
   await expect.poll(releves(page)).toMatchObject([{ id, heure: '12:00', vers: true }]);
-  await effacerEnergie(vue, 'Haute', 'agréable');
-  await expect.poll(async () => (await releves(page)()).length).toBe(0);
-  // L'heure choisie reste à l'écran : une nouvelle valeur recrée un relevé « vers 12 h ».
+  await bulle(vue, 'jaune').click();
+  await mot(vue, 'Curieux').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '12:00', vers: true, emotion: null, energie: null, humeur: null, faisais: null }]);
+  await retour(vue).click();
   await expect(vue.getByRole('button', { name: 'C\'était vers 12 h' })).toBeVisible();
-  await tuile(vue, 'Moyenne').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '12:00', vers: true, energie: 'energie:moyenne' }]);
+  await noter(vue, 'rouge', 'Préoccupé');
+  await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-14', heure: '12:00', vers: true, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne' }]);
+  // Effacé de nouveau, puis « Maintenant » : il ne reste rien, le relevé part. L'heure ne se garde plus qu'à l'écran.
+  await mot(vue, 'Préoccupé').click();
+  await expect.poll(releves(page)).toMatchObject([{ id, heure: '12:00', vers: true, emotion: null, energie: null }]);
+  await retour(vue).click();
+  await heure(vue, 'Maintenant').click();
+  await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  // « Vers 12 h », un mot effacé, et fermer : le relevé est noté, « Aucun mot » dans Ma journée, à son heure.
+  await heure(vue, '12 h').click();
+  await noter(vue, 'vert', 'Calme');
+  await expect.poll(releves(page)).toMatchObject([{ heure: '12:00', vers: true, emotion: 'roue:serenite:calme' }]);
+  await mot(vue, 'Calme').click();
+  await expect.poll(releves(page)).toMatchObject([{ heure: '12:00', vers: true, emotion: null, energie: null }]);
+  await retour(vue).click();
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(page.getByText(NOTEE)).toBeVisible();
+  await expect(ligneDuJour(page, 'Aucun mot')).toHaveCount(1);
+  await expect(ligneDuJour(page, 'Aucun mot')).toContainText('vers 12 h');
 });
 
 test('C\'était vers… après minuit : « vers 22 h » et « vers 0 h » restent au jour logique d\'hier', async ({ page }) => {
@@ -195,12 +214,15 @@ test('C\'était vers… après minuit : « vers 22 h » et « vers 0 h » resten
   await vue.getByRole('button', { name: 'Maintenant' }).click();
   await expect(vue.getByRole('group', { name: 'C\'était vers…' }).getByRole('button')).toHaveText([...HEURES, '22 h', '0 h']);
   await heure(vue, '22 h').click();
-  await tuile(vue, 'Haute').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '22:00', vers: true, energie: 'energie:haute' }]);
+  await noter(vue, 'rouge', 'Préoccupé');
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-14', heure: '22:00', vers: true, energie: 'energie:moyenne' }]);
+  await retour(vue).click();
   await heure(vue, '0 h').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '00:00', vers: true, energie: 'energie:haute' }]);
-  // Il est au jour logique du 14 : la liste d'« aujourd'hui » le montre.
-  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('vers 0 h énergie haute');
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '00:00', vers: true, energie: 'energie:moyenne' }]);
+  // Il est au jour logique du 14 : « Ma journée » d'aujourd'hui le montre.
+  await fermer(vue).click();
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await expect(ligneDuJour(page, 'Préoccupé')).toContainText('vers 0 h');
 });
 
 test('C\'était vers… ouverte avant 4 h, touchée après : l\'heure d\'hier n\'est pas posée sur le nouveau jour, la liste se rafraîchit', async ({ page }) => {
@@ -219,8 +241,8 @@ test('C\'était vers… ouverte avant 4 h, touchée après : l\'heure d\'hier n\
   await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
   await expect(liste.getByRole('button')).toHaveText(['Maintenant', '6 h']);
   await heure(vue, 'Maintenant').click();
-  await tuile(vue, 'Basse', 'agréable').click();
-  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: expect.stringMatching(/^06:\d\d$/), vers: null, energie: 'energie:basse' }]);
+  await noter(vue, 'vert', 'Calme');
+  await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: expect.stringMatching(/^06:\d\d$/), vers: null, energie: 'energie:moyenne' }]);
 });
 
 test('C\'était vers… avant 6 h : « Maintenant » seul, sans flèche, qui ne se touche pas', async ({ page }) => {
@@ -230,11 +252,11 @@ test('C\'était vers… avant 6 h : « Maintenant » seul, sans flèche, qui ne 
   await expect(vue.locator('.ligne-date')).toHaveText('Maintenant');
   await expect(vue.getByRole('button', { name: 'Maintenant' })).toHaveCount(0);
   await expect(vue.locator('.ligne-date svg')).toHaveCount(0);
-  await tuile(vue, 'Moyenne').click();
+  await noter(vue, 'rouge', 'Préoccupé');
   await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '05:30', vers: null, energie: 'energie:moyenne' }]);
 });
 
-test('C\'était vers… (v8) : repliée à chaque ouverture de l\'écran ; ouverte, un choix la laisse ouverte, et l\'écran se ferme seul après le mot', async ({ page }) => {
+test('C\'était vers… (v8) : repliée à chaque ouverture de l\'écran ; ouverte, un choix la laisse ouverte ; le mot écrit le relevé à cette heure', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
   const liste = vue.getByRole('group', { name: 'C\'était vers…' });
@@ -242,15 +264,15 @@ test('C\'était vers… (v8) : repliée à chaque ouverture de l\'écran ; ouver
   await boutonQuand(vue).click();
   await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
 
-  // Choisir une heure ne la ferme pas, et l'écran se ferme seul comme avant, un mot choisi.
+  // Choisir une heure ne la ferme pas.
   await heure(vue, '10 h').click();
   await expect(boutonQuand(vue)).toHaveText('C\'était vers 10 h');
   await expect(boutonQuand(vue)).toHaveAttribute('aria-expanded', 'true');
   await expect(liste.getByRole('button')).toHaveText(HEURES);
-  await tuile(vue, 'Moyenne', 'agréable').click();
-  await mot(vue, 'Calme', 'Sérénité').click();
-  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await noter(vue, 'vert', 'Calme');
   await expect.poll(releves(page)).toMatchObject([{ heure: '10:00', vers: true, emotion: 'roue:serenite:calme', energie: 'energie:moyenne' }]);
+  await finir(vue);
+  await expect(page).toHaveURL(/#\/aujourdhui$/);
 
   // Laissée ouverte, elle rouvre repliée, l'écran repartant de « Maintenant » ; rien n'est retenu sur l'iPhone.
   await aller(page, '#/moment');
@@ -265,75 +287,64 @@ test('C\'était vers… (v8) : repliée à chaque ouverture de l\'écran ; ouver
   await expect(liste).toHaveCount(0);
 });
 
-test('Ce que je faisais (v8) : ouvert pendant la saisie, l\'écran ne se ferme plus seul, même refermé ; ✕ le ferme avec le message ; replié à chaque ouverture', async ({ page }) => {
+// v9 (5/8) : « Ce que je faisais » n'est plus un repli de l'écran de l'émotion : il a l'écran 3, après la flèche (spec §4.3).
+test('Ce que je faisais (v9) : à l\'écran 3, après la flèche, chaque activité écrite au toucher ; l\'écran ne se ferme jamais seul ; ✕ le ferme avec le message ; rien n\'est retenu à l\'ouverture suivante', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
-  const repliFaisais = vue.getByRole('button', { name: /^Ce que je faisais/ });
-  const activites = vue.getByRole('group', { name: 'Ce que je faisais' });
-  await expect(repliFaisais).toHaveAttribute('aria-expanded', 'false');
-  await repliFaisais.click();
-  await expect(repliFaisais).toHaveAttribute('aria-expanded', 'true');
-  await expect(activites.getByRole('button')).toHaveText(['Travail', 'Trajet', 'Courses / démarches', 'Chez moi', 'Avec du monde', 'Repos']);
-
-  // Des activités seules ne créent pas de relevé ; elles partent avec la première valeur.
-  await activites.getByRole('button', { name: 'Travail' }).click();
-  await page.clock.runFor(150);
-  expect(await releves(page)()).toEqual([]);
-  await tuile(vue, 'Haute', 'agréable').click();
-  await mot(vue, 'Curieux', 'Joie').click();
+  // Pas d'activités avant le mot : l'écran 1 et la carte n'en ont pas.
+  await expect(faisais(vue)).toHaveCount(0);
+  await noter(vue, 'jaune', 'Curieux');
+  await expect(faisais(vue)).toHaveCount(0);
+  await continuer(vue).click();
+  await expect(faisais(vue).getByRole('button')).toHaveText(['Travail', 'Trajet', 'Courses / démarches', 'Chez moi', 'Avec du monde', 'Repos']);
+  await activite(vue, 'Travail').click();
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:joie:curieux', energie: 'energie:haute', faisais: ['activiteMoment:travail'] }]);
-  await activites.getByRole('button', { name: 'Trajet' }).click();
-  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:joie:curieux', energie: 'energie:haute', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
-
-  // Un mot et l'énergie sont choisis, bien au-delà du délai de la fermeture : l'écran reste là.
-  await page.clock.runFor(APRES_DELAI);
+  await activite(vue, 'Trajet').click();
+  await expect.poll(releves(page)).toMatchObject([{ faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
+  // Bien au-delà de l'ancien délai de fermeture (1,5 s, v8) : l'écran reste là.
+  await page.clock.runFor(3000);
   await expect(page).toHaveURL(/#\/moment$/);
-  await expect(vue).toBeVisible();
   await expect(page.getByText(NOTEE)).toHaveCount(0);
-  // Refermé, il a été ouvert pendant cette saisie : un autre mot ne ferme pas l'écran non plus.
-  await repliFaisais.click();
-  await expect(repliFaisais).toHaveAttribute('aria-expanded', 'false');
-  await mot(vue, 'Amusé', 'Joie').click();
-  await page.clock.runFor(APRES_DELAI);
-  await expect(page).toHaveURL(/#\/moment$/);
-
-  await vue.getByRole('button', { name: 'Fermer' }).click();
+  await fermer(vue).click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   await expect(page.getByText(NOTEE)).toBeVisible();
-  await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:joie:amuse', faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] }]);
-
-  // Le repli rouvre replié, sans résumé ; rien n'est retenu sur l'iPhone ; la fermeture automatique revient.
+  await expect(ligneDuJour(page, 'Curieux')).toHaveCount(1);
+  // La nouvelle ouverture repart de rien, et rien n'est retenu sur l'iPhone.
   await aller(page, '#/moment');
-  await expect(repliFaisais).toHaveAttribute('aria-expanded', 'false');
-  await expect(repliFaisais.locator('.repli-resume')).toHaveCount(0);
+  await noter(vue, 'vert', 'Calme');
+  await continuer(vue).click();
+  await expect(faisais(vue).getByRole('button', { pressed: true })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('carnet:moment:faisais'))).toBeNull();
-  await tuile(vue, 'Haute').click();
-  await mot(vue, 'Choqué', 'Surprise').click();
-  await expect(page).toHaveURL(/#\/aujourdhui$/);
+  await terminer(vue).click();
+  await expect.poll(async () => (await releves(page)()).find((h) => h.emotion === 'roue:serenite:calme')).toMatchObject({ faisais: null });
 });
 
-test('Ce que je faisais : replié, le repli résume ce qui est noté ; un relevé qui n\'a plus que des activités reste, sans elles il part', async ({ page }) => {
+test('Ce que je faisais : un relevé rouvert dont on efface le mot reste par ses activités ; sans elles il part, et « Relevé supprimé » le rend', async ({ page }) => {
   await aller(page, '#/moment');
   const vue = vueMoment(page);
-  const repliFaisais = vue.getByRole('button', { name: /^Ce que je faisais/ });
-  await repliFaisais.click();
-  await tuile(vue, 'Basse').click();
-  await mot(vue, 'Vide', 'Tristesse').click();
-  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Courses / démarches' }).click();
-  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Repos' }).click();
+  await noter(vue, 'bleu', 'Vide');
+  await continuer(vue).click();
+  await activite(vue, 'Courses / démarches').click();
+  await activite(vue, 'Repos').click();
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse:vide', energie: 'energie:basse', faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
-  await repliFaisais.click();
-  await expect(repliFaisais.locator('.repli-resume')).toHaveText('courses / démarches, repos');
-  // Le mot et l'énergie retirés : il ne reste que des activités, et elles gardent le relevé (v7, spec §4.3).
-  await mot(vue, 'Vide', 'Tristesse').click();
-  await expect.poll(releves(page)).toMatchObject([{ emotion: null, energie: 'energie:basse' }]);
-  await effacerEnergie(vue, 'Basse');
-  await expect.poll(releves(page)).toMatchObject([{ emotion: null, humeur: null, energie: null, faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
+  const [avant] = await releves(page)();
+  await terminer(vue).click();
+  // Rouvert depuis Ma journée : le mot et son énergie effacés, les activités gardent le relevé (v7, spec §4.3).
+  await ligneDuJour(page, 'Vide').locator('a').click();
+  await changerMot(vue).click();
+  await mot(vue, 'Vide').click();
+  await expect.poll(releves(page)).toMatchObject([{ id: avant.id, emotion: null, humeur: null, energie: null, faisais: ['activiteMoment:courses', 'activiteMoment:repos'] }]);
+  await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
+  await expect(vue.getByRole('heading', { name: 'Aucun mot', level: 1 })).toBeVisible();
   await page.clock.runFor(150);
   expect(await releves(page)()).toHaveLength(1);
-  // Les activités retirées à leur tour, il ne reste rien : le relevé est supprimé.
-  await repliFaisais.click();
-  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Courses / démarches' }).click();
-  await vue.getByRole('group', { name: 'Ce que je faisais' }).getByRole('button', { name: 'Repos' }).click();
+  // Les activités retirées à leur tour, il ne reste rien : le relevé est supprimé ; fermé, « Relevé supprimé », Annuler le
+  // rend tel qu'il était à l'ouverture.
+  await activite(vue, 'Courses / démarches').click();
+  await activite(vue, 'Repos').click();
   await expect.poll(async () => (await releves(page)()).length).toBe(0);
+  await terminer(vue).click();
+  await expect(page.getByText(SUPPRIME)).toBeVisible();
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(releves(page)).toEqual([avant]);
 });

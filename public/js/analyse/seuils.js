@@ -23,6 +23,6 @@ export const SEUILS = Object.freeze({
   comprendre: { minEvenements: 3, minValeurs: 3, minColonnes: 2, minActivite: 3, minElement: 3, nuitsSemaines: 4 },
   // v7 · Émotions du moment (spec §5, §6.4) : une vue d'émotions (Ta journée, colonnes de Comprendre, après une nuit,
   // autour des explosions) apparaît à partir de 5 relevés à émotion pris en compte. Autour d'un instant : 3 heures
-  // avant, 3 heures après.
-  emotions: { minReleves: 5, heuresAutour: 3 },
+  // avant, 3 heures après. v9 · Tes zones (spec §13.2) : la barre par semaine porte toujours sur les 12 dernières semaines.
+  emotions: { minReleves: 5, heuresAutour: 3, zonesSemaines: 12 },
 });

@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
-import { tuile, mot } from '../aides/emotion.js';
+import { noter, continuer } from '../aides/emotion.js';
 import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
 // v7 · Bien-être (spec §6) : l'onglet (v8 : le Programme, la cohérence cardiaque, la ligne fixe), un exercice une
@@ -456,6 +456,20 @@ const lignesPhase = (phase) => phase.evaluate((p) => {
   const duree = p.querySelector('.duree-respiration');
   return { nom: Math.max(...lignes(p.firstChild).map((x) => x.bottom)), duree: duree.getBoundingClientRect().top, lignesDuree: lignes(duree).length };
 });
+// « Pour récupérer, je… » (la règle « Me ressourcer » allumée) : un mot d'énergie basse noté maintenant, puis la flèche ;
+// v9 (5/8) : la carte est en tête de l'écran 3 de l'émotion.
+const versPourRecuperer = async (page) => {
+  await page.evaluate(async () => {
+    const m = window.__carnet.repo.meta;
+    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
+    await m.ecrire('ressourcer', { energieBasse: true });
+  });
+  await aller(page, '#/moment');
+  const emo = vue(page, 'Émotion du moment');
+  await noter(emo, 'bleu', 'Vide');
+  await continuer(emo).click();
+  return { emo, carte: emo.getByRole('region', { name: 'Pour récupérer, je…' }) };
+};
 
 test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, réglés au même endroit ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
   // Bien-être (v8) : la carte compacte, son titre, la durée et le rythme sur leurs puces, comme Moment difficile ; un choix
@@ -471,16 +485,7 @@ test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, r
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(5);
 
   // « Pour récupérer, je… » : une fois la respiration arrêtée.
-  await page.evaluate(async () => {
-    const m = window.__carnet.repo.meta;
-    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
-    await m.ecrire('ressourcer', { energieBasse: true });
-  });
-  await aller(page, '#/moment');
-  const emo = vue(page, 'Émotion du moment');
-  await tuile(emo, 'Basse').click();
-  await mot(emo, 'Vide', 'Tristesse').click();
-  const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
+  const { emo, carte } = await versPourRecuperer(page);
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await carte.getByRole('button', { name: 'Arrêter' }).click();
   const phaseCarte = carte.locator('.phase-respiration');
@@ -537,16 +542,7 @@ test('la respiration crée une séance avec son origine : Bien-être (au bout, d
   environ((await seances(page)).filter((s) => s.origine === 'moment-difficile' && s.id !== md1.id)[0].dureeS, 75);
 
   // « Pour récupérer, je… » : la respiration lancée par « Respirer », quittée après 90 s.
-  await page.evaluate(async () => {
-    const m = window.__carnet.repo.meta;
-    await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge', siAlors: [] });
-    await m.ecrire('ressourcer', { energieBasse: true });
-  });
-  await aller(page, '#/moment');
-  const emo = vue(page, 'Émotion du moment');
-  await tuile(emo, 'Basse').click();
-  await mot(emo, 'Vide', 'Tristesse').click();
-  const carte = emo.getByRole('region', { name: 'Pour récupérer, je…' });
+  const { emo, carte } = await versPourRecuperer(page);
   await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
   await expect(carte.locator('.phase-respiration')).toHaveText('Inspire');
   await page.clock.runFor(90000);

@@ -74,7 +74,8 @@ const JOUR = [
 // nExplosions : épisodes « Explosion » du jour (v4). Règle d'affichage de domain/explosions.js,
 // jamais enregistrée : le compteur s'il est noté (au moins le nombre d'épisodes), sinon les épisodes.
 // emotions (v7, facultatif) : les émotions du moment du jour (releves.js, resumeEmotions), placées après l'humeur, en un
-// segment « irrité, calme » de rubrique « emotions » qui porte ses familles (l'interface en fait des points de couleur).
+// segment « irrité, calme » de rubrique « emotions » qui porte ses zones (v9 ; ses familles jusqu'à la v8), dont
+// l'interface fait des points de couleur.
 function phraseJour(entree, carte, nExplosions, emotions) {
   const segments = [];
   const ajouter = (segment) => {
@@ -87,7 +88,7 @@ function phraseJour(entree, carte, nExplosions, emotions) {
     if (champ === 'sommeilRessenti') v = texteNuit(entree, carte);
     if (v != null) ajouter({ texte: forme(v, carte), valeur: true, rubrique });
     if (champ === 'humeur' && emotions && emotions.mots.length) {
-      ajouter({ texte: `${emotions.mots.join(', ')}${emotions.plus ? '…' : ''}`, valeur: true, rubrique: 'emotions', familles: emotions.familles });
+      ajouter({ texte: `${emotions.mots.join(', ')}${emotions.plus ? '…' : ''}`, valeur: true, rubrique: 'emotions', zones: emotions.zones });
     }
   }
   return segments;

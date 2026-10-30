@@ -225,7 +225,7 @@ test('180 jours inventés : « Voir en tableau », le toucher d\'une barre et se
   const zone = avant.locator('rect.g-zone').first();
   await zone.click();
   const detail = avant.getByRole('status');
-  await expect(detail).toContainText(/^Nuit notée Mal, 3 jours avant · \d+ sur \d+/);
+  await expect(detail).toContainText(/^Nuit notée Mal, 3 jours avant\u00a0· \d+ sur \d+/);
   await zone.click();
   await expect(detail).toHaveCount(0);
 

@@ -26,7 +26,13 @@ test('aucun relevé d\'énergie : pas de rangée, pas de ligne dans la légende'
   await expect(graphe).toHaveAttribute('viewBox', `0 0 326 ${HAUTEUR_SIMPLE}`);
   await expect(etiquettes(graphe)).toHaveText(['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
   await expect(graphe.locator('g.teinte-energie > rect.g-barre')).toHaveCount(0);
-  await expect(mesJours(page)).not.toContainText(/énergie/i);
+  // v9 : la légende des zones nomme « Énergie haute · désagréable »… (une zone, pas la rangée) ; rien d'autre, ni dans le
+  // graphique ni dans la légende, ne parle d'énergie.
+  await expect(graphe).not.toContainText(/énergie/i);
+  const legende = await mesJours(page).locator('.legende-frise > span:not([class^="zone-"])').allTextContents();
+  expect(legende.join(' ')).not.toMatch(/énergie/i);
+  expect(await mesJours(page).locator('.legende-frise > span[class^="zone-"]').allTextContents())
+    .toEqual(['Énergie haute · désagréable', 'Énergie haute · agréable', 'Énergie basse · désagréable', 'Énergie basse · agréable']);
 });
 
 test('énergie basse : une marque les jours concernés (01:00 et « vers 0 h » comptés), des barres par semaine, jamais de zéro', async ({ page }) => {

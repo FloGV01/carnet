@@ -10,7 +10,7 @@ PWA personnelle de suivi quotidien (journal du soir, épisodes émotionnels, sym
 - **Saisie du soir en moins de 30 s.** Un toucher enregistre, il n'y a jamais de bouton « Enregistrer ». Tout est facultatif, et un champ vide est une donnée valide.
 - **Aucune mécanique d'engagement** : ni série, ni score, ni badge, ni félicitation, ni compteur de jours. Silence total sur les jours non saisis. Aucun jugement, aucun avis clinique.
 - **Les listes `declencheur` et `dessous` ne se lissent jamais.** Leurs libellés sont dans `public/js/domain/vocabulaire.js`, figé une fois publié.
-- **Le vocabulaire de la roue des émotions ne se lisse jamais non plus.** Familles et mots sont dans `public/js/domain/roue.js`, figé une fois publié : un ajout se fait à la fin, jamais de renommage.
+- **Le vocabulaire de la roue des émotions ne se lisse jamais non plus.** Familles et mots sont dans `public/js/domain/roue.js`, figé une fois publié : un ajout se fait à la fin, jamais de renommage. La règle vaut pour les 144 mots de la carte (v9). Les mots sans famille (Fatigué, Épuisé) ont le préfixe réservé `roue:aucune:` ; les mots à soi ont l'identifiant `roue:perso:u-<8 hexa>`, et leur libellé, leur zone et leur famille vivent dans la méta `motsPerso`, jamais dans l'identifiant.
 - **Zéro réseau, zéro CDN.** Tout est vendorisé (`npm run vendor`). Aucune analytics, aucun appel sortant. La CSP est dans `netlify.toml`, qui est la seule source des en-têtes.
 - **Pas d'étape de build.** Modules ES natifs. Preact + htm uniquement via `public/js/ui/lib.js`.
 - **Sens des dépendances.** Seuls `ui/`, `app.js` et `main.js` importent `ui/` ou `vendor/`. `domain/`, `analyse/`, `db/` et `export/` sont purs : pas de DOM, et la date du jour est passée en paramètre.

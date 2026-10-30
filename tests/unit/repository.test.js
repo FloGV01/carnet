@@ -297,14 +297,17 @@ test('v6 : un relevé déjà créé passe à « vers » : date, heure et vers ch
   assert.equal((await repo.humeurs.tous()).length, 1, 'un seul relevé, jamais de doublon');
 });
 
-test('v6 : un relevé « vers » vidé est supprimé ; « vers » seul ne le garde pas, des activités le gardent (v7, spec §4.3)', async () => {
+test('v6 : un relevé vidé est supprimé ; des activités le gardent (v7, spec §4.3), « vers » seul aussi (v9, spec §13.5)', async () => {
   const { repo } = nouveauRepo();
   const r = await repo.humeurs.creer({ date: '2026-09-30', heure: '14:00', vers: true, humeur: 5, energie: 'energie:basse' });
   const sansHumeur = await repo.humeurs.modifier(r.id, { humeur: null, faisais: ['activiteMoment:travail', 'activiteMoment:trajet'] });
   assert.deepEqual([sansHumeur.energie, sansHumeur.vers, sansHumeur.faisais], ['energie:basse', true, ['activiteMoment:travail', 'activiteMoment:trajet']]);
   const activites = await repo.humeurs.modifier(r.id, { energie: null });
   assert.deepEqual([activites.humeur, activites.energie, activites.vers, activites.faisais], [null, null, true, ['activiteMoment:travail', 'activiteMoment:trajet']], 'vers et activités : le relevé reste');
-  assert.equal(await repo.humeurs.modifier(r.id, { faisais: null }), null, 'vers seul : le relevé part');
+  const versSeul = await repo.humeurs.modifier(r.id, { faisais: null });
+  assert.deepEqual([versSeul.id, versSeul.date, versSeul.heure, versSeul.vers, versSeul.faisais], [r.id, '2026-09-30', '14:00', true, null], 'vers seul : le relevé reste (v6 à v8 : il partait)');
+  // Revenu à « maintenant », il ne reste rien : le relevé part.
+  assert.equal(await repo.humeurs.modifier(r.id, { heure: '15:00', vers: null }), null);
   assert.equal(await repo.humeurs.lire(r.id), null);
   assert.deepEqual(await repo.humeurs.tous(), []);
   // Les activités sont des références de liste vérifiées.

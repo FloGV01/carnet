@@ -43,11 +43,11 @@ export function Soignants() {
     setPdf(null);
     (async () => {
       // La base n'est pas relue si elle n'a pas changé depuis l'Analyse ou la dernière page (v8, Q26, ui/lecture.js).
-      const [{ resultat, carte, zeroDepuis }, { journal, episodes, symptomes, traitements, rdvs, traitementActuel, humeurs }] = await Promise.all([
+      const [{ resultat, carte, zeroDepuis }, { journal, episodes, symptomes, traitements, rdvs, traitementActuel, humeurs, perso }] = await Promise.all([
         calculerAnalyse(), lireBase(),
       ]);
       const aujourdhui = repo.aujourdhui();
-      const modele = modeleSoignants({ journal, episodes, symptomes, traitements, humeurs }, { aujourdhui, carte, analyse: resultat, professionnel: pro, prenom, rdvs, traitements, traitementActuel, zeroDepuis });
+      const modele = modeleSoignants({ journal, episodes, symptomes, traitements, humeurs, perso }, { aujourdhui, carte, analyse: resultat, professionnel: pro, prenom, rdvs, traitements, traitementActuel, zeroDepuis });
       if (!actif || !toile.current) return;
       dessinerPage(toile.current, mettreEnPage(modele));
       const blob = await new Promise((ok) => toile.current.toBlob(ok, 'image/jpeg', 0.85));

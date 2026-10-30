@@ -97,7 +97,7 @@ const lignes = (page) => page.locator('.liste-evenements > li').evaluateAll((els
   lien: Boolean(li.querySelector('a')), chevron: li.querySelectorAll(':scope > * > svg').length > 0,
 })));
 
-test('Ma journée : relevés (dont un « vers ») et épisodes rangés par heure, symptômes à la fin ; un relevé n\'a ni lien ni chevron', async ({ page }) => {
+test('Ma journée : relevés (dont un « vers ») et épisodes rangés par heure, symptômes à la fin ; un relevé a son lien et son chevron (v9, spec §13.1)', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     await r.episodes.creer({ date: '2026-10-15', heure: '20:00', emotion: 'emotion:tristesse' });
@@ -113,10 +113,10 @@ test('Ma journée : relevés (dont un « vers ») et épisodes rangés par heure
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect.poll(() => lignes(page)).toEqual([
-    { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: false, chevron: false },
+    { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, chevron: true },
     { heure: '12:30', texte: 'Colère · 5 · Conflit', lien: true, chevron: true },
-    { heure: 'vers 14 h', texte: 'humeur 5', lien: false, chevron: false },
-    { heure: '18:05', texte: 'énergie basse', lien: false, chevron: false },
+    { heure: 'vers 14 h', texte: 'humeur 5', lien: true, chevron: true },
+    { heure: '18:05', texte: 'énergie basse', lien: true, chevron: true },
     { heure: '20:00', texte: 'Tristesse', lien: true, chevron: true },
     { heure: '', texte: 'Ruminations · 4', lien: true, chevron: true },
   ]);
@@ -136,7 +136,7 @@ test('Ma journée : relevés (dont un « vers ») et épisodes rangés par heure
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect.poll(() => lignes(page)).toEqual([
     { heure: '23:10', texte: 'Anxiété · 6', lien: true, chevron: true },
-    { heure: '02:30', texte: 'humeur 3', lien: false, chevron: false },
+    { heure: '02:30', texte: 'humeur 3', lien: true, chevron: true },
   ]);
   // Un jour sans rien : la section, vide, sans un mot de plus.
   await aller(page, '#/jour/2026-10-12');
@@ -159,9 +159,9 @@ test('Ma journée d\'un jour passé : un épisode sans heure vient après les re
   await aller(page, '#/jour/2026-10-12');
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
   await expect.poll(() => lignes(page)).toEqual([
-    { heure: '10:20', texte: 'humeur 6', lien: false, chevron: false },
-    { heure: '15:40', texte: 'ce que je faisais : travail, trajet', lien: false, chevron: false },
-    { heure: '19:00', texte: 'humeur 4', lien: false, chevron: false },
+    { heure: '10:20', texte: 'humeur 6', lien: true, chevron: true },
+    { heure: '15:40', texte: 'ce que je faisais : travail, trajet', lien: true, chevron: true },
+    { heure: '19:00', texte: 'humeur 4', lien: true, chevron: true },
     { heure: '', texte: 'Conflit', lien: true, chevron: true },
     { heure: '', texte: 'Ruminations · 4', lien: true, chevron: true },
   ]);
@@ -181,7 +181,7 @@ test('« Effacer cette journée » : la confirmation dit que les émotions du mo
   await boite.getByRole('button', { name: 'Effacer', exact: true }).click();
   await expect(page.getByText('Journée effacée')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Lieu', exact: true }).getByRole('button', { name: 'Bureau' })).toHaveAttribute('aria-pressed', 'false');
-  await expect.poll(() => lignes(page)).toEqual([{ heure: '10:20', texte: 'humeur 6', lien: false, chevron: false }]);
+  await expect.poll(() => lignes(page)).toEqual([{ heure: '10:20', texte: 'humeur 6', lien: true, chevron: true }]);
   expect(await repo(page, () => window.__carnet.repo.humeurs.tous())).toHaveLength(1);
 });
 

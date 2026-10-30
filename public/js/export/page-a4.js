@@ -83,7 +83,13 @@ function composer(m, nuits) {
   texte(m.sousTitre, { taille: 8, couleur: 'secondaire' });
   texte(m.noteLecture, { taille: 8, couleur: 'secondaire' });
 
-  titreSection('Indicateurs');
+  // La légende des zones (v9), d'une ligne, au bout de la ligne du titre (dessous si elle n'y tient pas).
+  titreSection('Indicateurs', m.legendeZones ? (yLigne, xMin) => {
+    const T = CASE_EMOTION.taille;
+    let x = x0 + largeur - largeurTexte(m.legendeZones, T);
+    if (x < xMin) { y += T * PT * 1.6; yLigne = y; x = x0; }
+    ops.push({ type: 'texte', x, y: yLigne, taille: T, texte: m.legendeZones, couleur: 'secondaire' });
+  } : null);
   const lNom = 54;
   const lCol = (largeur - lNom) / m.colonnes.length;
   y += 3.5;
@@ -91,8 +97,8 @@ function composer(m, nuits) {
   for (const ligne of m.indicateurs) {
     y += LIGNE_INDICATEUR;
     ops.push({ type: 'texte', x: x0, y, taille: 7, gras: false, texte: ligne.nom, couleur: 'texte', maxLargeur: lNom - 1.5 });
-    // Une ligne multiligne (les émotions par famille) passe à la ligne entre deux éléments ; la rangée prend la hauteur
-    // de sa plus longue valeur.
+    // Une ligne multiligne (les émotions par famille, par zone) passe à la ligne entre deux éléments ; la rangée prend la
+    // hauteur de sa plus longue valeur.
     let lignes = 1;
     ligne.valeurs.forEach((v, i) => {
       if (!ligne.multiligne) { ops.push({ type: 'texte', x: x0 + lNom + i * lCol, y, taille: 7, texte: v, couleur: 'texte', maxLargeur: lCol - 1.5 }); return; }

@@ -633,3 +633,13 @@ Version 8.0.0, construite du 24 au 26/10 en 9 tâches sur la branche `dev`. Elle
 - la base passe à `DB_VERSION` 6 (liste `sujetRdv`), la sauvegarde au format 6 ; le format de l'Export PSY change (la nuit dit ses heures).
 
 Le détail, les appels du concepteur, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 26/10.
+
+## 17. v9 (30/10)
+
+Version 9.0.0, construite du 28 au 30/10 en 8 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-10-28-carnet-v9-design.md`, qui fait foi là où elle s'écarte de celle-ci et de celles des v7 et v8 :
+- l'**émotion du moment** se note comme dans How We Feel, en plein écran noir : une couleur parmi quatre bulles, puis un mot sur une carte de 144 mots qu'on fait glisser, avec sa définition et une flèche vers « Ce que je faisais » ; une loupe cherche un mot, et l'on peut ajouter un mot à soi ;
+- la roue passe de 79 à 144 mots, 36 par zone ; Fatigué et Épuisé n'ont pas de famille ; un relevé se rouvre depuis Ma journée de n'importe quel jour ;
+- un mot a la **couleur de sa zone** partout (rouge, jaune, bleu, vert) ; l'Analyse gagne « Tes zones », l'Export PSY et la page A4 une ligne de zones ;
+- la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 7 (méta `motsPerso`).
+
+Le détail, les appels du concepteur, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 30/10.

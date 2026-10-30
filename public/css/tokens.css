@@ -57,6 +57,19 @@
   --c-emo-peur: #9364ce; --c-emo-peur-fill: #b88af7; --c-emo-peur-on: #131019; --c-emo-peur-tint: #f2eaff; --c-emo-peur-tint-2: #e6d8ff; --c-emo-peur-text: #674196;
   --c-emo-serenite: #079390; --c-emo-serenite-fill: #46d6d1; --c-emo-serenite-on: #071514; --c-emo-serenite-tint: #d9f5f4; --c-emo-serenite-tint-2: #b6ece9; --c-emo-serenite-text: #046663;
 
+  /* Zones de la carte des émotions (v9, spec §2 et §5), comme How We Feel : rouge (énergie haute, désagréable), jaune
+     (haute, agréable), bleu (basse, désagréable), vert (basse, agréable). La couleur d'un mot (relevé, point du jour, Mes
+     jours en mode jour), dans toute l'app ; les comptes par famille gardent les couleurs de famille. -fill est la couleur
+     médiane de la bulle de How We Feel (visuel-hwf.md §1.5) ; les autres rôles suivent la recette des familles sur sa
+     teinte (OKLCH : accent L 0,60 en clair, texte 0,46 et 0,80). En sombre, l'accent est la couleur de How We Feel
+     elle-même, sur noir comme chez elle (6,3:1 au moins). Un point, une barre ou un rond de légende (ecrans.css) est
+     peint en -fill dans les deux thèmes, la couleur des bulles, avec un liseré à l'accent qui porte le 3:1 en clair.
+     Une zone dit une énergie et un ressenti, jamais bien ou mal. */
+  --c-zone-rouge: #e53029; --c-zone-rouge-fill: #fe4c40; --c-zone-rouge-on: #1a0e0c; --c-zone-rouge-tint: #ffe9e5; --c-zone-rouge-tint-2: #ffd4ce; --c-zone-rouge-text: #a80007;
+  --c-zone-jaune: #9e7b00; --c-zone-jaune-fill: #ffd04c; --c-zone-jaune-on: #151107; --c-zone-jaune-tint: #f7eed8; --c-zone-jaune-tint-2: #eedeb7; --c-zone-jaune-text: #6d5400;
+  --c-zone-bleu: #577bd7; --c-zone-bleu-fill: #789fff; --c-zone-bleu-on: #0d111b; --c-zone-bleu-tint: #e7efff; --c-zone-bleu-tint-2: #d2e0ff; --c-zone-bleu-text: #3150a9;
+  --c-zone-vert: #009860; --c-zone-vert-fill: #4ce39b; --c-zone-vert-on: #09140e; --c-zone-vert-tint: #dff5e7; --c-zone-vert-tint-2: #c2ebd2; --c-zone-vert-text: #006941;
+
   /* « Effacer définitivement », dernier pas de « Tout effacer » : le seul bouton rouge de l'app, hors du lot 2b, gardé
      (v7, tâche 9) parce qu'il signale une action sans retour, jamais une valeur. AA : 6,7:1 en clair, 8,3:1 en sombre.
      À confirmer par l'utilisateur (docs/decisions.md, « En attente de l'utilisateur »). */
@@ -67,6 +80,9 @@
      17 px (le corps d'iOS) : elles suivent la taille du texte réglée sur l'iPhone. Chiffres tabulaires. */
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* v9 : New York, la serif de l'iPhone, en gras pour les titres et les mots des bulles de l'émotion (spec §5) ; Georgia
+     ailleurs (tests, Mac sans New York). Rien à télécharger. */
+  --police-serif: ui-serif, Georgia, serif;
   --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
   --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
   --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */
@@ -157,12 +173,24 @@
     --c-emo-peur: #c7a2ff; --c-emo-peur-tint: #231832; --c-emo-peur-tint-2: #312246; --c-emo-peur-text: #ccabfe;
     --c-emo-serenite: #3dcfcb; --c-emo-serenite-tint: #002423; --c-emo-serenite-tint-2: #013332; --c-emo-serenite-text: #63d3cf;
 
+    --c-zone-rouge: #fe4c40; --c-zone-rouge-tint: #321410; --c-zone-rouge-tint-2: #461d18; --c-zone-rouge-text: #ffa194;
+    --c-zone-jaune: #ffd04c; --c-zone-jaune-tint: #271c00; --c-zone-jaune-tint-2: #372900; --c-zone-jaune-text: #e6b72a;
+    --c-zone-bleu: #789fff; --c-zone-bleu-tint: #131d36; --c-zone-bleu-tint-2: #1c2a4c; --c-zone-bleu-text: #a0bcff;
+    --c-zone-vert: #4ce39b; --c-zone-vert-tint: #032515; --c-zone-vert-tint-2: #03351f; --c-zone-vert-text: #44dd95;
+
     --danger: #E8A195;
     --danger-texte: #1A1917;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --duree: 0ms; --duree-anim: 0ms; --duree-glisse: 0ms; }
+}
+/* Les écrans noirs de l'émotion (v9, spec §4) : fond noir dans les deux thèmes, comme How We Feel. Les jetons de base y
+   prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent (« C'était vers… »). */
+.ecran-noir {
+  color-scheme: dark;
+  --bg: #000000; --surface: #1e1f21; --surface-2: #2d2e30; --line: #47484a; --text: #bfc0c3; --text-2: #97989b;
+  --action: #eaebed; --action-on: #000000; --fond-choix: var(--surface);
 }
 
 /* Teinte locale d'une rubrique, d'un parcours ou d'une famille d'émotions : les composants lisent ses six rôles
@@ -190,3 +218,8 @@
 .emo-surprise { --c: var(--c-emo-surprise); --c-fill: var(--c-emo-surprise-fill); --c-on: var(--c-emo-surprise-on); --c-tint: var(--c-emo-surprise-tint); --c-tint-2: var(--c-emo-surprise-tint-2); --c-text: var(--c-emo-surprise-text); }
 .emo-peur { --c: var(--c-emo-peur); --c-fill: var(--c-emo-peur-fill); --c-on: var(--c-emo-peur-on); --c-tint: var(--c-emo-peur-tint); --c-tint-2: var(--c-emo-peur-tint-2); --c-text: var(--c-emo-peur-text); }
 .emo-serenite { --c: var(--c-emo-serenite); --c-fill: var(--c-emo-serenite-fill); --c-on: var(--c-emo-serenite-on); --c-tint: var(--c-emo-serenite-tint); --c-tint-2: var(--c-emo-serenite-tint-2); --c-text: var(--c-emo-serenite-text); }
+/* Zones de la carte des émotions (v9), dans leur ordre : la couleur d'un mot. */
+.zone-rouge { --c: var(--c-zone-rouge); --c-fill: var(--c-zone-rouge-fill); --c-on: var(--c-zone-rouge-on); --c-tint: var(--c-zone-rouge-tint); --c-tint-2: var(--c-zone-rouge-tint-2); --c-text: var(--c-zone-rouge-text); }
+.zone-jaune { --c: var(--c-zone-jaune); --c-fill: var(--c-zone-jaune-fill); --c-on: var(--c-zone-jaune-on); --c-tint: var(--c-zone-jaune-tint); --c-tint-2: var(--c-zone-jaune-tint-2); --c-text: var(--c-zone-jaune-text); }
+.zone-bleu { --c: var(--c-zone-bleu); --c-fill: var(--c-zone-bleu-fill); --c-on: var(--c-zone-bleu-on); --c-tint: var(--c-zone-bleu-tint); --c-tint-2: var(--c-zone-bleu-tint-2); --c-text: var(--c-zone-bleu-text); }
+.zone-vert { --c: var(--c-zone-vert); --c-fill: var(--c-zone-vert-fill); --c-on: var(--c-zone-vert-on); --c-tint: var(--c-zone-vert-tint); --c-tint-2: var(--c-zone-vert-tint-2); --c-text: var(--c-zone-vert-text); }

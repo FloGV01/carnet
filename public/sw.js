@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = 'cb48b4dca8f0';
+const VERSION = 'd6708863c08c';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -51,6 +51,7 @@ const FICHIERS = [
   "./js/domain/libelles.js",
   "./js/domain/listes-def.js",
   "./js/domain/mon-plan.js",
+  "./js/domain/mots-perso.js",
   "./js/domain/notes.js",
   "./js/domain/phrase.js",
   "./js/domain/programme.js",
@@ -79,8 +80,10 @@ const FICHIERS = [
   "./js/plateforme/sw-client.js",
   "./js/routeur.js",
   "./js/store.js",
+  "./js/ui/carte-geometrie.js",
   "./js/ui/composants/bandeau-maj.js",
   "./js/ui/composants/barre-onglets.js",
+  "./js/ui/composants/carte-du-bas.js",
   "./js/ui/composants/carte-emotions.js",
   "./js/ui/composants/coche.js",
   "./js/ui/composants/confirmation.js",
@@ -95,12 +98,15 @@ const FICHIERS = [
   "./js/ui/composants/lecteur.js",
   "./js/ui/composants/memo-vocal.js",
   "./js/ui/composants/mon-plan.js",
+  "./js/ui/composants/mot-perso.js",
   "./js/ui/composants/multiples.js",
   "./js/ui/composants/notes.js",
   "./js/ui/composants/parcours.js",
   "./js/ui/composants/pastilles.js",
   "./js/ui/composants/pourquoi.js",
+  "./js/ui/composants/quatre-bulles.js",
   "./js/ui/composants/questions.js",
+  "./js/ui/composants/recherche-emotion.js",
   "./js/ui/composants/repli.js",
   "./js/ui/composants/respiration.js",
   "./js/ui/composants/ressourcer.js",
@@ -112,6 +118,7 @@ const FICHIERS = [
   "./js/ui/composants/toast.js",
   "./js/ui/composants/traitement-actuel.js",
   "./js/ui/composants/une-chose.js",
+  "./js/ui/composants/zones.js",
   "./js/ui/ecrans/aide-iphone.js",
   "./js/ui/ecrans/analyse.js",
   "./js/ui/ecrans/apres-coup-liste.js",

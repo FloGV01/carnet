@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { modeleSoignants, NOM_EMOTIONS, NOM_NOTES } from '../../public/js/export/soignants.js';
+import { modeleSoignants, NOM_EMOTIONS, NOM_NOTES, NOM_ZONES, LEGENDE_ZONES } from '../../public/js/export/soignants.js';
 import { mettreEnPage, A4, couperLignes, couperListe, NUIT_PAR_NUIT } from '../../public/js/export/page-a4.js';
 import { FAMILLES } from '../../public/js/domain/roue.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
@@ -68,7 +68,7 @@ test('le modèle exclut tout texte libre privé et le signal', () => {
   assert.ok(!json.includes('NaN') && !json.includes('undefined'));
 });
 
-test('une seule page : hauteur ≤ 273 mm, y compris dans le cas extrême (v7 : les 7 familles, des comptes à 3 et à 4 chiffres, les notes)', () => {
+test('une seule page : hauteur ≤ 273 mm, y compris dans le cas extrême (v7 : les 7 familles, des comptes à 3 et à 4 chiffres, les notes ; v9 : les 4 zones)', () => {
   for (const extreme of [false, true]) {
     for (const parJour of [0, 6, 40]) {
       const emotions = parJour > 0;
@@ -80,6 +80,10 @@ test('une seule page : hauteur ≤ 273 mm, y compris dans le cas extrême (v7 : 
         assert.equal(m.frise.familles.length, 7);
         const chiffres = new RegExp(`^\\S+ \\d{${parJour === 40 ? 4 : 3}}$`);
         assert.ok(m.indicateurs[0].valeurs.at(-1).split(' · ').every((x) => chiffres.test(x)), m.indicateurs[0].valeurs.at(-1));
+        // v9 : les quatre zones, aux mêmes comptes à 3 ou 4 chiffres, sous les familles, dans chaque colonne.
+        assert.equal(m.indicateurs[1].nom, NOM_ZONES);
+        assert.ok(m.indicateurs[1].valeurs.every((v) => /^rouge \d+ · jaune \d+ · bleu \d+ · vert \d+$/.test(v)), m.indicateurs[1].valeurs.join(' | '));
+        assert.ok(m.indicateurs[1].valeurs.at(-1).split(' · ').every((x) => chiffres.test(x)), m.indicateurs[1].valeurs.at(-1));
         assert.ok(m.frise.avecHumeur, 'et les anciennes notes');
         assert.ok(m.frise.reperes.length > 0, 'et des repères');
       }
@@ -137,8 +141,8 @@ test('traitement actuel : une ligne par médicament, 4 au plus, et 3 changements
 // ---------- v6 : humeur du jour ----------
 
 const releve = (date, heure, humeur) => ({ id: `${date}-${heure}`, date, heure, humeur, energie: null });
-function casV6({ journal = [], humeurs = [], zeroDepuis = '2026-01-01' }) {
-  const data = { journal, episodes: [], symptomes: [], traitements: [], humeurs };
+function casV6({ journal = [], humeurs = [], zeroDepuis = '2026-01-01', perso }) {
+  const data = { journal, episodes: [], symptomes: [], traitements: [], humeurs, ...(perso ? { perso } : {}) };
   const aujourdhui = '2026-10-14';
   const analyse = analyze(data, { aujourdhui, items, zeroDepuis });
   return modeleSoignants(data, { aujourdhui, carte, analyse, professionnel: null, prenom: '', zeroDepuis });
@@ -278,13 +282,93 @@ test('v7 : « Émotions par famille » en tête des indicateurs, un compte de re
   assert.deepEqual(casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] }).indicateurs[0].valeurs, ['·', '·', '·']);
 });
 
+// v9 · relecture de la tâche 3 : avec la méta motsPerso, un relevé de mot à soi compte dans sa famille (Flottant, joie),
+// dans les indicateurs comme dans la frise ; sans famille (Brumeux), dans aucune. Mots inventés.
+test('v9 : un mot à soi compte dans sa famille, dans « Émotions par famille » et dans la frise ; sans famille, nulle part', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const BRUMEUX = 'roue:perso:u-4e5f6a7b';
+  const perso = {
+    [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: 'joie', definition: null, archive: false, createdAt: '2026-08-01T08:00:00.000Z' },
+    [BRUMEUX]: { libelle: 'Brumeux', zone: 'bleu', famille: null, definition: null, archive: false, createdAt: '2026-08-02T08:00:00.000Z' },
+  };
+  const humeurs = [emo('2026-10-13', '09:00', FLOTTANT), emo('2026-10-13', '10:00', 'roue:colere:irrite'), emo('2026-10-14', '09:00', BRUMEUX)];
+  const m = casV6({ humeurs, perso });
+  assert.deepEqual(m.indicateurs[0].valeurs, ['colère 1 · joie 1', 'colère 1 · joie 1', 'colère 1 · joie 1']);
+  const semaine = m.frise.colonnes.find((c) => c.cle === '2026-10-12');
+  assert.deepEqual([semaine.familles.joie, semaine.familles.colere, semaine.nEmotions], [1, 1, 2]);
+  assert.deepEqual(m.frise.familles.map((f) => f.cle), ['colere', 'joie']);
+  // Sans la méta, comme avant : seul Irrité.
+  assert.deepEqual(casV6({ humeurs }).indicateurs[0].valeurs, ['colère 1', 'colère 1', 'colère 1']);
+});
+
+// v9 (spec §8) : sous « Émotions par famille », « Émotions par zone (relevés) », même forme que la ligne de l'Export PSY,
+// une valeur par colonne. Fatigué (sans famille) compte en bleu, un mot à soi dans sa zone, une famille seule (v7) nulle
+// part. Mots inventés.
+test('v9 : « Émotions par zone » sous les familles, un compte par colonne dans l\'ordre des zones ; « · » sans zone', () => {
+  const FLOTTANT = 'roue:perso:u-0a1b2c3d';
+  const perso = { [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-08-01T08:00:00.000Z' } };
+  const humeurs = [
+    emo('2026-10-14', '09:00', 'roue:serenite:calme'), emo('2026-10-14', '12:00', 'roue:colere:irrite'), emo('2026-10-13', '10:00', 'roue:colere'),
+    emo('2026-10-13', '11:00', 'roue:aucune:fatigue'), emo('2026-10-12', '09:00', FLOTTANT),
+    emo('2026-08-20', '10:00', 'roue:joie:fier'), // dans « Depuis le début » seulement
+    emo('2026-10-16', '10:00', 'roue:peur:craintif'), // après aujourd'hui : jamais
+  ];
+  const m = casV6({ humeurs, perso });
+  assert.deepEqual(nomsIndicateurs(m).slice(0, 2), [NOM_EMOTIONS, NOM_ZONES]);
+  assert.equal(m.indicateurs[1].multiligne, true);
+  assert.deepEqual(m.indicateurs[0].valeurs, ['colère 2 · sérénité 1', 'colère 2 · sérénité 1', 'colère 2 · joie 1 · sérénité 1']);
+  assert.deepEqual(m.indicateurs[1].valeurs, ['rouge 1 · bleu 1 · vert 2', 'rouge 1 · bleu 1 · vert 2', 'rouge 1 · jaune 1 · bleu 1 · vert 2']);
+  // Instantané du haut de la page : le titre et sa légende, les colonnes, les familles puis les zones, dans l'ordre.
+  const textes = mettreEnPage(m).ops.filter((o) => o.type === 'texte').map((o) => o.texte);
+  const debut = textes.indexOf('INDICATEURS');
+  assert.deepEqual(textes.slice(debut, debut + 13), [
+    'INDICATEURS', LEGENDE_ZONES, '7 j', '30 j', 'Depuis le début',
+    NOM_EMOTIONS, 'colère 2 · sérénité 1', 'colère 2 · sérénité 1', 'colère 2 · joie 1 · sérénité 1',
+    NOM_ZONES, 'rouge 1 · bleu 1 · vert 2', 'rouge 1 · bleu 1 · vert 2', 'rouge 1 · jaune 1 · bleu 1 · vert 2',
+  ]);
+  assert.equal(textes[debut + 13], 'Explosions (jours avec)');
+  // Sans relevé qui ait une zone (une famille seule) : « · », comme les familles sans relevé.
+  assert.deepEqual(casV6({ humeurs: [emo('2026-10-13', '10:00', 'roue:colere')] }).indicateurs[1].valeurs, ['·', '·', '·']);
+  assert.deepEqual(casV6({ journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] }).indicateurs[1].valeurs, ['·', '·', '·']);
+});
+
+// La légende des zones, d'une ligne, au bout du titre « Indicateurs » : elle ne prend aucune hauteur, et dit ce que veut
+// dire chaque couleur, sans jugement.
+test('v9 : la légende des zones, d\'une ligne, au bout du titre « Indicateurs », dans la page ; la ligne de zones passe à la ligne entre deux zones', () => {
+  assert.equal(LEGENDE_ZONES, 'Zones : rouge = énergie haute, désagréable · jaune = haute, agréable · bleu = basse, désagréable · vert = basse, agréable');
+  for (const m of [cas(), cas({ extreme: true, emotions: true, parJour: 40 })]) {
+    assert.equal(m.legendeZones, LEGENDE_ZONES);
+    const { ops } = mettreEnPage(m);
+    const t = ops.filter((o) => o.type === 'texte');
+    const titre = t.find((o) => o.texte === 'INDICATEURS');
+    const legende = t.filter((o) => o.texte === LEGENDE_ZONES);
+    assert.equal(legende.length, 1, 'une seule ligne');
+    assert.equal(legende[0].y, titre.y, 'sur la ligne du titre');
+    assert.ok(legende[0].x > titre.x + 20 && legende[0].x + legende[0].texte.length * legende[0].taille * 0.3528 * 0.53 <= A4.largeur - A4.marge + 1e-9, 'à droite, dans la page');
+    assert.ok(legende[0].y < t.find((o) => o.texte === NOM_EMOTIONS).y);
+    assert.deepEqual(trouverInterdits(legende[0].texte), []);
+  }
+  // Quatre zones à 4 chiffres : deux zones par ligne, jamais coupées au milieu, sous la ligne des familles.
+  const m = cas({ extreme: true, emotions: true, parJour: 40 });
+  const { ops } = mettreEnPage(m);
+  const t = ops.filter((o) => o.type === 'texte');
+  const yZones = t.find((o) => o.texte === NOM_ZONES).y;
+  const yNotes = t.find((o) => o.texte === NOM_NOTES).y;
+  assert.ok(t.find((o) => o.texte === NOM_EMOTIONS).y < yZones);
+  const morceaux = t.filter((o) => o.y >= yZones && o.y < yNotes && /^(rouge|jaune|bleu|vert) \d+/.test(o.texte));
+  assert.equal(morceaux.length, 4 * 2, 'deux lignes dans chacune des 4 colonnes');
+  assert.ok(morceaux.every((o) => /^(rouge|jaune|bleu|vert) \d+ · (rouge|jaune|bleu|vert) \d+$/.test(o.texte)), morceaux.map((o) => o.texte).join(' | '));
+  assert.deepEqual(morceaux.slice(-2).map((o) => o.texte.replace(/\d+/g, 'n')), ['rouge n · jaune n', 'bleu n · vert n']);
+  assert.match(morceaux.at(-1).texte, /\d{4}$/, 'des comptes à 4 chiffres dans « Depuis le début »');
+});
+
 test('v7 : « Humeur (notes) » seulement si une colonne a d\'anciennes notes ; « Journées à 7 ou plus » est retirée', () => {
   const sans = casV6({ humeurs: [emo('2026-10-13', '10:00', 'roue:colere')], journal: [{ date: '2026-10-13', lieu: 'lieu:bureau' }] });
   assert.ok(!nomsIndicateurs(sans).includes(NOM_NOTES), 'aucune note : pas de ligne');
   // Une note ancienne, hors des 7 et 30 jours : la ligne, avec « · » là où il n'y en a pas.
   const avec = casV6({ journal: [{ date: '2026-08-01', humeur: 6 }, { date: '2026-10-13', lieu: 'lieu:bureau' }], humeurs: [emo('2026-10-13', '10:00', 'roue:colere')] });
-  assert.deepEqual(nomsIndicateurs(avec).slice(0, 2), [NOM_EMOTIONS, NOM_NOTES]);
-  assert.deepEqual(avec.indicateurs[1].valeurs, ['·', '·', '6 (6-6, sur 1 j)']);
+  assert.deepEqual(nomsIndicateurs(avec).slice(0, 3), [NOM_EMOTIONS, NOM_ZONES, NOM_NOTES]);
+  assert.deepEqual(avec.indicateurs[2].valeurs, ['·', '·', '6 (6-6, sur 1 j)']);
   for (const m of [sans, avec, cas({ extreme: true, emotions: true })]) {
     assert.ok(!nomsIndicateurs(m).some((n) => /Journées à 7|à 4 ou moins|Humeur moyenne/.test(n)), nomsIndicateurs(m).join(', '));
   }
@@ -378,6 +462,10 @@ test('v8 : « Durée de nuit (médiane) » des heures notées ; coucher et lever
 // ---------- v8 : Nuit par nuit (Q15) ----------
 
 const sectionNuits = (page) => page.ops.find((o) => o.type === 'texte' && /^NUIT PAR NUIT/.test(o.texte));
+// v9 : la ligne « Émotions par zone » prend deux lignes de plus avec des émotions (6,6 mm) : la page aux 6 questions, avec
+// des émotions, ne tient plus « Nuit par nuit » sur 4 semaines (elle passe à 2). Les essais de la page sur 4 semaines
+// partent donc de 3 questions.
+const troisQuestions = (m) => ({ ...m, rdv: { ...m.rdv, questions: m.rdv.questions.slice(0, 3) } });
 const barresNuits = (page) => page.ops.filter((o) => o.type === 'nuit');
 
 test('v8 · Nuit par nuit : le modèle porte les nuits des 4 puis des 2 dernières semaines, chacune avec son jour, ses heures, sa qualité, son texte', () => {
@@ -399,7 +487,7 @@ test('v8 · Nuit par nuit : le modèle porte les nuits des 4 puis des 2 dernièr
 
 test('v8 · Nuit par nuit sur la page : 4 semaines quand la page tient, une barre par nuit qui a sa durée, dans la page et dans sa colonne', () => {
   for (const emotions of [false, true]) {
-    const m = cas({ nuits: true, emotions });
+    const m = troisQuestions(cas({ nuits: true, emotions }));
     const page = mettreEnPage(m);
     assert.ok(page.hauteur <= A4.hauteurMax, `hauteur ${page.hauteur.toFixed(1)} mm`);
     assert.equal(page.nuitsSemaines, 4);
@@ -421,7 +509,8 @@ test('v8 · Nuit par nuit sur la page : 4 semaines quand la page tient, une barr
 });
 
 test('v8 · Nuit par nuit : 2 semaines si la page dépasse 273 mm, aucune si elle dépasse encore ; le reste de la page ne change pas', () => {
-  const m = cas({ nuits: true, emotions: true });
+  const m = troisQuestions(cas({ nuits: true, emotions: true }));
+  assert.equal(mettreEnPage(m).nuitsSemaines, 4);
   // Trois questions de plus : 4 semaines ne tiennent plus, 2 semaines si.
   const plus = { ...m, rdv: { ...m.rdv, questions: [...m.rdv.questions, 'question a', 'question b', 'question c'] } };
   const deux = mettreEnPage(plus);

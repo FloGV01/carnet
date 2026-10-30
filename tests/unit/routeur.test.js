@@ -148,3 +148,14 @@ test('v7 · la barre d\'onglets : Aujourd\'hui · Analyse · Bien-être · Soins
     assert.equal(lireRoute(o.hash).inconnue, undefined, o.hash);
   }
 });
+
+test('v9 · un relevé de l\'Émotion du moment rouvert : /moment/ID (l\'écran 3), à côté de /moment (un relevé neuf) ; onglet Aujourd\'hui', () => {
+  assert.deepEqual(lireRoute('#/moment'), { nom: 'moment', params: {}, chemin: '/moment' });
+  assert.deepEqual(lireRoute('#/moment/hu_0a1b2c3d4e5f6a7b'), { nom: 'moment-releve', params: { id: 'hu_0a1b2c3d4e5f6a7b' }, chemin: '/moment/hu_0a1b2c3d4e5f6a7b' });
+  assert.equal(versHash('moment-releve', { id: 'hu_x' }), '#/moment/hu_x');
+  assert.equal(versHash('moment'), '#/moment');
+  assert.equal(ongletDe('moment-releve'), 'aujourdhui');
+  // Ni le Moment difficile, ni une adresse sans id ou plus longue.
+  assert.equal(lireRoute('#/moment-difficile').nom, 'moment-difficile');
+  for (const h of ['#/moment/', '#/moment/hu_x/y', '#/moment/hu x']) assert.equal(lireRoute(h).inconnue, true, h);
+});

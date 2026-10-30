@@ -35,9 +35,10 @@ export function Consultation({ id: idRoute }) {
   const { fiche, id, ecrire, assurer } = useFiche({ store: 'rdv', route: 'rdv', idRoute, retour: '#/soins', initiale: () => ({}) });
   const [voir, setVoir] = useState(null);
   const { donnees } = useDonnees(async () => {
-    const [journal, episodes, symptomes, items, traitement, zeroDepuis, humeurs, rdvs, traitements] = await Promise.all([
+    // perso (v9) : les mots à soi (méta `motsPerso`), pour qu'un relevé qui en cite un compte dans sa famille.
+    const [journal, episodes, symptomes, items, traitement, zeroDepuis, humeurs, rdvs, traitements, perso] = await Promise.all([
       repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.listes.items(), lireTraitementActuel(), repo.meta.lire('explosionsDepuis'),
-      repo.humeurs.tous(), repo.rdv.tous(), repo.traitements.tous(),
+      repo.humeurs.tous(), repo.rdv.tous(), repo.traitements.tous(), repo.meta.lire('motsPerso'),
     ]);
     const au = repo.aujourdhui();
     // Humeur du jour (v6) ; un jour qui n'a que des relevés ne vaut jamais « 0 explosion ».
@@ -46,7 +47,7 @@ export function Consultation({ id: idRoute }) {
     const existantes = new Set([['episodes', episodes], ['symptomes', symptomes], ['traitements', traitements]]
       .flatMap(([store, liste]) => liste.map((e) => `${store}:${e.id}`)));
     const du = addDays(au, -29);
-    const emotions = parFamille(relevesAEmotion(humeurs).filter((r) => r.date >= du && r.date <= au));
+    const emotions = parFamille(relevesAEmotion(humeurs, perso).filter((r) => r.date >= du && r.date <= au));
     return { ind: indicateurs({ journal: duJour, episodes, symptomes }, du, au), emotions, carte: carteLibelles(items), traitement, rdvs, existantes, aujourdhui: au };
   }, []);
   if (!fiche || !donnees) return html`<div class="parcours"></div>`;

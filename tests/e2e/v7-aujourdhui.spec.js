@@ -290,7 +290,8 @@ test('en-tête 2b : « Jeudi 15 octobre » en 23/600 avec un chevron bas, ‹ en
 
 // ---------- Ma journée et le résumé (point de vigilance 5) ----------
 
-test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et des relevés à émotion, dans l\'ordre des heures ; le résumé montre les familles du jour', async ({ page }) => {
+// v9 (tâche 3) : les points prennent la couleur de la zone du mot ; une famille seule de la v7 n'a pas de zone, point creux.
+test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et des relevés à émotion, dans l\'ordre des heures ; le résumé montre les zones du jour', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     await r.journal.patch('2026-10-15', { lieu: 'lieu:bureau' });
@@ -314,15 +315,17 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
         point: s.backgroundColor === 'rgba(0, 0, 0, 0)' ? `creux ${s.borderTopColor}` : s.backgroundColor,
       };
     }));
+    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent.
     expect(lignes, schema).toEqual([
-      { heure: '09:05', texte: 'Irrité · énergie basse', lien: false, point: rgb(t['c-emo-colere']) },
-      { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: false, point: `creux ${rgb(t['text-2'])}` },
+      { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge-fill']) },
+      { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, point: `creux ${rgb(t['text-2'])}` },
       { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['c-episode']) },
-      { heure: 'vers 14 h', texte: 'Furieux', lien: false, point: rgb(t['c-emo-colere']) },
-      { heure: '18:30', texte: 'Sérénité', lien: false, point: rgb(t['c-emo-serenite']) },
-      { heure: '01:10', texte: 'Craintif', lien: false, point: rgb(t['c-emo-peur']) },
+      { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge-fill']) },
+      { heure: '18:30', texte: 'Sérénité', lien: true, point: `creux ${rgb(t['text-2'])}` },
+      { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge-fill']) },
     ]);
-    // Colonne d'heures fixe de 70, textes alignés ; AA du texte et de l'heure sur la carte.
+    // Colonne d'heures de 70 au texte par défaut (elle suit le corps en grand texte), textes alignés ; AA du texte et de
+    // l'heure sur la carte.
     const colonnes = await page.locator('.liste-evenements > li').evaluateAll((els) => els.map((li) => {
       const h = li.querySelector('.heure');
       const fond = getComputedStyle(li.closest('.liste-evenements')).backgroundColor;
@@ -336,14 +339,14 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
     }
     expect(new Set(colonnes.map((c) => c.texte)).size).toBe(1);
 
-    // Le résumé : les familles du jour en points de couleur, dans l'ordre de la journée, puis le texte ; l'ancienne note
-    // y reste (« humeur 6 »).
-    const familles = page.getByRole('img', { name: 'Émotions : Colère, Sérénité, Peur' });
-    await expect(familles).toBeVisible();
-    expect(await familles.locator('i').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor)), schema)
-      .toEqual([rgb(t['c-emo-colere']), rgb(t['c-emo-serenite']), rgb(t['c-emo-peur'])]);
+    // Le résumé : les zones du jour en points de couleur (v9 ; une seule ici, la famille seule n'en a pas), puis le
+    // texte ; l'ancienne note y reste (« humeur 6 »).
+    const zones = page.getByRole('img', { name: 'Émotions : énergie haute · désagréable' });
+    await expect(zones).toBeVisible();
+    expect(await zones.locator('i').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor)), schema)
+      .toEqual([rgb(t['c-zone-rouge-fill'])]);
     await expect(page.locator('.resume-jour')).toHaveText('Bureau · humeur 6');
-    const [points, resume] = await Promise.all([boite(page, '.familles-jour'), boite(page, '.resume-jour')]);
+    const [points, resume] = await Promise.all([boite(page, '.zones-jour'), boite(page, '.resume-jour')]);
     expect(points.x + points.width).toBeLessThanOrEqual(resume.x);
   }
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|null|roue:/);
@@ -355,13 +358,13 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
     await r.humeurs.creer({ date: '2026-10-13', heure: '11:00', emotion: 'roue:joie:curieux', energie: 'energie:haute' });
   });
   await aller(page, '#/jour/2026-10-13');
-  await expect(page.getByRole('img', { name: 'Émotions : Joie' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Émotions : énergie haute · agréable' })).toBeVisible();
   await expect(page.locator('.resume-jour')).toHaveText('Télétravail');
   await expect(page.locator('.liste-evenements > li')).toHaveText(['11:00Curieux · énergie haute']);
   // Un jour sans relevé : ni points, ni texte de trop.
   await aller(page, '#/jour/2026-10-12');
   await expect.poll(() => titreVu(page)).toBe('Lundi 12 octobre');
-  await expect(page.locator('.familles-jour')).toHaveCount(0);
+  await expect(page.locator('.zones-jour')).toHaveCount(0);
 });
 
 test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un petit carré (Symptôme et Sérénité, Épisode et Peur ont des couleurs voisines)', async ({ page }) => {

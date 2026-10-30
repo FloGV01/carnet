@@ -14,6 +14,8 @@ const T = {
   // contexte : sous-champs remplis par l'app (le jour d'écriture), qui seuls ne gardent pas l'objet.
   objet: (champs, contexte = []) => ({ type: 'objet', champs, contexte }), lignes: (champs) => ({ type: 'lignes', champs }),
   // v7 : un identifiant de la roue des émotions (domain/roue.js), et une valeur prise dans une liste fixe.
+  // v9 : un mot à soi n'est accepté que s'il est dans la méta `motsPerso`, passée en contexte (`perso`) : lue dans la
+  // même transaction à l'écriture (db/repository.js), prise dans le fichier à l'import (db/sauvegarde.js).
   roue: { type: 'roue' }, choix: (valeurs) => ({ type: 'choix', valeurs }),
 };
 
@@ -78,7 +80,8 @@ export const SCHEMAS = {
   // vers (v6) : relevé noté après coup, pour une heure passée. faisais : ce que je faisais.
   // emotion (v7) : une famille ou un mot de la roue, à la place de la note ; humeur reste pour les
   // anciens relevés et vaut null dans les nouveaux. Vide quand emotion, humeur, energie et faisais le
-  // sont tous (spec v7 §4.3) : « vers » seul ne garde pas un relevé, des activités le gardent.
+  // sont tous (spec v7 §4.3), et, depuis la v9, vers aussi (spec v9 §13.5 : le mot effacé, le relevé
+  // reste s'il a encore « Ce que je faisais » ou une heure « vers »).
   humeurs: {
     cles: { id: { type: 'id' }, date: T.date, heure: T.heure },
     saisis: { emotion: T.roue, humeur: T.int(1, 10), energie: T.ref('energie'), vers: T.vrai, faisais: T.refs('activiteMoment') },
@@ -132,7 +135,9 @@ function lienValide(l) {
   return { store: l.store, id: l.id };
 }
 
-function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
+// ctx : { origine, perso } (perso : la méta `motsPerso`, v9).
+function normaliserChamp(nom, def, v, ctx, erreurs, avertissements) {
+  const { origine } = ctx;
   if (vide(v)) return null;
   switch (def.type) {
     case 'date':
@@ -162,7 +167,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
       if (typeof v !== 'string' || listeDe(v) !== def.liste) { erreurs.push(`${nom} : référence invalide`); return null; }
       return v;
     case 'roue':
-      if (!estEmotion(v)) { erreurs.push(`${nom} : émotion inconnue`); return null; }
+      if (!estEmotion(v, ctx.perso)) { erreurs.push(`${nom} : émotion inconnue`); return null; }
       return v;
     case 'choix':
       if (!def.valeurs.includes(v)) { erreurs.push(`${nom} : valeur inconnue`); return null; }
@@ -194,7 +199,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
     case 'objet': {
       if (typeof v !== 'object' || Array.isArray(v)) { erreurs.push(`${nom} : objet attendu`); return null; }
       const res = {};
-      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], origine, erreurs, avertissements);
+      for (const [k, d] of Object.entries(def.champs)) res[k] = normaliserChamp(`${nom}.${k}`, d, v[k], ctx, erreurs, avertissements);
       const contexte = def.contexte || [];
       return Object.entries(res).some(([k, x]) => x !== null && !contexte.includes(k)) ? res : null;
     }
@@ -204,7 +209,7 @@ function normaliserChamp(nom, def, v, origine, erreurs, avertissements) {
       v.forEach((ligne, i) => {
         if (!ligne || typeof ligne !== 'object') { erreurs.push(`${nom}[${i}] : ligne invalide`); return; }
         const l = {};
-        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], origine, erreurs, avertissements);
+        for (const [k, d] of Object.entries(def.champs)) l[k] = normaliserChamp(`${nom}[${i}].${k}`, d, ligne[k], ctx, erreurs, avertissements);
         if (Object.values(l).some((x) => x !== null)) res.push(l);
       });
       return res.length ? res : null;
@@ -225,7 +230,9 @@ export function refsDuChamp(def, v) {
 }
 
 // Rend { valeur, erreurs, avertissements }. Tous les champs du schéma sont présents dans valeur.
-export function normaliser(store, brut, { origine = 'app' } = {}) {
+// perso (v9) : la méta `motsPerso`, pour reconnaître un relevé qui cite un mot à soi ; sans elle, il est refusé.
+export function normaliser(store, brut, { origine = 'app', perso = null } = {}) {
+  const ctx = { origine, perso };
   const schema = SCHEMAS[store];
   if (!schema) throw new Error(`Store inconnu : ${store}`);
   const erreurs = [];
@@ -238,11 +245,11 @@ export function normaliser(store, brut, { origine = 'app' } = {}) {
       valeur[nom] = src[nom] ?? null;
     } else {
       const avant = erreurs.length;
-      valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
+      valeur[nom] = normaliserChamp(nom, def, src[nom], ctx, erreurs, avertissements);
       if (valeur[nom] === null && erreurs.length === avant) erreurs.push(`${nom} : absente`);
     }
   }
-  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], origine, erreurs, avertissements);
+  for (const [nom, def] of Object.entries(schema.saisis)) valeur[nom] = normaliserChamp(nom, def, src[nom], ctx, erreurs, avertissements);
   for (const nom of CHAMPS_TECHNIQUES) if (typeof src[nom] === 'string') valeur[nom] = src[nom];
   const connus = new Set([...Object.keys(schema.cles), ...Object.keys(schema.saisis), ...CHAMPS_TECHNIQUES]);
   for (const nom of Object.keys(src)) if (!connus.has(nom)) avertissements.push(`${nom} : champ inconnu ignoré`);
@@ -263,8 +270,9 @@ export function valider(store, brut, options) {
 }
 
 // Champs de contexte préremplis par l'app : seuls, ils ne suffisent pas à garder une fiche.
-// v7 : « Ce que je faisais » n'en est plus un (spec §4.3), seul « vers » le reste pour les relevés.
-const CONTEXTE = { episodes: ['heure'], humeurs: ['vers'] };
+// v7 : « Ce que je faisais » n'en est plus un (spec §4.3). v9 : « vers » non plus (spec §13.5), un relevé
+// n'en a plus aucun.
+const CONTEXTE = { episodes: ['heure'] };
 
 export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];

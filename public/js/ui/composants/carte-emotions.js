@@ -1,168 +1,114 @@
-// Carte des émotions (v8, spec §4), comme How We Feel : d'abord une tuile, l'énergie et un côté (« plutôt
-// désagréable », « plutôt agréable »), puis un mot sur une carte de bulles. Un toucher enregistre :
-// - la tuile enregistre l'énergie (jamais devinée d'après le mot) et ouvre la carte centrée sur sa zone ; le côté
-//   n'est ni enregistré ni calculé, il ne sert qu'à trouver le mot. Retoucher la tuile choisie efface l'énergie ;
-// - la bulle, à la couleur de sa famille, enregistre `roue:<famille>:<mot>` ; elle grossit et sa définition s'affiche
-//   en bas. Retoucher le mot choisi l'efface ;
-// - un appui long sur une bulle montre sa définition sans rien choisir ;
-// - « Toute la carte » ouvre la carte sans passer par l'énergie, « ‹ Énergie » ramène aux tuiles.
-// La carte est toujours la même (domain/carte-roue.js) : trois bandes d'énergie, deux côtés, et dans chaque zone les
-// mots d'une même famille côte à côte. Elle se fait glisser dans les deux sens ; rien n'est grisé.
-// Une vue remplace l'autre au même endroit : pendant 350 ms, ses boutons ignorent les touchers (un second toucher
-// rapide tomberait sur un mot jamais vu), fondu ou non (« Réduire les animations ») ; ils sont alors aria-disabled.
-// Pour VoiceOver, chaque zone est un groupe nommé par sa légende (« Basse · plutôt agréable ») ; ouverte depuis une
-// tuile, la carte met le focus sur la zone touchée, sinon (« Toute la carte », « ‹ Énergie ») sur le titre de la vue.
-// surEnergie(id | null), surMot(id | null) : les choix ; surRetour() : retour aux tuiles ; surGeste.suspendre() et
-// surGeste.relancer() : un doigt posé sur la carte, puis levé ou la carte qui glisse (la fermeture attend).
-import { html, useEffect, useLayoutEffect, useRef, useState } from '../lib.js';
-import { FAMILLES, familleDe, libelleEmotion } from '../../domain/roue.js';
-import { COTES, ENERGIES, EXEMPLES, cleZone, motsDeZone, zoneDe } from '../../domain/carte-roue.js';
-import { definition } from '../../domain/definitions-roue.js';
-import { Icones } from '../icones.js';
-import { coche, libelleChoix } from './coche.js';
+// La carte des émotions (v9, spec §4.2 ; visuel-hwf.md §2), comme How We Feel : toute la grille de 12 × 12, plus les mots
+// à soi hors du carré de leur zone (domain/carte-roue.js, motsDeLaCarte), en bulles de 96 pt à la couleur de leur case,
+// dans un cadre plein écran qui défile librement dans les deux sens ; la page, elle, ne défile jamais de côté.
+// - Ouverte depuis une bulle de l'écran 1, elle est centrée sur le milieu de sa zone (`centre`).
+// - Un mot choisi (`choisi`) devient la double capsule de 156 pt ; ses voisines passent à 120 puis 108 pt (la lentille de
+//   ui/carte-geometrie.js) et la carte glisse jusqu'à lui, au milieu de l'écran. Les bulles changent de place et de
+//   taille en 450 ms ; avec « Réduire les animations », tout est immédiat (base.css), recentrage compris.
+// - Toucher un mot appelle `surMot(id)`, qui écrit (le mot, ou rien s'il était déjà choisi). Pendant la garde (`enGarde`,
+//   350 ms après un changement de vue ou un mot choisi), la carte ignore les touchers et est aria-disabled.
+// Le plan a la taille de toutes les dispositions possibles, plus une demi-fenêtre de chaque côté : n'importe quel mot,
+// même au bord, peut venir au centre. Les bulles y sont posées par CSSOM (transform, --c), sans attribut style.
+// Pour VoiceOver, chaque zone est un groupe nommé (« Énergie haute · désagréable »), ses mots dans l'ordre de lecture de
+// la carte ; chaque bulle est un bouton à son mot, aria-pressed quand il est choisi.
+import { html, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from '../lib.js';
+import { ZONES, NOMS_ZONES } from '../../domain/carte-roue.js';
+import { couleurCase, disposition, etendue, pointDe, DIAMETRE } from '../carte-geometrie.js';
+import { ajusterEtiquettes, zonesSures } from '../mesures.js';
 
-const GARDE_MS = 350;
-const APPUI_LONG_MS = 500;
-const TOLERANCE_PX = 10;
-const ID_ENERGIE = Object.freeze({ haute: 'energie:haute', moyenne: 'energie:moyenne', basse: 'energie:basse' });
-const COTE_TEXTE = { gauche: 'plutôt désagréable', droite: 'plutôt agréable' };
-const NOM_FAMILLE = new Map(FAMILLES.flatMap((f) => f.mots.map((m) => [m.id, f.libelle])));
-const ZONES = ENERGIES.flatMap((energie) => COTES.map((cote) => ({ energie, cote, cle: cleZone({ energie, cote }), mots: motsDeZone({ energie, cote }) })));
+const RAYON = DIAMETRE / 2;
+// La hauteur du voile noir du haut sous la zone sûre (.carte-fondu, visuel §2.7), qui couvre aussi les boutons.
+const VOILE_PX = 84;
+// Le plus petit corps d'un libellé de bulle (12 pt au texte par défaut ; visuel §2.6), et la marge gardée au bord du disque.
+const PLANCHER_PX = 9;
+const MARGE_PX = 3;
+// Le disque d'une bulle, en px de l'écran ; aucun pour le mot choisi (la double capsule, plus large que son libellé).
+const disque = (e) => {
+  const b = e.closest('.bulle-mot');
+  if (b.classList.contains('choisi')) return null;
+  const r = b.getBoundingClientRect();
+  return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, r: r.width / 2 - MARGE_PX * (r.width / DIAMETRE) };
+};
+const reduit = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Ouvre la carte sur une zone : centrée si elle tient dans le cadre, sinon son haut. Sans zone (« Toute la carte »), au
-// milieu : de part et d'autre du centre, sur la bande Moyenne, la moitié de chaque zone et sa légende (rangée contre le
-// centre, composants.css). Positions de mise en page (offset*), que le fondu d'apparition ne fausse pas.
-function centrer(cadre, cle) {
-  const carte = cadre.firstElementChild;
-  const zone = carte.querySelector(`[data-zone="${cle || cleZone({ energie: 'moyenne', cote: 'gauche' })}"]`);
-  if (!zone) return;
-  cadre.scrollLeft = Math.max(0, cle ? zone.offsetLeft + zone.offsetWidth / 2 - cadre.clientWidth / 2 : (carte.offsetWidth - cadre.clientWidth) / 2);
-  cadre.scrollTop = Math.max(0, zone.offsetHeight <= cadre.clientHeight
-    ? zone.offsetTop + zone.offsetHeight / 2 - cadre.clientHeight / 2
-    : zone.offsetTop - 8);
-}
+// Les mots de la carte, avec la couleur de leur case.
+export const motsColores = (mots) => mots.map((m) => ({ ...m, couleur: couleurCase(m.col, m.rang) }));
 
-// La définition après le mot et « : » : son initiale en minuscule (« Curieux : l'envie de découvrir… »), sauf pour un
-// sigle ou un nom (deux capitales de suite).
-const apresDeuxPoints = (texte) => (/^\p{Lu}(\p{Ll}|['’ ])/u.test(texte) ? texte[0].toLowerCase() + texte.slice(1) : texte);
-
-export function CarteEmotions({ emotion, energie, libelle, corrections, surEnergie, surMot, surRetour, surGeste }) {
-  // La vue : les tuiles, ou la carte (`centre` : la zone de la tuile touchée, null pour « Toute la carte »).
-  const [vue, setVue] = useState({ nom: 'tuiles', centre: null });
-  // Le côté de la tuile touchée (jamais enregistré) : il dit laquelle des deux tuiles d'une énergie est cochée.
-  const [cote, setCote] = useState(null);
-  // Le mot dont la définition s'affiche : le mot choisi, ou celui d'un appui long.
-  const [montre, setMontre] = useState(() => (zoneDe(emotion) ? emotion : null));
-  const [enGarde, setEnGarde] = useState(false);
-  const titre = useRef(null);
+export function CarteEmotions({ mots, choisi = null, centre = null, enGarde = false, surMot }) {
   const cadre = useRef(null);
-  const aFocaliser = useRef(false);
-  const garde = useRef(null);
-  const appui = useRef({ minuteur: null, x: 0, y: 0, long: false });
-  useEffect(() => () => { clearTimeout(garde.current); clearTimeout(appui.current.minuteur); }, []);
-  // Plus de mot (relevé supprimé, mot retouché) : sa définition part avec lui ; un mot choisi la montre.
-  useEffect(() => { if (emotion == null) setMontre(null); }, [emotion]);
-  // Plus d'énergie : aucune tuile cochée.
-  useEffect(() => { if (energie == null) setCote(null); }, [energie]);
-
-  const montrer = (nom, centre = null) => {
-    aFocaliser.current = true;
-    setMontre(zoneDe(emotion) ? emotion : null);
-    clearTimeout(garde.current);
-    setEnGarde(true);
-    garde.current = setTimeout(() => setEnGarde(false), GARDE_MS);
-    setVue({ nom, centre });
+  const [, redessiner] = useReducer((n) => n + 1, 0);
+  const geo = useMemo(() => etendue(mots), [mots]);
+  const places = useMemo(() => disposition(mots, choisi), [mots, choisi]);
+  // Une demi-fenêtre de marge autour de toutes les places : la carte occupe tout l'écran (inset 0). Les bords en pt
+  // entiers (la lentille mesurée a des dixièmes) : la place régulière d'un mot l'est aussi, et le défilement, entier,
+  // amène le mot choisi pile au milieu.
+  const [mx, my] = [Math.ceil(window.innerWidth / 2), Math.ceil(window.innerHeight / 2)];
+  const [x0, y0] = [Math.floor(geo.minX), Math.floor(geo.minY)];
+  const [ox, oy] = [mx - x0, my - y0];
+  const taille = { width: `${Math.ceil(geo.maxX) - x0 + 2 * mx}px`, height: `${Math.ceil(geo.maxY) - y0 + 2 * my}px` };
+  // Amène un point au milieu de l'écran. `borne` : sans dépasser le bord des bulles (plus la moitié d'un écart), pour
+  // l'ouverture sur une zone, qui montre ainsi des bulles jusqu'aux bords de l'écran ; un mot choisi, lui, vient
+  // toujours au milieu, même au bord de la carte (visuel §2.1). En haut, la borne laisse la place du voile et des
+  // boutons (la zone sûre et 84 pt, visuel §2.7) : ouverte sur le rouge ou le jaune, la carte vient au milieu de la
+  // zone, et les mots du rang 12, les plus intenses, ne passent ni sous ← et la loupe ni sous le voile (relecture finale).
+  const centrer = ({ x, y }, { doux = false, borne = false } = {}) => {
+    const c = cadre.current;
+    if (!c) return;
+    let [left, top] = [x + ox - c.clientWidth / 2, y + oy - c.clientHeight / 2];
+    if (borne) {
+      const r = geo.regulier;
+      const pad = RAYON + 5;
+      const voile = zonesSures().haut + VOILE_PX;
+      left = Math.max(r.minX + ox - pad, Math.min(left, r.maxX + ox + pad - c.clientWidth));
+      top = Math.max(r.minY + oy - pad - voile, Math.min(top, r.maxY + oy + pad - c.clientHeight));
+    }
+    c.scrollTo({ left, top, behavior: doux && !reduit() ? 'smooth' : 'auto' });
   };
+  // À l'ouverture : le milieu de la zone touchée, sinon le mot choisi, sinon le milieu de la carte ; le focus va à la zone
+  // touchée (sinon à la carte), sans la faire bouger.
   useLayoutEffect(() => {
-    if (vue.nom === 'carte' && cadre.current) centrer(cadre.current, vue.centre);
-  }, [vue]);
-  useEffect(() => {
-    if (!aFocaliser.current) return;
-    aFocaliser.current = false;
-    const zone = vue.nom === 'carte' && vue.centre && cadre.current && cadre.current.querySelector(`[data-zone="${vue.centre}"]`);
-    const cible = zone || titre.current;
+    centrer(pointDe(mots, centre ? { zone: centre } : { id: choisi }), { borne: Boolean(centre) || !choisi });
+    const cible = (centre && cadre.current.querySelector(`[data-zone="${centre}"]`)) || cadre.current.querySelector('.zone-carte');
     if (cible) cible.focus({ preventScroll: true });
-  }, [vue]);
-  // Un toucher, sauf pendant la garde.
-  const sauf = (faire) => (e) => { if (!enGarde) faire(e); };
+  }, []);
+  // Un mot choisi ensuite : la carte glisse jusqu'à lui.
+  const ouverte = useRef(false);
+  useLayoutEffect(() => {
+    if (!ouverte.current) { ouverte.current = true; return; }
+    if (choisi) centrer(pointDe(mots, { id: choisi }), { doux: true });
+  }, [choisi]);
+  // La fenêtre change de taille (l'iPhone tourne) : les marges suivent.
+  useEffect(() => {
+    window.addEventListener('resize', redessiner);
+    return () => window.removeEventListener('resize', redessiner);
+  }, []);
+  // Chaque libellé tient dans les 78 pt utiles de sa bulle (80 %, visuel §2.6) et dans son disque, même en très grand
+  // texte.
+  useEffect(() => {
+    let actif = true;
+    const ajuster = () => { if (actif && cadre.current) ajusterEtiquettes(cadre.current.querySelectorAll('.etiquette-mot'), PLANCHER_PX, disque); };
+    ajuster();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajuster);
+    return () => { actif = false; };
+  }, [mots]);
 
-  if (vue.nom === 'tuiles') {
-    const toucherTuile = (e, c) => {
-      const id = ID_ENERGIE[e];
-      if (energie === id && cote === c) { setCote(null); surEnergie(null); return; }
-      setCote(c);
-      if (energie !== id) surEnergie(id);
-      montrer('carte', cleZone({ energie: e, cote: c }));
-    };
-    return html`<div class="bloc-reponse vue-tuiles" key="tuiles">
-      <div class="tete-reponse">
-        <h2 class="titre-reponse" ref=${titre} tabindex="-1">Énergie</h2>
-        <button type="button" class="btn-lien toute-la-carte" aria-disabled=${enGarde ? 'true' : null} onClick=${sauf(() => montrer('carte', null))}>Toute la carte${Icones.chevron({ trait: 2 })}</button>
-      </div>
-      <div class="tuiles-emotion" role="group" aria-label="Énergie" aria-disabled=${enGarde ? 'true' : null}>
-        ${COTES.map((c) => html`<span class="cote-tuiles" aria-hidden="true">${COTE_TEXTE[c]}</span>`)}
-        ${ENERGIES.map((e) => COTES.map((c) => {
-          const choisie = energie === ID_ENERGIE[e] && cote === c;
-          const nom = libelle(ID_ENERGIE[e]);
-          return html`<button type="button" class="tuile-emotion" aria-pressed=${choisie ? 'true' : 'false'}
-            aria-label=${`Énergie ${nom.toLowerCase()}, ${COTE_TEXTE[c]}`} onClick=${sauf(() => toucherTuile(e, c))}>
-            ${coche()}${libelleChoix(nom)}
-            <span class="tuile-exemples">${EXEMPLES[cleZone({ energie: e, cote: c })].map((id) => html`<span class=${`exemple-tuile emo-${familleDe(id)}`}>${libelleEmotion(id)}</span>`)}</span>
-          </button>`;
-        }))}
-      </div>
-    </div>`;
-  }
-
-  // Appui long : la définition, sans choisir. Le clic de pointeur qui suit l'appui est ignoré ; un doigt qui bouge (la
-  // carte glisse) l'annule. Un nouvel appui repart de zéro, et chaque clic efface la marque : un appui long levé hors de
-  // la bulle n'avale pas le clic suivant, ni un clic sans pointeur (clavier, aides techniques : e.detail vaut 0).
-  const poser = (id) => (e) => {
-    const a = appui.current;
-    clearTimeout(a.minuteur);
-    Object.assign(a, { x: e.clientX, y: e.clientY, long: false });
-    a.minuteur = setTimeout(() => { a.long = true; setMontre(id); }, APPUI_LONG_MS);
+  const bulle = (m) => {
+    const p = places.get(m.id);
+    const est = m.id === choisi;
+    const style = { '--c': m.couleur, transform: `translate(${(p.x + ox - RAYON).toFixed(1)}px, ${(p.y + oy - RAYON).toFixed(1)}px) scale(${p.echelle})` };
+    return html`<button type="button" key=${m.id} class=${est ? 'bulle-mot choisi' : 'bulle-mot'} aria-pressed=${est ? 'true' : 'false'} style=${style}
+      onClick=${() => { if (!enGarde) surMot(m.id); }}>
+      <span class="demi droite" aria-hidden="true"></span><span class="demi gauche"><span class="etiquette-mot">${m.libelle}</span></span>
+    </button>`;
   };
-  const bouger = (e) => {
-    const a = appui.current;
-    if (Math.hypot(e.clientX - a.x, e.clientY - a.y) > TOLERANCE_PX) clearTimeout(a.minuteur);
-  };
-  const lever = () => clearTimeout(appui.current.minuteur);
-  const toucherMot = (e, id) => {
-    const apresAppuiLong = appui.current.long;
-    appui.current.long = false;
-    if (apresAppuiLong && e.detail !== 0) return;
-    if (emotion === id) { setMontre(null); surMot(null); return; }
-    setMontre(id);
-    surMot(id);
-  };
-  const retour = () => { surRetour(); montrer('tuiles'); };
-  const famille = montre && familleDe(montre);
-  const texte = montre && definition(montre, corrections);
-  return html`<div class="bloc-reponse vue-carte" key="carte">
-    <div class="tete-reponse">
-      <button type="button" class="btn-lien retour-energie" aria-disabled=${enGarde ? 'true' : null} onClick=${sauf(retour)}>${Icones.retour({ trait: 2 })}Énergie</button>
-      <h2 class="titre-reponse" ref=${titre} tabindex="-1">Émotion</h2>
+  // Dans chaque zone, l'ordre de lecture de la carte : du rang le plus haut au plus bas, de gauche à droite.
+  const parZone = useMemo(() => Object.fromEntries(ZONES.map((z) => [z, mots.filter((m) => m.zone === z)
+    .sort((a, b) => b.rang - a.rang || a.col - b.col)])), [mots]);
+  return html`<div class="carte-defile" ref=${cadre}>
+    <div class="carte-plan" role="group" aria-label="Émotion" aria-disabled=${enGarde ? 'true' : null} style=${taille}>
+      ${ZONES.map((z) => html`<div key=${z} class="zone-carte" role="group" aria-label=${NOMS_ZONES[z]} data-zone=${z} tabindex="-1">
+        ${parZone[z].map(bulle)}
+      </div>`)}
     </div>
-    <div class="carte-cadre" ref=${cadre} role="group" aria-label="Émotion" aria-disabled=${enGarde ? 'true' : null}
-      onPointerDown=${() => surGeste.suspendre()} onPointerUp=${() => surGeste.relancer()} onTouchEnd=${() => surGeste.relancer()}
-      onScroll=${() => surGeste.relancer()}>
-      <div class="carte-roue">
-        ${ZONES.map((z) => html`<div class=${`zone-carte zone-${z.cote}`} data-zone=${z.cle} role="group" aria-labelledby=${`legende-${z.cle}`} tabindex="-1">
-          <p class="legende-zone" id=${`legende-${z.cle}`}><span>${libelle(ID_ENERGIE[z.energie])} ·</span> <span>${COTE_TEXTE[z.cote]}</span></p>
-          <div class="bulles-zone">${z.mots.map((id) => {
-            const choisi = emotion === id;
-            const nom = libelleEmotion(id);
-            return html`<button type="button" class=${`bulle bulle-carte emo-${familleDe(id)}${montre === id && !choisi ? ' montree' : ''}`}
-              aria-pressed=${choisi ? 'true' : 'false'} aria-label=${`${nom}, famille ${NOM_FAMILLE.get(id)}`}
-              onPointerDown=${poser(id)} onPointerMove=${bouger} onPointerUp=${lever} onPointerCancel=${lever} onPointerLeave=${lever}
-              onContextMenu=${(e) => e.preventDefault()} onClick=${sauf((e) => toucherMot(e, id))}>${coche()}${libelleChoix(nom)}</button>`;
-          })}</div>
-        </div>`)}
-      </div>
-    </div>
-    <p class="definition-carte" aria-live="polite">${texte
-      ? html`<strong class=${`mot-definition emo-${famille}`}>${libelleEmotion(montre)}</strong>${' : '}${apresDeuxPoints(texte)}`
-      : html`<span class="aide-definition">Un appui long sur un mot montre son sens, sans le choisir.</span>`}</p>
   </div>`;
 }

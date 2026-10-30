@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, entreeDuJour, viderBase, aller } from '../aides/saisie.js';
-import { tuile, mot } from '../aides/emotion.js';
+import { noter, finir } from '../aides/emotion.js';
 
 // v4 : humeur du moment (émotion du moment en v7), détails du soir, Mon plan, Après coup, Ma journée, Analyse.
 const repo = (page, f, arg) => page.evaluate(f, arg);
@@ -11,22 +11,22 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('émotion du moment (v8) : une tuile et un mot, relevé à l\'heure réelle, liste du jour, suppression puis Annuler', async ({ page }) => {
+test('émotion du moment (v9) : une couleur et un mot, relevé à l\'heure réelle, la flèche et Terminer ; une nouvelle ouverture, un nouveau relevé ; Annuler', async ({ page }) => {
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
   const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
-  await tuile(vue, 'Moyenne', 'agréable').click();
-  await mot(vue, 'Calme', 'Sérénité').click();
+  await noter(vue, 'vert', 'Calme');
+  await finir(vue);
   await expect(page.getByText('Émotion du moment notée')).toBeVisible();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   const releves = () => repo(page, () => window.__carnet.repo.humeurs.tous());
   await expect.poll(releves).toMatchObject([{ date: '2026-10-05', heure: '18:42', emotion: 'roue:serenite:calme', humeur: null, energie: 'energie:moyenne' }]);
-  // Une nouvelle ouverture crée un nouveau relevé ; la liste du jour montre les précédents.
+  // Une nouvelle ouverture crée un nouveau relevé ; « Annuler » ne retire que lui.
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
-  await expect(vue.getByRole('region', { name: 'Relevés d\'aujourd\'hui' })).toContainText('18:42 Calme · énergie moyenne');
-  await vue.getByRole('button', { name: 'Supprimer le relevé de 18:42' }).click();
-  await expect.poll(async () => (await releves()).length).toBe(0);
+  await noter(vue, 'jaune', 'Curieux');
+  await finir(vue);
+  await expect.poll(async () => (await releves()).length).toBe(2);
   await page.getByRole('button', { name: 'Annuler' }).click();
-  await expect.poll(async () => (await releves()).length).toBe(1);
+  await expect.poll(releves).toMatchObject([{ emotion: 'roue:serenite:calme' }]);
 });
 
 test('sport et contact en détail : plusieurs activités, avec qui, comment c\'était ; Oui posé si vide', async ({ page }) => {

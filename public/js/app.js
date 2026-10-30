@@ -44,7 +44,9 @@ const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
   jour: (p) => html`<${Aujourdhui} date=${p.date} />`,
   'historique-jour': (p) => html`<${Aujourdhui} date=${p.date} depuisHistorique=${true} />`,
-  moment: () => html`<${Moment} />`,
+  // Un relevé neuf, ou un relevé rouvert (v9) : chacun sa clé, pour que passer de l'un à l'autre reparte de zéro.
+  moment: () => html`<${Moment} key="neuf" />`,
+  'moment-releve': (p) => html`<${Moment} key=${`releve-${p.id}`} id=${p.id} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
   'mon-plan': () => html`<${MonPlan} />`,
   'apres-coup-liste': () => html`<${ApresCoupListe} />`,

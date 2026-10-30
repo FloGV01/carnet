@@ -27,12 +27,16 @@ initialiserSw({ surMajDisponible: () => etatApp.maj({ majDisponible: true }) }).
 if (estModeApp(window)) demanderPersistance();
 
 // Retour au premier plan : le jour logique est recalculé ; après 30 min d'absence,
-// retour sur Aujourd'hui, sauf pendant un parcours (déjà enregistré).
+// retour sur Aujourd'hui, sauf pendant un parcours (déjà enregistré). L'Émotion du moment (#/moment, neuve ou rouverte)
+// est un plein écran où tout s'écrit au toucher : elle se ferme aussi (relecture finale de la v9). Laissée ouverte le
+// soir après un mot, elle gardait ce relevé comme relevé en cours, et un mot touché le matin le réécrivait, daté de la
+// veille.
+const estReleve = (hash) => /^#\/moment(\/|$)/.test(hash);
 survivreAuCycle({
   surMinute: () => etatApp.maj((e) => ({ horloge: (e.horloge || 0) + 1 })),
   surRetour: (absenceMs) => {
     etatApp.maj((e) => ({ horloge: (e.horloge || 0) + 1 }));
-    if (absenceMs > 30 * 60 * 1000 && !etatApp.lire().parcoursOuvert) location.hash = `#/${ROUTE_ACCUEIL}`;
+    if (absenceMs > 30 * 60 * 1000 && (!etatApp.lire().parcoursOuvert || estReleve(location.hash))) location.hash = `#/${ROUTE_ACCUEIL}`;
   },
 });
 

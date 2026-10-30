@@ -2,6 +2,7 @@
 // entre la dernière carte du soir et la bande du bas (positive : le soir tient sans défiler), et celle de « J'ai fini pour
 // ce soir ». Des chiffres techniques seulement, rien sur l'usage : les marges sont prises à chaque affichage du soir
 // d'aujourd'hui, détails fermés (aujourdhui.js), gardées en mémoire le temps de la session, jamais enregistrées.
+// v9 : et le corps des libellés des bulles de l'émotion, ajusté à leur place (ajusterEtiquettes, en bas).
 
 let margeSoir = null;
 
@@ -52,3 +53,42 @@ export function noterMargeSoir(main) {
 }
 export const lireMargeSoir = () => (margeSoir ? margeSoir.soir : null);
 export const lireMargeFini = () => (margeSoir ? margeSoir.fini : null);
+
+// Les libellés des bulles de l'émotion (v9, point de vigilance 2) : chacun tient dans la largeur de sa boîte et, si
+// `cercleDe` le donne ({ cx, cy, r }, en px de l'écran), dans le disque de sa bulle. Un mot trop long pour sa boîte
+// (« Reconnaissant », ou tout mot en très grand texte) passe à un corps plus petit, par demi-point, sans descendre sous
+// `plancher` ; plusieurs mots passent à la ligne, eux, et si leurs lignes débordent du disque, le corps baisse aussi.
+// Mesuré d'un bloc (une lecture pour tous), puis corrigé là où il le faut ; avec `uniforme`, tous prennent ensuite le
+// plus petit corps trouvé (les quatre bulles de l'écran 1, qui se lisent ensemble). Le corps est posé par CSSOM
+// (element.style), jamais en attribut : la CSP le permet.
+// Une ligne de texte de `e` sort-elle du disque ? Seuls les nœuds de texte comptent, pas les boîtes qui les portent.
+const horsDuCercle = (e, c) => {
+  if (!c) return false;
+  const textes = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+  const plage = document.createRange();
+  for (let n = textes.nextNode(); n; n = textes.nextNode()) {
+    plage.selectNodeContents(n);
+    const dehors = [...plage.getClientRects()].some((q) => [[q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]]
+      .some(([x, y]) => Math.hypot(x - c.cx, y - c.cy) > c.r + 0.5));
+    if (dehors) return true;
+  }
+  return false;
+};
+export function ajusterEtiquettes(elements, plancher, cercleDe = () => null, { uniforme = false } = {}) {
+  const els = [...elements];
+  for (const e of els) e.style.fontSize = '';
+  const trop = (e) => e.scrollWidth - e.clientWidth > 0.5;
+  const mesures = els.map((e) => ({ corps: parseFloat(getComputedStyle(e).fontSize), ratio: trop(e) ? e.clientWidth / e.scrollWidth : 1 }));
+  els.forEach((e, i) => {
+    const { corps, ratio } = mesures[i];
+    if (ratio < 1) e.style.fontSize = `${Math.max(plancher, Math.floor(corps * ratio * 2) / 2)}px`;
+  });
+  for (const e of els) {
+    const cercle = cercleDe(e);
+    let corps = parseFloat(getComputedStyle(e).fontSize);
+    while ((trop(e) || horsDuCercle(e, cercle)) && corps > plancher) { corps -= 0.5; e.style.fontSize = `${corps}px`; }
+  }
+  if (!uniforme || !els.length) return;
+  const corps = Math.min(...els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
+  for (const e of els) e.style.fontSize = `${corps}px`;
+}

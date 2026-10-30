@@ -9,6 +9,7 @@ import { nouvelId, nouvelIdListe } from '../domain/ids.js';
 import { LISTES, estListe } from '../domain/listes-def.js';
 import { normLabel } from '../domain/vocabulaire.js';
 import { carteLibelles } from '../domain/libelles.js';
+import { effacerMot } from '../domain/mots-perso.js';
 
 export { DataError };
 
@@ -70,10 +71,18 @@ export function creerRepository({
     }
   }
 
-  function preparer(store, fusion) {
-    const { valeur, erreurs } = normaliser(store, fusion, { origine: 'app' });
+  function preparer(store, fusion, contexte = {}) {
+    const { valeur, erreurs } = normaliser(store, fusion, { origine: 'app', ...contexte });
     if (erreurs.length) throw new ErreurValidation(erreurs);
     return valeur;
+  }
+
+  // v9 : un relevé qui cite un mot à soi n'est valable que si ce mot est dans la méta `motsPerso`, lue dans la
+  // transaction de l'écriture (spec §9). Les autres magasins ne citent aucun mot.
+  async function contexteDe(t, store) {
+    if (store !== 'humeurs') return {};
+    const r = await req(t.objectStore('meta').get('motsPerso'));
+    return { perso: r ? r.valeur : null };
   }
 
   async function nbAudios(t, parentStore, parentId) {
@@ -144,7 +153,7 @@ export function creerRepository({
       // L'id est tiré une seule fois : un nouvel essai réécrit la même clé, sans doublon.
       creer: async (brut = {}, { id = nouvelId(PREFIXES[store], alea) } = {}) => {
         const res = await tx(stores, 'readwrite', async (t) => {
-          const valeur = preparer(store, { ...brut, id });
+          const valeur = preparer(store, { ...brut, id }, await contexteDe(t, store));
           await verifierRefs(t, store, valeur);
           const h = horo();
           const enreg = { ...valeur, createdAt: h, updatedAt: h };
@@ -161,7 +170,7 @@ export function creerRepository({
           const os = t.objectStore(store);
           const existant = await req(os.get(id));
           if (!existant) throw new DataError('INTROUVABLE', `${store} ${id} introuvable`);
-          const valeur = preparer(store, { ...existant, ...changements, id });
+          const valeur = preparer(store, { ...existant, ...changements, id }, await contexteDe(t, store));
           await verifierRefs(t, store, valeur);
           marquer(t);
           if (estVide(store, valeur) && (await nbAudios(t, store, id)) === 0) { os.delete(id); return null; }
@@ -446,6 +455,25 @@ export function creerRepository({
     },
   };
 
+  // ---------- mots à soi (v9, spec §4.5) ----------
+  // Un mot à soi s'efface seulement s'il ne sert dans aucun relevé ; sinon il se met de côté (domain/mots-perso.js). La
+  // vérification et l'effacement tiennent dans la même transaction : un relevé écrit entre les deux ne perd pas son mot.
+  const motsPerso = {
+    effacer: async (id) => {
+      const valeur = await tx(['humeurs', 'meta'], 'readwrite', async (t) => {
+        const utilise = (await req(t.objectStore('humeurs').getAll())).some((h) => h.emotion === id);
+        const os = t.objectStore('meta');
+        const r = await req(os.get('motsPerso'));
+        const v = effacerMot(r ? r.valeur : null, id, utilise);
+        os.put({ cle: 'motsPerso', valeur: v });
+        marquer(t);
+        return v;
+      });
+      signaler('meta', 'motsPerso');
+      return valeur;
+    },
+  };
+
   return {
     aujourdhui: () => jourLogique(now()),
     maintenant: () => now(),
@@ -460,6 +488,7 @@ export function creerRepository({
     listes,
     audios,
     meta,
+    motsPerso,
     tx,
     ouvrir: getDb,
     fermer: async () => { if (dbP) { const db = await dbP.catch(() => null); if (db) db.close(); dbP = null; } },

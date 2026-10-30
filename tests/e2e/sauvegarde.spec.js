@@ -69,7 +69,7 @@ test('v6 : les notes sont dans le fichier, et une note absente du fichier est an
 test('v7 : les séances sont dans le fichier, et une séance absente du fichier est annoncée avant d\'être effacée', async ({ page }) => {
   const gardee = await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-09-30', heure: '18:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre' }));
   const f = await exporterVers(page);
-  expect(JSON.parse(Buffer.from(f.octets).toString('utf8'))).toMatchObject({ formatVersion: 6, schemaVersion: 6, counts: { seances: 1 } });
+  expect(JSON.parse(Buffer.from(f.octets).toString('utf8'))).toMatchObject({ formatVersion: 7, schemaVersion: 6, counts: { seances: 1 } });
   await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-09-30', heure: '20:30', exercice: 'coherence', dureeS: 120, origine: 'moment-difficile' }));
   await page.locator('input[type=file]').setInputFiles({ name: f.nom, mimeType: 'application/json', buffer: Buffer.from(f.octets) });
   await expect(page.getByText(/Ce fichier contient 0 journée, 0 épisode, 1 séance de Bien-être\./)).toBeVisible();

@@ -22,8 +22,8 @@ import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { normaliserJournee, champsAffiches, repliAffiche, repliNuitAffiche, NOM_PESE_RECHARGE, NOM_NUIT } from '../../domain/journee.js';
 import { HEURES_SOMMEIL, texteHeuresSommeil } from '../../domain/champs.js';
 import { estExplosion } from '../../domain/explosions.js';
-import { familleDe } from '../../domain/roue.js';
-import { texteReleve, famillesDuJour } from '../../domain/releves.js';
+import { zoneDe } from '../../domain/carte-roue.js';
+import { texteReleve, zonesDuJour } from '../../domain/releves.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { etatApp } from '../../store.js';
 import { carteLibelles, libelle } from '../../domain/libelles.js';
@@ -193,12 +193,14 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   useEffect(() => { etatApp.maj({ jourContexte: date }); }, [date]);
   const { donnees: evenements } = useDonnees(async () => {
     // Les 7 derniers jours ne se lisent que sur la page d'aujourd'hui : ils font la ligne « Après coup » (v6).
-    const [episodes, symptomes, items, rdvs, avecMemo, humeurs, recents] = await Promise.all([
+    // v9 : les mots à soi (méta `motsPerso`), pour le libellé et la zone d'un relevé qui en cite un.
+    const [episodes, symptomes, items, rdvs, avecMemo, humeurs, recents, perso] = await Promise.all([
       repo.episodes.parJour(date, date), repo.symptomes.parJour(date, date), repo.listes.items(), repo.rdv.tous(), repo.audios.parents(),
       repo.humeurs.parJour(date, date), date === aujourdhui ? repo.episodes.parJour(premierJourRecent(aujourdhui), aujourdhui) : [],
+      repo.meta.lire('motsPerso'),
     ]);
     return {
-      episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo, humeurs,
+      episodes, symptomes, carte: carteLibelles(items), rdv: prochainRdv(rdvs, repo.aujourdhui()), avecMemo, humeurs, perso,
       avecApresCoup: episodesRecents(recents, aujourdhui).length > 0,
     };
   }, [date]);
@@ -285,12 +287,12 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   // Humeur du jour (v6) : le résumé dit la moyenne des notes de 1 à 10 des relevés du jour, sinon l'humeur du soir ;
   // depuis la v7, seuls les anciens relevés en ont (« humeur 6 » reste affiché, spec §5). Les champs, eux, gardent
   // l'entrée du soir telle quelle. Pendant un changement de jour, les relevés encore chargés sont ceux de l'autre
-  // jour : seule l'entrée de ce jour-ci compte, et seuls les relevés de ce jour-ci donnent leurs familles.
+  // jour : seule l'entrée de ce jour-ci compte, et seuls les relevés de ce jour-ci donnent leurs zones.
   const duJour = avecHumeurDuJour([entree], evenements ? evenements.humeurs : []).find((j) => j.date === date);
   const phrase = phraseResume('jour', duJour, carte, { nExplosions });
   const resume = phrase.map((x) => x.texte).join('');
-  // v7 : les familles d'émotions du jour, en points de couleur, au lieu de l'humeur moyenne (spec §5).
-  const familles = famillesDuJour(evenements ? evenements.humeurs.filter((h) => jourEvenement(h.date, h.heure) === date) : []);
+  // Les zones des émotions du jour, en points de couleur (v9, spec §13.4 ; v7 : leurs familles, au lieu de l'humeur moyenne).
+  const zones = evenements ? zonesDuJour(evenements.humeurs.filter((h) => jourEvenement(h.date, h.heure) === date), evenements.perso) : [];
   const replie = fini && date === aujourdhui && !vide;
   const visibles = champsAffiches(journee, entree);
   // Un détail renseigné vaut aussi « Oui » quand le Oui / Non n'était pas encore choisi.
@@ -366,28 +368,31 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   };
   // Ma journée (2b) : une rangée par relevé, épisode ou symptôme, dans une carte ; l'heure dans sa colonne, le repère,
   // le texte, puis le chevron d'une fiche. Le repère d'un épisode ou d'un symptôme est un petit carré à la couleur de
-  // son parcours, celui d'un relevé un rond : des couleurs de parcours et de familles se ressemblent (Symptôme et
-  // Sérénité, Épisode et Peur), la forme les distingue.
+  // son parcours, celui d'un relevé un rond : des couleurs de parcours et de zones se ressemblent (Symptôme et la zone
+  // verte), la forme les distingue.
   const ligneEvenement = (cle, href, heure, texte, teinte, memo) => html`<li key=${cle}><a class="ligne-evenement" href=${href}>
     <span class="heure">${heure || ''}</span>
     <span class=${`point-evenement point-parcours teinte-${teinte}`} aria-hidden="true"></span>
     <span class="resume">${texte}</span>
     ${memo && html`<span class="icone-memo" role="img" aria-label="avec mémo vocal">${Icones.onde()}</span>`}
     ${Icones.chevron({ trait: 2 })}</a></li>`;
-  // Un relevé n'a ni lien ni chevron : il s'efface dans l'écran Émotion du moment. « Irrité · énergie moyenne », au point
-  // de sa famille (v7) ; un relevé sans émotion (ancienne note, énergie seule) a un point creux, le même pour tous.
+  // Un relevé : « Irrité · énergie moyenne », au point de la zone de son mot (v9 ; de sa famille en v7 et v8) ; un relevé
+  // sans zone (ancienne note, énergie seule, famille seule de la v7) a un point creux, le même pour tous. v9 (spec §13.1) :
+  // il se rouvre d'un toucher, quel que soit le jour, sur l'écran 3 de l'Émotion du moment (son mot, « Ce que je
+  // faisais », « Supprimer ce relevé ») ; il a donc son lien et son chevron, comme un épisode.
   const ligneReleve = (h) => {
-    const famille = familleDe(h.emotion);
-    return html`<li key=${h.id}><div class="ligne-evenement releve">
+    const zone = zoneDe(h.emotion, evenements.perso);
+    return html`<li key=${h.id}><a class="ligne-evenement releve" href=${versHash('moment-releve', { id: h.id })}>
       <span class="heure">${h.vers ? formaterVers(h.heure) : h.heure}</span>
-      <span class=${famille ? `point-evenement point-releve emo-${famille}` : 'point-evenement point-releve point-creux'} aria-hidden="true"></span>
-      <span class="resume">${texteReleve(h, evenements.carte)}</span></div></li>`;
+      <span class=${zone ? `point-evenement point-releve zone-${zone}` : 'point-evenement point-releve point-creux'} aria-hidden="true"></span>
+      <span class="resume">${texteReleve(h, evenements.carte, evenements.perso)}</span>
+      ${Icones.chevron({ trait: 2 })}</a></li>`;
   };
   // Ma journée (v6.1) : relevés du moment et épisodes du jour logique rangés par heure ; puis ce qui n'a pas
   // d'heure, les épisodes notés depuis la page d'un jour passé, et enfin les symptômes. Rien pour un jour sans rien.
   const lignesJournee = () => {
     const elements = [
-      ...evenements.humeurs.filter((h) => texteReleve(h, evenements.carte)).map((h) => ({ x: h, rendu: ligneReleve(h) })),
+      ...evenements.humeurs.filter((h) => texteReleve(h, evenements.carte, evenements.perso)).map((h) => ({ x: h, rendu: ligneReleve(h) })),
       ...evenements.episodes.map((ep) => ({ x: ep, rendu: ligneEvenement(ep.id, versHash('episode', { id: ep.id }), ep.heure,
         [libelle(evenements.carte, ep.emotion), ep.intensite, libelle(evenements.carte, ep.declencheur)].filter((x) => x != null).join(' · ') || 'Épisode',
         'ep', evenements.avecMemo.has(`episodes:${ep.id}`)) })),
@@ -405,7 +410,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     : null;
 
   return html`<main class=${classeEcran} ref=${refPage}>
-    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} familles=${familles} surRetour=${retour}
+    <${EnteteJour} date=${date} aujourdhui=${aujourdhui} surAller=${aller} indicateur=${indicateur} resume=${resume} zones=${zones} surRetour=${retour}
       veille=${enVeille ? `Encore ${JOURS[jourSemaine(aujourdhui)]} jusqu'à 4 h.` : null} />
     ${date !== aujourdhui && html`<a class="lien revenir" href="#/aujourdhui">Revenir à aujourd'hui</a>`}
 

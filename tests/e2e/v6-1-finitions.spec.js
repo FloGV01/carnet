@@ -69,10 +69,12 @@ test('« Tout effacer » n\'est pas centré ; le bouton ✕ garde sa forme', asy
   // Le chevron de « Retour » garde sa taille (la règle de l'icône du ✕ ne le réduit plus).
   expect(ecran.chevron).toBe(22);
 
-  // Un vrai bouton ✕ (relevé de l'humeur du moment) : 44 pt, icône centrée de 18.
-  await repo(page, () => window.__carnet.repo.humeurs.creer({ date: '2026-10-15', heure: '10:20', humeur: 6, energie: null }));
-  await aller(page, '#/moment');
-  const croix = page.getByRole('button', { name: 'Supprimer le relevé de 10:20' });
+  // Un vrai bouton ✕ (une note de Soins ; celui d'un relevé de l'humeur du moment est parti en v9) : 44 pt, icône
+  // centrée de 18.
+  await repo(page, () => window.__carnet.repo.notes.creer({ date: '2026-10-15', heure: '10:20', texte: 'Une note inventée.' }));
+  await aller(page, '#/soins');
+  await page.getByRole('button', { name: 'Soins : Notes', exact: true }).click();
+  const croix = page.getByRole('button', { name: /^Supprimer la note du/ });
   await expect(croix).toBeVisible();
   const forme = await croix.evaluate((b) => {
     const s = getComputedStyle(b);
@@ -177,7 +179,7 @@ test('A3 : « 5 minutes » ne se coupe pas, « · Mouvement » ne commence pas u
   expect(point.rects[0].gauche).toBeGreaterThan(point.gaucheElement + 20);
 });
 
-test('colonne des heures de largeur fixe : Ma journée (relevés, « vers », épisode, symptôme sans heure) et relevés du moment', async ({ page }) => {
+test('colonne des heures de largeur fixe : Ma journée (relevés, « vers », épisode, symptôme sans heure)', async ({ page }) => {
   await repo(page, async () => {
     const r = window.__carnet.repo;
     await r.humeurs.creer({ date: '2026-10-15', heure: '10:20', humeur: 6, energie: 'energie:moyenne' });
@@ -197,18 +199,4 @@ test('colonne des heures de largeur fixe : Ma journée (relevés, « vers », é
   for (const c of colonnes) expect(c.chiffres).toBe('tabular-nums');
   expect(new Set(colonnes.map((c) => c.largeur)).size).toBe(1);
   expect(new Set(colonnes.map((c) => c.resume)).size).toBe(1);
-
-  // Les relevés du jour dans l'humeur du moment : la même colonne, le texte part du même bord.
-  await aller(page, '#/moment');
-  const heures = page.locator('.moments-du-jour .heure-moment');
-  await expect(heures).toHaveText(['10:20', 'vers 23 h']);
-  const releves = await heures.evaluateAll((els) => els.map((h) => {
-    const r = document.createRange();
-    r.setStartAfter(h);
-    r.setEnd(h.parentElement, h.parentElement.childNodes.length);
-    return { chiffres: getComputedStyle(h).fontVariantNumeric, largeur: Math.round(h.getBoundingClientRect().width), texte: Math.round(r.getClientRects()[0].left) };
-  }));
-  for (const c of releves) expect(c.chiffres).toBe('tabular-nums');
-  expect(new Set(releves.map((c) => c.largeur)).size).toBe(1);
-  expect(new Set(releves.map((c) => c.texte)).size).toBe(1);
 });

@@ -11,9 +11,10 @@ import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } fr
 import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
+import { normaliserPerso, recreerSiAbsent } from '../domain/mots-perso.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 6;
+export const FORMAT_VERSION = 7;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
 export const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
@@ -190,6 +191,11 @@ export const MISES_A_NIVEAU = {
     if (Array.isArray(data.meta)) data.meta = data.meta.map(masquerNuit);
     return { ...s, formatVersion: 6, counts, data };
   },
+  // v6 -> v7 (v9) : rien à transformer. Le format 7 peut citer des mots à soi (méta `motsPerso`), qu'une app v8 ne
+  // connaît pas : elle refuse ainsi proprement un fichier de la v9. Une sauvegarde 6 n'en a aucun.
+  6(s) {
+    return { ...s, formatVersion: 7 };
+  },
 };
 export function mettreANiveauSauvegarde(s) {
   let courant = s;
@@ -229,11 +235,21 @@ export function analyserFichiers(fichiers) {
   const listes = (data.listes || []).filter((it) => it && typeof it.id === 'string' && estListe(it.liste) && typeof it.libelle === 'string');
   const idsListes = new Set(listes.map((i) => i.id));
   const ajoutsListes = [];
+  const metaFichier = (data.meta || []).filter((m) => m && typeof m.cle === 'string' && !META_NON_EXPORTEES.has(m.cle));
+  // v9 : les mots à soi du fichier valident les relevés qui en citent un. Un relevé qui cite un mot à soi absent du
+  // fichier (ou illisible) le recrée mis de côté, « Mot sans libellé » : rien n'est perdu (point de vigilance 4).
+  // Relecture finale : la méta du fichier est d'abord remise dans la forme que l'app écrit (normaliserPerso : zone,
+  // famille, mise de côté, une seule bulle par nom), avant la lecture des relevés.
+  const metaPerso = metaFichier.find((m) => m.cle === 'motsPerso');
+  const persoFichier = normaliserPerso(metaPerso ? metaPerso.valeur : null);
+  let perso = persoFichier;
   for (const store of Object.keys(SCHEMAS)) {
     valides[store] = [];
     (data[store] || []).forEach((brut, i) => {
-      const { valeur, erreurs: errs } = normaliser(store, brut, { origine: 'sauvegarde' });
+      const avecMot = store === 'humeurs' && brut ? recreerSiAbsent(perso, brut.emotion, s.exportedAt) : perso;
+      const { valeur, erreurs: errs } = normaliser(store, brut, { origine: 'sauvegarde', perso: avecMot });
       if (errs.length) { erreurs.push(`${store} n° ${i + 1} : ${errs.join(', ')}`); return; }
+      perso = avecMot;
       for (const [champ, def] of Object.entries(SCHEMAS[store].saisis)) {
         for (const id of refsDuChamp(def, valeur[champ])) {
           if (id && !idsListes.has(id)) {
@@ -257,9 +273,12 @@ export function analyserFichiers(fichiers) {
     audios.push({ ...meta, data: octets.slice().buffer });
   }
   const dates = valides.journal.map((j) => j.date).concat(valides.episodes.map((e) => e.date)).sort();
+  const metaImportee = metaPerso
+    ? metaFichier.filter((m) => m.cle !== 'motsPerso' || m === metaPerso).map((m) => (m === metaPerso ? { ...m, valeur: perso } : m))
+    : perso === persoFichier ? metaFichier : [...metaFichier, { cle: 'motsPerso', valeur: perso }];
   return {
     sauvegarde: s,
-    valides: { ...valides, listes: [...listes, ...ajoutsListes], meta: (data.meta || []).filter((m) => m && typeof m.cle === 'string' && !META_NON_EXPORTEES.has(m.cle)), audios },
+    valides: { ...valides, listes: [...listes, ...ajoutsListes], meta: metaImportee, audios },
     erreurs,
     manquants,
     resume: {

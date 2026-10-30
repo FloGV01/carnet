@@ -41,12 +41,13 @@ const joursAvecSeance = (seances) => new Set((seances || []).filter((s) => s && 
 // journal : explosions déjà selon la règle de l'analyse (domain/explosions.js).
 // humeurs : les relevés, pour l'énergie basse et les émotions (un relevé compte pour son jour logique, « vers » compris).
 // seances : les séances de Bien-être (v7) ; la Vue soignants n'en passe pas.
-export function frise({ journal = [], episodes = [], humeurs = [], seances = [] }, du, au) {
+// perso (v9) : la méta `motsPerso`, pour qu'un relevé de mot à soi soit une émotion du jour, et compte dans sa famille.
+export function frise({ journal = [], episodes = [], humeurs = [], seances = [], perso = null }, du, au) {
   const pas = pasFrise(du, au);
   const parDate = new Map(journal.map((j) => [j.date, j]));
   const autres = autresParJour(episodes);
   const basse = energieBasseParJour(humeurs);
-  const emotions = emotionsParJour(humeurs, du, au);
+  const emotions = emotionsParJour(humeurs, du, au, perso);
   const bienEtre = joursAvecSeance(seances);
   const avec = (colonnes) => ({
     avecEnergie: colonnes.some((c) => c.energieBasse != null), avecHumeur: colonnes.some((c) => c.humeur != null),
@@ -100,7 +101,11 @@ export function frise({ journal = [], episodes = [], humeurs = [], seances = [] 
       if (j.explosions != null) { g.expl += j.explosions; g.connues += 1; }
     }
     g.autres += autres.get(d) || 0;
-    for (const id of emotions.get(d) || []) { g.familles[familleDe(id)] += 1; g.nEmotions += 1; }
+    // Un mot sans famille (v9 : Fatigué, Épuisé) ne compte dans aucune famille, ni dans nEmotions.
+    for (const id of emotions.get(d) || []) {
+      const f = familleDe(id, perso);
+      if (f) { g.familles[f] += 1; g.nEmotions += 1; }
+    }
     if (basse.has(d)) { g.energieConnue += 1; if (basse.get(d)) g.basses += 1; }
     if (bienEtre.has(d)) g.bienEtre = true;
   }
@@ -112,7 +117,7 @@ export function frise({ journal = [], episodes = [], humeurs = [], seances = [] 
       humeur: g.humeurs.length >= min ? moyenne(g.humeurs) : null,
       fragile: g.humeurs.length >= min && g.humeurs.length < plein,
       nHumeur: g.humeurs.length,
-      // Le nombre de relevés de chaque famille ; nul sans émotion notée.
+      // Le nombre de relevés de chaque famille ; nul sans émotion notée d'une famille.
       familles: g.nEmotions ? g.familles : null,
       nEmotions: g.nEmotions,
       nuits: g.nNuits ? g.nuits : null,

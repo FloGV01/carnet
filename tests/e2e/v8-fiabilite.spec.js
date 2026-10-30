@@ -38,6 +38,9 @@ async function diagnostic(page) {
   await aller(page, '#/diagnostic');
   const dl = page.locator('main.diag dl').first();
   await expect(dl.locator('dt', { hasText: 'Marge du soir' })).toBeVisible();
+  // L'écran est lu après le premier rendu (useEffect) : « · » seul veut dire « pas encore lu », jamais une marge (v9, 2/8 :
+  // la lecture immédiate échouait parfois, même au tag v8.0.0).
+  await expect(dl.locator('dt:has-text("Fenêtre") + dd')).not.toHaveText('·');
   return dl.evaluate((l) => Object.fromEntries([...l.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent])));
 }
 const enPx = (n) => `${String(Math.round(n * 10) / 10).replace('-', '−').replace('.', ',')} px`;

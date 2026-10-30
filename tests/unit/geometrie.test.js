@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometrieMesJours, geometrieJournee, DIM_MES_JOURS, DIM_MES_JOURS_PDF, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
+import { geometrieMesJours, geometrieJournee, geometrieZonesSemaines, DIM_MES_JOURS, DIM_MES_JOURS_PDF, DIM_ZONES_SEMAINES, CRENEAUX } from '../../public/js/ui/graphes/geometrie.js';
 
 const jour = (cle, extra = {}) => ({ cle, humeur: null, moyenne7: null, nuit: null, explosions: null, autres: 0, aDonnee: false, ...extra });
 
@@ -46,6 +46,29 @@ test('Mes jours par semaine : nuits empilées, anneau si fragile, explosions à 
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
 });
 
+// v9 (relecture de la tâche 1) : Fatigué (roue:aucune:…, sans famille) ne fausse plus Mes jours par semaine. Avant, la
+// frise lui donnait une clé « null » à NaN : la barre de sa semaine disparaissait et les autres prenaient y = NaN.
+test('v9 · Mes jours par semaine avec un mot sans famille : une barre par semaine notée, aucun NaN, rien hors du cadre', async () => {
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const releve = (date, heure, emotion) => ({ id: `${date}-${heure}`, date, heure, emotion });
+  const humeurs = [releve('2026-09-02', '10:00', 'roue:aucune:fatigue'), releve('2026-09-02', '11:00', 'roue:joie:fier'), releve('2026-09-15', '10:00', 'roue:colere:irrite')];
+  for (const [du, pas] of [['2026-08-01', 'semaine'], ['2026-01-01', 'mois']]) {
+    const f = frise({ humeurs }, du, '2026-10-15');
+    assert.equal(f.pas, pas);
+    for (const g of [geometrieMesJours(f), geometrieMesJours(f, {}, { ...DIM_MES_JOURS_PDF, largeur: 900 })]) {
+      assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), [], pas);
+      assert.deepEqual(g.barres.map((b) => b.famille), pas === 'semaine' ? ['joie', 'colere'] : ['colere', 'joie'], pas);
+    }
+  }
+  // Une clé qui n'est pas une famille ne compte pas dans la hauteur : la barre a celle d'une colonne sans elle.
+  const colonne = (familles) => ({ cle: '2026-09-21', humeur: null, nuits: null, explosions: null, autres: 0, aDonnee: true, familles, nEmotions: 2 });
+  const vides = { colere: 0, degout: 0, tristesse: 0, joie: 0, surprise: 0, peur: 0, serenite: 0 };
+  const avec = geometrieMesJours({ pas: 'semaine', colonnes: [colonne({ ...vides, joie: 2, null: 3 }), colonne({ ...vides, colere: 4 })] });
+  const sans = geometrieMesJours({ pas: 'semaine', colonnes: [colonne({ ...vides, joie: 2 }), colonne({ ...vides, colere: 4 })] });
+  assert.deepEqual(avec.barres, sans.barres);
+  assert.deepEqual(horsCadre(avec, avec.dim.largeur, avec.dim.hauteur), []);
+});
+
 test('v7 · Mes jours sur la page A4 : des barres plus larges (barreMax), les mêmes rangées et le même ordre qu\'à l\'écran', () => {
   const colonnes = Array.from({ length: 12 }, (_, i) => ({ cle: `2026-${String(i + 1).padStart(2, '0')}`, humeur: 5, fragile: false, nuits: null, explosions: 1, autres: 0, aDonnee: true,
     familles: { colere: 1, degout: 0, tristesse: 0, joie: 0, surprise: 0, peur: 0, serenite: 2 }, nEmotions: 3 }));
@@ -79,7 +102,7 @@ test('ta journée (v7) : 12 créneaux de 4 h à 4 h, les familles d\'émotions e
   assert.deepEqual(geometrieJournee({ parHeure: null, creneaux: [] }).rangees, []);
 });
 
-test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa famille, « Humeur (notes) » seulement avec des notes', async () => {
+test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par relevé à la couleur de sa zone (v9), « Humeur (notes) » seulement avec des notes', async () => {
   const { geometrieMesJours } = await import('../../public/js/ui/graphes/geometrie.js');
   const { frise } = await import('../../public/js/analyse/frise.js');
   const humeurs = [
@@ -91,7 +114,8 @@ test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par re
   assert.deepEqual(g.rangees.map((r) => r.cle), ['emotions', 'nuits', 'explosions', 'autres'], 'sans note ni énergie : ni « Humeur (notes) » ni « Énergie basse »');
   assert.deepEqual(g.libelles.map((l) => l.lignes.map((x) => x.texte).join(' ')), ['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
   assert.deepEqual(g.etiquettes.map((e) => e.texte), ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
-  assert.deepEqual(g.points.map((p) => [p.cle, p.famille]), [['2026-10-12', 'colere'], ['2026-10-12', 'serenite'], ['2026-10-12', 'joie'], ['2026-10-14', 'peur']]);
+  // Irrité est rouge, Amusé jaune ; une famille seule de la v7 (Sérénité, Peur) n'a pas de zone : un point creux (null).
+  assert.deepEqual(g.points.map((p) => [p.cle, p.zone]), [['2026-10-12', 'rouge'], ['2026-10-12', null], ['2026-10-12', 'jaune'], ['2026-10-14', null]]);
   assert.ok(g.points[2].y < g.points[0].y, 'le troisième relevé du jour monte d\'un rang');
   assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
   // Avec une ancienne note : la rangée « Humeur (notes) », sous les émotions.
@@ -112,6 +136,43 @@ test('v7 · Mes jours à l\'écran : une étiquette par rangée, un point par re
   const g4 = geometrieMesJours(frise({ journal: [], episodes: [], humeurs: plein }, '2026-09-18', '2026-10-18'));
   const emo = g4.rangees[0];
   assert.ok(g4.points.every((p) => p.y - p.r >= emo.y - 0.1 && p.y + p.r <= emo.y + emo.h + 0.1));
+});
+
+// v9 · Tâche 3 : les points de Mes jours en mode jour prennent la couleur de la zone du mot (spec §13.4) ; les barres par
+// semaine ou par mois restent par famille.
+test('v9 · Mes jours par jour : un point par relevé à la zone de son mot (Fatigué compris), creux sans zone ; les barres par semaine restent par famille', async () => {
+  const { frise } = await import('../../public/js/analyse/frise.js');
+  const humeurs = [
+    { date: '2026-10-15', heure: '08:00', emotion: 'roue:colere:furieux' }, // rouge
+    { date: '2026-10-15', heure: '10:00', emotion: 'roue:joie:fier' }, // jaune
+    { date: '2026-10-15', heure: '12:00', emotion: 'roue:aucune:fatigue' }, // bleu, sans famille
+    { date: '2026-10-15', heure: '14:00', emotion: 'roue:serenite:calme' }, // vert
+    { date: '2026-10-15', heure: '16:00', emotion: 'roue:peur:accable' }, // rouge (bleu en v8)
+    { date: '2026-10-16', heure: '09:00', emotion: 'roue:colere' }, // famille seule (v7) : point creux
+    { date: '2026-10-16', heure: '10:00', humeur: 6 }, // ancienne note : pas de point d'émotion
+    { date: '2026-10-17', heure: '09:00', energie: 'energie:basse' }, // énergie seule : pas de point
+  ];
+  const f = frise({ journal: [], episodes: [], humeurs }, '2026-10-12', '2026-10-18');
+  const g = geometrieMesJours(f);
+  assert.deepEqual(g.points.map((p) => [p.cle, p.zone]), [
+    ['2026-10-15', 'rouge'], ['2026-10-15', 'jaune'], ['2026-10-15', 'bleu'], ['2026-10-15', 'vert'], ['2026-10-15', 'rouge'], ['2026-10-16', null],
+  ]);
+  assert.ok(g.points.every((p) => !('famille' in p)), 'plus de famille sur un point');
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  // Un mot à soi : sa zone vient de la méta motsPerso, passée par zoneDe.
+  const { zoneDe } = await import('../../public/js/domain/carte-roue.js');
+  const id = 'roue:perso:u-0a1b2c3d';
+  const perso = { [id]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-27T08:00:00.000Z' } };
+  const colonnes = [jour('2026-10-15', { emotions: [id, 'roue:joie:fier'], aDonnee: true })];
+  assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes }).points.map((p) => p.zone), [null, 'jaune'], 'sans la méta : point creux');
+  assert.deepEqual(geometrieMesJours({ pas: 'jour', colonnes }, { zoneDe: (x) => zoneDe(x, perso) }).points.map((p) => p.zone), ['vert', 'jaune']);
+  // Par semaine : les mêmes relevés en barres par famille (la famille seule de la v7 compte dans la sienne), sans Fatigué,
+  // qui n'a pas de famille ; aucun point.
+  const parSemaine = frise({ journal: [], episodes: [], humeurs }, '2026-07-20', '2026-10-18');
+  const g2 = geometrieMesJours(parSemaine);
+  assert.equal(parSemaine.pas, 'semaine');
+  assert.deepEqual(g2.points, []);
+  assert.deepEqual(g2.barres.map((b) => b.famille), ['colere', 'joie', 'peur', 'serenite']);
 });
 
 // v6 · énergie basse (spec §3) : une rangée sous les épisodes, à l'écran seulement (avecEnergie). La page A4 ne la reçoit
@@ -219,6 +280,18 @@ test('v6 · Mes jours, détail d\'une colonne : l\'énergie basse seulement quan
   assert.deepEqual(detailColonne('mois', { humeur: null, energieBasse: 12 }, lib), ['12 jours d\'énergie basse']);
   assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: 0 }, lib), ['humeur 5,0 en moyenne']);
   assert.deepEqual(detailColonne('semaine', { humeur: 5, fragile: false, energieBasse: null }, lib), ['humeur 5,0 en moyenne']);
+});
+
+// v9 · relecture de la tâche 3 : le détail d'un jour de Mes jours (et son tableau) dit le nom d'un mot à soi, lu dans la
+// méta motsPerso ; sans elle, l'identifiant brut s'afficherait.
+test('v9 · Mes jours, détail d\'un jour : le nom d\'un mot à soi, jamais son identifiant « roue: »', async () => {
+  const { detailColonne, texteEmotions } = await import('../../public/js/ui/graphes/graphes.js');
+  const id = 'roue:perso:u-0a1b2c3d';
+  const perso = { [id]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-27T08:00:00.000Z' } };
+  const ids = ['roue:joie:fier', id, 'roue:colere'];
+  assert.equal(texteEmotions(ids, perso), 'fier, flottant, colère');
+  assert.deepEqual(detailColonne('jour', { emotions: ids, entree: {} }, (x) => x, perso), ['émotions : fier, flottant, colère']);
+  assert.match(texteEmotions(ids), /roue:perso/, 'sans la méta');
 });
 
 // ---------- v6 · Comprendre ----------
@@ -546,4 +619,49 @@ test('v6 · repères : deux numéros trop proches passent sur un second rang ; u
   const pdf = geometrieMesJours({ pas: 'mois', colonnes: mois, avecHumeur: true }, { reperes: mois.map((c, i) => repere(i, '⑦–⑨', c.cle)) }, { ...DIM_MES_JOURS_PDF, largeur: 900 });
   assert.ok(pdf.reperes.every((r) => r.rang === 0));
   assert.deepEqual(horsCadre(pdf, 900, pdf.dim.hauteur), []);
+});
+
+// ---------- v9 · Tes zones, par semaine (spec §8 et §13.2) ----------
+
+const semaineZones = (semaine, o = {}) => ({ semaine, rouge: 0, jaune: 0, bleu: 0, vert: 0, ...o });
+// Les 12 lundis jusqu'à celui du 12 octobre 2026.
+const LUNDIS = ['2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05', '2026-10-12'];
+
+test('v9 · Tes zones par semaine : une barre empilée par semaine, de bas en haut rouge, jaune, bleu, vert, longue comme ses relevés ; rien pour une semaine vide', () => {
+  const semaines = LUNDIS.map((s) => semaineZones(s));
+  semaines[3] = semaineZones('2026-08-17', { vert: 2, rouge: 4, bleu: 2 });
+  semaines[11] = semaineZones('2026-10-12', { jaune: 4 });
+  semaines[10] = semaineZones('2026-10-05', { bleu: 1 });
+  const g = geometrieZonesSemaines(semaines);
+  const d = DIM_ZONES_SEMAINES;
+  assert.deepEqual(g.dim, { largeur: d.largeur, hauteur: d.haut + d.barresH + d.axeH });
+  // Une barre par zone notée, dans l'ordre des zones, la première posée sur la base, chacune au-dessus de la précédente.
+  const b = (cle) => g.barres.filter((x) => x.cle === cle);
+  assert.deepEqual(b('2026-08-17').map((x) => x.zone), ['rouge', 'bleu', 'vert']);
+  const [r, bl, v] = b('2026-08-17');
+  assert.ok(Math.abs(r.y + r.h + 0.6 - (d.haut + d.barresH)) < 0.2, 'posée sur la base');
+  assert.ok(bl.y + bl.h <= r.y + 0.05 && v.y + v.h <= bl.y + 0.05, 'empilées de bas en haut');
+  // Longue comme le nombre de relevés, sur une échelle commune : 8 relevés, la plus haute ; 4, la moitié ; 1, un huitième
+  // (3 unités au moins).
+  const hauteur = (cle) => (d.haut + d.barresH) - Math.min(...b(cle).map((x) => x.y));
+  assert.ok(Math.abs(hauteur('2026-08-17') - d.barresH) < 0.2);
+  assert.ok(Math.abs(hauteur('2026-10-12') - d.barresH / 2) < 0.2);
+  assert.ok(Math.abs(hauteur('2026-10-05') - Math.max(3, d.barresH / 8)) < 0.2);
+  // Rien pour une semaine vide : ni barre, ni zone à toucher.
+  assert.deepEqual(g.zones.map((z) => z.cle), ['2026-08-17', '2026-10-05', '2026-10-12']);
+  assert.equal(new Set(g.barres.map((x) => x.cle)).size, 3);
+  // Les lundis sous les barres, un sur deux en partant du plus récent.
+  assert.deepEqual(g.etiquettes.map((e) => e.texte), ['3/08', '17/08', '31/08', '14/09', '28/09', '12/10']);
+  assert.ok(g.etiquettes.every((e, i) => i === 0 || e.x > g.etiquettes[i - 1].x));
+  assert.ok(g.barres.every((x) => x.l <= d.barreMax && x.h > 0));
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+});
+
+test('v9 · Tes zones par semaine : sans relevé, rien de dessiné ni de touchable ; jamais NaN', () => {
+  const g = geometrieZonesSemaines(LUNDIS.map((s) => semaineZones(s)));
+  assert.deepEqual([g.barres, g.zones], [[], []]);
+  assert.deepEqual(horsCadre(g, g.dim.largeur, g.dim.hauteur), []);
+  const vide = geometrieZonesSemaines([]);
+  assert.deepEqual([vide.barres, vide.zones, vide.etiquettes], [[], [], []]);
+  assert.ok(!JSON.stringify(vide).includes('null'));
 });

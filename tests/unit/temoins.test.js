@@ -1,4 +1,4 @@
-// Sauvegardes témoins écrites par les versions publiées (formats 1 à 5, scripts/temoins.mjs) :
+// Sauvegardes témoins écrites par les versions publiées (formats 1 à 6, scripts/temoins.mjs) :
 // elles s'importent toujours au format courant, sans perte, et un export suivi d'un import reste stable.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,6 +15,8 @@ import { normaliser, SCHEMAS } from '../../public/js/domain/champs.js';
 import { addDays } from '../../public/js/domain/dates.js';
 import { versContacts } from '../../public/js/domain/contacts.js';
 import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { libelleEmotion } from '../../public/js/domain/roue.js';
+import { zoneDe } from '../../public/js/domain/carte-roue.js';
 import { controlerTemoin } from '../../scripts/temoins.mjs';
 
 const DOSSIER = join(RACINE, 'tests', 'fixtures', 'temoins');
@@ -25,6 +27,7 @@ const TEMOINS = [
   { fichier: 'format-3-memo.zip', format: 3, app: '5.0.0', memos: 2 },
   { fichier: 'format-4.json', format: 4, app: '6.1.0', memos: 0 },
   { fichier: 'format-5.json', format: 5, app: '7.0.0', memos: 0 },
+  { fichier: 'format-6.json', format: 6, app: '8.0.0', memos: 0 },
 ];
 // Le témoin JSON d'un format (le zip du format 3 vient après le JSON).
 const temoin = (format) => TEMOINS.find((t) => t.format === format);
@@ -88,10 +91,13 @@ test('les comptes sont justes : rien n\'est perdu, rien n\'est doublé', async (
       if (t.format <= 3) assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v6)`);
       else assert.ok(brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v6) dans le fichier`);
     }
-    // Les sujets d'un rendez-vous (v8) : aucun témoin ne les a, l'import les ajoute, datés du fichier.
+    // Les sujets d'un rendez-vous (v8) : absents des témoins d'avant la v8, l'import les ajoute, datés du fichier ; déjà
+    // dans le fichier au format 6.
     for (const it of seedItems(SEED_V6_AJOUTS, brut.exportedAt)) {
-      assert.ok(!brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v8) absent du fichier`);
-      assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v8)`);
+      if (t.format <= 5) {
+        assert.ok(!brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v8) absent du fichier`);
+        assert.deepEqual(lues.get(it.id), it, `${t.fichier} ${it.id} (v8)`);
+      } else assert.ok(brut.data.listes.some((x) => x.id === it.id), `${t.fichier} ${it.id} (v8) dans le fichier`);
     }
     const inconnus = tout.listes.filter((i) => i.origine === 'import').length;
     assert.equal(tout.listes.length, brut.counts.listes + listesManquantes(brut.data.listes).length + inconnus, t.fichier);
@@ -202,7 +208,7 @@ test('v7 : le témoin au format 4 garde ses notes de 1 à 10, ses relevés n\'on
 // (le Programme n'en date aucune), ses nuits ont coucher et lever sans nombre d'heures (Mes nuits les calcule).
 test('v8 : le témoin au format 5 garde ses séances sans fin, ses nuits sans heures, ses émotions et ses notes', async () => {
   const { brut, analyse, repo } = await importer(temoin(5));
-  assert.equal(analyse.sauvegarde.formatVersion, 6);
+  assert.equal(analyse.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(analyse.erreurs, []);
   assert.ok(brut.data.seances.length >= 3);
   assert.ok(brut.data.seances.every((x) => !('fin' in x) && !('programme' in x)), 'la v7 ne connaissait ni fin ni programme');
@@ -230,6 +236,33 @@ test('v8 : le témoin au format 5 garde ses séances sans fin, ses nuits sans he
   }
   assert.ok(brut.data.humeurs.some((h) => h.emotion && h.emotion.split(':').length === 2), 'une famille seule de la v7 reste valable');
   assert.equal(await repo.meta.lire('definitionsRoue'), null, 'aucune définition corrigée dans une sauvegarde de la v7');
+  assert.equal(await repo.meta.lire('schema'), 6);
+});
+
+// v9 : une sauvegarde de la v8 passe au format 7 sans aucun changement (mise à niveau vide). Ses relevés restent tels
+// qu'ils ont été saisis : l'énergie seule n'a pas de mot, Accablé garde l'énergie notée en v8 et prend la zone rouge.
+test('v9 : le témoin au format 6 passe au format 7 sans changement, énergie seule et Accablé compris', async () => {
+  const { brut, analyse, repo } = await importer(temoin(6));
+  assert.equal(brut.formatVersion, 6);
+  assert.equal(analyse.sauvegarde.formatVersion, 7);
+  assert.deepEqual(analyse.erreurs, []);
+  assert.deepEqual(analyse.sauvegarde.data, brut.data, 'rien n\'est transformé');
+  assert.deepEqual(analyse.sauvegarde.counts, brut.counts);
+  assert.ok(!analyse.valides.meta.some((m) => m.cle === 'motsPerso'), 'aucun mot à soi inventé');
+  for (const h of brut.data.humeurs) {
+    const lu = await repo.humeurs.lire(h.id);
+    for (const [champ, v] of Object.entries(h)) assert.deepEqual(lu[champ], v, `${h.id} ${champ}`);
+  }
+  const seule = brut.data.humeurs.find((h) => h.emotion === null && h.humeur === null);
+  assert.equal((await repo.humeurs.lire(seule.id)).energie, 'energie:basse', 'l\'énergie seule de la v8 reste, sans mot');
+  const accable = brut.data.humeurs.find((h) => h.emotion === 'roue:peur:accable');
+  assert.equal((await repo.humeurs.lire(accable.id)).energie, 'energie:basse', 'l\'énergie saisie en v8 n\'est pas réécrite');
+  assert.equal(zoneDe(accable.emotion), 'rouge');
+  assert.equal(libelleEmotion(accable.emotion), 'Accablé');
+  assert.deepEqual(await repo.meta.lire('definitionsRoue'), brut.data.meta.find((m) => m.cle === 'definitionsRoue').valeur);
+  const faite = brut.data.seances.find((x) => x.fin === true);
+  assert.deepEqual(await repo.seances.lire(faite.id), faite);
+  assert.equal(await repo.meta.lire('motsPerso'), null);
   assert.equal(await repo.meta.lire('schema'), 6);
 });
 
@@ -289,4 +322,20 @@ test('le script refuse un témoin incomplet', () => {
   assert.throws(() => controlerTemoin(sans5((s) => { for (const x of s.data.seances) x.exercice = 'coherence'; })), seul5('une séance d\'un exercice'));
   // Point de vigilance 1 de la v8 : le lever reste rempli, mais jamais sur la nuit qui a un coucher.
   assert.throws(() => controlerTemoin(sans5((s) => { for (const j of s.data.journal) j.heureLever = j.heureCoucher ? null : '07:00'; })), seul5('une nuit avec coucher et lever'));
+
+  // Format 6 (v8) : ce que la v8 ajoute, et les relevés que la v9 lit autrement (point de vigilance 1 de la v9).
+  const six = charger(temoin(6)).brut;
+  const sans6 = (modifier) => { const s = structuredClone(six); modifier(s); return enc.encode(JSON.stringify(s)); };
+  const seul6 = (manque) => ({ message: `témoin au format 6 incomplet :\n- ${manque}` });
+  assert.throws(() => controlerTemoin(sans6((s) => { for (const j of s.data.journal) j.heuresSommeil = null; })), /journal\.heuresSommeil/);
+  assert.throws(() => controlerTemoin(sans6((s) => { for (const x of s.data.seances) x.fin = null; })), /seances\.fin/);
+  // « Faite » et Programme sur deux séances différentes : chaque champ reste rempli, seul ce contrôle tombe.
+  assert.throws(() => controlerTemoin(sans6((s) => { s.data.seances.find((x) => !x.fin).fin = true; s.data.seances.find((x) => x.programme).fin = null; })),
+    seul6('une séance « Faite » du Programme'));
+  assert.throws(() => controlerTemoin(sans6((s) => { s.data.meta = s.data.meta.filter((m) => m.cle !== 'definitionsRoue'); })), seul6('des définitions des émotions corrigées'));
+  assert.throws(() => controlerTemoin(sans6((s) => { s.data.listes = s.data.listes.filter((i) => i.liste !== 'sujetRdv'); })), seul6('les sujets d\'un rendez-vous'));
+  assert.throws(() => controlerTemoin(sans6((s) => { for (const h of s.data.humeurs) if (!h.emotion && h.humeur === null) h.humeur = 5; })), seul6('un relevé à énergie seule'));
+  assert.throws(() => controlerTemoin(sans6((s) => { for (const h of s.data.humeurs) if (h.emotion === 'roue:peur:accable') h.emotion = 'roue:peur:craintif'; })), seul6('un relevé Accablé'));
+  assert.throws(() => controlerTemoin(sans6((s) => { const j = s.data.meta.find((m) => m.cle === 'journee'); j.valeur.masques = j.valeur.masques.filter((x) => x !== 'nuit'); })),
+    seul6('meta.journee avec « nuit » dans ses masques'));
 });
