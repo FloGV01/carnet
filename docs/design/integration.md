@@ -106,3 +106,12 @@ Aucun écran de la v8 n'est dessiné par Claude Design ; tous sont déduits du s
 - **Programme** : des cartes neutres, une rangée par séance, « Faite le 12/10 » en texte secondaire, derrière une coche à la couleur de Bien-être.
 - **Mes nuits** : la rampe sommeil du lot, avec un contour au pas « Moyen » pour la barre « Mal » (trop claire sur la carte), et une barre creuse pour une nuit sans qualité.
 - **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre, texte par défaut et 23 px), hors dépôt, et le test de contrôle étendu aux écrans de la v8. Le détail est dans `docs/decisions.md`, à l'entrée du 26/10.
+
+## v9 : les écrans du relevé d'émotion, comme How We Feel (30/10)
+
+Les écrans du relevé d'émotion quittent le système 2b : ils reprennent How We Feel, d'après les mesures de `docs/superpowers/specs/2026-10-28-carnet-v9/visuel-hwf.md` et la maquette validée (`apercu-carte.html`, dans le même dossier).
+
+- **Écrans du relevé** (les quatre bulles, la carte, « Ce que je faisais », la loupe, le mot à soi) : plein écran, fond noir dans les deux thèmes, boutons en verre sombre, titres et mots des bulles en `ui-serif` gras, texte noir sur les bulles. Ils remplacent la carte en tuiles de la v8.
+- **Couleurs de zone** : `--c-zone-rouge`, `-jaune`, `-bleu`, `-vert`, avec les six rôles du lot 2b, en clair et en sombre (`tokens.css`) ; `-fill` est la couleur médiane de la bulle de How We Feel. Ailleurs dans l'app (Ma journée, en-tête d'Aujourd'hui, Historique, Après coup, Mes jours en mode jour, « Tes zones »), un mot ou un relevé prend la couleur de sa zone ; les graphiques par famille gardent les couleurs de famille.
+- **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre), hors dépôt, comparées à la maquette et aux captures de How We Feel, et le test de contrôle étendu aux écrans de la v9. Le détail est dans `docs/decisions.md`, à l'entrée du 30/10.
+

@@ -110,6 +110,36 @@ test('v9 : six textes de Carnet changent, sans le mot d\'une autre bulle ; les 7
   assert.equal(MOTS_V8.length, 79);
 });
 
+// v9 (8/8) : les textes à relire de la v9, dans l'entrée v9.0.0 de docs/decisions.md : les six textes changés (celui de
+// la v8, puis celui de la v9), puis les définitions des 65 ajouts, une ligne par mot sous sa famille, Fatigué et Épuisé
+// sous « Sans famille ». Un texte changé dans definitions-roue.js sans l'être là fait échouer ce test.
+test('v9 : les six textes changés et les 65 ajouts sont repris dans docs/decisions.md, au texte de Carnet', () => {
+  const doc = lire('docs/decisions.md');
+  const debut = doc.indexOf('## 2026-10-30 : v9.0.0');
+  assert.ok(debut > 0, 'entrée v9.0.0 absente');
+  const suite = doc.slice(debut);
+  const fin = suite.indexOf('\n## ', 1);
+  const v9 = fin > 0 ? suite.slice(0, fin + 1) : suite;
+  const [six, ajouts] = ['**Les six textes de Carnet qui changent**', '**Les définitions des 65 ajouts**'].map((t) => v9.indexOf(t));
+  assert.ok(six > 0 && ajouts > six, 'sections des textes à relire absentes');
+  const changes = v9.slice(six, ajouts);
+  for (const [id, avant] of Object.entries(TEXTES_V8)) {
+    const m = MOTS.find((x) => x.id === id);
+    assert.ok(changes.includes(`- **${m.libelle}** : « ${avant} » devient « ${DEFINITIONS[id]} »\n`), `${m.libelle} : textes v8 et v9`);
+  }
+  assert.equal((changes.match(/^- \*\*/gm) || []).length, 6);
+  const liste = v9.slice(ajouts);
+  const blocs = [...FAMILLES.map((f) => [f.libelle, f.mots.slice(NOMBRE_V8[f.cle])]), ['Sans famille', MOTS.filter((m) => m.famille === null)]];
+  for (const [titre, mots] of blocs) {
+    const entete = `#### ${titre} (${mots.length})`;
+    assert.ok(liste.includes(entete), `${entete} absent`);
+    const bloc = `${liste.slice(liste.indexOf(entete)).split('\n\n#### ')[0].trimEnd()}\n`;
+    for (const m of mots) assert.ok(bloc.includes(`- **${m.libelle}** : ${DEFINITIONS[m.id]}\n`), `${m.libelle} : définition absente ou ancienne`);
+  }
+  assert.equal(blocs.reduce((n, [, mots]) => n + mots.length, 0), 65);
+  assert.equal((liste.match(/^- \*\*/gm) || []).length, 65);
+});
+
 test('v9 : les définitions des 65 ajouts viennent de la proposition ; Insouciant a la sienne, écrite pour Carnet', () => {
   const CHANGES = { 'roue:tristesse:fatigue': 'roue:aucune:fatigue', 'roue:tristesse:epuise': 'roue:aucune:epuise' };
   const ajouts = PROPOSITION.mots.filter((m) => m.nouveau && m.id !== 'roue:serenite:ensommeille');

@@ -996,3 +996,227 @@ Choisir un mot qui compte pour toi, et une chose qui va avec. Posture : assis.
 13. Étire-toi comme tu en as envie : les bras, le dos, le cou. *(15 s)*
 14. Si tes yeux sont fermés, ouvre-les. Regarde trois choses autour de toi. *(15 s)*
 15. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+## 2026-10-30 : v9.0.0, l'émotion comme How We Feel, en plein écran
+
+Source : les retours de l'utilisateur sur l'écran Émotion de la v8 (carte trop petite, bulles ternes, 26 mots agréables pour 53 désagréables) et ses captures de How We Feel, avec ses choix du 28/10. Spec : `docs/superpowers/specs/2026-10-28-carnet-v9-design.md`, qui fait foi, avec son §13 (précisions après relecture), et ses annexes (`visuel-hwf.md` pour les mesures et les couleurs, `carte-proposee.json` pour les 144 mots, `apercu-carte.html`, la maquette validée). Plan : `docs/superpowers/plans/2026-10-28-carnet-v9.md`, en 8 tâches, une par commit, chacune relue puis corrigée. Version 9.0.0, publiée en une fois.
+
+La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi vivent dans une méta. La sauvegarde passe au `FORMAT_VERSION` 7 (`docs/format-sauvegarde.md`). Les sauvegardes des formats 1 à 6 restent importables, et aucun relevé n'est réécrit : un ancien relevé garde son mot, sa famille seule, sa note ou son énergie.
+
+### Décisions de l'utilisateur (spec §2, 28/10)
+
+- **Comme How We Feel, en plein écran** : l'enchaînement, la forme et l'esthétique, sauf les écarts de la spec §3. D'abord une couleur, puis des mots voisins à comparer, avec leur définition.
+- **Couleurs de zone** : rouge (énergie haute, désagréable), jaune (haute, agréable), bleu (basse, désagréable), vert (basse, agréable), en dégradé. Un mot a la couleur de sa zone partout dans l'app.
+- **144 mots, 36 par zone**, comme How We Feel : les 79 mots de la roue, plus 65 mots de How We Feel traduits.
+- **Fatigué et Épuisé sans famille** : ils ne comptent que par zone. Survolté prend la case de « Hyper » (rouge). Libéré prend le sens de « libre », et Soulagé est ajouté. Insouciant remplace Ensommeillé, qui ne venait pas de How We Feel.
+- **Après la flèche** : « Ce que je faisais » en plein écran, facultatif, puis fermeture.
+- **Analyse** : une vue par zone, à côté des familles qui restent ; 4 bulles avec le nombre de relevés, et une barre par semaine.
+- **Mot à soi** : un nom, une zone, une famille et une définition facultative.
+- **Exports** : une ligne de zones dans l'Export PSY et sur la page A4 des soignants.
+- **Bien-être façon « Tools »** : plus tard, hors de la v9.
+
+### Appels du concepteur, à vérifier (spec §11 et §13)
+
+- Fond noir aussi en thème clair, pour tous les écrans du relevé.
+- Titre de l'écran 1 en phrase, « Touche la couleur la plus proche de ce moment » ; « Maintenant ▾ » sous les bulles.
+- Toucher une couleur n'écrit rien ; toucher un mot écrit. Retoucher le mot choisi l'efface, énergie comprise (règle de Carnet, pas de How We Feel).
+- Un relevé se rouvre depuis Ma journée de n'importe quel jour, Historique compris, directement sur l'écran 3 ; il s'y supprime.
+- « Aucune » parmi les familles d'un mot à soi.
+- Énergie d'un mot : rangs 1 à 4 basse, 5 à 8 moyenne, 9 à 12 haute.
+- Les graphiques par famille gardent leurs couleurs de famille ; ce qui montre des relevés ou des mots prend la couleur de zone.
+- Ligne de zones nommée par couleurs (rouge, jaune, bleu, vert), avec une légende sur la page A4.
+- `FORMAT_VERSION` 7.
+
+### Identifiants (plan)
+
+- **Mot de la roue** : `roue:<famille>:<slug>`, inchangé. Les 79 mots de la v8 gardent identifiant, libellé et famille ; les 65 ajouts vont à la fin de chaque famille, dans l'ordre de `carte-proposee.json`, et sont figés à leur tour.
+- **Mots sans famille** : `roue:aucune:fatigue` et `roue:aucune:epuise`. `aucune` est un préfixe réservé, absent des familles : `familleDe` rend `null`.
+- **Mot à soi** : `roue:perso:u-<8 chiffres hexadécimaux>`, comme un élément de liste créé par l'utilisateur. Son libellé, sa zone, sa famille et sa définition sont dans la méta `motsPerso`, jamais dans l'identifiant : renommé ou changé de zone, il garde ses relevés.
+- Toute fonction qui lit un mot (libellé, famille, zone, énergie, définition) prend en dernier paramètre facultatif la méta `motsPerso`. Les domaines restent purs.
+
+### Les mots et la carte (tâche 1)
+
+- **La grille 12 × 12** (`domain/carte-roue.js`) remplace celle de 6 × 6 de la v8 : colonne 1, la plus désagréable, à 12, la plus agréable ; rang 1, l'énergie la plus basse, à 12, la plus haute. Rouge : colonnes 1 à 6, rangs 7 à 12 ; jaune : 7 à 12 et 7 à 12 ; bleu : 1 à 6 et 1 à 6 ; vert : 7 à 12 et 1 à 6. 144 cases toutes différentes, 36 par zone. Un seul mot de la v8 change de zone : Accablé passe du bleu au rouge (« Overwhelmed »).
+- **L'énergie** d'un relevé se déduit du rang du mot, au toucher. Un mot à soi prend « haute » en rouge ou en jaune, « basse » en bleu ou en vert. Les relevés existants gardent l'énergie saisie.
+- **Les mots à soi sur la carte** : hors du carré, du côté extérieur de leur zone (rouge et bleu à gauche, jaune et vert à droite), colonne par colonne vers l'extérieur, en partant du bord d'énergie extérieur, dans l'ordre de création. Ils prennent la couleur de la case du bord de leur zone, sur leur rang.
+- **Les définitions** (`domain/definitions-roue.js`) : 144. Les 64 ajouts de la proposition gardent leur texte ; celui d'Insouciant est écrit pour Carnet. Six textes de Carnet changent (plus bas, « Textes à relire »).
+- **Relecture** : les mots sans famille ne comptent dans aucune vue par famille (Mes jours par semaine et par mois, la page A4, Comprendre, « Émotions selon ce que je faisais ») : plus de clé « null », plus de relevé compté en trop. Réglages › Émotions gagne une section « Sans famille » (Fatigué, Épuisé), au point creux. Tranquille garde le « rien ne presse » de la v8 et laisse « sans souci » à Insouciant.
+
+### Mots à soi, validation et sauvegarde (tâche 2)
+
+- **`domain/mots-perso.js`**, pur : création (le nom et la zone suffisent ; un nom déjà sur la carte, sans tenir compte des accents ni de la casse, est refusé), modification, mise de côté, effacement (refusé si le mot sert dans un relevé), mots actifs.
+- **Validation** : un relevé qui cite un mot à soi n'est accepté que si ce mot est dans `motsPerso`, lue dans la même transaction à l'écriture, prise dans le fichier à l'import. « Vérifier mes données » les reconnaît.
+- **Import** : un relevé qui cite un mot à soi absent du fichier recrée ce mot, mis de côté, « Mot sans libellé », sans zone : rien n'est perdu (point de vigilance 4). L'aperçu d'import nomme « les mots ajoutés à la carte des émotions ».
+- **Format 7** : une sauvegarde au format 6 y passe sans aucun changement. Un témoin au format 6, écrit par le tag v8.0.0 (énergie seule, Accablé, définitions corrigées, séance « Faite »), rejoint ceux des formats 1 à 5.
+- **Relecture** : les mots actifs (la loupe) sont ceux de la carte, une seule règle. Un mot recréé à l'import puis remis en service sans couleur n'y entre pas.
+
+### Couleurs de zone (tâche 3)
+
+- **Jetons** `--c-zone-rouge`, `-jaune`, `-bleu`, `-vert`, avec les six rôles du système 2b, en clair et en sombre (`tokens.css`) ; `-fill` est la couleur médiane de la bulle de How We Feel (visuel §1.5). Classes `.zone-*`.
+- **Points** : un relevé a le point de la zone de son mot dans Ma journée ; l'en-tête d'Aujourd'hui, l'Historique et Après coup ont un point par zone présente, sans doublon, dans l'ordre rouge, jaune, bleu, vert. Un ancien relevé sans zone (famille seule de la v7, note de 1 à 10, énergie seule) a un point creux neutre.
+- **Mes jours, en mode jour** : les points par zone, avec la légende des 4 zones (« Énergie haute · désagréable »…). Les graphiques par famille ne changent pas.
+- **Relecture** : les mots à soi passent dans toute l'Analyse, Comprendre, En consultation, la Vue soignants et l'Export PSY (leur nom, leur zone, leur famille s'ils en ont une). Aucun identifiant `roue:perso:…` n'est affiché.
+
+### Écrans 1 et 2 : les quatre bulles et la carte (tâche 4)
+
+- **Plein écran noir**, dans les deux thèmes, sans barre d'onglets ni en-tête de Carnet ; la route reste `#/moment`.
+- **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en `ui-serif` gras, les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
+- **Toucher une couleur** ouvre la carte sur le milieu de sa zone, sans rien écrire. La carte s'y arrête au bord des bulles : des bulles jusqu'aux bords de l'écran, jamais de noir vide sur le côté.
+- **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en `ui-serif` gras, corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
+- **Toucher un mot** écrit le relevé tout de suite (le mot et l'énergie de sa case) : la bulle devient la double capsule de 156, recentrée au milieu de l'écran, ses voisines passent à 120 puis 108, et la carte du bas monte (le mot dans la couleur de sa case, éclaircie jusqu'à 4,5:1 sur le gris, sa définition, le rond blanc et la flèche « Continuer »). Un autre mot remplace le premier, énergie comprise ; retouché, le mot s'efface avec son énergie, et le relevé part s'il ne reste rien.
+- **Garde de 350 ms** après chaque changement de vue (point de vigilance 5). « Réduire les animations » fige tout : halos à leurs décalages mesurés, recentrage d'un coup. En très grand texte, les libellés se réduisent jusqu'à un plancher et passent à la ligne dans leur bulle ; la carte du bas grandit au lieu de couper la définition (point de vigilance 2).
+- **Relecture** : la garde vaut aussi après un mot choisi, pendant que la carte glisse jusqu'à lui (un second toucher rapide tombait sur un autre mot). ← vient avant la carte pour VoiceOver et le clavier. Spec §13.5 à la lettre : le mot effacé, une heure « vers » garde le relevé, qui se lit « Aucun mot ».
+
+### Écran 3 et relevé rouvert (tâche 5)
+
+- **Écran 3**, après la flèche : le mot en rappel dans sa couleur ; « Pour récupérer, je… » d'abord si la règle « Me ressourcer » joue ; « Ce que je faisais », les pastilles écrites au toucher ; « Terminer » et ✕ ferment avec « Émotion du moment notée ». Garde de 350 ms : un second toucher sous la flèche ne tombe pas sur « Terminer ».
+- **`#/moment/ID`** : un relevé rouvert s'ouvre sur l'écran 3, avec son mot, ou « Aucun mot » pour un ancien relevé, son jour et son heure, « Changer le mot » (la carte, son mot choisi), « Ce que je faisais » et « Supprimer ce relevé » (confirmation, puis « Relevé supprimé · Annuler »). Ni « Maintenant ▾ » ni « Pour récupérer, je… ». Un identifiant inconnu renvoie sur Aujourd'hui.
+- **Ma journée** : chaque ligne de relevé est un lien avec son chevron, pour tous les jours, Historique compris.
+- **Relecture** : à l'ouverture, le message de l'écran d'avant se ferme. Rouvert aussitôt après « Terminer », le relevé avait « Émotion du moment notée · Annuler » par-dessus son mot, et cet Annuler retirait de la base le relevé affiché.
+
+### La loupe et le mot à soi (tâche 6)
+
+- **La loupe**, en haut à droite des écrans 1 et 2 : une recherche plein écran, champ actif (une amorce prend le focus pendant le toucher, pour que l'iPhone ouvre le clavier). Elle cherche sans accents ni casse dans les noms, puis dans les définitions, corrections comprises : les noms qui commencent par le texte, puis ceux qui le contiennent, puis les définitions. Chaque résultat montre le mot à la couleur de sa zone et le début de sa définition. Le toucher choisit le mot comme sur la carte (la loupe ne l'efface jamais), puis la carte s'ouvre centrée sur lui.
+- **« Ajouter mon mot « … » »**, sans résultat ou sous les résultats, sauf si un mot de la carte porte ce nom : l'écran du mot à soi, nom prérempli, les quatre bulles en petit. Le mot naît au premier choix de couleur et entre aussitôt dans le relevé, avec l'énergie de sa zone ; famille (7 et « Aucune ») et définition le complètent au toucher. La couleur choisie a un anneau autour de sa bulle. La flèche ouvre la carte, centrée sur lui, hors du carré de sa zone.
+- **Réglages › Émotions › « Mes mots »** : les mots de la carte, puis ceux mis de côté. Une rangée touchée devient le même formulaire. « Mettre de côté » si le mot sert dans un relevé, « Effacer » sinon (avec confirmation, vérifié dans la transaction), « Remettre sur la carte » s'il a une couleur. Les relevés ne sont jamais réécrits.
+- **Relecture** : le message d'un nom refusé reste tant que le champ montre ce nom ; aucune famille n'est cochée d'avance ; l'aide et la confirmation d'effacement suivent l'état du mot.
+
+### Tes zones et exports (tâche 7)
+
+- **Analyse, « Tes zones »**, juste après « Tes émotions » : les quatre bulles en petit, chacune avec « N relevés » sur la période choisie ; dessous, la barre par semaine sur les 12 dernières semaines, en 4 couleurs empilées, avec sa phrase-résumé et « Voir en tableau ». Sous 5 relevés avec un mot, « Pas encore assez de données pour le dire. » ; « Pourquoi ? » dit que seuls comptent les relevés qui ont un mot. Ni pourcentage ni zone mise en avant.
+- **Export PSY** : sous chaque semaine des COMPTEURS, « zones : rouge 3 · jaune 2 · bleu 9 · vert 5 », zones à zéro omises, absente sans relevé à zone.
+- **Page A4** : « Émotions par zone (relevés) » sous les familles, une valeur par colonne, et la légende des zones au bout du titre « Indicateurs ». Le cas extrême tient sous 273 mm.
+- **Relecture** : dans le détail d'une semaine touchée, le premier « · » tient au nom de la semaine par une espace insécable ; même correction pour Mes jours, Ta journée et la barre touchée de Comprendre (Q29).
+
+### Contrôle global (tâche 8)
+
+- **Captures**, dans WebKit à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, gardées hors du dépôt : écran 1, carte sans mot et avec un mot choisi (Calme, la case de « Calm »), écran 3, loupe (un résultat, puis aucun), création d'un mot (avant et après sa couleur), « Tes zones », Aujourd'hui et sa liste du jour, Historique, Réglages › Émotions › « Mes mots » (fermé et ouvert). Comparées à `apercu-carte.html` et aux captures de How We Feel : rien à corriger. Les écrans du relevé sont les mêmes dans les deux thèmes, sur leur fond noir.
+- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par la loupe (un mot trouvé), l'écran du mot à soi (une couleur choisie), ce mot sur la carte, « Tes zones » en tableau et « Mes mots » (un mot ouvert), avec un mot à soi et Fatigué dans les relevés versés : 56 écrans, contre 49 en v8. Tout texte visible a au moins 4,5:1 sur son fond, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte par défaut et à 23 px), et il vérifie maintenant aussi qu'aucune violation de la CSP ne survient sur tout le parcours.
+- **Choix fait sans coche** : la couleur choisie d'un mot à soi est marquée par un anneau autour de sa bulle (une forme, pas la couleur seule), comme le mot choisi de la carte l'est par sa double capsule. Le contrôle l'accepte ainsi, sans coche.
+- **Mots interdits** : tous les textes de l'app passent `trouverInterdits` (`ton.test.js`), les 144 définitions aussi (`definitions-roue.test.js`).
+- **Version 9.0.0** (package.json, precache).
+
+### Le format de l'Export PSY change (v9, à signaler)
+
+Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à mettre à jour :
+- sous chaque semaine, une ligne « zones : rouge 3 · jaune 2 · bleu 9 · vert 5 » : rouge = énergie haute, désagréable ; jaune = haute, agréable ; bleu = basse, désagréable ; vert = basse, agréable. Zones à zéro omises, ligne absente sans relevé à zone ;
+- les 65 mots nouveaux et les mots à soi apparaissent par leur nom dans les lignes du jour (« émotions : … », « humeur du moment ») ;
+- Fatigué, Épuisé et un mot à soi sans famille n'entrent dans aucun compte par famille des COMPTEURS (« émotions : colère 2 · … ») ; ils comptent dans la ligne des zones.
+
+### En attente de l'utilisateur
+
+- **Les textes à relire** (plus bas), dans l'app, après la publication : Réglages › Émotions, où une définition se corrige.
+- **CLAUDE.md** : le plan y ajoute le préfixe `roue:aucune:` des mots sans famille, `roue:perso:u-…` des mots à soi, et la règle « jamais de renommage » pour les 144 mots. Une modification de CLAUDE.md doit venir de l'utilisateur : elle n'est pas faite dans ce commit.
+- **Les points en attente de la v7 et de la v8 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie…).
+
+### À essayer sur l'iPhone
+
+- **La barre d'état en thème clair au-dessus des écrans noirs** (spec §12) : rien n'est réglé. Si elle reste claire au-dessus du noir, une piste est de passer `theme-color` en noir le temps du relevé.
+- **La police** : New York a un œil plus petit que la serif de How We Feel ; les corps des titres et des bulles sont à caler sur l'appareil, d'après les largeurs mesurées (visuel §6).
+- **La carte sous le doigt** : le défilement dans les deux sens, sa fluidité sur l'iPhone 13 Pro, le recentrage doux après un mot, les halos qui tournent, et « Réduire les animations ».
+- **La loupe** : le clavier qui s'ouvre dès le toucher.
+- **Le grand texte d'iOS** sur les bulles, la carte du bas et l'écran du mot à soi.
+
+### Textes à relire après la publication
+
+Écrits pour Carnet (spec §6 et §13.3) : des phrases courtes, neutres, sans le mot d'une autre bulle. Une définition se corrige dans Réglages › Émotions ; « Revenir au texte de Carnet » retire la correction. Le texte de Carnet ne change que par une nouvelle version.
+
+**Les six textes de Carnet qui changent** (le texte de la v8, puis celui de la v9) :
+
+- **Mécontent** : « Pas satisfait de ce qui se passe ou de ce qu'on a reçu. » devient « Ce qui se passe, ou ce qu'on a reçu, ne convient pas. »
+- **Accompli** : « Satisfait d'avoir mené quelque chose au bout. » devient « Ce qu'on avait entrepris est achevé, on en voit le résultat. »
+- **Extasié** : « Émerveillé, transporté de joie. » devient « Transporté par une joie immense. »
+- **Libéré** : « Soulagé d'un poids, plus léger. » devient « Libre de ses mouvements, plus rien ne retient. »
+- **Craintif** : « Inquiet de ce qui pourrait arriver, sur la réserve. » devient « Sur la réserve, on redoute ce qui pourrait arriver. »
+- **Tranquille** : « Sans souci pour l'instant, rien ne presse. » devient « Le temps s'écoule doucement, sans hâte ni agitation. »
+
+**Les définitions des 65 ajouts**, à la fin de leur famille, dans l'ordre de `domain/roue.js`. Celle d'Insouciant est écrite pour Carnet ; les 64 autres viennent de la proposition.
+
+#### Colère (2)
+
+- **En colère** : Remonté contre quelqu'un ou quelque chose, ça chauffe à l'intérieur.
+- **Frustré** : Empêché d'arriver à ce qu'on voulait, l'envie reste coincée.
+
+#### Dégoût (1)
+
+- **Mépris** : On regarde quelqu'un ou quelque chose de haut, avec froideur.
+
+#### Tristesse (4)
+
+- **Ennui** : Le temps paraît long, rien n'accroche.
+- **Triste** : Le cœur lourd, avec parfois l'envie de pleurer.
+- **Découragé** : Plus le cœur à continuer, l'effort semble ne mener à rien.
+- **Désespéré** : Plus aucun espoir que les choses s'arrangent.
+
+#### Joie (35)
+
+- **Euphorique** : Une joie vive, un peu étourdissante.
+- **Électrisé** : Un frisson de joie qui parcourt tout le corps.
+- **Aux anges** : Débordant de bonheur, comme en apesanteur.
+- **Déterminé** : Décidé à aller au bout de ce qu'on a choisi.
+- **Fort** : Avec prise sur ce qui arrive, on peut agir.
+- **Enthousiaste** : Plein d'ardeur pour ce qu'on est en train de faire.
+- **Joyeux** : Le sourire facile, une joie qui se voit.
+- **Productif** : Les choses avancent, on fait ce qu'on voulait faire.
+- **Fier** : La tête haute pour ce qu'on a fait ou ce qu'on est.
+- **Heureux** : La vie paraît belle en ce moment, on en profite.
+- **Motivé** : Prêt à s'y mettre, avec l'envie de le faire.
+- **Gai** : Une humeur légère et agréable, sans raison particulière.
+- **Concentré** : L'esprit tout entier pris par ce qu'on fait.
+- **Vivant** : Plein de vie, présent dans son corps et dans le moment.
+- **Stimulé** : Tiré vers le haut par quelque chose d'exigeant.
+- **Réjoui** : Une petite joie, quelque chose fait plaisir.
+- **Ravi** : Enchanté par ce qui arrive, la joie est franche.
+- **Compétent** : Capable de faire ce qu'on a à faire, et on le sent.
+- **Compris** : Ce qu'on vit ou ce qu'on pense est saisi par quelqu'un d'autre.
+- **Épanoui** : Avec le sentiment de grandir et d'être pleinement soi.
+- **Comblé** : Un bonheur plein et doux, qui enveloppe tout.
+- **Apprécié** : Ce qu'on fait ou ce qu'on est plaît aux autres, et ils le montrent.
+- **Soutenu** : Quelqu'un est là, sur qui s'appuyer.
+- **Aimé** : Avec la sensation de recevoir l'affection de quelqu'un.
+- **Relié** : Proche des autres, quelque chose passe entre eux et soi.
+- **Compatissant** : La peine d'un autre résonne en soi, avec l'envie de l'aider.
+- **Inclus** : Accueilli dans un groupe, on en fait partie.
+- **Reconnaissant** : L'envie de dire merci pour ce qu'on a reçu.
+- **Bienveillant** : Tourné vers les autres avec douceur, sans arrière-pensée.
+- **Écouté** : Ce qu'on dit est entendu et pris en compte.
+- **Content** : Ce qu'on a suffit, sans chercher plus loin.
+- **Accepté** : Reçu tel qu'on est, sans avoir à changer.
+- **Ému** : Le cœur chaviré par quelque chose de beau ou de tendre.
+- **Chanceux** : La vie a été généreuse, on le mesure.
+- **Satisfait** : Ce qu'on attendait est arrivé, tel qu'on le voulait.
+
+#### Surprise (4)
+
+- **Surpris** : Pris de court par quelque chose d'inattendu.
+- **Émerveillé** : Saisi par quelque chose de grand ou de beau, qui dépasse.
+- **Emballé** : Conquis par une idée ou un projet, l'envie de s'y lancer tout de suite.
+- **Épaté** : Impressionné par quelque chose qu'on n'aurait pas cru possible.
+
+#### Peur (10)
+
+- **Paniqué** : La peur fait perdre ses moyens, on ne sait plus quoi faire.
+- **Survolté** : Trop d'énergie, le corps et la tête n'arrivent plus à ralentir.
+- **Stressé** : Mobilisé sans relâche, sans pouvoir souffler.
+- **Sous pression** : Poussé par ce que les autres attendent ou par un délai qui approche.
+- **Anxieux** : Une peur sans objet précis, qui serre la gorge ou le ventre.
+- **Agité** : Impossible de tenir en place, le corps a besoin de bouger.
+- **Apeuré** : Face à quelque chose ou à quelqu'un qui fait peur.
+- **Tendu** : Les muscles crispés, le corps prêt à réagir.
+- **Inquiet** : Dans l'attente, on se demande comment ça va tourner.
+- **Mal à l'aise** : Pas bien dans la situation, quelque chose cloche.
+
+#### Sérénité (7)
+
+- **À l'aise** : Bien dans la situation, rien ne gêne.
+- **Bien** : Ça va, tout simplement.
+- **Pensif** : Absorbé par ses pensées, calmement, sans qu'elles tournent en rond.
+- **Équilibré** : Chaque chose à sa place, ni trop ni trop peu.
+- **Solide** : D'aplomb, sur des bases qui tiennent.
+- **Insouciant** : L'esprit léger, sans aucun souci en tête.
+- **Soulagé** : Ce qui pesait ou faisait mal vient de s'arrêter.
+
+#### Sans famille (2)
+
+- **Fatigué** : Le corps ou la tête demandent du repos.
+- **Épuisé** : À bout de forces, même les petites choses coûtent.

@@ -18,7 +18,10 @@ import { canaux, contraste, jetons } from '../aides/couleurs.js';
 // fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), « Émotions selon ce que je faisais »
 // (graphique et tableau), Réglages › Émotions (un sens corrigé). v9 (4/8) : les écrans noirs de l'émotion (les quatre
 // bulles, la carte, un mot choisi et sa carte du bas) remplacent ceux de la v8 ; v9 (5/8) : l'écran 3 (« Ce que je
-// faisais », une activité choisie) et un relevé rouvert depuis Ma journée.
+// faisais », une activité choisie) et un relevé rouvert depuis Ma journée. v9 (8/8) : la loupe (un mot trouvé, à la
+// couleur de sa zone), l'écran du mot à soi (une couleur choisie : le mot naît), puis ce mot sur la carte, hors du carré de
+// sa zone ; « Tes zones » en tableau ; Réglages › Émotions › « Mes mots », un mot ouvert. Les relevés versés citent un mot
+// à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -35,7 +38,8 @@ const PLAN = {
 // la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
 // une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
 // bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
-// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. Renvoie les identifiants utiles.
+// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. v9 (8/8) : un mot à soi (Flottant, vert,
+// sans famille) et Fatigué, chacun dans un relevé. Renvoie les identifiants utiles.
 async function verser(page) {
   return page.evaluate(async (plan) => {
     const r = window.__carnet.repo;
@@ -68,6 +72,10 @@ async function verser(page) {
     await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
     await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
     await r.seances.creer({ date: '2026-10-11', heure: '09:30', exercice: 'respiration-abdominale', origine: 'bien-etre', dureeS: 180, fin: true, programme: 'respiration-abdominale' });
+    await r.meta.ecrire('motsPerso', { 'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'vert', famille: null,
+      definition: 'Un peu ailleurs, sans attache.', archive: false, createdAt: '2026-10-01T08:00:00.000Z' } });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '20:00', emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' });
+    await r.humeurs.creer({ date: '2026-10-14', heure: '20:00', emotion: 'roue:aucune:fatigue', energie: 'energie:basse' });
     await r.meta.ecrire('monPlan', plan);
     await r.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par ce qui se répète, et ça dure.' });
     await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
@@ -175,10 +183,11 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 }).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ').join('.')}`));
 
 // Les choix faits visibles sans leur coche (jamais la couleur seule). Une question cochée a sa propre case ; le mot choisi
-// de la carte des émotions (v9) a sa forme, la double capsule de 156 au lieu d'un disque de 96 (visuel §2.4).
+// de la carte des émotions (v9) a sa forme, la double capsule de 156 au lieu d'un disque de 96 (visuel §2.4) ; la couleur
+// choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau blanc autour du disque.
 const sansCoche = (page) => page.evaluate(() => [...document.querySelectorAll('[aria-pressed="true"]')].filter((b) => {
   if (b.getBoundingClientRect().width < 1 || b.closest('.visuellement-cache') || b.classList.contains('question-case')) return false;
-  if (b.classList.contains('bulle-mot')) return false;
+  if (b.classList.contains('bulle-mot') || b.matches('.quatre-bulles.petites .bulle-zone')) return false;
   const svg = b.querySelector(':scope > .coche svg');
   return !svg || svg.getBoundingClientRect().width < 10;
 }).map((b) => b.textContent.trim().slice(0, 30)));
@@ -210,10 +219,27 @@ const ECRANS = (ids) => [
     await p.getByRole('button', { name: 'Terminer', exact: true }).click();
     await p.locator('.liste-evenements a.releve').first().click();
   }, '.ecran-faisais .supprimer-releve'],
+  // v9 (8/8) : la loupe, un mot trouvé ; l'écran du mot à soi, une couleur choisie (le mot naît, avec sa famille et sa
+  // définition à compléter) ; puis la carte, ce mot choisi hors du carré de sa zone, et sa carte du bas.
+  ['Émotion du moment, la loupe', async (p) => {
+    await aller(p, '#/aujourdhui');
+    await aller(p, '#/moment');
+    await p.getByRole('button', { name: 'Chercher un mot', exact: true }).click();
+    await p.getByRole('searchbox', { name: 'Chercher un mot', exact: true }).fill('fat');
+  }, '.resultats-loupe .resultat-loupe .extrait-resultat'],
+  ['Émotion du moment, mon mot', async (p) => {
+    await p.getByRole('searchbox', { name: 'Chercher un mot', exact: true }).fill('brumeux');
+    await p.getByRole('button', { name: 'Ajouter mon mot « Brumeux »', exact: true }).click();
+    await p.getByRole('group', { name: 'Couleur', exact: true }).getByRole('button', { name: 'Énergie basse, désagréable', exact: true }).click();
+  }, '.ecran-mot .formulaire-mot [role="group"][aria-label="Famille"]'],
+  ['Émotion du moment, mon mot sur la carte', (p) => p.getByRole('button', { name: 'Continuer', exact: true }).click(), '.bulle-mot.choisi'],
   ['Épisode, étape 1', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/episode/nouveau'); }, '.titre-question'],
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
   ['Analyse', (p) => aller(p, '#/analyse'), '.analyse .selecteur-periode'],
+  // v9 (8/8) : « Tes zones », ses bulles comptées, puis sa barre par semaine en tableau.
+  ['Analyse, Tes zones en tableau', (p) => p.locator('section.tes-zones').getByRole('button', { name: 'Voir en tableau' }).click(),
+    'section.tes-zones figure.g-zones-semaines table'],
   ['Comprendre, Explosions', (p) => aller(p, '#/comprendre/explosions'), '.comprendre figure.graphe'],
   // v8 (9/9) : le graphique « Émotions selon ce que je faisais » (Q18) dessiné, puis son tableau.
   ['Comprendre, Énergie', (p) => aller(p, '#/comprendre/energie'), '.comprendre figure.graphe svg[aria-label^="Émotions selon ce que je faisais"]'],
@@ -256,6 +282,8 @@ const ECRANS = (ids) => [
   ['Réglages › Émotions', (p) => aller(p, '#/reglages/emotions'), '.reglages-emotions .bouton-definition'],
   // v8 (9/9) : le sens corrigé d'Irrité, ouvert dans son champ, et « Revenir au texte de Carnet ».
   ['Réglages › Émotions, un sens corrigé', (p) => p.getByRole('button', { name: /^Irrité/ }).click(), '.reglages-emotions .champ-definition + .revenir-carnet'],
+  // v9 (8/8) : « Mes mots », Flottant (versé) et Brumeux (né dans la loupe) ; Flottant ouvert dans son formulaire.
+  ['Réglages › Émotions, Mes mots', (p) => p.getByRole('button', { name: /^Flottant/ }).click(), '.reglages-emotions .editeur-mot .formulaire-mot'],
   ['Réglages › une liste', (p) => aller(p, '#/reglages/listes/declencheur'), '.element-liste'],
   ['Réglages › Rappels', (p) => aller(p, '#/reglages/rappel'), '.heures-moment'],
   ['Réglages › Moment difficile', (p) => aller(p, '#/reglages/moment-difficile'), '.reglage-respiration'],
@@ -269,8 +297,13 @@ const ECRANS = (ids) => [
   ['Guide d\'installation', async (p) => { await p.goto('/?forcer-guide'); }, '.guide'],
 ];
 
+// v9 (8/8) : chaque écran dit aussi les violations de la CSP survenues depuis l'écran d'avant.
 async function parcourir(page, schema, verifier) {
   await page.emulateMedia({ colorScheme: schema });
+  await page.addInitScript(() => {
+    window.__csp = [];
+    document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile || ''}`));
+  });
   const ids = await verser(page);
   await page.reload();
   await appPrete(page);
@@ -281,6 +314,7 @@ async function parcourir(page, schema, verifier) {
     if (nom === 'Analyse') await expect(page.locator('main')).not.toContainText('Calcul…', { timeout: 30000 });
     await stabiliser(page);
     const f = await verifier(nom);
+    f.push(...(await page.evaluate(() => (window.__csp || []).splice(0))).map((x) => `CSP : ${x}`));
     if (f.length) fautes[nom] = f;
   }
   return fautes;
