@@ -80,9 +80,6 @@
      17 px (le corps d'iOS) : elles suivent la taille du texte réglée sur l'iPhone. Chiffres tabulaires. */
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
-  /* v9 : New York, la serif de l'iPhone, en gras pour les titres et les mots des bulles de l'émotion (spec §5) ; Georgia
-     ailleurs (tests, Mac sans New York). Rien à télécharger. */
-  --police-serif: ui-serif, Georgia, serif;
   --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
   --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
   --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */

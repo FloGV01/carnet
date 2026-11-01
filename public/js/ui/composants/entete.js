@@ -1,8 +1,8 @@
 import { html } from '../lib.js';
 import { Icones } from '../icones.js';
 
-// En-tête d'écran. Racine d'onglet : grand titre serif. Écran poussé : rangée « Retour »
-// (avec, à droite, un élément facultatif comme « Enregistré ») puis titre serif.
+// En-tête d'écran. Racine d'onglet : grand titre. Écran poussé : rangée « Retour »
+// (avec, à droite, un élément facultatif comme « Enregistré ») puis titre.
 export function Entete({ titre, retour, droite }) {
   if (!retour) {
     return html`<header class="entete-onglet">

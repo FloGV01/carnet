@@ -298,7 +298,7 @@ test('l\'ordre de lecture suit l\'écran : ✕ d\'abord à l\'écran 1 ; à l\'�
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:peur:anxieux' }]);
 });
 
-test('le mot choisi : la double capsule de 156 au milieu de l\'écran, ses voisines à 120 puis 108, les autres à 96 ; en New York grasse, corps = diamètre / 8', async ({ page }) => {
+test('le mot choisi : la double capsule de 156 au milieu de l\'écran, ses voisines à 120 puis 108, les autres à 96 ; en police système grasse (v10), corps = diamètre / 8', async ({ page }) => {
   for (const mouvement of ['reduce', 'no-preference']) {
     await page.emulateMedia({ reducedMotion: mouvement });
     const vue = await ouvrir(page);
@@ -315,11 +315,11 @@ test('le mot choisi : la double capsule de 156 au milieu de l\'écran, ses voisi
     }, { message: mouvement }).toBe(true);
     await finMouvements(page);
     expect(await mesure(), mouvement).toMatchObject({ calme: [expect.any(Number), expect.any(Number), 156, 156], voisines: [120, 120, 120, 120], diagonales: [108, 108, 108], loin: [96, 96, 96] });
-    // Deux capsules de 78 de rayon 39 (24 × 1,625) ; le libellé noir, 12 px en New York (ou Georgia) grasse, 18 une fois choisi.
+    // Deux capsules de 78 de rayon 39 (24 × 1,625) ; le libellé noir, 12 px en police système grasse, 18 une fois choisi.
     const forme = await page.evaluate(() => {
       const choisi = document.querySelector('.bulle-mot.choisi');
       const autre = [...document.querySelectorAll('.bulle-mot')].find((b) => b.textContent === 'Tendu');
-      const etiquette = (b) => { const e = b.querySelector('.etiquette-mot'); const s = getComputedStyle(e); return [Math.round(parseFloat(s.fontSize) * 10) / 10, s.fontWeight, s.color, /ui-serif/.test(s.fontFamily)]; };
+      const etiquette = (b) => { const e = b.querySelector('.etiquette-mot'); const s = getComputedStyle(e); return [Math.round(parseFloat(s.fontSize) * 10) / 10, s.fontWeight, s.color, /^-apple-system/.test(s.fontFamily)]; };
       return { demis: [...choisi.querySelectorAll('.demi')].map((d) => [Math.round(d.getBoundingClientRect().width), getComputedStyle(d).borderTopLeftRadius]),
         choisi: etiquette(choisi), autre: etiquette(autre),
         hauteur: Math.round(choisi.querySelector('.etiquette-mot').getBoundingClientRect().height / autre.querySelector('.etiquette-mot').getBoundingClientRect().height * 10) / 10 };

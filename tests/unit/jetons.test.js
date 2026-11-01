@@ -23,6 +23,17 @@ test('aucune variable CSS non définie : chaque var(--x) des feuilles (et du JS)
   assert.deepEqual([...new Set(fautes)], []);
 });
 
+test('v10 : une seule police, la police système : ni --police-serif, ni ui-serif, ni Georgia, ni New York dans public/, commentaires compris', () => {
+  const textes = lister(join(RACINE, 'public'), (p) => /\.(css|js|html)$/.test(p) && !p.includes('/vendor/'));
+  assert.ok(textes.length > CSS.length, 'le CSS, le JS et le HTML sont lus');
+  const fautes = [];
+  for (const f of textes) {
+    for (const m of lire(f).matchAll(/--police-serif|ui-serif|georgia|new york|(?<!sans-)serif/gi)) fautes.push(`${rel(f)} : ${m[0]}`);
+  }
+  assert.deepEqual(fautes, []);
+  assert.match(TOKENS, /--police: -apple-system/);
+});
+
 test('base 2b : les valeurs exactes du lot, en clair et en sombre', () => {
   assert.deepEqual(['bg', 'surface', 'surface-2', 'line', 'text', 'text-2', 'action', 'action-on'].map((n) => clair[n]),
     ['#e7eaee', '#ffffff', '#eef0f4', '#c2c4c8', '#181b1f', '#585b61', '#181b1f', '#fdfdfd']);

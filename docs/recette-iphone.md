@@ -16,7 +16,7 @@
 
 ## Design (J2.0)
 
-- [ ] Les titres s'affichent en serif (New York), en clair et en sombre.
+- [ ] Tous les textes s'affichent dans la police de l'iPhone (SF Pro), titres et carte des émotions compris, en clair et en sombre.
 - [ ] Réglages iOS › Luminosité et affichage › Taille du texte au plus grand : l'app reste lisible et défile, rien n'est coupé.
 - [ ] « Pas à pas » : la journée se remplit une question par écran ; Fermer garde tout.
 - [ ] Toucher le micro « Dicter » quand le clavier est déjà ouvert ne le referme pas.

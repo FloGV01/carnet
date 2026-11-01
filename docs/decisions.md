@@ -1061,9 +1061,9 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 ### Écrans 1 et 2 : les quatre bulles et la carte (tâche 4)
 
 - **Plein écran noir**, dans les deux thèmes, sans barre d'onglets ni en-tête de Carnet ; la route reste `#/moment`.
-- **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en `ui-serif` gras, les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
+- **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en gras (`ui-serif` en v9, police système depuis la v10), les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
 - **Toucher une couleur** ouvre la carte sur le milieu de sa zone, sans rien écrire. La carte s'y arrête au bord des bulles : des bulles jusqu'aux bords de l'écran, jamais de noir vide sur le côté.
-- **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en `ui-serif` gras, corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
+- **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en gras (`ui-serif` en v9, police système depuis la v10), corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
 - **Toucher un mot** écrit le relevé tout de suite (le mot et l'énergie de sa case) : la bulle devient la double capsule de 156, recentrée au milieu de l'écran, ses voisines passent à 120 puis 108, et la carte du bas monte (le mot dans la couleur de sa case, éclaircie jusqu'à 4,5:1 sur le gris, sa définition, le rond blanc et la flèche « Continuer »). Un autre mot remplace le premier, énergie comprise ; retouché, le mot s'efface avec son énergie, et le relevé part s'il ne reste rien.
 - **Garde de 350 ms** après chaque changement de vue (point de vigilance 5). « Réduire les animations » fige tout : halos à leurs décalages mesurés, recentrage d'un coup. En très grand texte, les libellés se réduisent jusqu'à un plancher et passent à la ligne dans leur bulle ; la carte du bas grandit au lieu de couper la définition (point de vigilance 2).
 - **Relecture** : la garde vaut aussi après un mot choisi, pendant que la carte glisse jusqu'à lui (un second toucher rapide tombait sur un autre mot). ← vient avant la carte pour VoiceOver et le clavier. Spec §13.5 à la lettre : le mot effacé, une heure « vers » garde le relevé, qui se lit « Aucun mot ».
@@ -1132,7 +1132,7 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 ### À essayer sur l'iPhone
 
 - **La barre d'état en thème clair au-dessus des écrans noirs** (spec §12) : rien n'est réglé. Si elle reste claire au-dessus du noir, une piste est de passer `theme-color` en noir le temps du relevé.
-- **La police** : New York a un œil plus petit que la serif de How We Feel ; les corps des titres et des bulles sont à caler sur l'appareil, d'après les largeurs mesurées (visuel §6).
+- **La police** : levé en v10, la police système remplace New York partout (« Utilise la police iPhone »), carte des émotions comprise ; il n'y a plus de corps à caler pour elle.
 - **La carte sous le doigt** : le défilement dans les deux sens, sa fluidité sur l'iPhone 13 Pro, le recentrage doux après un mot, les halos qui tournent, et « Réduire les animations ».
 - **La loupe** : le clavier qui s'ouvre dès le toucher.
 - **Le grand texte d'iOS** sur les bulles, la carte du bas et l'écran du mot à soi.
