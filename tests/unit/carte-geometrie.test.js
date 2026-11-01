@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { couleurCase, couleurLisible, contraste, disposition, etendue, pointDe, PAS, FOND_CARTE_DU_BAS } from '../../public/js/ui/carte-geometrie.js';
+import { couleurCase, couleurLisible, contraste, disposition, etendue, motDuMilieu, pointDe, PAS, FOND_CARTE_DU_BAS } from '../../public/js/ui/carte-geometrie.js';
 import { motsDeLaCarte, zoneDe, zoneDeCase } from '../../public/js/domain/carte-roue.js';
 import { jetons } from '../aides/couleurs.js';
 import { RACINE, lire } from '../aides/fichiers.js';
@@ -8,6 +8,8 @@ import { join } from 'node:path';
 
 // v9 (4/8) · La carte des émotions en nombres (ui/carte-geometrie.js ; visuel-hwf.md §2.2 à §2.5) : la couleur de chaque
 // case, lisible avec son texte noir ; la lentille autour du mot choisi, sans chevauchement. Mots à soi inventés.
+// v10 (2/9) : le mot du milieu, centre de la lentille pendant le glissement (spec §4.1) ; n'importe quel mot peut donc
+// être le centre, avec ou sans mot choisi ailleurs.
 const MOTS = motsDeLaCarte(null);
 const id = (libelle) => MOTS.find((m) => m.libelle === libelle).id;
 const PERSO = {
@@ -128,32 +130,57 @@ const distanceSegment = ([px, py], [ax, ay], [bx, by]) => {
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 };
-test('aucune bulle n\'en chevauche une autre, quel que soit le mot choisi (et sans mot choisi), mots à soi compris', () => {
+// Le plus petit écart entre une double capsule à son échelle (le centre de chaque moitié à 24 pt × échelle) et un disque.
+const ecartCapsule = (q, [x, y, r]) => Math.min(...[-1, 1].map((sens) => {
+  const demi = 24 * q.echelle;
+  return distanceSegment([x, y], [q.x + sens * demi, q.y - demi], [q.x + sens * demi, q.y + demi]) - demi - r;
+}));
+const disquesDe = (p, sauf = null) => [...p.entries()].filter(([i]) => i !== sauf).map(([, q]) => [q.x, q.y, 48 * q.echelle]);
+test('aucune bulle n\'en chevauche une autre, quel que soit le centre (chacun des mots, ou aucun), en cercles comme avec la double capsule, mots à soi compris', () => {
   const mots = motsDeLaCarte(PERSO);
-  for (const choisi of [null, ...mots.map((m) => m.id)]) {
-    const p = [...disposition(mots, choisi).entries()];
-    const disques = p.filter(([i]) => i !== choisi).map(([, q]) => [q.x, q.y, 48 * q.echelle]);
+  for (const centre of [null, ...mots.map((m) => m.id)]) {
+    const p = disposition(mots, centre);
+    // Le centre en cercle de 156 (le mot du milieu, pendant le glissement) ; les autres, des disques.
+    const disques = disquesDe(p);
     for (let i = 0; i < disques.length; i++) {
       for (let j = i + 1; j < disques.length; j++) {
         const [a, b] = [disques[i], disques[j]];
-        assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= a[2] + b[2] - 0.01, `${choisi} : deux disques se chevauchent`);
+        assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= a[2] + b[2] - 0.01, `${centre} : deux disques se chevauchent`);
       }
     }
-    if (!choisi) continue;
-    const q = disposition(mots, choisi).get(choisi);
-    for (const [x, y, r] of disques) {
-      for (const dx of [-39, 39]) {
-        assert.ok(distanceSegment([x, y], [q.x + dx, q.y - 39], [q.x + dx, q.y + 39]) >= 39 + r - 0.01, `${choisi} : la double capsule chevauche un disque`);
+    if (!centre) continue;
+    // Le centre en double capsule (le mot touché).
+    for (const d of disquesDe(p, centre)) assert.ok(ecartCapsule(p.get(centre), d) >= -0.01, `${centre} : la double capsule chevauche un disque`);
+  }
+});
+
+// Spec §4.1 : la lentille suit le milieu, le mot choisi ailleurs garde sa double capsule, à l'échelle qu'elle lui donne.
+// Ses coins sortent du disque que la lentille a prévu pour lui : là où elle resserre ses voisins, ils peuvent mordre sur
+// eux d'un point au plus, sans cacher de libellé.
+test('un mot choisi hors du centre de la lentille : sa double capsule mord d\'un point au plus sur ses voisins', () => {
+  const mots = motsDeLaCarte(PERSO);
+  for (const centre of mots) {
+    const p = disposition(mots, centre.id);
+    for (const choisi of mots) {
+      if (choisi.id === centre.id) continue;
+      const q = p.get(choisi.id);
+      for (const d of disquesDe(p, choisi.id)) {
+        // Un disque à plus de deux diamètres ne peut pas la toucher : le calcul est évité (146 × 146 × 145 paires).
+        if (Math.abs(d[0] - q.x) > 200 || Math.abs(d[1] - q.y) > 200) continue;
+        assert.ok(ecartCapsule(q, d) >= -1, `centre ${centre.libelle}, choisi ${choisi.libelle}`);
       }
     }
   }
 });
 
-test('étendue : le plan contient toutes les dispositions ; pointDe : le milieu d\'une zone, ou la place régulière d\'un mot', () => {
+test('étendue : le plan contient la disposition de chacun des centres possibles ; pointDe : le milieu d\'une zone, ou la place régulière d\'un mot', () => {
   const e = etendue(MOTS);
   assert.deepEqual(e.regulier, { minX: 0, maxX: 11 * PAS, minY: 0, maxY: 11 * PAS });
-  for (const choisi of [id('Enragé'), id('Calme'), id('Serein')]) {
-    for (const q of disposition(MOTS, choisi).values()) assert.ok(q.x >= e.minX && q.x <= e.maxX && q.y >= e.minY && q.y <= e.maxY);
+  for (const mots of [MOTS, motsDeLaCarte(PERSO)]) {
+    const f = etendue(mots);
+    for (const m of mots) {
+      for (const q of disposition(mots, m.id).values()) assert.ok(q.x >= f.minX && q.x <= f.maxX && q.y >= f.minY && q.y <= f.maxY, m.libelle);
+    }
   }
   assert.ok(e.minX < 0 && e.maxX > 11 * PAS, 'la lentille écarte les bords');
   // Le milieu de la zone rouge (colonnes 1 à 6, rangs 12 à 7), celui de la verte (7 à 12, 6 à 1).
@@ -162,4 +189,61 @@ test('étendue : le plan contient toutes les dispositions ; pointDe : le milieu 
   assert.deepEqual(pointDe(MOTS, { id: id('Calme') }), { x: 6 * PAS, y: 6 * PAS });
   // Les mots qui servent de repères ici sont bien dans la zone attendue.
   assert.deepEqual(['Enragé', 'Serein', 'Calme', 'Ennui'].map((l) => zoneDe(id(l))), ['rouge', 'vert', 'vert', 'bleu']);
+});
+
+test('le mot du milieu : sur une place, ce mot ; entre deux places, la plus proche ; le calcul part des places régulières, mots à soi compris', () => {
+  const place = (libelle, mots = MOTS) => disposition(mots).get(mots.find((m) => m.libelle === libelle).id);
+  for (const libelle of ['Enragé', 'Calme', 'Serein', 'Ennui']) assert.equal(motDuMilieu(MOTS, place(libelle)), id(libelle));
+  // Calme est à (6 ; 6) pas, À l'aise à (7 ; 6) : un tiers du chemin reste à Calme, deux tiers vont à À l'aise.
+  const calme = place('Calme');
+  assert.equal(motDuMilieu(MOTS, { x: calme.x + PAS / 3, y: calme.y }), id('Calme'));
+  assert.equal(motDuMilieu(MOTS, { x: calme.x + (2 * PAS) / 3, y: calme.y }), id('À l\'aise'));
+  // Très loin hors de la carte : le coin le plus proche.
+  assert.equal(motDuMilieu(MOTS, { x: -2000, y: -2000 }), id('Enragé'));
+  // Un mot à soi décale les colonnes (la colonne 1 passe à un pas du bord) : le point suit le même repère.
+  const avec = motsDeLaCarte(PERSO);
+  assert.equal(motDuMilieu(avec, place('Bouillonnant', avec)), 'roue:perso:u-0000000a');
+  assert.equal(motDuMilieu(avec, place('Enragé', avec)), id('Enragé'));
+  assert.equal(motDuMilieu(avec, place('Flottant', avec)), 'roue:perso:u-0000000b');
+  // Rien sur la carte : rien.
+  assert.equal(motDuMilieu([], { x: 0, y: 0 }), null);
+});
+
+test('le mot du milieu : l\'hystérésis garde le précédent tant qu\'aucune place n\'est plus proche d\'au moins 15 % du pas ; ce seuil se règle', () => {
+  const { x, y } = disposition(MOTS).get(id('Calme'));
+  const point = (t) => ({ x: x + t, y });
+  const [calme, aise] = [id('Calme'), id('À l\'aise')];
+  // Au milieu des deux, et un peu au-delà : À l'aise est le plus proche, mais de moins de 15,9 pt.
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 1)), aise);
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 1), calme), calme);
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 7.9), calme), calme);
+  // Plus proche de 16 pt : il change. Et de l'autre côté, le précédent est À l'aise : même règle.
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 8), calme), aise);
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 - 7.9), aise), aise);
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 - 8), aise), calme);
+  // Le seuil en paramètre : sans lui, plus d'hystérésis ; plus grand, elle tient plus loin.
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 1), calme, 0), aise);
+  assert.equal(motDuMilieu(MOTS, point(PAS / 2 + 8), calme, 0.3), calme);
+  // Un précédent qui n'est plus sur la carte (un mot à soi mis de côté) ne compte pas ; ni un précédent loin du point.
+  assert.equal(motDuMilieu(MOTS, point(0), 'roue:perso:u-00000000'), calme);
+  assert.equal(motDuMilieu(MOTS, point(0), id('Enragé')), calme);
+});
+
+test('le mot du milieu : à égalité entre quatre mots (le milieu d\'une zone), le plus haut puis le plus à gauche ; entre deux, pareil', () => {
+  // Le milieu de chaque zone tombe entre les colonnes 3 et 4 (ou 9 et 10), et les rangs 9 et 10 (ou 3 et 4).
+  const coin = (col, rang) => MOTS.find((m) => m.col === col && m.rang === rang).id;
+  assert.equal(motDuMilieu(MOTS, pointDe(MOTS, { zone: 'rouge' })), coin(3, 10));
+  assert.equal(motDuMilieu(MOTS, pointDe(MOTS, { zone: 'jaune' })), coin(9, 10));
+  assert.equal(motDuMilieu(MOTS, pointDe(MOTS, { zone: 'bleu' })), coin(3, 4));
+  assert.equal(motDuMilieu(MOTS, pointDe(MOTS, { zone: 'vert' })), coin(9, 4));
+  // Le résultat ne dépend pas de l'ordre de la liste.
+  assert.equal(motDuMilieu([...MOTS].reverse(), pointDe(MOTS, { zone: 'rouge' })), coin(3, 10));
+  // Entre deux mots d'une même rangée, le plus à gauche ; d'une même colonne, le plus haut.
+  const p = disposition(MOTS).get(coin(5, 8));
+  assert.equal(motDuMilieu(MOTS, { x: p.x + PAS / 2, y: p.y }), coin(5, 8));
+  assert.equal(motDuMilieu([...MOTS].reverse(), { x: p.x + PAS / 2, y: p.y }), coin(5, 8));
+  assert.equal(motDuMilieu(MOTS, { x: p.x, y: p.y + PAS / 2 }), coin(5, 8));
+  assert.equal(motDuMilieu([...MOTS].reverse(), { x: p.x, y: p.y + PAS / 2 }), coin(5, 8));
+  // À égalité, le précédent reste : ni l'un ni l'autre n'est plus proche.
+  assert.equal(motDuMilieu(MOTS, pointDe(MOTS, { zone: 'rouge' }), coin(4, 9)), coin(4, 9));
 });

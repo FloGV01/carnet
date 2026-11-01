@@ -563,35 +563,36 @@ test('point de vigilance 5 : deux touchers rapides, sur une bulle puis au même 
 // le premier. Anxieux (col 3, rang 10) est près du milieu de la zone rouge, pas au milieu : choisi, il y vient.
 test('deux touchers rapides au même endroit sur un mot loin du milieu : le premier mot reste choisi, le relevé porte ce mot et son énergie (avec ou sans « Réduire les animations »)', async ({ page }) => {
   test.setTimeout(60000);
-  // Apeuré, ouvert sur le rouge : loin du milieu ; une fois au milieu, le point touché tombe sur sa voisine de gauche.
-  const apeure = MOTS_CARTE.find((x) => x.libelle === 'Apeuré').id;
-  for (const mouvement of ['no-preference', 'reduce']) {
+  // Ouvert sur le rouge, un mot loin du milieu, entier à l'écran ; une fois au milieu, le point touché tombe sur une
+  // voisine. Apeuré, quand la lentille n'est pas posée à l'ouverture ; sinon (v10), elle le met au bord : Non respecté.
+  for (const [mouvement, LOIN] of [['no-preference', 'Non respecté'], ['reduce', 'Apeuré']]) {
+    const idLoin = MOTS_CARTE.find((x) => x.libelle === LOIN).id;
     await page.emulateMedia({ reducedMotion: mouvement });
     const vue = await ouvrir(page);
     await bulle(vue, 'rouge').click();
     await finGarde(carte(vue));
-    const b = await mot(vue, 'Apeuré').boundingBox();
+    const b = await mot(vue, LOIN).boundingBox();
     const point = [b.x + b.width / 2, b.y + b.height / 2];
     expect(Math.hypot(point[0] - 195, point[1] - 422), mouvement).toBeGreaterThan(40);
     await toucherDeuxFois(page, point, point);
     await page.clock.runFor(400);
     await page.clock.resume();
-    await expect(carte(vue).getByRole('button', { pressed: true }), mouvement).toHaveText(['Apeuré']);
-    await expect.poll(releves(page), { message: mouvement }).toMatchObject([{ emotion: apeure, energie: energieDe(apeure) }]);
-    await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Apeuré');
-    // La carte posée (Apeuré au milieu), un autre mot est sous le doigt ; la garde passée, le même toucher le prend :
+    await expect(carte(vue).getByRole('button', { pressed: true }), mouvement).toHaveText([LOIN]);
+    await expect.poll(releves(page), { message: mouvement }).toMatchObject([{ emotion: idLoin, energie: energieDe(idLoin) }]);
+    await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(LOIN);
+    // La carte posée (le mot au milieu), un autre mot est sous le doigt ; la garde passée, le même toucher le prend :
     // c'est bien la garde qui a joué. Retouché, ce mot s'efface, et le relevé avec.
     await expect.poll(async () => {
-      const c = await mot(vue, 'Apeuré').boundingBox();
+      const c = await mot(vue, LOIN).boundingBox();
       return Math.abs(c.x + c.width / 2 - 195) <= 1 && Math.abs(c.y + c.height / 2 - 422) <= 1;
     }, { message: mouvement }).toBe(true);
     await finMouvements(page);
     const sous = await page.evaluate(([x, y]) => document.elementFromPoint(x, y).closest('.bulle-mot').textContent, point);
-    expect(sous, mouvement).not.toBe('Apeuré');
+    expect(sous, mouvement).not.toBe(LOIN);
     await finGarde(carte(vue));
     await page.touchscreen.tap(...point);
     await expect(mot(vue, sous), mouvement).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([apeure]);
+    await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([idLoin]);
     await mot(vue, sous).click();
     await expect.poll(async () => (await releves(page)()).length, { message: mouvement }).toBe(0);
     await retour(vue).click();
@@ -1054,6 +1055,7 @@ test('relecture finale : au clavier, le contour d\'une bulle de l\'écran 1 pass
 
 // Ouverte depuis la bulle rouge ou jaune, la carte vient au milieu de la zone, et ne monte jamais au point de mettre les
 // mots du rang 12, les plus intenses, sous le voile et sous ← et la loupe : leur centre reste sous la zone sûre + 84 pt.
+// v10 : la lentille, déjà posée à l'ouverture, les écarte vers le haut ; la carte descend d'autant, et pas plus.
 test('relecture finale : ouverte sur le rouge ou le jaune, les mots du rang 12 restent sous le voile et les boutons', async ({ page }) => {
   for (const zones of [false, true]) {
     if (zones) { await simulerZonesSures(page); await page.reload(); await appPrete(page); }
@@ -1068,12 +1070,20 @@ test('relecture finale : ouverte sur le rouge ou le jaune, les mots du rang 12 r
       const visibles = centres.filter(([, , x]) => x > 0 && x < 390);
       expect(visibles.length, `${zone}, zones sûres ${haut}`).toBeGreaterThan(0);
       for (const [nom, y] of centres) expect(y, `${zone} ${nom}, zones sûres ${haut}`).toBeGreaterThanOrEqual(haut + 84);
-      // Avec les zones sûres de l'iPhone, la place suffit : le milieu de l'écran est au milieu de la zone (rang 9,5).
+      // Avec les zones sûres de l'iPhone, le milieu de l'écran tombe au milieu de la zone (colonne 3,5 ou 9,5, rang 9,5),
+      // à la descente près : celle qui garde le plus haut des mots du rang 12 juste sous le voile, 23 pt. Le centre de la
+      // lentille, le rang 10, garde sa place régulière : elle dit où est le milieu de l'écran sur la carte.
       if (zones) {
-        const y = await carte(vue).getByRole('button').evaluateAll((bs, noms) => bs.filter((b) => noms.includes(b.textContent))
-          .map((b) => { const r = b.getBoundingClientRect(); return r.top + r.height / 2; }), MOTS_CARTE.filter((x) => x.zone === zone && (x.rang === 9 || x.rang === 10)).map((x) => x.libelle));
-        const [y10, y9] = [Math.min(...y), Math.max(...y)];
-        expect(Math.abs((y10 + y9) / 2 - 422), zone).toBeLessThan(1.5);
+        const colonne = zone === 'rouge' ? 3 : 9;
+        const centreLentille = MOTS_CARTE.find((x) => x.col === colonne && x.rang === 10).libelle;
+        const c = await mot(vue, centreLentille).boundingBox();
+        expect(c.width, zone).toBe(156);
+        expect(Math.abs(c.x + c.width / 2 + 53 - 195), zone).toBeLessThan(1.5);
+        const y10 = c.y + c.height / 2;
+        const descente = y10 + 53 - 422;
+        expect(descente, zone).toBeGreaterThanOrEqual(0);
+        expect(descente, zone).toBeLessThanOrEqual(23);
+        expect(Math.abs(Math.min(...centres.map(([, y]) => y)) - (haut + 84)), zone).toBeLessThan(1.5);
       }
       await aller(page, '#/aujourdhui');
     }
