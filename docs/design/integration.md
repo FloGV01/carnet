@@ -9,13 +9,13 @@ d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
 - **Jetons** (`public/css/tokens.css`) : palette sable et ardoise, plus une couleur par rubrique
   (`--c-*` plein, `--t-*` teinte). Ce sont des repères, jamais une valeur bonne ou mauvaise. Contrastes
   plein sur teinte de 5,1:1 à 8,4:1. Le sombre suit le réglage de l'iPhone.
-- **Typographie** : titres en serif système (New York), texte en SF Pro. Les tailles sont en rem sur
+- **Typographie** : titres en serif système (New York) jusqu'à la v7, en police système ensuite ; texte en SF Pro. Les tailles sont en rem sur
   une base de 17 px. Sur iPhone seulement, cette base suit la taille du texte d'iOS (Dynamic Type).
 - **Icônes** : une seule famille au trait (`public/js/ui/icones.js`), tracés de la maquette.
 - **Sélection** : fond plein de la rubrique, graisse 600 et rayon qui passe de 12 à 22. La sélection
   ne repose jamais sur la couleur seule.
 - **Écrans** : Aujourd'hui (rubriques teintées, résumé dans l'en-tête), parcours Épisode et Symptôme
-  (phrase résumé, question en serif, glissement entre étapes, récapitulatif en carte), Historique
+  (phrase résumé, question en serif jusqu'à la v7, glissement entre étapes, récapitulatif en carte), Historique
   (puces par rubrique, loupe, filtres en pastilles), Soins (carte du prochain rendez-vous, questions
   à cocher), Réglages (sauvegarde intégrée, interrupteur, « Tout effacer » en trois temps), Analyse
   (Ma semaine, tuiles et graphes teintés, étiquette au toucher), Export PSY, Vue soignants, guide.
@@ -111,7 +111,7 @@ Aucun écran de la v8 n'est dessiné par Claude Design ; tous sont déduits du s
 
 Les écrans du relevé d'émotion quittent le système 2b : ils reprennent How We Feel, d'après les mesures de `docs/superpowers/specs/2026-10-28-carnet-v9/visuel-hwf.md` et la maquette validée (`apercu-carte.html`, dans le même dossier).
 
-- **Écrans du relevé** (les quatre bulles, la carte, « Ce que je faisais », la loupe, le mot à soi) : plein écran, fond noir dans les deux thèmes, boutons en verre sombre, titres et mots des bulles en `ui-serif` gras, texte noir sur les bulles. Ils remplacent la carte en tuiles de la v8.
+- **Écrans du relevé** (les quatre bulles, la carte, « Ce que je faisais », la loupe, le mot à soi) : plein écran, fond noir dans les deux thèmes, boutons en verre sombre, titres et mots des bulles en gras (`ui-serif` en v9, police système depuis la v10), texte noir sur les bulles. Ils remplacent la carte en tuiles de la v8.
 - **Couleurs de zone** : `--c-zone-rouge`, `-jaune`, `-bleu`, `-vert`, avec les six rôles du lot 2b, en clair et en sombre (`tokens.css`) ; `-fill` est la couleur médiane de la bulle de How We Feel. Ailleurs dans l'app (Ma journée, en-tête d'Aujourd'hui, Historique, Après coup, Mes jours en mode jour, « Tes zones »), un mot ou un relevé prend la couleur de sa zone ; les graphiques par famille gardent les couleurs de famille.
 - **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre), hors dépôt, comparées à la maquette et aux captures de How We Feel, et le test de contrôle étendu aux écrans de la v9. Le détail est dans `docs/decisions.md`, à l'entrée du 30/10.
 

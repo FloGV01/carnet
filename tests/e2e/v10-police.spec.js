@@ -162,6 +162,14 @@ test('très grand texte (17 à 23) : les libellés de Tes zones restent dans leu
     const fautes = await page.evaluate(() => {
       const res = [];
       if (document.documentElement.scrollWidth > innerWidth + 0.5) res.push(`page : ${document.documentElement.scrollWidth} px`);
+      // La carte elle-même : la page peut rester à sa largeur alors que les bulles sortent de la carte.
+      const carte = document.querySelector('.tes-zones');
+      if (carte.scrollWidth > carte.clientWidth + 0.5) res.push(`carte : ${carte.scrollWidth} px pour ${carte.clientWidth}`);
+      const cadre = carte.getBoundingClientRect();
+      for (const b of carte.querySelectorAll('.bulle-zone')) {
+        const r = b.getBoundingClientRect();
+        if (r.left < cadre.left - 0.5 || r.right > cadre.right + 0.5 || r.top < cadre.top - 0.5 || r.bottom > cadre.bottom + 0.5) res.push(`${b.className} : de ${r.left} à ${r.right}, hors de sa carte (de ${cadre.left} à ${cadre.right})`);
+      }
       const plage = document.createRange();
       for (const e of document.querySelectorAll('.quatre-bulles.comptes .etiquette-bulle')) {
         const r = e.closest('.face').getBoundingClientRect();
