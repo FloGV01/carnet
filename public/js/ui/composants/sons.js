@@ -3,10 +3,11 @@
 // calés sur son horloge (`currentTime`), pas sur un minuteur :
 // - un bol de début, d'environ 4 s ; un bol de changement d'étape, plus court et plus doux, joué avant la voix ;
 // - trois bols de fin ;
-// - le souffle : un bruit doux, filtré, qui monte pendant l'inspiration et redescend à l'expiration ; rien pendant
-//   « Retiens ».
+// - le souffle : un bruit doux, filtré, qui monte pendant l'inspiration (v10 : et pendant la petite inspiration du soupir,
+//   plus claire) et redescend à l'expiration ; rien pendant « Retiens ».
 // Doux, courts, jamais surprenants : une attaque adoucie, aucun son fort. Sans contexte (son « Aucun », ou rien préparé),
-// rien ne joue. Les écrans de crise (Moment difficile, « Respirer ») n'utilisent pas ce module (spec §12.1).
+// rien ne joue. Les écrans de crise (Moment difficile, « Respirer », et le lecteur en mode `crise`) ne jouent rien de ce module
+// (spec §12.1) : seulement le signal sonore de signal-sonore.js.
 import { quandSonPret } from './signal-sonore.js';
 
 // La fréquence de base de chaque bol, en Hz : les tests reconnaissent un bol à elle.
@@ -20,6 +21,7 @@ const BATTEMENT_HZ = 0.7;
 const ATTAQUE_S = 0.03;
 const VOLUME_SOUFFLE = 0.18;
 const SILENCE = 0.0001;
+const PHASES_SONORES = new Set(['inspire', 'inspire-encore', 'expire']);
 
 // Les sons qui jouent ou vont jouer : { c, gain, sources, finS, souffle }. La pause, l'arrière-plan et la sortie les coupent.
 const vivants = new Set();
@@ -79,15 +81,16 @@ function bruit(c) {
 function souffleSur(c, t0, dureeS, phase) {
   try {
     const t1 = t0 + dureeS;
-    const inspire = phase === 'inspire';
+    const encore = phase === 'inspire-encore';
+    const inspire = phase === 'inspire' || encore;
     const source = c.createBufferSource();
     source.buffer = bruit(c);
     source.loop = true;
     const filtre = c.createBiquadFilter();
     filtre.type = 'lowpass';
     filtre.Q.value = 0.5;
-    filtre.frequency.setValueAtTime(inspire ? 380 : 1000, t0);
-    filtre.frequency.linearRampToValueAtTime(inspire ? 1100 : 340, t1);
+    filtre.frequency.setValueAtTime(encore ? 700 : inspire ? 380 : 1000, t0);
+    filtre.frequency.linearRampToValueAtTime(encore ? 1300 : inspire ? 1100 : 340, t1);
     const g = c.createGain();
     g.gain.setValueAtTime(SILENCE, t0);
     g.gain.linearRampToValueAtTime(VOLUME_SOUFFLE, t0 + dureeS * (inspire ? 0.8 : 0.15));
@@ -123,7 +126,7 @@ export const sons = {
   bolsFin: () => quandSonPret((c) => BOLS.fin.forEach((f, i) => bol(c, maintenant(c) + i * ECART_FIN_S, { frequence: f, dureeS: 3.4, volume: 0.16 }))),
   // Une phase du souffle, `dansS` secondes après maintenant, pendant `dureeS` : seulement une inspiration ou une expiration.
   souffle: ({ phase, dureeS, dansS = 0 }) => {
-    if ((phase !== 'inspire' && phase !== 'expire') || !(dureeS >= 0.3)) return;
+    if (!PHASES_SONORES.has(phase) || !(dureeS >= 0.3)) return;
     quandSonPret((c) => souffleSur(c, maintenant(c) + Math.max(0, dansS), dureeS, phase));
   },
   couperSouffle: () => couper((v) => v.souffle),

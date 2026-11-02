@@ -79,6 +79,8 @@ const C = {
   points: 'M5 12h.01 M12 12h.01 M19 12h.01',
   bascule: 'M8 7h8a5 5 0 0 1 0 10H8A5 5 0 0 1 8 7z M13.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
   ajouter: 'M5 5h14v14H5z M12 9v6 M9 12h6',
+  // Bien-être (v10) : l'épingle d'un favori.
+  epingle: 'M8.5 3h7 M9.5 3v6.5L6 14v2.5h12V14l-3.5-4.5V3 M12 16.5V21.5',
 };
 
 export const Icones = Object.fromEntries(Object.entries(C).map(([nom, d]) => [nom, (options) => svg(d, options)]));

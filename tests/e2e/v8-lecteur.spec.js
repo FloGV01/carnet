@@ -13,7 +13,8 @@ import {
 // Aucun » et « Repères » ; le mode silencieux ; la cohérence cardiaque lancée d'un toucher ; le point de vigilance 4 (une
 // respiration de crise reste muette par défaut ; une lecture interrompue coupe voix et sons et rend le verrou d'écran,
 // une seule séance).
-// Les exercices s'ouvrent depuis l'écran Programme (v8, tâche 4) : le lecteur y revient.
+// Ces exercices s'ouvrent depuis l'écran Programme (v8, tâche 4) : le lecteur y revient. La durée au choix, le noting, le
+// soupir, l'épingle, l'exercice de nuit et le mode crise : tests/e2e/v10-lecteur.spec.js.
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
 test.beforeEach(async ({ page }) => {

@@ -42,11 +42,13 @@ export const ROUTES = [
   { nom: 'export-psy', motif: '/export-psy' },
   { nom: 'soignants', motif: '/soignants' },
   // Bien-être (v7, spec §6) : l'onglet. v8 : la cohérence cardiaque de l'onglet dans le lecteur, le Programme (spec §6),
-  // et une séance du Programme dans le lecteur (domain/programme.js) ; les exercices ne se font plus que là.
+  // et une séance du Programme dans le lecteur (domain/programme.js).
   { nom: 'bien-etre', motif: '/bien-etre' },
   { nom: 'coherence', motif: '/bien-etre/coherence' },
   { nom: 'programme', motif: '/bien-etre/programme' },
   { nom: 'seance-programme', motif: `/bien-etre/programme/${ID}`, params: ['id'] },
+  // v10 (spec §7.4) : un exercice seul dans le lecteur, hors du Programme.
+  { nom: 'exercice', motif: `/exercice/${ID}`, params: ['id'] },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
 
 export function lireRoute(hash) {
@@ -75,7 +77,7 @@ export function versHash(nom, params = {}) {
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
-  if (['bien-etre', 'coherence', 'programme', 'seance-programme'].includes(nom)) return 'bien-etre';
+  if (['bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

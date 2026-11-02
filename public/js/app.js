@@ -37,7 +37,7 @@ import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
-import { BienEtre, Coherence } from './ui/ecrans/bien-etre.js';
+import { BienEtre, Coherence, ExerciceSeul } from './ui/ecrans/bien-etre.js';
 import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 
 const ECRANS = {
@@ -78,6 +78,7 @@ const ECRANS = {
   coherence: () => html`<${Coherence} />`,
   programme: () => html`<${Programme} />`,
   'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
+  exercice: (p) => html`<${ExerciceSeul} key=${p.id} id=${p.id} />`,
 };
 
 function useEtatApp() {

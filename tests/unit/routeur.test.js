@@ -114,8 +114,8 @@ test('v7 · Bien-être : /bien-etre allume l\'onglet Bien-être ; l\'Historique,
   assert.deepEqual(lireRoute('#/bien-etre'), { nom: 'bien-etre', params: {}, chemin: '/bien-etre' });
   assert.equal(versHash('bien-etre'), '#/bien-etre');
   assert.equal(ongletDe('bien-etre'), 'bien-etre');
-  // v8 : les exercices ne se font plus que dans le Programme ; l'adresse d'un exercice seul n'existe plus.
-  for (const h of ['#/bien-etre/', '#/bien-etre/exercice/ancrage-54321', '#/bien-etre/exercice/', '#/exercice/scan-corporel']) assert.equal(lireRoute(h).inconnue, true, h);
+  // L'adresse d'un exercice seul de la v7 n'existe plus (v10 : c'est #/exercice/<id>).
+  for (const h of ['#/bien-etre/', '#/bien-etre/exercice/ancrage-54321', '#/bien-etre/exercice/']) assert.equal(lireRoute(h).inconnue, true, h);
   // L'Historique garde sa route et ses jours ; il n'a plus d'onglet à lui.
   assert.equal(lireRoute('#/historique').nom, 'historique');
   assert.equal(ongletDe('historique'), 'analyse');
@@ -131,6 +131,15 @@ test('v8 · le Programme : /bien-etre/programme, et une séance du Programme dan
   assert.equal(ongletDe('programme'), 'bien-etre');
   assert.equal(ongletDe('seance-programme'), 'bien-etre');
   for (const h of ['#/bien-etre/programme/', '#/programme', '#/bien-etre/programme/a/b']) assert.equal(lireRoute(h).inconnue, true, h);
+});
+
+test('v10 · un exercice seul dans le lecteur : /exercice/ID, onglet Bien-être ; les routes d\'avant ne changent pas', () => {
+  assert.deepEqual(lireRoute('#/exercice/scan-corporel'), { nom: 'exercice', params: { id: 'scan-corporel' }, chemin: '/exercice/scan-corporel' });
+  assert.equal(versHash('exercice', { id: 'soupir' }), '#/exercice/soupir');
+  assert.equal(ongletDe('exercice'), 'bien-etre');
+  for (const h of ['#/exercice', '#/exercice/', '#/exercice/a/b']) assert.equal(lireRoute(h).inconnue, true, h);
+  assert.equal(lireRoute('#/bien-etre/programme/soupir').nom, 'seance-programme');
+  assert.equal(lireRoute('#/bien-etre/coherence').nom, 'coherence');
 });
 
 test('v8 · la cohérence cardiaque de Bien-être dans le lecteur : /bien-etre/coherence, onglet Bien-être', () => {

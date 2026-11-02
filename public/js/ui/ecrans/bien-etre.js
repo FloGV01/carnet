@@ -16,7 +16,7 @@ import { PucesRespiration, useReglagesRespiration } from '../composants/respirat
 import { Icones } from '../icones.js';
 import { useDonnees } from '../hooks.js';
 import { repo } from '../../donnees.js';
-import { dureeEtPosture } from '../../domain/exercices.js';
+import { dureeEtPosture, exerciceDe } from '../../domain/exercices.js';
 import { seanceProgramme, suivante } from '../../domain/programme.js';
 import { NOM_RESPIRATION, normaliserRespiration, seanceCoherence } from '../../domain/respiration.js';
 import { pourAffichage } from '../../domain/typographie.js';
@@ -85,4 +85,14 @@ export function Coherence() {
   }, []);
   const seance = useMemo(() => reglages && seanceCoherence(reglages), [reglages]);
   return seance ? html`<${Lecteur} seance=${seance} />` : null;
+}
+
+// Un exercice seul dans le lecteur (#/exercice/<id>, v10, spec §7.4), à la durée retenue pour ceux qui en ont une au choix
+// (lecteur.js). Lancé d'un toucher (lancerLecture), il démarre aussitôt et revient à l'écran d'où il part ; ouvert autrement,
+// il attend « Commencer ». Il n'écrit pas `programme` : seul le Programme date ses séances. Un exercice inconnu ramène à
+// Bien-être.
+export function ExerciceSeul({ id }) {
+  const exercice = exerciceDe(id);
+  useEffect(() => { if (!exercice) location.hash = versHash('bien-etre'); }, [id]);
+  return exercice ? html`<${Lecteur} seance=${exercice} />` : null;
 }

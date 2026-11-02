@@ -637,6 +637,11 @@ test('v8 : aperçu de l\'import, les définitions des émotions ont leurs mots e
   assert.equal(phraseMeta(['inconnue', 'definitionsRoue']), 'Les définitions des émotions seront remplacées par ce que contient le fichier.');
 });
 
+test('v10 : aperçu de l\'import, les exercices épinglés ont leurs mots', () => {
+  assert.equal(phraseMeta(['favorisBienEtre']), 'Les exercices épinglés seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan', 'favorisBienEtre']), 'Mon plan et les exercices épinglés seront remplacés par ce que contient le fichier.');
+});
+
 test('v8 : « Revenir » vers une copie prise avant la v8 remet les sujets d\'un rendez-vous, sans écraser ceux de la copie', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);

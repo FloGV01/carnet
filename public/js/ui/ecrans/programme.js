@@ -64,5 +64,5 @@ export function SeanceProgramme({ id }) {
     if (id === 'coherence') repo.meta.lire('respiration').catch(() => null).then((v) => setReglages(normaliserRespiration(v)));
   }, [id]);
   const seance = useMemo(() => (connue && reglages ? seanceProgramme(id, reglages) : null), [id, reglages]);
-  return seance ? html`<${Lecteur} seance=${seance} origine=${ADRESSE_PROGRAMME} programme=${id} />` : null;
+  return seance ? html`<${Lecteur} seance=${seance} retour=${ADRESSE_PROGRAMME} programme=${id} />` : null;
 }
