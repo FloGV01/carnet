@@ -68,7 +68,7 @@ export function ReglagesMomentDifficile() {
       </li>`}
     </ul>
     <p class="aide-carte">${pourAffichage(voix
-    ? 'Le signal et la voix valent aussi pour les exercices courts de Moment difficile. « Réveil la nuit » reste sans signal : seule la voix peut y parler.'
+    ? 'Le signal vaut aussi pour les exercices courts de Moment difficile, et la voix pour eux seuls. « Réveil la nuit » reste sans signal : seule la voix peut y parler.'
     : 'Le signal vaut aussi pour les exercices courts de Moment difficile, sauf « Réveil la nuit ».')}</p>
     <h2 class="libelle-section">Une chose à la fois</h2>
     <ul class="liste carte carte-groupe">

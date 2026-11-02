@@ -980,8 +980,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    Les puces servent aussi à la carte de la cohérence cardiaque de Bien-être (v8). */
 .moment-difficile .respiration { gap: 12px; }
 .moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
-/* « Commencer » : 30 de marge à côté du mot en texte normal ; elle fond avec le très grand texte, qui ne dépasse plus de la carte. */
-.moment-difficile .respiration .btn { min-height: 54px; padding: 0 max(6px, calc(47px - 1rem)); font-size: 1.059rem; margin-top: 4px; }
+/* « Commencer » : 30 de marge à côté du mot en texte normal ; elle fond avec le très grand texte. Le mot se borne à 44 px :
+   « Recommencer », le même bouton une fois la respiration finie, ne dépasse ainsi de la carte à aucune taille. */
+.moment-difficile .respiration .btn { min-height: 54px; padding: 0 max(6px, calc(47px - 1rem)); font-size: min(1.059rem, 44px); margin-top: 4px; }
 .puces-respiration { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .puce-reglage { position: relative; display: inline-flex; align-items: center; }
 .puce-reglage select {

@@ -70,7 +70,7 @@ test('#/exercice/:id : le lecteur attend « Commencer », à l\'onglet Bien-êtr
   await expect(v.locator('.lecteur-duree')).toHaveText(/^2\smin\s·\slà où tu es$/);
   // Une durée fixe : pas de choix.
   await expect(v.getByRole('group', { name: 'Durée' })).toHaveCount(0);
-  await expect(page.locator('.barre-onglets')).toHaveCount(0);
+  await expect(page.getByRole('navigation')).toHaveCount(0);
   await page.clock.runFor(3000);
   expect(await audio(page)).toMatchObject({ contextes: 0, oscillateurs: [] });
   await expect(consigne(v)).toHaveCount(0);

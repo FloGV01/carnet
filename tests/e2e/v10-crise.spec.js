@@ -160,6 +160,45 @@ test('très grand texte : les quatre boutons tiennent, de même taille, sans dé
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
+test('très grand texte : « Commencer », puis « Recommencer » une fois la respiration finie, restent dans la carte, sans débordement ; leur texte ne se borne qu\'à 44 px, le texte normal ne change pas', async ({ page }) => {
+  await ecrireMeta(page, 'respiration', { duree: 2, rythme: '5-5', son: false, voix: false });
+  const v = await ouvrir(page);
+  const mesurer = async (nom) => {
+    for (const [taille, texteBouton] of [[17, 18], [28, 29.65], [40, 42.36], [47, 44], [53, 44]]) {
+      await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+      const m = await v.evaluate((d) => {
+        const corps = d.querySelector('.parcours-corps');
+        const carte = d.querySelector('.carte-respiration').getBoundingClientRect();
+        const b = d.querySelector('.respiration .btn');
+        const r = b.getBoundingClientRect();
+        const plage = document.createRange();
+        plage.selectNodeContents(b.lastChild);
+        const mot = plage.getBoundingClientRect();
+        return {
+          gauche: r.left - carte.left, droite: carte.right - r.right, motGauche: mot.left - r.left, motDroite: r.right - mot.right,
+          lignes: plage.getClientRects().length, texte: parseFloat(getComputedStyle(b).fontSize), corps: corps.scrollWidth - corps.clientWidth,
+        };
+      });
+      const quoi = `${nom}, ${taille} px`;
+      expect(m.gauche, quoi).toBeGreaterThanOrEqual(0);
+      expect(m.droite, quoi).toBeGreaterThanOrEqual(0);
+      expect(m.motGauche, quoi).toBeGreaterThanOrEqual(0);
+      expect(m.motDroite, quoi).toBeGreaterThanOrEqual(0);
+      expect(m.lignes, quoi).toBe(1);
+      expect(m.corps, quoi).toBe(0);
+      expect(m.texte, quoi).toBeCloseTo(texteBouton, 1);
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  };
+  await expect(bouton(v, 'Commencer')).toBeVisible();
+  await mesurer('Commencer');
+  await bouton(v, 'Commencer').click();
+  await expect(v.locator('.phase-respiration')).toHaveText('Inspire');
+  await page.clock.runFor(121000);
+  await expect(bouton(v, 'Recommencer')).toBeVisible();
+  await mesurer('Recommencer');
+});
+
 // ---------- Un toucher démarre ----------
 
 test('un toucher sur « Panique » : le lecteur démarre aussitôt, sans « Commencer », sans son ; à la fin, retour sur Moment difficile sans message, séance d\'origine moment-difficile menée au bout ; rien d\'autre n\'est écrit', async ({ page }) => {
@@ -179,7 +218,7 @@ test('un toucher sur « Panique » : le lecteur démarre aussitôt, sans « Comm
   await expect(l.getByRole('group', { name: 'Durée' })).toHaveCount(0);
   await expect(l.locator('.anneau-temps, .anneau-plein, .epingle')).toHaveCount(0);
   await expect(l).not.toContainText('il reste');
-  await expect(page.locator('.barre-onglets')).toHaveCount(0);
+  await expect(page.getByRole('navigation')).toHaveCount(0);
   await figer(page);
   await expect.poll(() => verrou(page)).toMatchObject({ demandes: 1, rendus: 0 });
   // Jusqu'au bout : aucun son, aucune voix.
@@ -347,14 +386,14 @@ test('« Fermer » touché avant que les réglages soient lus, signal allumé : 
   expect((await parole(page)).dits).toEqual([]);
 });
 
-test('Réglages › Moment difficile : « Lire les consignes à voix haute », éteint au départ, sous « Signal sonore » ; rien n\'est écrit sans toucher ; le texte dit que le signal et la voix valent aussi pour les exercices courts', async ({ page }) => {
+test('Réglages › Moment difficile : « Lire les consignes à voix haute », éteint au départ, sous « Signal sonore » ; rien n\'est écrit sans toucher ; le texte dit que le signal vaut aussi pour les exercices courts, et la voix pour eux seuls', async ({ page }) => {
   await aller(page, '#/reglages/moment-difficile');
   const voix = reglageVoix(page);
   await expect(voix).toHaveAttribute('aria-checked', 'false');
   const signal = page.getByRole('switch', { name: 'Signal sonore', exact: true });
   const ordre = await page.locator('.reglages-moment-difficile [role="switch"]').evaluateAll((l) => l.map((x) => x.getAttribute('aria-label')).slice(0, 2));
   expect(ordre).toEqual(['Signal sonore', 'Lire les consignes à voix haute']);
-  await expect(page.locator('.reglages-moment-difficile')).toContainText('Le signal et la voix valent aussi pour les exercices courts de Moment difficile.');
+  await expect(page.locator('.reglages-moment-difficile')).toContainText('Le signal vaut aussi pour les exercices courts de Moment difficile, et la voix pour eux seuls.');
   await expect(page.locator('.reglages-moment-difficile')).toContainText('« Réveil la nuit » reste sans signal');
   expect(await lireMeta(page, 'respiration')).toBeNull();
   await voix.click();
@@ -401,6 +440,18 @@ test('la voix réglée dans Réglages : la synthèse lit la première consigne d
   await expect.poll(async () => (await parole(page)).dits).toHaveLength(2);
   expect((await parole(page)).dits[1]).toMatch(/^Trois soupirs/);
   expect(await audio(page)).toMatchObject({ notes: [], session: 'ambient' });
+});
+
+// Ce que dit le texte de Réglages : la voix ne vaut que pour les exercices courts. La cohérence cardiaque de cet écran n'a pas de voix.
+test('la voix réglée dans Réglages : la cohérence cardiaque de Moment difficile reste sans voix, d\'un bout à l\'autre', async ({ page }) => {
+  await espionnerAudio(page);
+  await ecrireMeta(page, 'respiration', { duree: 2, rythme: '5-5', son: false, voix: true });
+  const v = await ouvrir(page);
+  await bouton(v, 'Commencer').click();
+  await expect(v.locator('.phase-respiration')).toHaveText('Inspire');
+  await page.clock.runFor(121000);
+  await expect(bouton(v, 'Recommencer')).toBeVisible();
+  expect(await parole(page)).toMatchObject({ dits: [], amorces: 0 });
 });
 
 test('le signal réglé dans Réglages : un repère à chaque changement d\'étape d\'un exercice lancé de Moment difficile, quel que soit le son du lecteur de Bien-être ; « Réveil la nuit » reste muet, sa voix éteinte', async ({ page }) => {
