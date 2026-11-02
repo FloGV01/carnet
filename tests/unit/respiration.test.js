@@ -58,24 +58,34 @@ test('en 4-6 l\'inspiration dure 4 s au lieu de 5 s : l\'expiration est plus lon
 });
 
 test('sans réglage, les valeurs par défaut s\'appliquent à la lecture (copie, jamais l\'objet figé)', () => {
-  assert.deepEqual(RESPIRATION_DEFAUT, { duree: 5, rythme: '5-5', son: false });
+  assert.deepEqual(RESPIRATION_DEFAUT, { duree: 5, rythme: '5-5', son: false, voix: false });
   for (const brut of [undefined, null, {}, 'texte', 12, []]) {
     const r = normaliserRespiration(brut);
-    assert.deepEqual(r, { duree: 5, rythme: '5-5', son: false });
+    assert.deepEqual(r, { duree: 5, rythme: '5-5', son: false, voix: false });
     assert.notEqual(r, RESPIRATION_DEFAUT);
   }
 });
 
 test('un réglage partiel garde ce qui est valide et complète le reste', () => {
-  assert.deepEqual(normaliserRespiration({ duree: 10 }), { duree: 10, rythme: '5-5', son: false });
-  assert.deepEqual(normaliserRespiration({ rythme: '4-6' }), { duree: 5, rythme: '4-6', son: false });
-  assert.deepEqual(normaliserRespiration({ son: true }), { duree: 5, rythme: '5-5', son: true });
-  assert.deepEqual(normaliserRespiration({ duree: 2, rythme: '4-6', son: true }), { duree: 2, rythme: '4-6', son: true });
+  assert.deepEqual(normaliserRespiration({ duree: 10 }), { duree: 10, rythme: '5-5', son: false, voix: false });
+  assert.deepEqual(normaliserRespiration({ rythme: '4-6' }), { duree: 5, rythme: '4-6', son: false, voix: false });
+  assert.deepEqual(normaliserRespiration({ son: true }), { duree: 5, rythme: '5-5', son: true, voix: false });
+  assert.deepEqual(normaliserRespiration({ duree: 2, rythme: '4-6', son: true }), { duree: 2, rythme: '4-6', son: true, voix: false });
 });
 
 test('une valeur hors liste est ignorée, une clé inconnue n\'est pas gardée', () => {
-  assert.deepEqual(normaliserRespiration({ duree: 3, rythme: '6-4', son: 'oui', autre: 1 }), { duree: 5, rythme: '5-5', son: false });
-  assert.deepEqual(normaliserRespiration({ duree: '10', son: 1 }), { duree: 5, rythme: '5-5', son: false });
+  assert.deepEqual(normaliserRespiration({ duree: 3, rythme: '6-4', son: 'oui', autre: 1 }), { duree: 5, rythme: '5-5', son: false, voix: false });
+  assert.deepEqual(normaliserRespiration({ duree: '10', son: 1 }), { duree: 5, rythme: '5-5', son: false, voix: false });
+});
+
+test('v10 · `voix` (la lecture à voix haute des exercices courts) : un booléen, éteint au départ, gardé quand il est allumé', () => {
+  assert.equal(normaliserRespiration({ voix: true }).voix, true);
+  assert.equal(normaliserRespiration({ voix: false }).voix, false);
+  for (const brut of ['oui', 1, null, {}, undefined]) assert.equal(normaliserRespiration({ voix: brut }).voix, false, String(brut));
+  // Une méta écrite avant la v10 (sans la clé) reste valide, et ses autres réglages ne bougent pas.
+  assert.deepEqual(normaliserRespiration({ duree: 2, rythme: '4-6', son: true }), { duree: 2, rythme: '4-6', son: true, voix: false });
+  // La voix et le signal se règlent l'un sans l'autre.
+  assert.deepEqual(normaliserRespiration({ son: false, voix: true }), { duree: 5, rythme: '5-5', son: false, voix: true });
 });
 
 test('les textes d\'avant et de fin suivent la durée ; « 5 minutes » ne se coupe pas (espace insécable)', () => {

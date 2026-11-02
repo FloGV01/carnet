@@ -14,11 +14,22 @@
 // dans chacune. Deux blocs communs, « Arriver » (60 s) et « Revenir » (55 s), en ouvrent et en ferment cinq. Aucune
 // n'a de rythme écrit : ni disque ni souffle. « Premiers pas » n'est pas écrite (§12.4) : Respiration abdominale ouvre
 // le Programme. Elles ne se lancent que depuis le Programme (domain/programme.js).
+// v10 (spec §5.2, §6 et §14) : 10 exercices nouveaux, ajoutés à la fin : six pour Bien-être et l'écran 3, puis les quatre
+// de Moment difficile. Mêmes règles d'écriture, aucune rétention. Les quatre de Moment difficile durent de 1 à 3 min, sans
+// choix de durée : consignes physiques, les yeux ouverts, le droit de bouger et de passer une étape. Champs nouveaux d'une
+// étape : `repete` (celle qui s'allonge selon la durée choisie) et `etiquettes` (les boutons du noting, qui n'écrivent
+// rien) ; d'un exercice : `nuit` (écran noir, muet sauf la voix).
+import { cycleSouffleMs } from './respiration.js';
 
-const e = (texte, dureeS, souffle) => Object.freeze(souffle ? { texte, dureeS, souffle: Object.freeze(souffle) } : { texte, dureeS });
+const e = (texte, dureeS, souffle, autres) => Object.freeze({ texte, dureeS, ...(souffle && { souffle: Object.freeze(souffle) }), ...autres });
 
 // Quatre temps de quatre secondes (respiration carrée).
 const CARRE = { inspi: 4, retiens1: 4, expi: 4, retiens2: 4 };
+// v10 : le soupir (9 s) et l'expiration longue (10 s), sans rétention.
+const SOUPIR = { inspi: 2, inspi2: 1, retiens1: 0, expi: 6, retiens2: 0 };
+const LONGUE = { inspi: 4, inspi2: 0, retiens1: 0, expi: 6, retiens2: 0 };
+const REPETE = Object.freeze({ repete: true });
+const ETIQUETTES_NOTING = Object.freeze(['Pensée', 'Corps', 'Son', 'Émotion']);
 
 // Les blocs communs des séances nouvelles (v8) : l'accueil et le retour d'une séance de sophrologie, copiés dans chacune.
 const ARRIVER = [
@@ -347,9 +358,189 @@ export const EXERCICES = Object.freeze([
       ...REVENIR,
     ],
   },
+  // v10 : les exercices courts, trois d'entre eux à durée au choix (dureeMin : la durée de départ, 3 min). Le temps des
+  // étapes fixes est choisi pour qu'à 3 min le total tombe juste : 36 s pour un cycle de 9 s, 40 s pour un cycle de 10 s.
+  {
+    id: 'soupir',
+    titre: 'Le soupir',
+    dureeMin: 3,
+    posture: 'là où tu es',
+    description: 'Une inspiration, une petite en plus, une longue expiration.',
+    etapes: [
+      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
+      e('Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux.', 8),
+      e('Expire longuement par la bouche, jusqu\'au bout, sans forcer.', 8),
+      e('Inspire, encore un peu, puis expire longuement. Sans forcer.', 144, SOUPIR, REPETE),
+      e('Laisse ta respiration redevenir libre.', 6),
+      e('Reprends ce que tu faisais quand tu veux.', 6),
+    ],
+  },
+  {
+    id: 'expiration-longue',
+    titre: 'Expiration longue',
+    dureeMin: 3,
+    posture: 'là où tu es',
+    description: 'Inspirer sur quatre temps, expirer sur six.',
+    etapes: [
+      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
+      e('Inspire par le nez, sur quatre temps.', 8),
+      e('Expire par la bouche, sur six temps. Plus long que l\'inspiration, sans forcer.', 10),
+      e('Inspire, quatre temps. Expire, six temps. Sans forcer.', 140, LONGUE, REPETE),
+      e('Laisse ta respiration redevenir libre.', 7),
+      e('Reprends ce que tu faisais quand tu veux.', 7),
+    ],
+  },
+  {
+    id: 'noting',
+    titre: 'Noter ce qui passe',
+    dureeMin: 3,
+    posture: 'là où tu es',
+    description: 'Toucher l\'étiquette de ce qui passe, puis revenir au souffle.',
+    etapes: [
+      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
+      e('Sens l\'air qui entre et qui sort, sans rien changer.', 8),
+      e('Quelque chose passe ? Une pensée, le corps, un son, une émotion.', 9),
+      e('Touche l\'étiquette de ce qui passe, puis reviens au souffle. Rien n\'est gardé.', 140, null, { ...REPETE, etiquettes: ETIQUETTES_NOTING }),
+      e('Laisse les étiquettes. Sens encore une fois l\'air qui entre et qui sort.', 8),
+      e('Reprends ce que tu faisais quand tu veux.', 7),
+    ],
+  },
+  {
+    id: 'ancrage-court',
+    titre: 'Ancrage court',
+    dureeMin: 2,
+    posture: 'là où tu es',
+    description: 'Trois choses vues, deux sons, une chose touchée.',
+    etapes: [
+      e('Garde les yeux ouverts. Si un sens ne répond pas, passe au suivant.', 10),
+      e('Nomme trois choses que tu vois.', 35),
+      e('Nomme deux sons que tu entends.', 30),
+      e('Nomme une chose que tu touches. Touche-la si tu veux.', 25),
+      e('Respire une fois, lentement.', 10),
+      e('Reprends ce que tu faisais quand tu veux.', 10),
+    ],
+  },
+  {
+    id: 'scan-court',
+    titre: 'Scan court',
+    dureeMin: 3,
+    posture: 'assis ou allongé',
+    description: 'Les pieds, les mains, le ventre, les épaules, la mâchoire.',
+    etapes: [
+      e('Installe-toi assis ou allongé. Les yeux ouverts ou fermés, les deux vont.', 15),
+      e('Tes pieds : remarque ce qui est là. « Rien de spécial » est une réponse normale.', 30),
+      e('Tes mains : les doigts, les paumes.', 30),
+      e('Ton ventre, qui bouge avec la respiration.', 30),
+      e('Tes épaules : hautes ou basses, sans rien changer.', 30),
+      e('Ta mâchoire. Si elle est serrée, laisse les dents se séparer un peu.', 30),
+      e('Bouge les doigts. Reprends ce que tu faisais quand tu veux.', 15),
+    ],
+  },
+  {
+    id: 'savourer',
+    titre: 'Savourer',
+    dureeMin: 2,
+    posture: 'là où tu es',
+    description: 'Remarquer trois détails de ce moment, et où il se sent dans le corps.',
+    etapes: [
+      e('Reste là où tu es, les yeux ouverts.', 10),
+      e('Remarque un détail de ce moment : une lumière, un son, une matière.', 25),
+      e('Remarque un deuxième détail.', 20),
+      e('Remarque un troisième détail.', 20),
+      e('Où ce moment se sent-il dans ton corps ? La poitrine, le ventre, les mains, ou nulle part.', 20),
+      e('Garde ça encore quelques souffles, sans rien y changer.', 15),
+      e('Reprends ce que tu faisais quand tu veux.', 10),
+    ],
+  },
+  // v10 : les quatre exercices de Moment difficile (spec §5.2).
+  {
+    id: 'panique',
+    titre: 'Panique',
+    dureeMin: 2,
+    posture: 'là où tu es',
+    description: 'Les pieds au sol, trois soupirs, ce qu\'il y a autour de toi.',
+    etapes: [
+      e('Pose les pieds bien à plat et appuie. Tu peux bouger, ou passer une étape, quand tu veux.', 12),
+      e('Trois soupirs : inspire, une petite inspiration en plus, une longue expiration.', 27, SOUPIR),
+      e('Regarde autour de toi. Nomme trois choses que tu vois.', 20),
+      e('Nomme deux sons que tu entends.', 18),
+      e('Touche une chose près de toi. Nomme-la.', 12),
+      e('Encore deux longues expirations : inspire, puis souffle lentement.', 20, LONGUE),
+      e('Reste là, ou bouge, comme tu veux.', 11),
+    ],
+  },
+  {
+    id: 'colere',
+    titre: 'Colère',
+    dureeMin: 2,
+    posture: 'debout ou en marchant',
+    description: 'S\'éloigner, serrer les poings puis relâcher, expirer longuement.',
+    etapes: [
+      e('Éloigne-toi si tu peux. Sinon, tourne-toi. Marcher, bouger ou passer une étape est permis tout du long.', 15),
+      e('Serre les poings fort, cinq secondes.', 8),
+      e('Relâche. Ouvre les mains.', 7),
+      e('Serre encore, cinq secondes.', 8),
+      e('Relâche. Ouvre les mains.', 7),
+      e('Une dernière fois : serre, cinq secondes.', 8),
+      e('Relâche tout. Secoue les mains si tu veux.', 7),
+      e('Longues expirations : inspire, puis souffle lentement par la bouche.', 40, LONGUE),
+      e('Marche, ou reste là, comme tu veux.', 15),
+      e('Reprends quand tu veux.', 5),
+    ],
+  },
+  {
+    id: 'trop-plein',
+    titre: 'Trop-plein',
+    dureeMin: 2,
+    posture: 'là où tu es',
+    description: 'Moins de choses qui entrent, une pression, de longues expirations.',
+    etapes: [
+      e('Regarde un seul point devant toi : un mur, le sol, un objet. Tu peux bouger, ou passer une étape.', 20),
+      e('Couvre-toi les oreilles si le bruit est de trop.', 12),
+      e('Croise les bras et serre. Ou pose les mains à plat, sur la poitrine ou les cuisses.', 15),
+      e('Appuie un peu plus fort. Garde cette pression.', 13),
+      e('Longues expirations : inspire, puis souffle lentement.', 30, LONGUE),
+      e('Reste là. Il n\'y a rien à faire.', 25),
+      e('Reprends quand tu veux.', 5),
+    ],
+  },
+  {
+    id: 'reveil-nuit',
+    titre: 'Réveil la nuit',
+    dureeMin: 3,
+    posture: 'allongé',
+    nuit: true,
+    description: 'Une expiration longue, puis le corps, des pieds à la mâchoire.',
+    etapes: [
+      e('Reste là où tu es, allongé. Tu peux bouger, ou passer une étape.', 10),
+      e('Inspire sur quatre temps. Expire sur six temps, sans forcer.', 50, LONGUE),
+      e('Sens tes pieds.', 20),
+      e('Sens tes mains.', 20),
+      e('Sens ton ventre, qui monte et qui descend.', 20),
+      e('Sens tes épaules, là où elles touchent le lit.', 20),
+      e('Sens ta mâchoire. Les dents peuvent se séparer un peu.', 20),
+      e('Reste là. Il n\'y a rien à attendre.', 20),
+    ],
+  },
 ].map((x) => Object.freeze({ ...x, etapes: Object.freeze(x.etapes) })));
 
 export const exerciceDe = (id) => EXERCICES.find((x) => x.id === id) || null;
+
+// v10 (spec §6) : la durée au choix, pour les exercices qui ont une étape qui se répète (le soupir, l'expiration longue, le
+// noting). Cette étape s'allonge ou se raccourcit, en cycles entiers si elle est rythmée ; l'arrivée et la fin ne changent
+// pas. Une durée hors liste, ou un exercice sans étape qui se répète : l'exercice tel quel.
+export const DUREES_AU_CHOIX = Object.freeze([1, 3, 5]);
+export const aDureeAuChoix = (ex) => Boolean(ex && ex.etapes.some((x) => x.repete));
+export function exerciceAvecDuree(ex, minutes) {
+  if (!aDureeAuChoix(ex) || !DUREES_AU_CHOIX.includes(minutes)) return ex;
+  const fixe = ex.etapes.reduce((s, x) => s + (x.repete ? 0 : x.dureeS), 0);
+  const etapes = ex.etapes.map((x) => {
+    if (!x.repete) return x;
+    const pas = x.souffle ? cycleSouffleMs(x.souffle) / 1000 : 1;
+    return Object.freeze({ ...x, dureeS: Math.max(1, Math.round((minutes * 60 - fixe) / pas)) * pas });
+  });
+  return Object.freeze({ ...ex, dureeMin: minutes, etapes: Object.freeze(etapes) });
+}
 
 // « 3 min · assis ou allongé » : la durée annoncée et la posture.
 export const dureeEtPosture = (ex) => [`${ex.dureeMin}\u00a0min`, ex.posture].filter(Boolean).join(' · ');

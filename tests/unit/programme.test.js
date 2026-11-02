@@ -33,8 +33,12 @@ test('8 étapes, 17 séances dans l\'ordre de l\'annexe (Respiration abdominale 
   assert.equal(new Set(ETAPES.map((e) => e.id)).size, 8);
   assert.ok(Object.isFrozen(ETAPES) && Object.isFrozen(SEANCES_PROGRAMME));
   for (const e of ETAPES) assert.ok(Object.isFrozen(e) && Object.isFrozen(e.seances), e.id);
-  // Tous les exercices sont dans le Programme (aucune séance hors du Programme, sauf la cohérence de l'onglet), une fois.
-  assert.deepEqual(EXERCICES.map((x) => x.id).sort(), ORDRE.filter((id) => id !== 'coherence').sort());
+  // Tous les exercices d'avant la v10 sont dans le Programme, une fois. Le Programme ne change pas (spec v10 §6) : les
+  // 10 exercices de la v10 n'y entrent pas.
+  const avantV10 = EXERCICES.slice(0, EXERCICES.findIndex((x) => x.id === 'soupir'));
+  assert.equal(avantV10.length, 16);
+  assert.deepEqual(avantV10.map((x) => x.id).sort(), ORDRE.filter((id) => id !== 'coherence').sort());
+  for (const x of EXERCICES.slice(16)) assert.equal(estSeanceProgramme(x.id), false, x.id);
   assert.ok(!SEANCES_PROGRAMME.includes('premiers-pas'));
   for (const id of SEANCES_PROGRAMME) assert.match(id, /^[a-z0-9]+(-[a-z0-9]+)*$/, 'identifiant accepté par la route');
   assert.equal(estSeanceProgramme('scan-corporel'), true);

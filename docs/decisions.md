@@ -1240,3 +1240,151 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 
 - **Fatigué** : Le corps ou la tête demandent du repos.
 - **Épuisé** : À bout de forces, même les petites choses coûtent.
+
+## 2026-11-02 : v10.0.0, des exercices pour chaque moment (en construction)
+
+Spec : `docs/superpowers/specs/2026-10-30-carnet-v10-design.md`. Plan : `docs/superpowers/plans/2026-10-30-carnet-v10.md`. Cette entrée se complète à chaque tâche ; la version n'est pas publiée.
+
+### Le contenu : exercices, souffle, propositions, favoris, entrées (tâche 3)
+
+- **10 exercices ajoutés à la fin de `EXERCICES`** (les 16 identifiants d'avant ne bougent pas) : six pour Bien-être et l'écran 3, puis les quatre de Moment difficile. Ils n'entrent pas dans le Programme, qui ne change pas.
+- **Le soupir** : le souffle gagne un temps, `inspi2` (absent, il vaut 0 : les souffles d'avant la v10 ne changent pas ; sinon 3 s au plus), avec la phase `inspire-encore` et le mot « Encore un peu ». Le disque, le mot et le son le suivent à la tâche 4.
+- **Durée au choix** (1, 3 ou 5 min) : l'étape marquée `repete` s'allonge ou se raccourcit, en cycles entiers si elle est rythmée, et l'arrivée et la fin ne changent pas. **3 min au départ**, tant que rien n'est retenu. Le temps des étapes fixes est choisi pour que tout tombe juste à 3 min. L'expiration longue et le noting font exactement 1, 3 et 5 min ; le soupir, en cycles de 9 s, fait 63 s, 180 s et 297 s.
+- **Les exercices de Moment difficile ont des étapes rythmées** (trois soupirs, longues expirations) : le disque et le mot de la phase y guident, sans son de souffle (tâche 4). Ils font 2 min, 3 pour « Réveil la nuit ». Chacun dit qu'on peut bouger et passer une étape : le bouton « Suivant » du lecteur le permet déjà.
+- **« Poser l'attention » n'est pas écrit** : « attention » est un mot interdit de l'app (`tests/aides/mots-interdits.js`). « Réveil la nuit » dit « Sens tes pieds. », et ne parle pas de sommeil (liste `PROMESSES`).
+- **`voix`** s'ajoute à la méta `respiration` (booléen, faux au départ) : une méta écrite avant la v10 reste valide. L'interrupteur arrive à la tâche 5.
+- **Favoris** : `normaliserFavoris` ignore un identifiant inconnu, un doublon et ce qui n'est pas une liste ; rien n'est tiré de la liste, aucun nombre. `basculerFavori` n'ajoute pas un identifiant inconnu.
+- **Les trois modules nouveaux de `domain/`** (`propositions.js`, `favoris.js`, `entrees-bien-etre.js`) ne sont branchés aux écrans qu'aux tâches 4 et 8. D'ici là, `tests/unit/code-mort.test.js` les nomme dans une liste exacte, à vider à mesure : un autre module orphelin fait échouer le test, et un module branché aussi, tant qu'il reste dans la liste.
+
+**La table « Pour ce moment : »** (spec §8), à relire, dans `domain/propositions.js` :
+
+| zone | exercices proposés |
+|---|---|
+| rouge | Le soupir · Ancrage court · Expiration longue |
+| jaune | Savourer · Noter ce qui passe |
+| bleu | Scan court · Expiration longue · Noter ce qui passe |
+| vert | Savourer · Expiration longue |
+
+### Exercices à relire (titres et étapes)
+
+Écrits pour Carnet, à relire par l'utilisateur : une consigne par écran, phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. Ce sont des techniques communes : aucun texte, aucun nom de séance n'est repris d'une autre app. Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas.
+
+#### Le soupir (1, 3 ou 5 min, `soupir`)
+
+Une inspiration, une petite en plus, une longue expiration. Posture : là où tu es.
+
+1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
+2. Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux. *(8 s)*
+3. Expire longuement par la bouche, jusqu'au bout, sans forcer. *(8 s)*
+4. Inspire, encore un peu, puis expire longuement. Sans forcer. *(144 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min.
+5. Laisse ta respiration redevenir libre. *(6 s)*
+6. Reprends ce que tu faisais quand tu veux. *(6 s)*
+
+#### Expiration longue (1, 3 ou 5 min, `expiration-longue`)
+
+Inspirer sur quatre temps, expirer sur six. Posture : là où tu es.
+
+1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
+2. Inspire par le nez, sur quatre temps. *(8 s)*
+3. Expire par la bouche, sur six temps. Plus long que l'inspiration, sans forcer. *(10 s)*
+4. Inspire, quatre temps. Expire, six temps. Sans forcer. *(140 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min.
+5. Laisse ta respiration redevenir libre. *(7 s)*
+6. Reprends ce que tu faisais quand tu veux. *(7 s)*
+
+#### Noter ce qui passe (1, 3 ou 5 min, `noting`)
+
+Toucher l'étiquette de ce qui passe, puis revenir au souffle. Posture : là où tu es.
+
+1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
+2. Sens l'air qui entre et qui sort, sans rien changer. *(8 s)*
+3. Quelque chose passe ? Une pensée, le corps, un son, une émotion. *(9 s)*
+4. Touche l'étiquette de ce qui passe, puis reviens au souffle. Rien n'est gardé. *(140 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min, avec les étiquettes Pensée, Corps, Son, Émotion.
+5. Laisse les étiquettes. Sens encore une fois l'air qui entre et qui sort. *(8 s)*
+6. Reprends ce que tu faisais quand tu veux. *(7 s)*
+
+#### Ancrage court (2 min, `ancrage-court`)
+
+Trois choses vues, deux sons, une chose touchée. Posture : là où tu es.
+
+1. Garde les yeux ouverts. Si un sens ne répond pas, passe au suivant. *(10 s)*
+2. Nomme trois choses que tu vois. *(35 s)*
+3. Nomme deux sons que tu entends. *(30 s)*
+4. Nomme une chose que tu touches. Touche-la si tu veux. *(25 s)*
+5. Respire une fois, lentement. *(10 s)*
+6. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Scan court (3 min, `scan-court`)
+
+Les pieds, les mains, le ventre, les épaules, la mâchoire. Posture : assis ou allongé.
+
+1. Installe-toi assis ou allongé. Les yeux ouverts ou fermés, les deux vont. *(15 s)*
+2. Tes pieds : remarque ce qui est là. « Rien de spécial » est une réponse normale. *(30 s)*
+3. Tes mains : les doigts, les paumes. *(30 s)*
+4. Ton ventre, qui bouge avec la respiration. *(30 s)*
+5. Tes épaules : hautes ou basses, sans rien changer. *(30 s)*
+6. Ta mâchoire. Si elle est serrée, laisse les dents se séparer un peu. *(30 s)*
+7. Bouge les doigts. Reprends ce que tu faisais quand tu veux. *(15 s)*
+
+#### Savourer (2 min, `savourer`)
+
+Remarquer trois détails de ce moment, et où il se sent dans le corps. Posture : là où tu es.
+
+1. Reste là où tu es, les yeux ouverts. *(10 s)*
+2. Remarque un détail de ce moment : une lumière, un son, une matière. *(25 s)*
+3. Remarque un deuxième détail. *(20 s)*
+4. Remarque un troisième détail. *(20 s)*
+5. Où ce moment se sent-il dans ton corps ? La poitrine, le ventre, les mains, ou nulle part. *(20 s)*
+6. Garde ça encore quelques souffles, sans rien y changer. *(15 s)*
+7. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Panique (2 min, `panique`)
+
+Les pieds au sol, trois soupirs, ce qu'il y a autour de toi. Posture : là où tu es.
+
+1. Pose les pieds bien à plat et appuie. Tu peux bouger, ou passer une étape, quand tu veux. *(12 s)*
+2. Trois soupirs : inspire, une petite inspiration en plus, une longue expiration. *(27 s)*
+3. Regarde autour de toi. Nomme trois choses que tu vois. *(20 s)*
+4. Nomme deux sons que tu entends. *(18 s)*
+5. Touche une chose près de toi. Nomme-la. *(12 s)*
+6. Encore deux longues expirations : inspire, puis souffle lentement. *(20 s)*
+7. Reste là, ou bouge, comme tu veux. *(11 s)*
+
+#### Colère (2 min, `colere`)
+
+S'éloigner, serrer les poings puis relâcher, expirer longuement. Posture : debout ou en marchant.
+
+1. Éloigne-toi si tu peux. Sinon, tourne-toi. Marcher, bouger ou passer une étape est permis tout du long. *(15 s)*
+2. Serre les poings fort, cinq secondes. *(8 s)*
+3. Relâche. Ouvre les mains. *(7 s)*
+4. Serre encore, cinq secondes. *(8 s)*
+5. Relâche. Ouvre les mains. *(7 s)*
+6. Une dernière fois : serre, cinq secondes. *(8 s)*
+7. Relâche tout. Secoue les mains si tu veux. *(7 s)*
+8. Longues expirations : inspire, puis souffle lentement par la bouche. *(40 s)*
+9. Marche, ou reste là, comme tu veux. *(15 s)*
+10. Reprends quand tu veux. *(5 s)*
+
+#### Trop-plein (2 min, `trop-plein`)
+
+Moins de choses qui entrent, une pression, de longues expirations. Posture : là où tu es.
+
+1. Regarde un seul point devant toi : un mur, le sol, un objet. Tu peux bouger, ou passer une étape. *(20 s)*
+2. Couvre-toi les oreilles si le bruit est de trop. *(12 s)*
+3. Croise les bras et serre. Ou pose les mains à plat, sur la poitrine ou les cuisses. *(15 s)*
+4. Appuie un peu plus fort. Garde cette pression. *(13 s)*
+5. Longues expirations : inspire, puis souffle lentement. *(30 s)*
+6. Reste là. Il n'y a rien à faire. *(25 s)*
+7. Reprends quand tu veux. *(5 s)*
+
+#### Réveil la nuit (3 min, `reveil-nuit`)
+
+Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allongé. Écran noir, muet sauf la voix.
+
+1. Reste là où tu es, allongé. Tu peux bouger, ou passer une étape. *(10 s)*
+2. Inspire sur quatre temps. Expire sur six temps, sans forcer. *(50 s)*
+3. Sens tes pieds. *(20 s)*
+4. Sens tes mains. *(20 s)*
+5. Sens ton ventre, qui monte et qui descend. *(20 s)*
+6. Sens tes épaules, là où elles touchent le lit. *(20 s)*
+7. Sens ta mâchoire. Les dents peuvent se séparer un peu. *(20 s)*
+8. Reste là. Il n'y a rien à attendre. *(20 s)*

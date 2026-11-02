@@ -424,9 +424,9 @@ test('Moment difficile : les puces règlent la durée et le rythme d\'un toucher
   await ecrireMeta(page, 'respiration', { duree: 5, rythme: '5-5', son: true });
   const vue = await ouvrirDifficile(page);
   await puce(vue, 'Durée').selectOption('2');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '5-5', son: true });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '5-5', son: true, voix: false });
   await puce(vue, 'Rythme').selectOption('4-6');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '4-6', son: true });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '4-6', son: true, voix: false });
   await expect(puce(vue, 'Rythme')).toHaveValue('4-6');
   expect(await puce(vue, 'Rythme').evaluate((x) => x.selectedOptions[0].textContent)).toBe('4 s · 6 s');
   // Réglages › Moment difficile montre le même réglage.
@@ -463,14 +463,14 @@ test('Moment difficile : une puce réglée une fois la respiration finie ne chan
   await expect.poll(seances).toEqual([120]);
   // 10 minutes sur la puce : le réglage change, le texte de fin dit toujours la séance faite.
   await puce(vue, 'Durée').selectOption('10');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '5-5', son: false });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '5-5', son: false, voix: false });
   await expect(puce(vue, 'Durée')).toHaveValue('10');
   await expect(phase).toHaveText('2 minutes de respiration.');
   await expect(vue.getByText('10 minutes de respiration.')).toHaveCount(0);
   expect(await seances()).toEqual([120]);
   // Le rythme aussi, sans rien changer au texte.
   await puce(vue, 'Rythme').selectOption('4-6');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '4-6', son: false });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '4-6', son: false, voix: false });
   await expect(phase).toHaveText('2 minutes de respiration.');
   // « Recommencer » : 10 minutes, cette fois. Passé 2 minutes, la respiration continue ; arrêtée, c'est une autre séance.
   await vue.getByRole('button', { name: 'Recommencer' }).click();

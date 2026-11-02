@@ -62,7 +62,7 @@ test('la durée réglée change le texte d\'avant et celui de fin : 2 min, puis 
   await aller(page, '#/reglages/moment-difficile');
   await bouton(page, 'Durée : 2 min').click();
   await expect(bouton(page, 'Durée : 2 min')).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => lire(page)).toEqual({ duree: 2, rythme: '5-5', son: false });
+  await expect.poll(() => lire(page)).toEqual({ duree: 2, rythme: '5-5', son: false, voix: false });
   const vue = await ouvrir(page);
   await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
   await expect(puce(vue, 'Durée')).toHaveValue('2');
@@ -101,7 +101,7 @@ test('le rythme réglé : 4-6 inspire 4 s et expire 6 s, le pic du cercle est à
   await aller(page, '#/reglages/moment-difficile');
   await bouton(page, 'Rythme : 4-6').click();
   await expect(bouton(page, 'Rythme : 4-6')).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => lire(page)).toEqual({ duree: 5, rythme: '4-6', son: false });
+  await expect.poll(() => lire(page)).toEqual({ duree: 5, rythme: '4-6', son: false, voix: false });
 
   vue = await ouvrir(page);
   await vue.getByRole('button', { name: 'Commencer' }).click();
@@ -181,7 +181,7 @@ test('signal sonore activé : contexte créé au toucher, une note par phase, mi
   const interrupteur = page.getByRole('switch', { name: 'Signal sonore' });
   await interrupteur.click();
   await expect(interrupteur).toHaveAttribute('aria-checked', 'true');
-  await expect.poll(() => lire(page)).toEqual({ duree: 5, rythme: '5-5', son: true });
+  await expect.poll(() => lire(page)).toEqual({ duree: 5, rythme: '5-5', son: true, voix: false });
 
   await espionnerAudio(page, { session: true });
   const vue = await ouvrir(page);

@@ -1,31 +1,50 @@
 // Bien-être (v7, spec §6.2 et §6.3) : les 8 exercices (identifiants figés, durées de la spec, textes selon les règles
 // d'écriture, repris dans docs/decisions.md pour être relus) et la règle qui crée une séance. v8 (spec §6 et §12.4) : les
 // 8 séances nouvelles du Programme, à la fin, avec les blocs « Arriver » et « Revenir » et les précautions de l'annexe.
+// v10 (spec §5.2, §6 et §14) : les 10 exercices nouveaux, à la fin, et la durée au choix.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { EXERCICES, BLOCS, exerciceDe, dureeExerciceS, exerciceMeneAuBout, PART_MENEE_AU_BOUT } from '../../public/js/domain/exercices.js';
+import {
+  EXERCICES, BLOCS, DUREES_AU_CHOIX, aDureeAuChoix, exerciceAvecDuree, exerciceDe, dureeEtPosture, dureeExerciceS, exerciceMeneAuBout,
+  PART_MENEE_AU_BOUT,
+} from '../../public/js/domain/exercices.js';
 import { doitEnregistrer, nouvelleSeance, dureeSeance, SEANCE_MIN_S } from '../../public/js/domain/seances.js';
 import { normaliser } from '../../public/js/domain/champs.js';
-import { seanceCoherence } from '../../public/js/domain/respiration.js';
+import { cycleSouffleMs, seanceCoherence } from '../../public/js/domain/respiration.js';
 import { seanceProgramme } from '../../public/js/domain/programme.js';
 import { trouverInterdits, normaliser as sansAccents } from '../aides/mots-interdits.js';
 import { RACINE, lire } from '../aides/fichiers.js';
 
 // Les durées de la spec §6.2, dans l'ordre de la liste ; puis les séances nouvelles du Programme (v8, annexe
-// programme-sophro.md §5), arrondies à la minute.
+// programme-sophro.md §5), arrondies à la minute ; puis les exercices de la v10 (spec §6 et §5.2 ; 3 min de départ pour
+// les trois à durée au choix).
 const DUREES = {
   'respiration-abdominale': 3, 'respiration-carree': 3, epaules: 5, 'tension-detente': 8,
   'scan-corporel': 10, 'lieu-ressource': 8, 'ancrage-54321': 3, 'pause-une-minute': 1,
   'les-sons': 5, 'cinq-zones': 6, 'mouvements-lents': 4, 'point-corps': 3, 'marche-lente': 5, 'bon-moment-passe': 6,
   'moment-a-venir': 6, 'ce-qui-compte': 6,
+  soupir: 3, 'expiration-longue': 3, noting: 3, 'ancrage-court': 2, 'scan-court': 3, savourer: 2,
+  panique: 2, colere: 2, 'trop-plein': 2, 'reveil-nuit': 3,
 };
-const NOUVELLES = Object.keys(DUREES).slice(8);
+const NOUVELLES = Object.keys(DUREES).slice(8, 16);
+const V10 = Object.keys(DUREES).slice(16);
+const AU_CHOIX = ['soupir', 'expiration-longue', 'noting'];
+const DE_CRISE = ['panique', 'colere', 'trop-plein', 'reveil-nuit'];
 const textes = (x) => [x.titre, x.description, ...x.etapes.map((e) => e.texte)];
 
-test('16 exercices (8 de la v7, puis 8 du Programme), leurs identifiants dans l\'ordre de la spec, figés', () => {
-  assert.equal(EXERCICES.length, 16);
+test('26 exercices (8 de la v7, 8 du Programme, puis 10 de la v10), leurs identifiants dans l\'ordre de la spec, figés', () => {
+  assert.equal(EXERCICES.length, 26);
   assert.deepEqual(EXERCICES.map((x) => x.id), Object.keys(DUREES));
+  // Les 16 identifiants d'avant ne bougent pas ; les nouveaux viennent après, dans l'ordre du plan.
+  assert.deepEqual(EXERCICES.slice(0, 16).map((x) => x.id), [
+    'respiration-abdominale', 'respiration-carree', 'epaules', 'tension-detente', 'scan-corporel', 'lieu-ressource', 'ancrage-54321',
+    'pause-une-minute', 'les-sons', 'cinq-zones', 'mouvements-lents', 'point-corps', 'marche-lente', 'bon-moment-passe', 'moment-a-venir',
+    'ce-qui-compte',
+  ]);
+  assert.deepEqual(EXERCICES.slice(16).map((x) => x.id), [
+    'soupir', 'expiration-longue', 'noting', 'ancrage-court', 'scan-court', 'savourer', 'panique', 'colere', 'trop-plein', 'reveil-nuit',
+  ]);
   assert.ok(Object.isFrozen(EXERCICES));
   for (const x of EXERCICES) {
     assert.ok(Object.isFrozen(x) && Object.isFrozen(x.etapes), x.id);
@@ -40,8 +59,9 @@ test('durées de la spec, et la somme des étapes proche de la durée annoncée'
   for (const x of EXERCICES) {
     assert.equal(x.dureeMin, DUREES[x.id], x.id);
     assert.ok(x.etapes.length >= 5, `${x.id} : au moins 5 étapes`);
-    // Chaque étape a sa durée (voix allumée, elle avance seule à la fin) : un nombre entier de secondes, de 5 à 2 min.
-    for (const e of x.etapes) assert.ok(Number.isInteger(e.dureeS) && e.dureeS >= 5 && e.dureeS <= 120, `${x.id} : ${e.texte}`);
+    // Chaque étape a sa durée (voix allumée, elle avance seule à la fin) : un nombre entier de secondes, de 5 à 2 min (v10 :
+    // l'étape qui se répète va au-delà, pour faire les 3 min de départ).
+    for (const e of x.etapes) assert.ok(Number.isInteger(e.dureeS) && e.dureeS >= 5 && (e.repete || e.dureeS <= 120), `${x.id} : ${e.texte}`);
     const ecart = Math.abs(dureeExerciceS(x) - x.dureeMin * 60);
     assert.ok(ecart <= Math.max(10, x.dureeMin * 6), `${x.id} : ${dureeExerciceS(x)} s pour ${x.dureeMin} min`);
   }
@@ -64,7 +84,7 @@ test('textes : titre et description sur une ligne, aucun mot interdit, tutoiemen
     for (const e of x.etapes) assert.match(e.texte, /[.?]$/, `une consigne finit par un point : ${e.texte}`);
   }
   // Les titres ne se répètent pas.
-  assert.equal(new Set(EXERCICES.map((x) => x.titre)).size, 16);
+  assert.equal(new Set(EXERCICES.map((x) => x.titre)).size, 26);
 });
 
 // Ni promesse d'effet, ni conseil de santé, ni émotion à atteindre (spec §6.2) ; jamais « positive » ou « négative ».
@@ -121,6 +141,113 @@ test('v8 · les blocs « Arriver » (60 s) et « Revenir » (55 s) ouvrent et fe
   }
   // Les huit exercices de la v7 n'ont pas changé de texte (spec §6) : ils ne prennent aucun bloc.
   for (const x of EXERCICES.slice(0, 8)) assert.ok(!x.etapes.some((e) => BLOCS.arriver.includes(e) || BLOCS.revenir.includes(e)), x.id);
+});
+
+test('v10 · les titres de la spec, et les exercices nouveaux sans rétention, sans cœur, sans nom déposé', () => {
+  assert.deepEqual(V10.map((id) => exerciceDe(id).titre), [
+    'Le soupir', 'Expiration longue', 'Noter ce qui passe', 'Ancrage court', 'Scan court', 'Savourer', 'Panique', 'Colère', 'Trop-plein', 'Réveil la nuit',
+  ]);
+  for (const id of V10) {
+    const x = exerciceDe(id);
+    assert.ok(x.posture && x.description, id);
+    const n = sansAccents(textes(x).join(' '));
+    assert.doesNotMatch(n, /\bretien|\bretenir|\bbloque/, `${id} : aucune rétention écrite`);
+    assert.doesNotMatch(n, /\bc(oe|œ)ur\b|battement|pouls/, `${id} : rien sur le cœur`);
+    assert.doesNotMatch(n, /headspace|how we feel|petit bambou/, `${id} : aucun nom repris`);
+    for (const e of x.etapes.filter((y) => y.souffle)) {
+      assert.deepEqual([e.souffle.retiens1, e.souffle.retiens2], [0, 0], `${id} : aucune rétention dans le rythme`);
+      assert.equal(typeof e.souffle.inspi2, 'number', `${id} : les souffles de la v10 écrivent leur seconde inspiration`);
+    }
+  }
+});
+
+test('v10 · les quatre de Moment difficile : de 1 à 3 min, sans durée au choix, les yeux ouverts, bouger et passer une étape permis', () => {
+  for (const id of DE_CRISE) {
+    const x = exerciceDe(id);
+    const total = dureeExerciceS(x);
+    assert.ok(total >= 60 && total <= 180, `${id} : ${total} s`);
+    assert.ok(x.etapes.every((e) => !e.repete), `${id} : rien ne se répète`);
+    assert.equal(aDureeAuChoix(x), false, id);
+    const tout = sansAccents(x.etapes.map((e) => e.texte).join(' '));
+    assert.doesNotMatch(tout, /ferme.{0,10}yeux|yeux ferm/, `${id} : les yeux ouverts`);
+    assert.match(tout, /passer une etape/, `${id} : le droit de passer une étape`);
+    assert.match(tout, /\bbouge|marcher/, `${id} : le droit de bouger`);
+  }
+  // Seul « Réveil la nuit » est sur écran noir ; le champ n'existe pas ailleurs.
+  assert.deepEqual(EXERCICES.filter((x) => 'nuit' in x).map((x) => x.id), ['reveil-nuit']);
+  assert.equal(exerciceDe('reveil-nuit').nuit, true);
+  // Le principe de chacun, dans l'ordre de la spec §5.2 : le rythme de chaque étape rythmée.
+  const rythmes = (id) => exerciceDe(id).etapes.filter((e) => e.souffle).map((e) => cycleSouffleMs(e.souffle) / 1000);
+  assert.deepEqual(DE_CRISE.map(rythmes), [[9, 10], [10], [10], [10]]);
+  const panique = exerciceDe('panique').etapes.map((e) => e.texte);
+  assert.match(panique[0], /pieds/);
+  assert.match(panique[1], /^Trois soupirs/);
+  assert.match(panique[5], /^Encore deux longues expirations/);
+  // « Serrer cinq secondes » laisse ces cinq secondes après la lecture de la consigne, trois fois.
+  const serrer = exerciceDe('colere').etapes.filter((e) => /cinq secondes/.test(e.texte));
+  assert.equal(serrer.length, 3);
+  for (const e of serrer) assert.ok(e.dureeS - e.texte.split(/\s+/).length / 3 >= 5, e.texte);
+});
+
+test('v10 · la durée au choix : 1, 3 ou 5 min, pour le soupir, l\'expiration longue et le noting seulement', () => {
+  assert.deepEqual([...DUREES_AU_CHOIX], [1, 3, 5]);
+  assert.ok(Object.isFrozen(DUREES_AU_CHOIX));
+  assert.deepEqual(EXERCICES.filter(aDureeAuChoix).map((x) => x.id), AU_CHOIX);
+  for (const x of EXERCICES) assert.equal(x.etapes.filter((e) => e.repete).length, AU_CHOIX.includes(x.id) ? 1 : 0, x.id);
+  for (const brut of [null, undefined, seanceCoherence()]) assert.equal(aDureeAuChoix(brut), false);
+  for (const id of AU_CHOIX) {
+    const x = exerciceDe(id);
+    for (const minutes of DUREES_AU_CHOIX) {
+      const d = exerciceAvecDuree(x, minutes);
+      const place = x.etapes.findIndex((e) => e.repete);
+      const pas = x.etapes[place].souffle ? cycleSouffleMs(x.etapes[place].souffle) / 1000 : 1;
+      assert.equal(d.dureeMin, minutes, id);
+      // La somme à un demi-cycle près (mieux que le cycle près demandé), en secondes entières.
+      assert.ok(Math.abs(dureeExerciceS(d) - minutes * 60) <= pas / 2, `${id} : ${dureeExerciceS(d)} s pour ${minutes} min`);
+      assert.ok(Number.isInteger(d.etapes[place].dureeS));
+      // Les autres étapes ne changent pas : les mêmes objets, dans le même ordre.
+      d.etapes.forEach((e, i) => { if (i !== place) assert.equal(e, x.etapes[i], `${id} : ${e.texte}`); });
+      assert.equal(d.etapes.length, x.etapes.length);
+      assert.equal(d.etapes[place].texte, x.etapes[place].texte);
+      assert.deepEqual(d.etapes[place].souffle, x.etapes[place].souffle);
+      assert.equal(d.etapes[place].repete, true);
+      // Voix allumée : même à 1 min, l'étape qui se répète laisse le temps de faire ce qu'elle dit.
+      assert.ok(d.etapes[place].dureeS - d.etapes[place].texte.split(/\s+/).length / 3 >= 3, `${id} à ${minutes} min`);
+      assert.ok(Object.isFrozen(d) && Object.isFrozen(d.etapes) && Object.isFrozen(d.etapes[place]), id);
+      assert.equal(dureeEtPosture(d), `${minutes}\u00a0min · ${x.posture}`);
+      // « Mené au bout » suit la durée choisie.
+      assert.equal(exerciceMeneAuBout(d, { derniereAtteinte: true, dureeS: dureeExerciceS(d) / 2 }), true);
+      assert.equal(exerciceMeneAuBout(d, { derniereAtteinte: true, dureeS: dureeExerciceS(d) / 2 - 1 }), false);
+    }
+    // À 3 min, la durée de départ tombe juste : l'exercice tel qu'il est écrit, sans rien modifier de la liste.
+    assert.equal(dureeExerciceS(x), 180, id);
+    assert.deepEqual(exerciceAvecDuree(x, 3), x, id);
+    assert.equal(exerciceDe(id), x);
+    // Une durée hors liste (une clé abîmée de l'appareil) : l'exercice tel quel.
+    for (const brut of [2, 0, -1, '3', NaN, null, undefined]) assert.equal(exerciceAvecDuree(x, brut), x, String(brut));
+  }
+  // Les durées exactes de l'écran : l'expiration longue et le noting tombent juste, le soupir à moins de 5 s (cycles de 9 s).
+  const totaux = (id) => DUREES_AU_CHOIX.map((m) => dureeExerciceS(exerciceAvecDuree(exerciceDe(id), m)));
+  assert.deepEqual(totaux('expiration-longue'), [60, 180, 300]);
+  assert.deepEqual(totaux('noting'), [60, 180, 300]);
+  assert.deepEqual(totaux('soupir'), [63, 180, 297]);
+  // Les sept autres, et ce qui n'est pas un exercice, ne changent pas.
+  for (const x of EXERCICES.filter((y) => !AU_CHOIX.includes(y.id))) assert.equal(exerciceAvecDuree(x, 5), x, x.id);
+  assert.equal(exerciceAvecDuree(null, 3), null);
+  const coherence = seanceCoherence();
+  assert.equal(exerciceAvecDuree(coherence, 1), coherence);
+});
+
+test('v10 · le noting : quatre étiquettes sur l\'étape qui se répète, et nulle part ailleurs', () => {
+  const avec = EXERCICES.flatMap((x) => x.etapes.filter((e) => 'etiquettes' in e).map((e) => [x.id, e]));
+  assert.deepEqual(avec.map(([id]) => id), ['noting']);
+  const [[, etape]] = avec;
+  assert.deepEqual([...etape.etiquettes], ['Pensée', 'Corps', 'Son', 'Émotion']);
+  assert.ok(Object.isFrozen(etape.etiquettes));
+  assert.equal(etape.repete, true);
+  assert.ok(!etape.souffle, 'le temps avance seul, sans disque');
+  assert.deepEqual(exerciceAvecDuree(exerciceDe('noting'), 5).etapes.find((e) => e.repete).etiquettes, etape.etiquettes);
+  for (const t of etape.etiquettes) assert.deepEqual(trouverInterdits(t), [], t);
 });
 
 test('les titres et les étapes sont repris dans docs/decisions.md, pour être relus par l\'utilisateur, avec leurs durées', () => {
