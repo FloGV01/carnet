@@ -119,6 +119,15 @@ test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour
   }
 });
 
+test('v10 · le minuteur silencieux, le minuteur de concentration et les sons de fond : des routes de l\'onglet Bien-être', () => {
+  for (const nom of ['minuteur', 'concentration', 'sons']) {
+    assert.deepEqual(lireRoute(`#/${nom}`), { nom, params: {}, chemin: `/${nom}` });
+    assert.equal(versHash(nom), `#/${nom}`);
+    assert.equal(ongletDe(nom), 'bien-etre');
+    assert.equal(lireRoute(`#/${nom}/x`).inconnue, true);
+  }
+});
+
 test('v7 · Bien-être : /bien-etre allume l\'onglet Bien-être ; l\'Historique, sorti de la barre, allume l\'Analyse', () => {
   assert.deepEqual(lireRoute('#/bien-etre'), { nom: 'bien-etre', params: {}, chemin: '/bien-etre' });
   assert.equal(versHash('bien-etre'), '#/bien-etre');

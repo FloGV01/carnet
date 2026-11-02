@@ -3,6 +3,8 @@
 // calés sur son horloge (`currentTime`), pas sur un minuteur :
 // - un bol de début, d'environ 4 s ; un bol de changement d'étape, plus court et plus doux, joué avant la voix ;
 // - trois bols de fin ;
+// - v10, pour les deux minuteurs : un seul bol, le même au début et à la fin, et un bol d'intervalle, le plus doux. Ils se
+//   programment à l'avance (`dansS`), sur l'horloge audio, comme le souffle : la pause et la sortie les annulent (`couper`) ;
 // - le souffle : un bruit doux, filtré, qui monte pendant l'inspiration (v10 : et pendant la petite inspiration du soupir,
 //   plus claire) et redescend à l'expiration ; rien pendant « Retiens ».
 // Doux, courts, jamais surprenants : une attaque adoucie, aucun son fort. Sans contexte (son « Aucun », ou rien préparé),
@@ -11,7 +13,7 @@
 import { quandSonPret } from './signal-sonore.js';
 
 // La fréquence de base de chaque bol, en Hz : les tests reconnaissent un bol à elle.
-export const BOLS = Object.freeze({ debut: 196, etape: 294, fin: Object.freeze([262, 233, 196]) });
+export const BOLS = Object.freeze({ debut: 196, etape: 294, intervalle: 349, fin: Object.freeze([262, 233, 196]) });
 // Les trois bols de fin se suivent à 1,2 s d'écart ; le dernier s'éteint avant la fermeture du lecteur (6 s).
 export const ECART_FIN_S = 1.2;
 // Un bol chanté : des partiels inharmoniques [rapport, amplitude, part de la durée], chacun doublé d'un oscillateur à peine
@@ -120,10 +122,16 @@ function couper(choisir) {
 }
 
 const maintenant = (c) => c.currentTime + 0.02;
+// Le bol d'un minuteur s'éteint en ce temps-là : on laisse le contexte éveillé jusque-là (suspendreSon).
+export const DUREE_BOL_MINUTEUR_S = 4.2;
+const plusTard = (c, dansS) => maintenant(c) + Math.max(0, dansS);
 export const sons = {
   bolDebut: () => quandSonPret((c) => bol(c, maintenant(c), { frequence: BOLS.debut, dureeS: 4.2, volume: 0.2 })),
   bolEtape: () => quandSonPret((c) => bol(c, maintenant(c), { frequence: BOLS.etape, dureeS: 2.2, volume: 0.1 })),
   bolsFin: () => quandSonPret((c) => BOLS.fin.forEach((f, i) => bol(c, maintenant(c) + i * ECART_FIN_S, { frequence: f, dureeS: 3.4, volume: 0.16 }))),
+  // Le bol d'un minuteur et celui de l'intervalle, `dansS` secondes après maintenant.
+  bolMinuteur: ({ dansS = 0 } = {}) => quandSonPret((c) => bol(c, plusTard(c, dansS), { frequence: BOLS.debut, dureeS: DUREE_BOL_MINUTEUR_S, volume: 0.2 })),
+  bolIntervalle: ({ dansS = 0 } = {}) => quandSonPret((c) => bol(c, plusTard(c, dansS), { frequence: BOLS.intervalle, dureeS: 2.2, volume: 0.07 })),
   // Une phase du souffle, `dansS` secondes après maintenant, pendant `dureeS` : seulement une inspiration ou une expiration.
   souffle: ({ phase, dureeS, dansS = 0 }) => {
     if (!PHASES_SONORES.has(phase) || !(dureeS >= 0.3)) return;

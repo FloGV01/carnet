@@ -417,7 +417,7 @@ button.effacer svg { width: 18px; height: 18px; }
    à la couleur du parcours. */
 .titre-parcours {
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
-  font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty;
+  font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty; overflow-wrap: anywhere;
 }
 .carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c); color: var(--c-on); display: grid; place-items: center; }
 .carre-titre svg { width: 20px; height: 20px; }

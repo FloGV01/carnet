@@ -153,7 +153,7 @@ function amorcerVoix() {
 const memeSouffle = (a, b) => Boolean(a && b) && TEMPS_SOUFFLE.every((k) => a[k] === b[k]);
 
 // « 6:40 » : le temps qui reste, jamais négatif.
-const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+export const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 // seance : { id, titre, dureeMin, posture, description, nuit?, etapes: [{ texte, dureeS, souffle?, etiquettes? }] } (un
 // exercice de domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). mode : 'bien-etre' ou 'crise' (v10).

@@ -2,9 +2,12 @@
 // ce qu'aucune source ne garantit (partage, impression, presse-papier, micro, dictée). v8 (Q27) : l'écran aussi, la
 // fenêtre, les zones sûres (encoche, barre d'accueil), la hauteur utile entre elles, la marge du soir (entre la
 // dernière carte du soir et la bande du bas, prise au dernier affichage du soir d'aujourd'hui, détails fermés) et celle
-// de « J'ai fini pour ce soir » : des chiffres techniques, rien sur l'usage.
+// de « J'ai fini pour ce soir » : des chiffres techniques, rien sur l'usage. v10 (spec §14.2) : 2 min de bruit rose en session
+// « playback », pour vérifier sur l'iPhone qu'un son de fond continue écran verrouillé.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
+import { suspendreSon } from '../composants/signal-sonore.js';
+import { FONDU_SORTIE_S, demarrerFond } from '../composants/sons-de-fond.js';
 import { VERSION, VERSION_APP } from '../../version.js';
 import { libelleMode } from '../../plateforme/mode.js';
 import { demanderPersistance, etatStockage, formaterOctets } from '../../plateforme/persistance.js';
@@ -15,11 +18,13 @@ import { formatsSupportes, microDisponible, ouvrirMicro, creerEnregistreur, asse
 import { creerZip } from '../../db/zip.js';
 import { lireTout } from '../../db/sauvegarde.js';
 import { verifierDonnees } from '../../domain/verification.js';
+import { pourAffichage } from '../../domain/typographie.js';
 import { repo } from '../../donnees.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
 import { zonesSures, hauteurUtile, lireMargeSoir, lireMargeFini } from '../mesures.js';
 
 const enc = new TextEncoder();
+const ESSAI_FOND_S = 120;
 // « 28,3 px », « −12 px » : une décimale au plus, à la française.
 const px = (n) => `${String(n).replace('-', '−').replace('.', ',')} px`;
 
@@ -60,6 +65,9 @@ export function Diagnostic() {
   const [journal, setJournal] = useState([]);
   const [micro, setMicro] = useState({ etat: 'repos' });
   const [verif, setVerif] = useState({ etat: 'repos' });
+  const [fondActif, setFondActif] = useState(false);
+  const fond = useRef(null);
+  const finFond = useRef(null);
   const zoneDicter = useRef(null);
   const ecran = useEcran();
   const noter = (test, resultat) => setJournal((j) => [...j, `${test} : ${resultat}`]);
@@ -107,6 +115,26 @@ export function Diagnostic() {
       noter('Vérification des données', `échec (${(e && e.code) || (e && e.name) || 'erreur'})`);
     }
   };
+  const arreterFond = () => {
+    clearTimeout(finFond.current);
+    if (!fond.current) return;
+    fond.current.arreter();
+    fond.current = null;
+    suspendreSon({ apresMs: FONDU_SORTIE_S * 1000 + 200 });
+  };
+  const essayerFond = () => {
+    if (fond.current) {
+      arreterFond();
+      setFondActif(false);
+      noter('Son de fond', 'arrêté');
+      return;
+    }
+    fond.current = demarrerFond('rose', { minuterieS: ESSAI_FOND_S, volume: 0.5 });
+    setFondActif(true);
+    noter('Son de fond', `lancé (${ESSAI_FOND_S} s, session ${navigator.audioSession ? navigator.audioSession.type : 'non réglable'})`);
+    finFond.current = setTimeout(() => { arreterFond(); setFondActif(false); noter('Son de fond', 'fini'); }, ESSAI_FOND_S * 1000);
+  };
+  useEffect(() => arreterFond, []);
   const dicter = () => { const z = zoneDicter.current; if (z) { z.focus(); noter('Dicter', 'focus demandé (le clavier est-il ouvert ?)'); } };
 
   const enregistrer = async () => {
@@ -190,6 +218,8 @@ export function Diagnostic() {
         <label class="discret" for="diag-dicter">Champ de test pour Dicter</label>
         <textarea id="diag-dicter" class="champ-texte" ref=${zoneDicter}></textarea>
         <button type="button" class="btn" onClick=${dicter}>Dicter (ouvre le clavier)</button>
+        <button type="button" class="btn" onClick=${essayerFond}>${fondActif ? 'Arrêter le son de fond' : 'Son de fond, écran verrouillé'}</button>
+        <p class="discret">${pourAffichage('Lance 2 min de bruit rose. À vérifier : verrouille l\'iPhone, le son doit continuer, puis s\'éteindre en fondu à la fin des 2 min. Il joue aussi en mode silencieux et met la musique en pause.')}</p>
       </div>
     </section>
     <section class="section">

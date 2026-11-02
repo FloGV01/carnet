@@ -39,6 +39,9 @@ import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
 import { BienEtre, Coherence, ExerciceSeul } from './ui/ecrans/bien-etre.js';
 import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
+import { Minuteur } from './ui/ecrans/minuteur.js';
+import { Concentration } from './ui/ecrans/concentration.js';
+import { Sons } from './ui/ecrans/sons.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -80,6 +83,9 @@ const ECRANS = {
   programme: () => html`<${Programme} />`,
   'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
   exercice: (p) => html`<${ExerciceSeul} key=${p.id} id=${p.id} />`,
+  minuteur: () => html`<${Minuteur} />`,
+  concentration: () => html`<${Concentration} />`,
+  sons: () => html`<${Sons} />`,
 };
 
 function useEtatApp() {

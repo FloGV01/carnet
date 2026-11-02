@@ -1153,12 +1153,21 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Un interrupteur fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans sa rangée de 52. */
 .reglages-lecteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 /* « Son » : sa puce à droite (« Repères + souffle ▾ »), un menu de l'iPhone comme la durée et le rythme. */
-.reglage-son { padding-top: 6px; padding-bottom: 6px; }
+.reglage-son { padding-top: 6px; padding-bottom: 6px; flex-wrap: wrap; }
 /* « Précédent » et « Suivant » à parts égales (la moitié, moins l'écart) : 5rem gardent le plus long mot entier, le chevron
    cédant la place s'il le faut. Quand la moitié fait moins de 5rem (très grand texte), l'un sous l'autre. */
 .actions-lecteur { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(5rem, calc(50% - 5px)), 1fr)); gap: 10px; padding: 4px 4px 0; }
 .actions-lecteur .btn { min-height: 56px; padding: 0 8px; font-size: 1.059rem; }
 .terminer-lecteur { grid-column: 1 / -1; justify-self: center; padding: 0 16px; }
+/* Sons de fond et minuteurs (v10, spec §9) : des écrans du lecteur. Les quatre sons en 2 × 2 (l'un sous l'autre en très grand
+   texte), le volume avec sa cible de 44, le temps restant de la concentration en grand, « Arrêter » de toute la largeur. */
+.segmente.choix-son { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.reglage-volume { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: var(--t-sous); color: var(--text-2); }
+.reglage-volume input { flex: 1 1 10rem; min-width: 0; min-height: var(--cible); margin: 0; background: none; -webkit-appearance: none; appearance: none; }
+.reglage-volume input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--text-2); }
+.reglage-volume input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0; background: var(--c-fill); box-shadow: 0 0 0 1.5px var(--c); }
+.temps-restant { font: 600 min(20vw, 4.5rem)/1.1 var(--police); color: var(--text); font-variant-numeric: tabular-nums; text-align: center; }
+.parcours-pied .bouton-arreter { flex: 1; margin: 4px 6px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
    de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }

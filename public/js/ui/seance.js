@@ -12,8 +12,35 @@ export async function garderEcran() {
   try { return navigator.wakeLock ? await navigator.wakeLock.request('screen') : null; } catch { return null; }
 }
 
-// exercice : `coherence` ou l'identifiant d'un exercice ; origine : `bien-etre`, `moment-difficile` ou `ressourcer`. Sans
-// origine, rien n'est noté. programme (v8) : l'identifiant de la séance du Programme d'où elle a été lancée, et rien
+// Le verrou d'écran d'un écran entier (v10, les deux minuteurs). `prendre()` le demande (de nouveau au retour d'une page cachée,
+// où l'iPhone le reprend), `rendre()` le rend ; un verrou obtenu après `rendre()` est rendu tout de suite.
+export function useVerrouEcran() {
+  const ref = useRef(null);
+  if (!ref.current) {
+    let verrou = null;
+    let voulu = false;
+    const lacher = (v) => { if (v) v.release().catch(() => {}); };
+    ref.current = {
+      prendre() {
+        voulu = true;
+        garderEcran().then((v) => {
+          if (!voulu) { lacher(v); return; }
+          lacher(verrou);
+          verrou = v;
+        });
+      },
+      rendre() {
+        voulu = false;
+        lacher(verrou);
+        verrou = null;
+      },
+    };
+  }
+  return ref.current;
+}
+
+// exercice : `coherence`, l'identifiant d'un exercice ou `minuteur` (v10) ; origine : `bien-etre`, `moment-difficile` ou
+// `ressourcer`. Sans origine, rien n'est noté. programme (v8) : l'identifiant de la séance du Programme d'où elle a été lancée, et rien
 // ailleurs. `commencer()` ouvre une séance (son début fait sa date et son heure), `noter({ dureeS, terminee })` la note
 // si la règle le permet ; menée au bout (`terminee`), elle porte `fin: true` (v8), qui ne s'efface plus. Les écritures se
 // suivent ; un échec n'interrompt rien. `notee()` (v8, Q29) : la séance en cours a passé la règle (elle est, ou va être,

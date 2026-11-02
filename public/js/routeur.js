@@ -51,6 +51,10 @@ export const ROUTES = [
   { nom: 'seance-programme', motif: `/bien-etre/programme/${ID}`, params: ['id'] },
   // v10 (spec §7.4) : un exercice seul dans le lecteur, hors du Programme.
   { nom: 'exercice', motif: `/exercice/${ID}`, params: ['id'] },
+  // v10 (spec §9) : le minuteur silencieux, le minuteur de concentration et les sons de fond, des écrans pleins.
+  { nom: 'minuteur', motif: '/minuteur' },
+  { nom: 'concentration', motif: '/concentration' },
+  { nom: 'sons', motif: '/sons' },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
 
 export function lireRoute(hash) {
@@ -79,7 +83,7 @@ export function versHash(nom, params = {}) {
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'crise', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
-  if (['bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice'].includes(nom)) return 'bien-etre';
+  if (['bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

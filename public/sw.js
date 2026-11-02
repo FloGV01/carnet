@@ -2,7 +2,7 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '4daaad1ddaad';
+const VERSION = '4b824cfc1846';
 const FICHIERS = [
   "./",
   "./css/base.css",
@@ -117,6 +117,7 @@ const FICHIERS = [
   "./js/ui/composants/rubrique.js",
   "./js/ui/composants/segmente.js",
   "./js/ui/composants/signal-sonore.js",
+  "./js/ui/composants/sons-de-fond.js",
   "./js/ui/composants/sons.js",
   "./js/ui/composants/texte.js",
   "./js/ui/composants/toast.js",
@@ -131,6 +132,7 @@ const FICHIERS = [
   "./js/ui/ecrans/aujourdhui.js",
   "./js/ui/ecrans/bien-etre.js",
   "./js/ui/ecrans/comprendre.js",
+  "./js/ui/ecrans/concentration.js",
   "./js/ui/ecrans/consultation.js",
   "./js/ui/ecrans/diagnostic.js",
   "./js/ui/ecrans/effacer.js",
@@ -140,6 +142,7 @@ const FICHIERS = [
   "./js/ui/ecrans/historique.js",
   "./js/ui/ecrans/listes.js",
   "./js/ui/ecrans/ma-journee.js",
+  "./js/ui/ecrans/minuteur.js",
   "./js/ui/ecrans/moment-difficile.js",
   "./js/ui/ecrans/moment.js",
   "./js/ui/ecrans/mon-plan.js",
@@ -154,6 +157,7 @@ const FICHIERS = [
   "./js/ui/ecrans/sauvegarde.js",
   "./js/ui/ecrans/soignants.js",
   "./js/ui/ecrans/soins.js",
+  "./js/ui/ecrans/sons.js",
   "./js/ui/ecrans/symptome.js",
   "./js/ui/ecrans/traitement.js",
   "./js/ui/fiche.js",
