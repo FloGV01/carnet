@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.js';
 import { vueMoment, bulle, carte, mot, carteDuBas } from '../aides/emotion.js';
-import { motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
+import { energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 import { PAS } from '../../public/js/ui/carte-geometrie.js';
 
 // v10 (2/9) · La carte suit le glissement (spec §4.1) : le mot du milieu de la fenêtre grossit, ses voisins un peu ; des
@@ -191,6 +191,8 @@ const leve = (page, n) => page.evaluate((libelle) => {
   b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }));
   b.click();
 }, n);
+// Un clic sans appui : aucun doigt posé ni levé, comme VoiceOver et le clavier.
+const clicSeul = (page, n) => page.evaluate((libelle) => [...document.querySelectorAll('.bulle-mot')].find((e) => e.textContent === libelle).click(), n);
 
 test('point de vigilance 1 : un doigt posé sur un mot pendant que la lentille arrive, levé sur le voisin venu s\'y placer, ne choisit rien ; le même toucher, la carte posée, choisit ce voisin', async ({ page }) => {
   const vue = await ouvrir(page, 'rouge');
@@ -235,7 +237,7 @@ test('point de vigilance 1 : le mot sous le doigt quand il se pose, encore sous 
   await page.waitForTimeout(100);
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([AVANT]);
   // Sans appui du tout (VoiceOver, le clavier), le clic dit lui-même sa bulle : elle est choisie.
-  await page.evaluate((libelle) => [...document.querySelectorAll('.bulle-mot')].find((e) => e.textContent === libelle).click(), en(1, 12));
+  await clicSeul(page, en(1, 12));
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([en(1, 12)]);
 });
 
@@ -277,34 +279,129 @@ test('point de vigilance 1 : de vrais touchers juste après un glissement choisi
   expect(pris).toBeGreaterThan(0);
 });
 
+// Le toucher abandonné ou perdu. Après un pointercancel (le défilement a pris la main) ou un toucher entre deux bulles, resté
+// sans clic, un clic sans appui dit lui-même sa bulle : sinon il serait ignoré, sans aucun signal.
+test('un appui abandonné (pointercancel), puis un clic sans appui sur un autre mot : cet autre mot est choisi', async ({ page }) => {
+  const vue = await ouvrir(page, 'jaune');
+  const [a, b] = [en(9, 9), en(10, 9)];
+  await page.evaluate((libelle) => {
+    const e = [...document.querySelectorAll('.bulle-mot')].find((x) => x.textContent === libelle);
+    e.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    e.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerType: 'touch' }));
+  }, a);
+  await clicSeul(page, b);
+  await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([b]);
+});
+
+test('un toucher entre deux bulles, resté sans clic, puis un clic sans appui passé 500 ms : le mot est choisi', async ({ page }) => {
+  const vue = await ouvrir(page, 'jaune');
+  const b = en(10, 9);
+  await page.evaluate(() => {
+    const p = document.querySelector('.carte-plan');
+    p.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    p.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }));
+  });
+  await page.waitForTimeout(600);
+  await clicSeul(page, b);
+  await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([b]);
+});
+
+// Le recentrage. Après le glissement, un mot entier à l'écran, le plus loin du milieu, hors du voile : un vrai doigt le
+// touche là où il est (un .click() ferait d'abord défiler la carte jusqu'à lui), et le recentrage en croise d'autres.
+const motLoin = (page) => page.evaluate(() => {
+  let loin = null;
+  for (const b of document.querySelectorAll('.bulle-mot')) {
+    const r = b.getBoundingClientRect();
+    if (r.left < 8 || r.right > 382 || r.top < 140 || r.bottom > 760) continue;
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    const d = Math.hypot(x - 195, y - 422);
+    if (!loin || d > loin.d) loin = { nom: b.textContent, id: b.dataset.mot, x, y, d };
+  }
+  return loin;
+});
+// À chaque image dès qu'un mot est choisi, les mots à l'échelle 1,625 dans le style posé (la cible de la transition).
+const suivreLentille = (page) => page.evaluate(() => {
+  window.__centres = new Set();
+  const suivre = () => {
+    if (document.querySelector('.bulle-mot.choisi')) for (const b of document.querySelectorAll('.bulle-mot')) if (b.style.transform.endsWith('scale(1.625)')) window.__centres.add(b.textContent);
+    window.__suivi = requestAnimationFrame(suivre);
+  };
+  suivre();
+});
+const lentillesVues = (page) => page.evaluate(() => { cancelAnimationFrame(window.__suivi); return [...window.__centres]; });
+
 test('un toucher après un défilement choisit le mot et recentre la carte (v9) ; pendant le recentrage, la lentille reste sur lui, sans passer par les mots croisés', async ({ page }) => {
   const vue = await ouvrir(page, 'jaune');
   await glisser(page, 2 * PAS, PAS);
-  // Un mot visible, loin du milieu : le recentrage en croise d'autres.
-  const cible = en(9, 9);
-  const avant = await centreDe(page, cible);
-  expect(Math.hypot(avant[0] - 195, avant[1] - 422)).toBeGreaterThan(PAS);
-  // À chaque image à partir du toucher, les mots à l'échelle 1,625 dans le style posé (la cible de la transition).
-  await page.evaluate(() => {
-    window.__centres = new Set();
-    let touche = false;
-    document.querySelector('.carte-plan').addEventListener('click', () => { touche = true; }, { capture: true, once: true });
-    const suivre = () => {
-      if (touche) for (const b of document.querySelectorAll('.bulle-mot')) if (b.style.transform.endsWith('scale(1.625)')) window.__centres.add(b.textContent);
-      window.__suivi = requestAnimationFrame(suivre);
-    };
-    suivre();
-  });
-  await mot(vue, cible).click();
-  await expect(mot(vue, cible)).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => centreDe(page, cible)).toEqual([195, 422]);
+  const loin = await motLoin(page);
+  expect(loin.d).toBeGreaterThan(2 * PAS);
+  await suivreLentille(page);
+  await page.touchscreen.tap(loin.x, loin.y);
+  await expect(mot(vue, loin.nom)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => centreDe(page, loin.nom)).toEqual([195, 422]);
   await finMouvements(page);
-  expect(await page.evaluate(() => { cancelAnimationFrame(window.__suivi); return [...window.__centres]; })).toEqual([cible]);
+  expect(await lentillesVues(page)).toEqual([loin.nom]);
   const l = await largeurs(page);
-  expect(l[cible]).toBe(156);
+  expect(l[loin.nom]).toBe(156);
   expect(Object.values(l).filter((x) => x === 156)).toHaveLength(1);
-  await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(cible);
-  await expect.poll(() => releves(page)).toMatchObject([{ energie: 'energie:haute' }]);
+  await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(loin.nom);
+  await expect.poll(() => releves(page)).toMatchObject([{ emotion: loin.id, energie: energieDe(loin.id) }]);
+});
+
+// Le second toucher, pour vérifier que le premier a été pris (v9, point de vigilance 5), se pose pendant le recentrage. La
+// garde l'ignore : il ne libère pas non plus la lentille, qui repasserait par les mots croisés (§4.1, la carte ne sautille
+// pas). L'horloge de la page est arrêtée pour le tenir dans la garde, même si la machine est lente.
+test('deux touchers enchaînés sur un mot loin du milieu : le second, dans la garde, laisse la lentille sur le mot touché, sans passer par les mots croisés', async ({ page }) => {
+  const vue = await ouvrir(page, 'jaune');
+  await glisser(page, 2 * PAS, PAS);
+  const loin = await motLoin(page);
+  expect(loin.d).toBeGreaterThan(2 * PAS);
+  await suivreLentille(page);
+  await page.evaluate(() => {
+    window.__poses = 0;
+    document.querySelector('.carte-plan').addEventListener('pointerdown', () => { window.__poses += 1; }, true);
+  });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 500));
+  await Promise.all([page.touchscreen.tap(loin.x, loin.y), page.touchscreen.tap(loin.x, loin.y)]);
+  await page.clock.runFor(400);
+  await page.clock.resume();
+  await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([loin.nom]);
+  await expect.poll(() => centreDe(page, loin.nom)).toEqual([195, 422]);
+  await finMouvements(page);
+  expect(await page.evaluate(() => window.__poses)).toBe(2);
+  expect(await lentillesVues(page)).toEqual([loin.nom]);
+  expect((await largeurs(page))[loin.nom]).toBe(156);
+  await expect.poll(() => releves(page)).toMatchObject([{ emotion: loin.id, energie: energieDe(loin.id) }]);
+});
+
+// Le doigt qui reprend la carte : le défilement prend la main (pointercancel). L'horloge de la page est arrêtée : pour elle,
+// le recentrage ne peut ni finir ni expirer, seul ce doigt peut libérer la lentille.
+test('un doigt reprend la carte pendant le recentrage : la lentille le suit aussitôt, le mot touché reste choisi', async ({ page }) => {
+  const vue = await ouvrir(page, 'jaune');
+  await glisser(page, 2 * PAS, PAS);
+  const loin = await motLoin(page);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 500));
+  await page.touchscreen.tap(loin.x, loin.y);
+  await expect(mot(vue, loin.nom)).toHaveAttribute('aria-pressed', 'true');
+  // Le doigt se pose, le défilement prend la main et emmène la carte à l'opposé du mot touché.
+  await page.evaluate(([x, y]) => new Promise((ok) => {
+    const p = document.querySelector('.carte-plan');
+    p.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    p.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerType: 'touch' }));
+    document.querySelector('.carte-defile').addEventListener('scroll', ok, { once: true });
+    document.querySelector('.carte-defile').scrollBy(x, y);
+  }), [Math.sign(195 - loin.x) * 3 * PAS, Math.sign(422 - loin.y) * 3 * PAS]);
+  await page.clock.runFor(100);
+  await page.clock.resume();
+  await finMouvements(page);
+  const l = await largeurs(page);
+  const centres = Object.keys(l).filter((n) => l[n] === 156);
+  expect(centres).toHaveLength(1);
+  expect(centres).not.toEqual([loin.nom]);
+  const [x, y] = await centreDe(page, centres[0]);
+  expect(Math.hypot(x - 195, y - 422)).toBeLessThan(PAS);
+  await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText([loin.nom]);
+  await expect.poll(() => releves(page)).toMatchObject([{ emotion: loin.id }]);
 });
 
 test('avec un mot choisi, glisser ne change rien au relevé : le mot garde sa double capsule, aria-pressed et la carte du bas, à la taille que la lentille lui donne ; toucher un autre mot le remplace et recentre', async ({ page }) => {

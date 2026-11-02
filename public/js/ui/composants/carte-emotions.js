@@ -164,17 +164,18 @@ export function CarteEmotions({ mots, choisi = null, centre = null, enGarde = fa
     return () => { actif = false; };
   }, [mots]);
 
-  // Le toucher en cours : { id, leve }, la bulle sous le doigt quand il s'est posé et l'heure où il s'est levé. Posé, il
-  // laisse aussi la main sur un recentrage, si le doigt reprend la carte. Sans appui (VoiceOver, le clavier), le clic dit
-  // lui-même sa bulle.
+  // Le toucher en cours : { id, leve }, la bulle sous le doigt quand il s'est posé et l'heure où il s'est levé. Sans appui
+  // (VoiceOver, le clavier), le clic dit lui-même sa bulle. Quand le défilement prend la main (pointercancel), le toucher
+  // est abandonné et le recentrage aussi : la lentille suit ce doigt, qui reprend la carte. Un doigt seulement posé ne
+  // libère rien : un second toucher, que la garde ignore, laisse la lentille sur le mot touché ; sans pointercancel,
+  // RECENTRAGE_MS la libère quand même.
   const appui = useRef(null);
   const surPose = (e) => {
-    recentrage.current = null;
     const b = e.target.closest('.bulle-mot');
     appui.current = { id: b ? b.dataset.mot : null, leve: null };
   };
   const surLeve = () => { if (appui.current) appui.current.leve = performance.now(); };
-  const surAbandon = () => { appui.current = null; };
+  const surAbandon = () => { appui.current = null; recentrage.current = null; };
   const toucher = (id) => {
     const a = appui.current;
     appui.current = null;
