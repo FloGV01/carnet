@@ -1249,7 +1249,7 @@ Spec : `docs/superpowers/specs/2026-10-30-carnet-v10-design.md`. Plan : `docs/su
 
 - **10 exercices ajoutés à la fin de `EXERCICES`** (les 16 identifiants d'avant ne bougent pas) : six pour Bien-être et l'écran 3, puis les quatre de Moment difficile. Ils n'entrent pas dans le Programme, qui ne change pas.
 - **Le soupir** : le souffle gagne un temps, `inspi2` (absent, il vaut 0 : les souffles d'avant la v10 ne changent pas ; sinon 3 s au plus), avec la phase `inspire-encore` et le mot « Encore un peu ». Le disque, le mot et le son le suivent à la tâche 4.
-- **Durée au choix** (1, 3 ou 5 min) : l'étape marquée `repete` s'allonge ou se raccourcit, en cycles entiers si elle est rythmée, et l'arrivée et la fin ne changent pas. **3 min au départ**, tant que rien n'est retenu. Le temps des étapes fixes est choisi pour que tout tombe juste à 3 min. L'expiration longue et le noting font exactement 1, 3 et 5 min ; le soupir, en cycles de 9 s, fait 63 s, 180 s et 297 s.
+- **Durée au choix** (1, 3 ou 5 min) : l'étape marquée `repete` s'allonge ou se raccourcit, en cycles entiers si elle est rythmée, et l'arrivée et la fin ne changent pas. **3 min au départ**, tant que rien n'est retenu. Le temps des étapes fixes (27 s pour le soupir, 30 s pour les deux autres) est choisi pour que tout tombe juste à 3 min, et pour qu'à 1 min, la durée qu'on choisit quand on est pressé, l'étape qui se répète garde au moins la moitié du temps : 4 soupirs (36 s sur 63), 3 longues expirations (30 s sur 60), 30 s sur 60 pour le noting. Aucune étape ne répète la posture : l'écran « avant » dit déjà « là où tu es ». L'expiration longue et le noting font exactement 1, 3 et 5 min ; le soupir, en cycles de 9 s, fait 63 s, 180 s et 297 s.
 - **Les exercices de Moment difficile ont des étapes rythmées** (trois soupirs, longues expirations) : le disque et le mot de la phase y guident, sans son de souffle (tâche 4). Ils font 2 min, 3 pour « Réveil la nuit ». Chacun dit qu'on peut bouger et passer une étape : le bouton « Suivant » du lecteur le permet déjà.
 - **« Poser l'attention » n'est pas écrit** : « attention » est un mot interdit de l'app (`tests/aides/mots-interdits.js`). « Réveil la nuit » dit « Sens tes pieds. », et ne parle pas de sommeil (liste `PROMESSES`).
 - **`voix`** s'ajoute à la méta `respiration` (booléen, faux au départ) : une méta écrite avant la v10 reste valide. L'interrupteur arrive à la tâche 5.
@@ -1273,34 +1273,31 @@ Spec : `docs/superpowers/specs/2026-10-30-carnet-v10-design.md`. Plan : `docs/su
 
 Une inspiration, une petite en plus, une longue expiration. Posture : là où tu es.
 
-1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
-2. Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux. *(8 s)*
-3. Expire longuement par la bouche, jusqu'au bout, sans forcer. *(8 s)*
-4. Inspire, encore un peu, puis expire longuement. Sans forcer. *(144 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min.
-5. Laisse ta respiration redevenir libre. *(6 s)*
-6. Reprends ce que tu faisais quand tu veux. *(6 s)*
+1. Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux. *(8 s)*
+2. Expire longuement par la bouche, jusqu'au bout, sans forcer. *(8 s)*
+3. Inspire, encore un peu, puis expire longuement. Sans forcer. *(153 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (36 s à 1 min, 270 s à 5 min).
+4. Laisse ta respiration redevenir libre. *(5 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
 
 #### Expiration longue (1, 3 ou 5 min, `expiration-longue`)
 
 Inspirer sur quatre temps, expirer sur six. Posture : là où tu es.
 
-1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
-2. Inspire par le nez, sur quatre temps. *(8 s)*
-3. Expire par la bouche, sur six temps. Plus long que l'inspiration, sans forcer. *(10 s)*
-4. Inspire, quatre temps. Expire, six temps. Sans forcer. *(140 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min.
-5. Laisse ta respiration redevenir libre. *(7 s)*
-6. Reprends ce que tu faisais quand tu veux. *(7 s)*
+1. Inspire par le nez, sur quatre temps. *(8 s)*
+2. Expire par la bouche, sur six temps, sans forcer. *(10 s)*
+3. Inspire, quatre temps. Expire, six temps. Sans forcer. *(150 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (30 s à 1 min, 270 s à 5 min).
+4. Laisse ta respiration redevenir libre. *(6 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
 
 #### Noter ce qui passe (1, 3 ou 5 min, `noting`)
 
 Toucher l'étiquette de ce qui passe, puis revenir au souffle. Posture : là où tu es.
 
-1. Reste là où tu es, les yeux ouverts si tu veux. *(8 s)*
-2. Sens l'air qui entre et qui sort, sans rien changer. *(8 s)*
-3. Quelque chose passe ? Une pensée, le corps, un son, une émotion. *(9 s)*
-4. Touche l'étiquette de ce qui passe, puis reviens au souffle. Rien n'est gardé. *(140 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min, avec les étiquettes Pensée, Corps, Son, Émotion.
-5. Laisse les étiquettes. Sens encore une fois l'air qui entre et qui sort. *(8 s)*
-6. Reprends ce que tu faisais quand tu veux. *(7 s)*
+1. Sens l'air qui entre et qui sort, sans rien changer. *(7 s)*
+2. Quelque chose passe ? Une pensée, le corps, un son, une émotion. *(9 s)*
+3. Touche l'étiquette de ce qui passe, puis reviens au souffle. Rien n'est gardé. *(150 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (30 s à 1 min, 270 s à 5 min), avec les étiquettes Pensée, Corps, Son, Émotion.
+4. Laisse les étiquettes. Sens encore une fois l'air qui entre et qui sort. *(8 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
 
 #### Ancrage court (2 min, `ancrage-court`)
 
@@ -1378,7 +1375,7 @@ Moins de choses qui entrent, une pression, de longues expirations. Posture : là
 
 #### Réveil la nuit (3 min, `reveil-nuit`)
 
-Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allongé. Écran noir, muet sauf la voix.
+Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allongé. Écran noir ; dans Moment difficile, muet sauf la voix ; dans Bien-être, les réglages du lecteur.
 
 1. Reste là où tu es, allongé. Tu peux bouger, ou passer une étape. *(10 s)*
 2. Inspire sur quatre temps. Expire sur six temps, sans forcer. *(50 s)*

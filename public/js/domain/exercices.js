@@ -18,7 +18,7 @@
 // de Moment difficile. Mêmes règles d'écriture, aucune rétention. Les quatre de Moment difficile durent de 1 à 3 min, sans
 // choix de durée : consignes physiques, les yeux ouverts, le droit de bouger et de passer une étape. Champs nouveaux d'une
 // étape : `repete` (celle qui s'allonge selon la durée choisie) et `etiquettes` (les boutons du noting, qui n'écrivent
-// rien) ; d'un exercice : `nuit` (écran noir, muet sauf la voix).
+// rien) ; d'un exercice : `nuit` (écran noir ; dans Moment difficile, muet sauf la voix ; dans Bien-être, les réglages du lecteur).
 import { cycleSouffleMs } from './respiration.js';
 
 const e = (texte, dureeS, souffle, autres) => Object.freeze({ texte, dureeS, ...(souffle && { souffle: Object.freeze(souffle) }), ...autres });
@@ -359,7 +359,9 @@ export const EXERCICES = Object.freeze([
     ],
   },
   // v10 : les exercices courts, trois d'entre eux à durée au choix (dureeMin : la durée de départ, 3 min). Le temps des
-  // étapes fixes est choisi pour qu'à 3 min le total tombe juste : 36 s pour un cycle de 9 s, 40 s pour un cycle de 10 s.
+  // étapes fixes est choisi pour qu'à 3 min le total tombe juste, et qu'à 1 min l'étape qui se répète garde au moins la
+  // moitié du temps : 27 s pour un cycle de 9 s, 30 s pour un cycle de 10 s (et pour le noting). Aucune étape ne répète la
+  // posture : l'écran « avant » dit déjà « là où tu es ».
   {
     id: 'soupir',
     titre: 'Le soupir',
@@ -367,11 +369,10 @@ export const EXERCICES = Object.freeze([
     posture: 'là où tu es',
     description: 'Une inspiration, une petite en plus, une longue expiration.',
     etapes: [
-      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
       e('Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux.', 8),
       e('Expire longuement par la bouche, jusqu\'au bout, sans forcer.', 8),
-      e('Inspire, encore un peu, puis expire longuement. Sans forcer.', 144, SOUPIR, REPETE),
-      e('Laisse ta respiration redevenir libre.', 6),
+      e('Inspire, encore un peu, puis expire longuement. Sans forcer.', 153, SOUPIR, REPETE),
+      e('Laisse ta respiration redevenir libre.', 5),
       e('Reprends ce que tu faisais quand tu veux.', 6),
     ],
   },
@@ -382,12 +383,11 @@ export const EXERCICES = Object.freeze([
     posture: 'là où tu es',
     description: 'Inspirer sur quatre temps, expirer sur six.',
     etapes: [
-      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
       e('Inspire par le nez, sur quatre temps.', 8),
-      e('Expire par la bouche, sur six temps. Plus long que l\'inspiration, sans forcer.', 10),
-      e('Inspire, quatre temps. Expire, six temps. Sans forcer.', 140, LONGUE, REPETE),
-      e('Laisse ta respiration redevenir libre.', 7),
-      e('Reprends ce que tu faisais quand tu veux.', 7),
+      e('Expire par la bouche, sur six temps, sans forcer.', 10),
+      e('Inspire, quatre temps. Expire, six temps. Sans forcer.', 150, LONGUE, REPETE),
+      e('Laisse ta respiration redevenir libre.', 6),
+      e('Reprends ce que tu faisais quand tu veux.', 6),
     ],
   },
   {
@@ -397,12 +397,11 @@ export const EXERCICES = Object.freeze([
     posture: 'là où tu es',
     description: 'Toucher l\'étiquette de ce qui passe, puis revenir au souffle.',
     etapes: [
-      e('Reste là où tu es, les yeux ouverts si tu veux.', 8),
-      e('Sens l\'air qui entre et qui sort, sans rien changer.', 8),
+      e('Sens l\'air qui entre et qui sort, sans rien changer.', 7),
       e('Quelque chose passe ? Une pensée, le corps, un son, une émotion.', 9),
-      e('Touche l\'étiquette de ce qui passe, puis reviens au souffle. Rien n\'est gardé.', 140, null, { ...REPETE, etiquettes: ETIQUETTES_NOTING }),
+      e('Touche l\'étiquette de ce qui passe, puis reviens au souffle. Rien n\'est gardé.', 150, null, { ...REPETE, etiquettes: ETIQUETTES_NOTING }),
       e('Laisse les étiquettes. Sens encore une fois l\'air qui entre et qui sort.', 8),
-      e('Reprends ce que tu faisais quand tu veux.', 7),
+      e('Reprends ce que tu faisais quand tu veux.', 6),
     ],
   },
   {

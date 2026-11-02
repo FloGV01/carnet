@@ -238,6 +238,27 @@ test('v10 · la durée au choix : 1, 3 ou 5 min, pour le soupir, l\'expiration l
   assert.equal(exerciceAvecDuree(coherence, 1), coherence);
 });
 
+// À 1 min, la durée qu'on choisit quand on est pressé, l'étape qui fait l'exercice n'est pas la plus petite part : l'arrivée
+// et la fin restent brèves. La posture de l'écran « avant » dit déjà « là où tu es » : aucune étape ne le répète.
+test('v10 · la durée au choix : à 1 min, l\'étape qui se répète garde au moins la moitié du temps', () => {
+  const repete = (id, m) => exerciceAvecDuree(exerciceDe(id), m).etapes.find((e) => e.repete);
+  const partage = (id) => DUREES_AU_CHOIX.map((m) => repete(id, m).dureeS);
+  assert.deepEqual(partage('soupir'), [36, 153, 270]);
+  assert.deepEqual(partage('expiration-longue'), [30, 150, 270]);
+  assert.deepEqual(partage('noting'), [30, 150, 270]);
+  for (const id of AU_CHOIX) {
+    const d = exerciceAvecDuree(exerciceDe(id), 1);
+    const part = repete(id, 1).dureeS;
+    assert.ok(part >= dureeExerciceS(d) - part, `${id} : ${part} s sur ${dureeExerciceS(d)}`);
+    assert.ok(!d.etapes.some((e) => /^Reste là où tu es/.test(e.texte)), `${id} : pas d'étape qui répète la posture`);
+    assert.equal(d.etapes.length, 5, id);
+  }
+  // Ce que ça laisse : 4 soupirs, 3 longues expirations, et plus de 25 s pour toucher une étiquette après la lecture.
+  assert.equal(repete('soupir', 1).dureeS / (cycleSouffleMs(repete('soupir', 1).souffle) / 1000), 4);
+  assert.equal(repete('expiration-longue', 1).dureeS / (cycleSouffleMs(repete('expiration-longue', 1).souffle) / 1000), 3);
+  assert.ok(repete('noting', 1).dureeS - repete('noting', 1).texte.split(/\s+/).length / 3 > 25);
+});
+
 test('v10 · le noting : quatre étiquettes sur l\'étape qui se répète, et nulle part ailleurs', () => {
   const avec = EXERCICES.flatMap((x) => x.etapes.filter((e) => 'etiquettes' in e).map((e) => [x.id, e]));
   assert.deepEqual(avec.map(([id]) => id), ['noting']);
@@ -256,12 +277,22 @@ test('les titres et les étapes sont repris dans docs/decisions.md, pour être r
   for (const x of EXERCICES) {
     x.etapes.forEach((e, i) => assert.ok(doc.includes(`${i + 1}. ${e.texte} *(${e.dureeS} s)*`), `durée à jour dans decisions.md : ${e.texte}`));
   }
+  // Le partage de la durée au choix se relit sur la fiche : l'étape qui se répète, à 1 et à 5 min.
+  for (const id of AU_CHOIX) {
+    const [a, , b] = DUREES_AU_CHOIX.map((m) => exerciceAvecDuree(exerciceDe(id), m).etapes.find((e) => e.repete).dureeS);
+    assert.ok(doc.includes(`ici à 3 min (${a} s à 1 min, ${b} s à 5 min)`), `${id} : le partage dans decisions.md`);
+  }
+  // « Réveil la nuit » : le même exercice partout (spec §7.2) ; « muet sauf la voix » ne vaut que dans Moment difficile.
+  const nuit = 'dans Moment difficile, muet sauf la voix ; dans Bien-être, les réglages du lecteur';
+  assert.ok(doc.includes(`Posture : allongé. Écran noir ; ${nuit}.`), 'la fiche de « Réveil la nuit »');
+  assert.ok(lire(join(RACINE, 'public', 'js', 'domain', 'exercices.js')).includes(`\`nuit\` (écran noir ; ${nuit})`), 'le commentaire du champ `nuit`');
 });
 
 // Voix allumée, l'étape suivante est lue à la fin de la durée de l'étape. Une consigne se dit à environ 3 mots par seconde
 // (voix française du système : « Inspire par le nez en comptant jusqu'à quatre. » prend de 2 à 2,5 s) : chaque étape
 // laisse au moins 3 s après sa lecture, et une étape qui fait compter jusqu'à quatre en laisse au moins 5 (4 s pour
-// compter, sans que la consigne suivante coupe le compte).
+// compter, sans que la consigne suivante coupe le compte). v10 : la même règle pour une étape sans rythme qui dit « sur
+// quatre temps » ou « sur six temps », 1 s de plus que ces temps (avec un rythme, c'est le disque qui mène le compte).
 test('voix allumée : chaque étape laisse le temps de faire ce qu\'elle dit après sa lecture', () => {
   const lecture = (t) => t.split(/\s+/).length / 3;
   for (const x of EXERCICES) {
@@ -269,8 +300,12 @@ test('voix allumée : chaque étape laisse le temps de faire ce qu\'elle dit apr
       const reste = e.dureeS - lecture(e.texte);
       assert.ok(reste >= 3, `${x.id} : ${e.texte} (${e.dureeS} s)`);
       if (/compt\w* jusqu'à quatre/.test(e.texte)) assert.ok(reste >= 5, `le temps de compter : ${e.texte} (${e.dureeS} s)`);
+      const n = !e.souffle && /sur (quatre|six) temps/.exec(e.texte);
+      if (n) assert.ok(reste >= { quatre: 4, six: 6 }[n[1]] + 1, `le temps de compter : ${e.texte} (${e.dureeS} s)`);
     }
   }
+  // La garde voit bien les deux étapes de l'expiration longue qui comptent sans disque.
+  assert.deepEqual(EXERCICES.flatMap((x) => x.etapes.filter((e) => !e.souffle && /sur (quatre|six) temps/.test(e.texte)).map(() => x.id)), ['expiration-longue', 'expiration-longue']);
   const carree = exerciceDe('respiration-carree').etapes.filter((e) => /en comptant jusqu'à quatre/.test(e.texte));
   assert.equal(carree.length, 4);
   for (const e of carree) assert.ok(e.dureeS >= 8, e.texte);
