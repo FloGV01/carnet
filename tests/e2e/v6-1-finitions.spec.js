@@ -1,5 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
-import { viderBase, aller } from '../aides/saisie.js';
+import { viderBase, aller, appPrete } from '../aides/saisie.js';
+import { installerParole } from '../aides/lecteur.js';
 
 // v6.1 · finitions (P1, A3) : des défauts sans question de goût, vérifiés sur les styles calculés. Les
 // interrupteurs de Réglages vont à droite ; « Tout effacer » n'est plus centré (la règle du bouton ✕ ne vise
@@ -28,11 +29,14 @@ const lignesInterrupteur = (page) => page.locator('.ligne-interrupteur').evaluat
   };
 }));
 
-test('interrupteurs alignés à droite : Réglages › Moment difficile et › Me ressourcer (v7 : plus de section Analyse)', async ({ page }) => {
+test('interrupteurs alignés à droite : Réglages › Moment difficile et › Me ressourcer (v7 : plus de section Analyse ; v10 : la voix, avec une voix française)', async ({ page }) => {
+  await installerParole(page);
+  await page.reload();
+  await appPrete(page);
   await aller(page, '#/reglages');
   await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
   await expect(page.locator('.ligne-interrupteur')).toHaveCount(0);
-  for (const [route, nombre] of [['#/reglages/moment-difficile', 7], ['#/reglages/ressourcer', 1]]) {
+  for (const [route, nombre] of [['#/reglages/moment-difficile', 8], ['#/reglages/ressourcer', 1]]) {
     await aller(page, route);
     await expect(page.locator('.ligne-interrupteur')).toHaveCount(nombre);
     const lignes = await lignesInterrupteur(page);

@@ -12,6 +12,8 @@ export const ROUTES = [
   // Un relevé de l'Émotion du moment rouvert depuis Ma journée (v9, spec §13.1) : l'écran 3, « Ce que je faisais ».
   { nom: 'moment-releve', motif: `/moment/${ID}`, params: ['id'] },
   { nom: 'moment-difficile', motif: '/moment-difficile' },
+  // v10 (spec §5 et §14.5) : un exercice court de Moment difficile, dans le lecteur en mode crise.
+  { nom: 'crise', motif: `/crise/${ID}`, params: ['id'] },
   { nom: 'mon-plan', motif: '/mon-plan' },
   { nom: 'apres-coup-liste', motif: '/apres-coup' },
   { nom: 'apres-coup', motif: `/apres-coup/${ID}`, params: ['id'] },
@@ -75,7 +77,7 @@ export function versHash(nom, params = {}) {
 // Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins. v7 : l'Historique sort de la
 // barre et s'ouvre par sa porte en haut de l'Analyse ; lui et un jour ouvert depuis lui allument l'onglet Analyse.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'crise', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
   if (['bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';

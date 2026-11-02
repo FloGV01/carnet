@@ -41,6 +41,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
+  assert.equal(ongletDe('crise'), 'aujourdhui', 'v10 : un exercice court reste à l\'onglet de Moment difficile');
   assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-emotions'), 'reglages', 'v8 : le sens des mots se règle dans Réglages');
@@ -48,6 +49,14 @@ test('onglet actif', () => {
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
   assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v10 · un exercice court de Moment difficile : /crise/ID, à côté de la route de Moment difficile', () => {
+  assert.deepEqual(lireRoute('#/crise/trop-plein'), { nom: 'crise', params: { id: 'trop-plein' }, chemin: '/crise/trop-plein' });
+  assert.equal(versHash('crise', { id: 'reveil-nuit' }), '#/crise/reveil-nuit');
+  assert.equal(lireRoute('#/moment-difficile').nom, 'moment-difficile');
+  // Sans identifiant, l'adresse n'existe pas.
+  for (const h of ['#/crise', '#/crise/']) assert.equal(lireRoute(h).inconnue, true, h);
 });
 
 test('v6.1 · « Pour mes soignants » : Export PSY et Vue soignants allument l\'onglet Soins, l\'Analyse garde Comprendre', () => {

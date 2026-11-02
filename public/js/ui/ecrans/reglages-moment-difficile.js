@@ -1,20 +1,25 @@
 // Réglages › Moment difficile (v6) : la respiration guidée (durée, rythme, signal sonore, méta
 // `respiration`) et les rubriques de Mon plan qui passent dans « Une chose à la fois » (méta
-// `uneChoseALaFois`). Chaque choix s'enregistre d'un toucher.
+// `uneChoseALaFois`). Chaque choix s'enregistre d'un toucher. v10 (spec §14.5) : le signal vaut aussi pour les exercices
+// courts de Moment difficile, et la voix pour eux seuls (sans voix française, l'interrupteur n'apparaît pas).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Interrupteur } from '../composants/interrupteur.js';
+import { useVoixFrancaise } from '../composants/lecteur.js';
 import { Segmente } from '../composants/segmente.js';
 import { repo } from '../../donnees.js';
 import { DUREES, RYTHMES, normaliserRespiration } from '../../domain/respiration.js';
 import { CLES_RUBRIQUES, RUBRIQUES_PLAN, TITRE_SI_ALORS, normaliserUneChose } from '../../domain/mon-plan.js';
+import { pourAffichage } from '../../domain/typographie.js';
 
 const OPTIONS_DUREE = DUREES.map((d) => ({ valeur: d, libelle: `${d} min` }));
 const OPTIONS_RYTHME = RYTHMES.map((r) => ({ valeur: r, libelle: r }));
+const VOIX = 'Lire les consignes à voix haute';
 
 export function ReglagesMomentDifficile() {
   const [respiration, setRespiration] = useState(null);
   const [uneChose, setUneChose] = useState(null);
+  const voix = useVoixFrancaise();
   const file = useRef(Promise.resolve());
   // Une lecture qui échoue donne les réglages par défaut : l'écran ne reste jamais vide.
   useEffect(() => {
@@ -53,9 +58,18 @@ export function ReglagesMomentDifficile() {
           <span class="ligne-libelle">Signal sonore</span>
           <${Interrupteur} etiquette="Signal sonore" actif=${respiration.son} surChanger=${changer('son')} />
         </div>
-        <p class="note-carte-interne marge-interne">Un son doux à chaque changement de phase. Il se tait quand l'iPhone est en silencieux et se mêle à la musique.</p>
+        <p class="note-carte-interne marge-interne">Un son doux à chaque changement de phase ou d'étape. Il se tait quand l'iPhone est en silencieux et se mêle à la musique.</p>
       </li>
+      ${voix && html`<li>
+        <div class="ligne-interrupteur">
+          <span class="ligne-libelle">${VOIX}</span>
+          <${Interrupteur} etiquette=${VOIX} actif=${respiration.voix} surChanger=${changer('voix')} />
+        </div>
+      </li>`}
     </ul>
+    <p class="aide-carte">${pourAffichage(voix
+    ? 'Le signal et la voix valent aussi pour les exercices courts de Moment difficile. « Réveil la nuit » reste sans signal : seule la voix peut y parler.'
+    : 'Le signal vaut aussi pour les exercices courts de Moment difficile, sauf « Réveil la nuit ».')}</p>
     <h2 class="libelle-section">Une chose à la fois</h2>
     <ul class="liste carte carte-groupe">
       ${RUBRIQUES_PLAN.map(([cle, titre]) => html`<li>

@@ -14,6 +14,8 @@ test('Moment difficile : un toucher, cohérence cardiaque, Mon plan tel qu\'écr
   await page.getByRole('link', { name: 'Moment difficile' }).click();
   const vue = page.getByRole('dialog', { name: 'Moment difficile' });
   await expect(page.getByRole('navigation')).toHaveCount(0);
+  // v10 : les quatre exercices courts au-dessus, sans rien changer à la suite (tests/e2e/v10-crise.spec.js).
+  await expect(vue.getByRole('group', { name: 'Un exercice court' }).getByRole('button')).toHaveCount(4);
   await expect(vue).toContainText('je sors marcher');
   await expect(vue).toContainText('Si la chaleur monte, alors je respire');
   await vue.getByRole('button', { name: 'Commencer' }).click();

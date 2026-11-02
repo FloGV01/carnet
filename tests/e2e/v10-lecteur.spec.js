@@ -5,8 +5,7 @@ import { installerParole, parole, installerVerrou, verrou, cacher, montrer, sean
 import { contraste } from '../aides/couleurs.js';
 
 // v10 (4/9) · Le lecteur (spec §5.3, §6, §7.3 et §14) : la durée au choix, le noting, le soupir, l'épingle, l'exercice de
-// nuit, et le mode crise. L'adresse #/crise/:id vient à la tâche suivante : ici, le lecteur en mode crise est monté seul,
-// comme le fera cet écran, et retiré au changement d'adresse, comme le fait l'app.
+// nuit, et le mode crise, par son adresse #/crise/:id (ses boutons : v10-crise.spec.js).
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
 test.beforeEach(async ({ page }) => {
@@ -52,22 +51,12 @@ const rienNeDeborde = async (page) => {
   expect(fautes).toEqual([]);
 };
 
-// Le lecteur en mode crise, à la place de ce que fera #/crise/:id. `toucher` : lancé d'un toucher (lancerLecture) ; sinon,
-// ouvert par son adresse.
-const monterCrise = (page, id, { toucher = true } = {}) => page.evaluate(async ([ident, avecToucher]) => {
-  const { html, render } = await import('/js/ui/lib.js');
-  const { Lecteur, lancerLecture } = await import('/js/ui/composants/lecteur.js');
-  const { exerciceDe } = await import('/js/domain/exercices.js');
-  const racine = document.body.appendChild(document.createElement('div'));
-  if (avecToucher) lancerLecture(location.hash, { retour: '#/reglages', mode: 'crise' });
-  render(html`<${Lecteur} seance=${exerciceDe(ident)} mode="crise" retour="#/reglages" />`, racine);
-  const depart = location.hash;
-  window.addEventListener('hashchange', function quitter() {
-    if (location.hash === depart) return;
-    window.removeEventListener('hashchange', quitter);
-    render(null, racine);
-  });
-}, [id, toucher]);
+// Le lecteur en mode crise. `toucher` : lancé d'un toucher (lancerLecture), avec un retour qui n'est pas celui de l'adresse,
+// pour vérifier qu'il est suivi ; sinon, ouvert par son adresse.
+const monterCrise = async (page, id, { toucher = true } = {}) => {
+  if (!toucher) { await aller(page, `#/crise/${id}`); return; }
+  await page.evaluate((ident) => import('/js/ui/composants/lecteur.js').then((m) => m.lancerLecture(`#/crise/${ident}`, { retour: '#/reglages', mode: 'crise' })), id);
+};
 
 // Panique : 12, 27 (soupir), 20, 18, 12, 20 (expiration longue), 11 s : deux minutes.
 const PANIQUE = 'Pose les pieds bien à plat et appuie. Tu peux bouger, ou passer une étape, quand tu veux.';
@@ -301,9 +290,6 @@ test('très grand texte, le pied du lecteur : « Précédent » et « Suivant »
     expect(await pied(v), `Bien-être, ${taille} px`).toBe(attendu);
     await v.getByRole('button', { name: 'Fermer' }).click();
     await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/bien-etre');
-    // Le lecteur de crise est monté ici sur Aujourd'hui, dont l'échelle s'arrête à 33 px (parcours-quotidien.spec.js).
-    if (taille > 33) continue;
-    await aller(page, '#/aujourdhui');
     await monterCrise(page, 'panique');
     const c = vue(page, 'Panique');
     await expect(bouton(c, 'Pause')).toBeVisible();
@@ -624,10 +610,10 @@ test('mode crise, ouvert sans toucher (une adresse) : rien ne joue seul, il atte
   await expect(consigne(v)).toHaveText(/Éloigne-toi/);
   // Sans signal, le toucher ne crée pas de contexte audio.
   expect(await audio(page)).toMatchObject({ contextes: 0 });
-  // « Terminer » tôt : pas de séance, pas de message, le retour demandé.
+  // « Terminer » tôt : pas de séance, pas de message, le retour de l'adresse.
   await v.getByRole('button', { name: 'Terminer' }).click();
   await page.clock.runFor(6100);
-  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/reglages');
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/moment-difficile');
   expect(await seances(page)).toEqual([]);
 });
 

@@ -102,7 +102,7 @@ function voixFrancaise() {
 }
 
 // Les voix arrivent parfois après le premier rendu (événement voiceschanged).
-function useVoixFrancaise() {
+export function useVoixFrancaise() {
   const [voix, setVoix] = useState(voixFrancaise);
   useEffect(() => {
     const s = window.speechSynthesis;
@@ -416,16 +416,19 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
   }, [etat, place]);
 
   // En crise, les réglages de la méta. Le toucher a préparé le son sans le savoir : si ni le signal ni la voix n'en veulent,
-  // il se rendort.
+  // il se rendort. S'ils en veulent, il reste éveillé : une respiration en cours, quittée par ce toucher, a demandé sa veille
+  // en se démontant, et plus aucun geste ne pourrait le relancer sur l'iPhone. Déjà quitté à cette lecture, le lecteur a tout
+  // rendu : plus rien à faire.
   useEffect(() => {
     if (!crise) return;
     repo.meta.lire('respiration').catch(() => null).then((v) => {
+      if (courant.current.etat === 'sortie') return;
       const r = normaliserRespiration(v);
       const signal = r.son && !seance.nuit;
       setSon(signal ? 'reperes' : 'aucun');
       setVoixVoulue(r.voix);
       setPret(true);
-      if (auto && !signal && !r.voix) suspendreSon();
+      if (auto) { if (signal || r.voix) preparerSon({ session: 'ambient' }); else suspendreSon(); }
     });
   }, []);
   // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus.

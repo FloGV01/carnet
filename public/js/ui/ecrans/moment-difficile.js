@@ -4,13 +4,40 @@
 // « Modifier » à droite de son titre (v6.1). Rien n'y est calculé ni choisi par l'app : ni
 // conseil, ni sélection de notes, ni compte à rebours. La respiration crée une séance d'origine `moment-difficile` (v7).
 // En 2b (v7, tâche 8) : trois cartes, à la couleur du parcours (bleu brume) ; « Commencer » en -fill / -on.
+// v10 (spec §5 et §14.5) : en tête, quatre boutons aux mots fixes, Panique, Colère, Trop-plein, Réveil la nuit. Un toucher
+// démarre aussitôt un exercice court (#/crise/<id>), dans le lecteur en mode crise, sans choix de durée et sans compte à
+// rebours ; il revient ici à la fin. Le bouton touché n'est pas une donnée : seule la séance est notée, d'origine
+// `moment-difficile`. Les trois cartes restent en dessous : l'écran peut défiler, le pied reste à sa place.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
+import { Lecteur, lancerLecture } from '../composants/lecteur.js';
 import { Respiration } from '../composants/respiration.js';
 import { ContenuPlan, lirePlan } from '../composants/mon-plan.js';
 import { UneChose, lireUneChose } from '../composants/une-chose.js';
+import { exerciceDe } from '../../domain/exercices.js';
 import { cartesPlan, planVide } from '../../domain/mon-plan.js';
+import { versHash } from '../../routeur.js';
 import { Icones } from '../icones.js';
+
+// Dans l'ordre des boutons. Leur mot est le titre de l'exercice (domain/exercices.js).
+const EXERCICES_COURTS = ['panique', 'colere', 'trop-plein', 'reveil-nuit'];
+const ICI = versHash('moment-difficile');
+
+// Le son et la voix sont préparés dans le toucher (lancerLecture) ; ils ne jouent que si Réglages › Moment difficile le dit.
+function ExercicesCourts() {
+  return html`<div class="exercices-courts" role="group" aria-label="Un exercice court">
+    ${EXERCICES_COURTS.map((id) => html`<button type="button" class="exercice-court"
+      onClick=${() => lancerLecture(versHash('crise', { id }), { retour: ICI, mode: 'crise' })}>${exerciceDe(id).titre}</button>`)}
+  </div>`;
+}
+
+// Un exercice court dans le lecteur (#/crise/<id>). Lancé d'un toucher, il démarre aussitôt ; ouvert autrement, il attend
+// « Commencer » : rien ne joue seul. Ce qui n'est pas l'un des quatre, un autre exercice compris, ramène à Moment difficile.
+export function ExerciceCrise({ id }) {
+  const exercice = EXERCICES_COURTS.includes(id) ? exerciceDe(id) : null;
+  useEffect(() => { if (!exercice) location.hash = ICI; }, [id]);
+  return exercice ? html`<${Lecteur} seance=${exercice} mode="crise" retour=${ICI} />` : null;
+}
 
 export function MomentDifficile() {
   const [plan, setPlan] = useState(null);
@@ -41,6 +68,7 @@ export function MomentDifficile() {
   return html`<${CadreParcours} titre="Moment difficile" teinte="difficile" surFermer=${fermer}
     pied=${html`<a class="btn-lien" href="#/episode/nouveau">${Icones.plus({ trait: 2 })}Noter un épisode</a>`}>
     <div class="etape moment-difficile">
+      <${ExercicesCourts} />
       <div class="carte carte-respiration">
         <${Respiration} origine="moment-difficile" reglable=${true} />
       </div>

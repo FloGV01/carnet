@@ -14,7 +14,7 @@ import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
 import { Moment } from './ui/ecrans/moment.js';
-import { MomentDifficile } from './ui/ecrans/moment-difficile.js';
+import { ExerciceCrise, MomentDifficile } from './ui/ecrans/moment-difficile.js';
 import { MonPlan } from './ui/ecrans/mon-plan.js';
 import { ApresCoup } from './ui/ecrans/apres-coup.js';
 import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
@@ -48,6 +48,7 @@ const ECRANS = {
   moment: () => html`<${Moment} key="neuf" />`,
   'moment-releve': (p) => html`<${Moment} key=${`releve-${p.id}`} id=${p.id} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
+  crise: (p) => html`<${ExerciceCrise} key=${p.id} id=${p.id} />`,
   'mon-plan': () => html`<${MonPlan} />`,
   'apres-coup-liste': () => html`<${ApresCoupListe} />`,
   'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
