@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.js';
-import { vueMoment, bulle, carte, mot, carteDuBas } from '../aides/emotion.js';
+import { vueMoment, bulle, carte, mot, carteDuBas, finMouvements, toucherMot } from '../aides/emotion.js';
 import { energieDe, motsDeLaCarte } from '../../public/js/domain/carte-roue.js';
 import { PAS } from '../../public/js/ui/carte-geometrie.js';
 
@@ -19,8 +19,6 @@ const ouvrir = async (page, zone) => {
   await expect(carte(vue)).not.toHaveAttribute('aria-disabled', 'true');
   return vue;
 };
-const finMouvements = (page) => page.evaluate(() => Promise.all(document.getAnimations()
-  .filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))));
 // Fait défiler le cadre, attend l'événement de défilement et les images qui le suivent (la lentille s'y pose), puis la fin
 // des transitions.
 const glisser = async (page, dx, dy) => {
@@ -158,7 +156,7 @@ test('« Réduire les animations » : rien ne grossit en glissant, toutes les bu
   expect(await page.evaluate(() => window.__attributs)).toBe(0);
   await rienDEcrit(page, vue, 'glissé');
   // Le mot touché prend sa taille, au milieu, d'un coup.
-  await mot(vue, 'Vide').click();
+  await toucherMot(vue, 'Vide');
   await expect(mot(vue, 'Vide')).toHaveAttribute('aria-pressed', 'true');
   expect(await centreDe(page, 'Vide')).toEqual([195, 422]);
   expect((await largeurs(page)).Vide).toBe(156);
@@ -269,7 +267,7 @@ test('point de vigilance 1 : de vrais touchers juste après un glissement choisi
       expect(choisis[0], `toucher ${i}`).toBe(pose1);
       await expect(carte(vue)).not.toHaveAttribute('aria-disabled', 'true');
       await finMouvements(page);
-      await mot(vue, choisis[0]).click();
+      await toucherMot(vue, choisis[0]);
       await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(0);
       await expect.poll(async () => (await releves(page)).length, { message: `toucher ${i}` }).toBe(0);
     }
@@ -277,6 +275,26 @@ test('point de vigilance 1 : de vrais touchers juste après un glissement choisi
   }
   // Un toucher au moins est tombé sur un mot : le test a bien vu ce qu'il compare.
   expect(pris).toBeGreaterThan(0);
+});
+
+// L'aide dont dépendent les tests qui touchent un mot (tests/aides/emotion.js) : le clic part d'une carte immobile, sinon
+// la lentille emporterait la bulle sous le pointeur et le toucher serait ignoré, au hasard, sous charge.
+test('toucherMot : un mot hors de l\'écran y est amené, tout s\'y pose, puis le doigt se pose sur lui, sans mouvement en cours ; la carte glisse ensuite jusqu\'à lui', async ({ page }) => {
+  const vue = await ouvrir(page, 'rouge');
+  const loin = MOTS.find((m) => m.col === 12 && m.rang === 1);
+  const horsEcran = await mot(vue, loin.libelle).evaluate((b) => { const r = b.getBoundingClientRect(); return r.left >= innerWidth || r.top >= innerHeight; });
+  expect(horsEcran).toBe(true);
+  await page.evaluate(() => {
+    document.querySelector('.carte-plan').addEventListener('pointerdown', (e) => {
+      const b = e.target.closest('.bulle-mot');
+      window.__appui = { mot: b && b.textContent, mouvements: document.getAnimations().filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime)).length };
+    }, { capture: true, once: true });
+  });
+  await toucherMot(vue, loin.libelle);
+  expect(await page.evaluate(() => window.__appui)).toEqual({ mot: loin.libelle, mouvements: 0 });
+  await expect(mot(vue, loin.libelle)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => centreDe(page, loin.libelle)).toEqual([195, 422]);
+  await expect.poll(() => releves(page)).toMatchObject([{ emotion: loin.id, energie: energieDe(loin.id) }]);
 });
 
 // Le toucher abandonné ou perdu. Après un pointercancel (le défilement a pris la main) ou un toucher entre deux bulles, resté
@@ -406,7 +424,7 @@ test('un doigt reprend la carte pendant le recentrage : la lentille le suit auss
 
 test('avec un mot choisi, glisser ne change rien au relevé : le mot garde sa double capsule, aria-pressed et la carte du bas, à la taille que la lentille lui donne ; toucher un autre mot le remplace et recentre', async ({ page }) => {
   const vue = await ouvrir(page, 'vert');
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(() => centreDe(page, 'Calme')).toEqual([195, 422]);
   await finMouvements(page);
   await expect.poll(async () => (await releves(page)).length).toBe(1);
@@ -436,7 +454,7 @@ test('avec un mot choisi, glisser ne change rien au relevé : le mot garde sa do
   expect((await largeurs(page)).Calme).toBe(156);
   // Un autre mot : il prend la capsule, le relevé change, il vient au milieu.
   const autre = en(8, 4);
-  await mot(vue, autre).click();
+  await toucherMot(vue, autre);
   await expect(mot(vue, autre)).toHaveAttribute('aria-pressed', 'true');
   await expect(mot(vue, 'Calme')).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(() => centreDe(page, autre)).toEqual([195, 422]);
@@ -451,12 +469,12 @@ const stylesPoses = (page) => page.evaluate(() => Object.fromEntries([...documen
 
 test('retoucher le mot choisi l\'efface sans rien bouger sous le doigt : la lentille reste, il redevient un cercle de 156', async ({ page }) => {
   const vue = await ouvrir(page, 'vert');
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(() => centreDe(page, 'Calme')).toEqual([195, 422]);
   await finMouvements(page);
   await expect(carte(vue)).not.toHaveAttribute('aria-disabled', 'true');
   const avant = await stylesPoses(page);
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect(mot(vue, 'Calme')).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(async () => (await releves(page)).length).toBe(0);
   expect(await stylesPoses(page)).toEqual(avant);
@@ -470,7 +488,7 @@ test('retoucher le mot choisi l\'efface sans rien bouger sous le doigt : la lent
 // finit) ne doit pas la remettre là où elle était au rendu d'avant.
 test('un rendu de la carte après un glissement ne remet aucune bulle ailleurs : mot effacé hors du centre, garde qui finit', async ({ page }) => {
   const vue = await ouvrir(page, 'vert');
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(() => centreDe(page, 'Calme')).toEqual([195, 422]);
   await finMouvements(page);
   await expect(carte(vue)).not.toHaveAttribute('aria-disabled', 'true');
@@ -478,13 +496,13 @@ test('un rendu de la carte après un glissement ne remet aucune bulle ailleurs :
   await glisser(page, PAS, 0);
   expect((await largeurs(page))[en(8, 6)]).toBe(156);
   const posees = await stylesPoses(page);
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect(mot(vue, 'Calme')).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(async () => (await releves(page)).length).toBe(0);
   expect(await stylesPoses(page)).toEqual(posees);
   await rienDEcrit(page, vue, 'effacé');
   // Un mot choisi, puis une garde qui se pose et qui finit : le recentrage arrivé, la lentille est sur lui, et le reste.
-  await mot(vue, en(8, 6)).click();
+  await toucherMot(vue, en(8, 6));
   await expect(mot(vue, en(8, 6))).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => centreDe(page, en(8, 6))).toEqual([195, 422]);
   await glisser(page, 0, PAS);
@@ -514,7 +532,7 @@ test('un mot à soi hors du carré : le repère du milieu le compte, la lentille
   expect(Object.values(l).filter((v) => v === 156)).toHaveLength(1);
   expect([l[en(1, 12)], l[en(1, 11)]]).toEqual([120, 108]);
   await rienDEcrit(page, vue, 'glissé');
-  await mot(vue, 'Flottant').click();
+  await toucherMot(vue, 'Flottant');
   await expect(mot(vue, 'Flottant')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => centreDe(page, 'Flottant')).toEqual([195, 422]);
   await expect.poll(async () => (await releves(page)).length).toBe(1);
@@ -559,7 +577,7 @@ test('très grand texte (17, 19, 21, 23) : après un glissement, chaque libellé
     await page.evaluate(() => document.fonts.ready);
     await glisser(page, PAS, -2 * PAS);
     expect(await hors(), `${taille} px, glissé`).toEqual([]);
-    await mot(vue, 'Désillusionné').click();
+    await toucherMot(vue, 'Désillusionné');
     await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Désillusionné');
     await finMouvements(page);
     await glisser(page, 2 * PAS, PAS);

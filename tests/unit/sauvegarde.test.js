@@ -642,6 +642,16 @@ test('v10 : aperçu de l\'import, les exercices épinglés ont leurs mots', () =
   assert.equal(phraseMeta(['monPlan', 'favorisBienEtre']), 'Mon plan et les exercices épinglés seront remplacés par ce que contient le fichier.');
 });
 
+test('v10 : aperçu de l\'import, une épingle posée puis retirée ne laisse rien à annoncer ; une liste qui a des éléments, si', () => {
+  const vide = [{ cle: 'favorisBienEtre', valeur: [] }];
+  assert.deepEqual(metaRemplacee(vide, []), [], 'absente du fichier : rien n\'est perdu');
+  assert.deepEqual(metaRemplacee(vide, [{ cle: 'favorisBienEtre', valeur: ['soupir'] }]), [], 'le fichier en a : rien n\'est perdu non plus');
+  const epingle = [{ cle: 'favorisBienEtre', valeur: ['soupir'] }];
+  assert.deepEqual(metaRemplacee(epingle, []), ['favorisBienEtre']);
+  assert.deepEqual(metaRemplacee(epingle, [{ cle: 'favorisBienEtre', valeur: [] }]), ['favorisBienEtre']);
+  assert.deepEqual(metaRemplacee(epingle, [{ cle: 'favorisBienEtre', valeur: ['soupir'] }]), []);
+});
+
 test('v8 : « Revenir » vers une copie prise avant la v8 remet les sujets d\'un rendez-vous, sans écraser ceux de la copie', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);

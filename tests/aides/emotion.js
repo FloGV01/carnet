@@ -1,6 +1,8 @@
 // Aides de l'écran « Émotion du moment » (v9, spec §4) : l'écran 1 et ses quatre bulles, la carte des mots, la carte du
 // bas, l'écran 3 (« Ce que je faisais », « Terminer »). Un bouton en garde (350 ms après un changement de vue) est
 // aria-disabled, ou dans un groupe aria-disabled : Playwright attend la fin de la garde avant de toucher.
+import { expect } from './gardes.js';
+
 export const vueMoment = (page) => page.getByRole('dialog', { name: 'Émotion du moment' });
 // Le nom de chaque bulle de l'écran 1.
 export const NOMS_BULLES = {
@@ -12,6 +14,31 @@ export const bulle = (vue, zone) => bulles(vue).getByRole('button', { name: NOMS
 export const carte = (vue) => vue.getByRole('group', { name: 'Émotion', exact: true });
 // mot(vue, 'Irrité') : la bulle du mot sur la carte.
 export const mot = (vue, libelle) => carte(vue).getByRole('button', { name: libelle, exact: true });
+// Attend la fin des transitions et des animations finies (les halos tournent sans fin).
+export const finMouvements = (page) => page.evaluate(() => Promise.all(document.getAnimations()
+  .filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))));
+const defilement = (page) => page.evaluate(() => {
+  const c = document.querySelector('.carte-defile');
+  return c && [c.scrollLeft, c.scrollTop];
+});
+// Toucher un mot de la carte, comme un doigt : à l'écran, la carte posée. Un `.click()` seul fait défiler la carte jusqu'au
+// mot au dernier moment ; la lentille suit ce défilement et emporte les bulles sous le pointeur pendant le clic, qui est
+// ignoré, comme il se doit (v10, point de vigilance 1). Sous charge, le test échouait ainsi au hasard : mot perdu, sans
+// erreur. L'essai à blanc (mêmes attentes que le clic, garde comprise, et le même défilement) est donc refait jusqu'à ce
+// qu'il ne fasse plus rien bouger ; le clic n'a alors plus rien à faire défiler.
+export async function toucherMot(vue, libelle) {
+  const page = vue.page();
+  const bulleDuMot = mot(vue, libelle);
+  await expect(async () => {
+    const avant = await defilement(page);
+    await bulleDuMot.click({ trial: true });
+    // Les deux images où la lentille se pose après l'événement de défilement (comme `glisser`, v10-carte), puis ses transitions.
+    await page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))));
+    await finMouvements(page);
+    expect(await defilement(page)).toEqual(avant);
+  }).toPass({ timeout: 10000 });
+  await bulleDuMot.click();
+}
 export const retour = (vue) => vue.getByRole('button', { name: 'Revenir au choix de la couleur', exact: true });
 export const fermer = (vue) => vue.getByRole('button', { name: 'Fermer', exact: true });
 export const continuer = (vue) => vue.getByRole('button', { name: 'Continuer', exact: true });
@@ -25,7 +52,7 @@ export const supprimerReleve = (vue) => vue.getByRole('button', { name: 'Supprim
 // Une couleur puis un mot : le relevé est écrit au mot.
 export async function noter(vue, zone, libelle) {
   await bulle(vue, zone).click();
-  await mot(vue, libelle).click();
+  await toucherMot(vue, libelle);
 }
 // La flèche, puis « Terminer » à l'écran 3 : l'écran se ferme.
 export async function finir(vue) {

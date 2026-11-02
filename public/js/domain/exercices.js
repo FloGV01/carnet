@@ -13,7 +13,8 @@
 // imposée, rien sur le cœur, les souvenirs par les sens, avec une sortie écrite, et « Tu peux t'arrêter à tout moment. »
 // dans chacune. Deux blocs communs, « Arriver » (60 s) et « Revenir » (55 s), en ouvrent et en ferment cinq. Aucune
 // n'a de rythme écrit : ni disque ni souffle. « Premiers pas » n'est pas écrite (§12.4) : Respiration abdominale ouvre
-// le Programme. Elles ne se lancent que depuis le Programme (domain/programme.js).
+// le Programme. Elles se lancent depuis le Programme (domain/programme.js), ou seules par #/exercice/<id> (v10) : seul le
+// Programme date ses séances.
 // v10 (spec §5.2, §6 et §14) : 10 exercices nouveaux, ajoutés à la fin : six pour Bien-être et l'écran 3, puis les quatre
 // de Moment difficile. Mêmes règles d'écriture, aucune rétention. Les quatre de Moment difficile durent de 1 à 3 min, sans
 // choix de durée : consignes physiques, les yeux ouverts, le droit de bouger et de passer une étape. Champs nouveaux d'une

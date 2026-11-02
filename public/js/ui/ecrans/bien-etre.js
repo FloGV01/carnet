@@ -1,5 +1,6 @@
 // Onglet Bien-être (v7, spec §6.2 ; v8, spec §5 et §6) : pour pratiquer hors des moments de crise. Il ne garde que le
-// Programme et la cohérence cardiaque (la liste des exercices disparaît : ils se font dans le Programme).
+// Programme et la cohérence cardiaque (la liste des exercices disparaît : ils se font dans le Programme, ou seuls par
+// #/exercice/<id>, v10).
 // - En tête, la carte Programme : la séance qui vient (celle qui suit la dernière faite dans l'ordre du Programme,
 //   domain/programme.js), « 5 min · assis », et un gros bouton lecture rond qui la lance d'un toucher dans le lecteur ;
 //   le reste de la carte ouvre l'écran Programme. Ni nombre, ni pourcentage, ni anneau.

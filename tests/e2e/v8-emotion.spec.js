@@ -1,6 +1,6 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
-import { vueMoment, bulle, mot, carteDuBas, finir } from '../aides/emotion.js';
+import { vueMoment, bulle, toucherMot, carteDuBas, finir } from '../aides/emotion.js';
 import { FAMILLES, MOTS_SANS_FAMILLE } from '../../public/js/domain/roue.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
 
@@ -73,7 +73,7 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await aller(page, '#/moment');
   const vue = vueMoment(page);
   await bulle(vue, 'rouge').click();
-  await mot(vue, 'Irrité').click();
+  await toucherMot(vue, 'Irrité');
   await expect(carteDuBas(vue).locator('.definition-carte-du-bas')).toHaveText('Agacé par un bruit qui revient.');
   await finir(vue);
   await expect(page).toHaveURL(/#\/aujourdhui$/);

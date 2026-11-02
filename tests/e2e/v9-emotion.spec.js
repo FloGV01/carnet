@@ -2,7 +2,7 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.js';
 import { contraste } from '../aides/couleurs.js';
 import {
-  vueMoment, bulles, bulle, carte, mot, retour, fermer, continuer, carteDuBas, noter, finir, faisais, activite, terminer, changerMot,
+  vueMoment, bulles, bulle, carte, mot, toucherMot, finMouvements, retour, fermer, continuer, carteDuBas, noter, finir, faisais, activite, terminer, changerMot,
   supprimerReleve, NOMS_BULLES, NOTEE, SUPPRIME,
 } from '../aides/emotion.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
@@ -31,9 +31,6 @@ const ouvrir = async (page) => {
 };
 // La garde de 350 ms passée (plus rien d'aria-disabled).
 const finGarde = (groupe) => expect(groupe).not.toHaveAttribute('aria-disabled', 'true');
-// Attend la fin des transitions et des animations finies (les halos tournent sans fin).
-const finMouvements = (page) => page.evaluate(() => Promise.all(document.getAnimations()
-  .filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))));
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
@@ -56,7 +53,7 @@ test('une couleur n\'écrit rien ; le mot écrit le relevé, avec l\'énergie de
   expect(await releves(page)()).toEqual([]);
   await expect(carteDuBas(vue)).toHaveCount(0);
 
-  await mot(vue, 'Vide').click();
+  await toucherMot(vue, 'Vide');
   await expect.poll(releves(page)).toMatchObject([{ date: '2026-10-15', heure: '21:00', vers: null, emotion: 'roue:tristesse:vide', energie: 'energie:basse', humeur: null }]);
   await expect(mot(vue, 'Vide')).toHaveAttribute('aria-pressed', 'true');
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(1);
@@ -79,17 +76,17 @@ test('un autre mot remplace le mot et son énergie ; retoucher le mot choisi l\'
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:furieux', energie: 'energie:haute' }]);
   const [{ id }] = await releves(page)();
   // Préoccupé, rang 8 : énergie moyenne. Le même relevé.
-  await mot(vue, 'Préoccupé').click();
+  await toucherMot(vue, 'Préoccupé');
   await expect.poll(releves(page)).toMatchObject([{ id, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne' }]);
   await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Préoccupé');
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveText(['Préoccupé']);
   // Retouché : plus de mot ni d'énergie, il ne reste rien, le relevé est supprimé ; la carte du bas s'en va.
-  await mot(vue, 'Préoccupé').click();
+  await toucherMot(vue, 'Préoccupé');
   await expect.poll(async () => (await releves(page)()).length).toBe(0);
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(0);
   await expect(carteDuBas(vue)).toHaveCount(0);
   // Un nouveau mot : un nouveau relevé.
-  await mot(vue, 'Irrité').click();
+  await toucherMot(vue, 'Irrité');
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', energie: 'energie:haute' }]);
   expect((await releves(page)())[0].id).not.toBe(id);
 });
@@ -142,7 +139,7 @@ test('la flèche, puis « Terminer » touché deux fois pendant l\'écriture : l
     window.__messages = new Set();
     window.__carnet.etatApp.abonner((e) => { if (e.toast && e.toast.texte === 'Émotion du moment notée') window.__messages.add(e.toast.id); });
   });
-  await mot(vue, 'Serein').click();
+  await toucherMot(vue, 'Serein');
   await continuer(vue).click();
   await terminer(vue).click();
   await terminer(vue).click();
@@ -178,7 +175,7 @@ test('plein écran, fond noir en clair comme en sombre, des bulles à l\'écran 
     await bulle(vue, 'vert').click();
     await expect(carte(vue)).toBeVisible();
     expect(await etat(), `${schema}, carte`).toEqual(attendu);
-    await mot(vue, 'Calme').click();
+    await toucherMot(vue, 'Calme');
     await expect(carteDuBas(vue)).toBeVisible();
     expect(await etat(), `${schema}, un mot`).toEqual(attendu);
     // Le cadre de la carte défile dans les deux sens ; la page reste en place.
@@ -272,7 +269,7 @@ test('l\'ordre de lecture suit l\'écran : ✕ d\'abord à l\'écran 1 ; à l\'�
   await expect(carte(vue).getByRole('button')).toHaveCount(144);
   let noms = await boutons();
   expect([noms[0], noms[1], noms.length]).toEqual(['Revenir au choix de la couleur', 'Chercher un mot', 146]);
-  await mot(vue, 'Anxieux').click();
+  await toucherMot(vue, 'Anxieux');
   await expect(continuer(vue)).toBeVisible();
   noms = await boutons();
   expect([noms[0], noms[1], noms.at(-1), noms.length]).toEqual(['Revenir au choix de la couleur', 'Chercher un mot', 'Continuer', 147]);
@@ -359,7 +356,7 @@ test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\
     }
     // Les cases les plus profondes de chaque zone, et une claire : le mot, éclairci si besoin, et la définition, blanche.
     for (const n of ['Enragé', 'Sans valeur', 'Extasié', 'Serein', 'Calme']) {
-      await mot(vue, n).click();
+      await toucherMot(vue, n);
       await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(n);
       const [fond, motCouleur, def] = await carteDuBas(vue).evaluate((e) => [e, e.querySelector('.mot-carte-du-bas'), e.querySelector('.definition-carte-du-bas')]
         .map((x) => getComputedStyle(x)[x === e ? 'backgroundColor' : 'color']));
@@ -454,7 +451,7 @@ test('point de vigilance 2 : en très grand texte (17, 19, 21, 23), chaque libel
     // lignes y tiennent) : la carte du bas grandit au lieu de la couper.
     const hauteurs = [];
     for (const n of ['Désillusionné', 'Reconnaissant']) {
-      await mot(vue, n).click();
+      await toucherMot(vue, n);
       await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(n);
       await finMouvements(page);
       expect(await debordements(page), `${n}, ${taille} px`).toEqual([]);
@@ -490,7 +487,7 @@ test('point de vigilance 3 : un mot touché, puis l\'app passée en arrière-pla
   await bulle(vue, 'rouge').click();
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(0);
   await expect(carteDuBas(vue)).toHaveCount(0);
-  await mot(vue, 'Choqué').click();
+  await toucherMot(vue, 'Choqué');
   await expect.poll(async () => (await releves(page)()).length).toBe(2);
   expect((await releves(page)()).map((h) => h.emotion).sort()).toEqual(['roue:colere:irrite', 'roue:surprise:choque']);
 });
@@ -547,7 +544,7 @@ test('point de vigilance 5 : deux touchers rapides, sur une bulle puis au même 
       await page.touchscreen.tap(cible.x, cible.y);
       await expect(mot(vue, cible.nom), quoi).toHaveAttribute('aria-pressed', 'true');
       await expect.poll(async () => (await releves(page)()).length, { message: quoi }).toBe(1);
-      await mot(vue, cible.nom).click();
+      await toucherMot(vue, cible.nom);
       await expect.poll(async () => (await releves(page)()).length, { message: quoi }).toBe(0);
       await retour(vue).click();
       await fermer(vue).click();
@@ -593,7 +590,7 @@ test('deux touchers rapides au même endroit sur un mot loin du milieu : le prem
     await page.touchscreen.tap(...point);
     await expect(mot(vue, sous), mouvement).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(async () => (await releves(page)()).map((h) => h.emotion), { message: mouvement }).not.toEqual([idLoin]);
-    await mot(vue, sous).click();
+    await toucherMot(vue, sous);
     await expect.poll(async () => (await releves(page)()).length, { message: mouvement }).toBe(0);
     await retour(vue).click();
     await fermer(vue).click();
@@ -608,7 +605,7 @@ test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot
   expect(await halos()).toEqual(Array(12).fill(['orbite']));
   await bulle(vue, 'vert').click();
   expect(parseFloat(await carte(vue).locator('.bulle-mot').first().evaluate((b) => getComputedStyle(b).transitionDuration))).toBeGreaterThan(0);
-  await mot(vue, 'Serein').click();
+  await toucherMot(vue, 'Serein');
   await expect(carteDuBas(vue)).toBeVisible();
   // L'écran 3 paraît en fondu.
   await continuer(vue).click();
@@ -624,7 +621,7 @@ test('mouvement (visuel §4) : les halos tournent, la carte glisse jusqu\'au mot
   await bulle(vue, 'vert').click();
   await expect(carte(vue)).toBeVisible();
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-  await mot(vue, 'Serein').click();
+  await toucherMot(vue, 'Serein');
   // Aussitôt : au milieu de l'écran, à sa taille finale, sans transition ni animation ; la carte du bas, sans glisser.
   const fige = await page.evaluate(() => {
     const b = document.querySelector('.bulle-mot.choisi');
@@ -661,7 +658,7 @@ test('un mot à soi est sur la carte, hors du carré du côté de sa zone, à la
       couleur: couleur(de('Flottant')) === couleur(de('Serein')) };
   });
   expect(place).toEqual({ dansLeVert: true, aDroite: true, couleur: true });
-  await mot(vue, 'Flottant').click();
+  await toucherMot(vue, 'Flottant');
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' }]);
   await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText('Flottant');
   await expect(carteDuBas(vue).locator('.definition-carte-du-bas')).toHaveText('Un peu ailleurs, sans attache.');
@@ -796,7 +793,7 @@ test('un relevé rouvert depuis Ma journée s\'ouvre sur l\'écran 3 : son mot, 
   await expect(rappel(vue, 'Curieux')).toBeFocused();
   // Un autre mot : écrit tout de suite, avec l'énergie de sa case, à la même heure ; la flèche ramène à l'écran 3.
   await changerMot(vue).click();
-  await mot(vue, 'Préoccupé').click();
+  await toucherMot(vue, 'Préoccupé');
   await expect.poll(releves(page)).toMatchObject([{ id, date: '2026-10-15', heure: '09:10', vers: null, emotion: 'roue:peur:preoccupe', energie: 'energie:moyenne',
     faisais: ['activiteMoment:travail', 'activiteMoment:monde'] }]);
   await continuer(vue).click();
@@ -904,7 +901,7 @@ test('point de vigilance 1 : un ancien relevé (énergie seule de la v8, famille
   await expect(carte(vue).getByRole('button')).toHaveCount(144);
   await expect(carte(vue).getByRole('button', { pressed: true })).toHaveCount(0);
   await expect(carteDuBas(vue)).toHaveCount(0);
-  await mot(vue, 'Furieux').click();
+  await toucherMot(vue, 'Furieux');
   await expect.poll(() => lire(page, ids[1])).toMatchObject({ date: '2026-10-15', heure: '10:00', emotion: 'roue:colere:furieux', energie: 'energie:haute' });
   await continuer(vue).click();
   await expect(rappel(vue, 'Furieux')).toBeFocused();
@@ -915,10 +912,10 @@ test('point de vigilance 1 : un ancien relevé (énergie seule de la v8, famille
   // La note de la v6 : Calme remplace l'énergie, la note et l'heure « vers » restent ; effacé, la note garde le relevé.
   await ligneReleve(page, 'vers 12 h').click();
   await changerMot(vue).click();
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(() => lire(page, ids[2])).toMatchObject({ heure: '12:00', vers: true, humeur: 6, emotion: 'roue:serenite:calme', energie: 'energie:moyenne', faisais: ['activiteMoment:repos'] });
   await finGarde(carte(vue));
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(() => lire(page, ids[2])).toMatchObject({ heure: '12:00', vers: true, humeur: 6, emotion: null, energie: null, faisais: ['activiteMoment:repos'] });
   await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
   await expect(rappel(vue, 'Aucun mot')).toBeFocused();
@@ -963,7 +960,7 @@ test('un relevé rouvert vidé de tout (mot effacé, plus d\'activité) part ; u
   await ligneReleve(page, 'Calme').click();
   const vue = vueMoment(page);
   await changerMot(vue).click();
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect.poll(async () => (await releves(page)()).length).toBe(0);
   await expect(carteDuBas(vue)).toHaveCount(0);
   await vue.getByRole('button', { name: 'Revenir au relevé', exact: true }).click();
@@ -1155,7 +1152,7 @@ test('relecture finale : une création qui écrit puis échoue une fois laisse u
   await page.clock.runFor(1600);
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse:vide' }]);
   const [{ id }] = await releves(page)();
-  await mot(vue, 'Épuisé').click();
+  await toucherMot(vue, 'Épuisé');
   await expect.poll(releves(page)).toMatchObject([{ id, emotion: 'roue:aucune:epuise' }]);
   expect(await releves(page)()).toHaveLength(1);
 });

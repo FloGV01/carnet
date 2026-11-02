@@ -26,10 +26,12 @@ const META_GARDEES_SI_ABSENTES = new Set(['explosionsDepuis']);
 // sont celles de l'utilisateur : le fichier les remplace toutes, et une clé absente du fichier est retirée.
 const estMetaUtilisateur = (cle) => !META_NON_EXPORTEES.has(cle) && !META_GARDEES_SI_ABSENTES.has(cle);
 
-// Aperçu : clés de l'utilisateur présentes ici que l'import retirerait ou changerait.
+// Aperçu : clés de l'utilisateur présentes ici que l'import retirerait ou changerait. Une liste vide (la dernière épingle
+// retirée) n'a rien à perdre : rien à annoncer.
+const listeVide = (v) => Array.isArray(v) && v.length === 0;
 export function metaRemplacee(actuelles, duFichier) {
   const fichier = new Map((duFichier || []).filter((m) => m && typeof m.cle === 'string').map((m) => [m.cle, JSON.stringify(m.valeur)]));
-  return (actuelles || []).filter((m) => estMetaUtilisateur(m.cle) && m.valeur != null && fichier.get(m.cle) !== JSON.stringify(m.valeur)).map((m) => m.cle);
+  return (actuelles || []).filter((m) => estMetaUtilisateur(m.cle) && m.valeur != null && !listeVide(m.valeur) && fichier.get(m.cle) !== JSON.stringify(m.valeur)).map((m) => m.cle);
 }
 
 // Dans la même transaction : la méta de l'utilisateur devient exactement celle de `source`.

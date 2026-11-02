@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
+import { vueMoment, toucherMot } from '../aides/emotion.js';
 
 // v7 (9/9) · Contrôle global (plan v6.2, tâches 6 et 7) : on parcourt les écrans principaux, avec des données inventées,
 // en clair et en sombre.
@@ -236,7 +237,7 @@ const ECRANS = (ids) => [
   }, '.quatre-bulles .face .etiquette-bulle'],
   ['Émotion du moment, carte', (p) => p.getByRole('button', { name: 'Énergie haute, désagréable', exact: true }).click(), '.carte-plan .bulle-mot'],
   ['Émotion du moment, un mot et son sens', async (p) => {
-    await p.getByRole('group', { name: 'Émotion', exact: true }).getByRole('button', { name: 'Irrité', exact: true }).click();
+    await toucherMot(vueMoment(p), 'Irrité');
     await expect(p.locator('.definition-carte-du-bas')).toHaveText('Agacé par ce qui se répète, et ça dure.');
   }, '.bulle-mot.choisi'],
   ['Émotion du moment, Ce que je faisais', async (p) => {

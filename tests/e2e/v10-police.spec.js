@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import {
-  vueMoment, bulle, mot, continuer, faisais, terminer, loupe, champLoupe, trouves, ajouterMot, couleurMot,
+  vueMoment, bulle, mot, toucherMot, continuer, faisais, terminer, loupe, champLoupe, trouves, ajouterMot, couleurMot,
 } from '../aides/emotion.js';
 
 // v10 (1/9) · Une seule police (spec §4.3) : la police système partout, carte des émotions comprise, en gras comme en v9.
@@ -74,7 +74,7 @@ test('aucune police à empattements calculée : écran 1, carte, mot choisi, éc
   await expect(mot(vue, 'Calme')).toBeVisible();
   await controler(page, 'carte', ['.etiquette-mot']);
 
-  await mot(vue, 'Calme').click();
+  await toucherMot(vue, 'Calme');
   await expect(vue.locator('.carte-du-bas')).toBeVisible();
   await controler(page, 'mot choisi', ['.etiquette-mot']);
 

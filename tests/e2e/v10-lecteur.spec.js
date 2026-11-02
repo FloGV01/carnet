@@ -251,7 +251,8 @@ test('noting, mouvement réduit : seul le fond change, sans animation ; en mouve
 });
 
 test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l\'épingle tiennent, sans rien faire déborder de côté', async ({ page }) => {
-  for (const taille of [17, 19, 21, 23]) {
+  // Jusqu'à 33 px (AX2), l'échelle de parcours-quotidien.spec.js.
+  for (const taille of [17, 19, 21, 23, 28, 33]) {
     await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
     const v = await ouvrir(page, 'noting', 'Noter ce qui passe');
     await rienNeDeborde(page);
@@ -266,6 +267,53 @@ test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l
     expect(lignes).toEqual([1, 1, 1, 1]);
     await v.getByRole('button', { name: 'Fermer' }).click();
     await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/bien-etre');
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});
+
+test('très grand texte, le pied du lecteur : « Précédent » et « Suivant » à parts égales, puis l\'un sous l\'autre ; les mots entiers dans leur bouton, le chevron de « Suivant » entier ; en Bien-être comme en crise', async ({ page }) => {
+  const pied = async (v) => {
+    await rienNeDeborde(page);
+    const [p, s] = [await bouton(v, 'Précédent').boundingBox(), await bouton(v, 'Suivant').boundingBox()];
+    expect(s.x + s.width).toBeLessThanOrEqual(390);
+    const chevron = await bouton(v, 'Suivant').locator('svg').boundingBox();
+    expect(chevron.width).toBe(20);
+    expect(chevron.x + chevron.width).toBeLessThanOrEqual(s.x + s.width);
+    // Le mot lui-même, sur une ligne, dans le bouton.
+    const mot = await bouton(v, 'Précédent').evaluate((b) => {
+      const r = document.createRange();
+      r.selectNodeContents([...b.childNodes].find((n) => n.nodeType === Node.TEXT_NODE));
+      const t = r.getBoundingClientRect();
+      return { gauche: t.left, droite: t.right, lignes: r.getClientRects().length };
+    });
+    expect(mot.lignes).toBe(1);
+    expect(mot.gauche).toBeGreaterThanOrEqual(p.x);
+    expect(mot.droite).toBeLessThanOrEqual(p.x + p.width);
+    if (Math.abs(p.y - s.y) >= 1) return 'l\'un sous l\'autre';
+    expect(Math.abs(p.width - s.width)).toBeLessThan(1);
+    return 'côte à côte';
+  };
+  for (const [taille, attendu] of [[17, 'côte à côte'], [23, 'côte à côte'], [28, 'côte à côte'], [33, 'côte à côte'], [40, 'l\'un sous l\'autre']]) {
+    await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+    const v = await ouvrir(page, 'ancrage-court', 'Ancrage court');
+    await bouton(v, 'Commencer').click();
+    await expect(bouton(v, 'Suivant')).toBeVisible();
+    expect(await pied(v), `Bien-être, ${taille} px`).toBe(attendu);
+    await v.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/bien-etre');
+    // Le lecteur de crise est monté ici sur Aujourd'hui, dont l'échelle s'arrête à 33 px (parcours-quotidien.spec.js).
+    if (taille > 33) continue;
+    await aller(page, '#/aujourdhui');
+    await monterCrise(page, 'panique');
+    const c = vue(page, 'Panique');
+    await expect(bouton(c, 'Pause')).toBeVisible();
+    expect(await pied(c), `crise, ${taille} px`).toBe(attendu);
+    // En pause aussi : les réglages sous l'écran de lecture.
+    await bouton(c, 'Pause').click();
+    await expect(c.getByRole('list', { name: 'Réglages du lecteur' })).toBeVisible();
+    expect(await pied(c), `crise en pause, ${taille} px`).toBe(attendu);
+    await c.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/reglages');
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
@@ -457,6 +505,105 @@ test('mode crise, en pause : le signal et la voix se changent pour cette fois, s
   await bouton(w, 'Pause').click();
   await expect(w.getByRole('switch', { name: 'Signal sonore' })).toHaveAttribute('aria-checked', 'false');
   await expect(w.getByRole('switch', { name: 'Lire les consignes à voix haute' })).toHaveAttribute('aria-checked', 'true');
+});
+
+// La voix lit en session « ambient » (spec §5.3), le signal éteint comme allumé : la musique continue, le mode silencieux est respecté.
+const sessionVaut = (page) => page.evaluate(() => navigator.audioSession.type);
+const dits = async (page) => (await parole(page)).dits;
+for (const [id, titre, premiereS, reglage] of [
+  ['panique', 'Panique', 12, { son: false, voix: true }],
+  // « Réveil la nuit » : le signal n'y sonne jamais, la voix est le seul son possible.
+  ['reveil-nuit', 'Réveil la nuit', 10, { son: true, voix: true }],
+]) {
+  test(`mode crise, ${titre} : sans signal, la voix garde la session « ambient » pendant toute la lecture et après une reprise, sans aucune note ; elle est rendue en quittant`, async ({ page }) => {
+    await espionnerAudio(page, { session: true });
+    await ecrireMeta(page, 'respiration', { duree: 5, rythme: '5-5', ...reglage });
+    await aller(page, '#/aujourdhui');
+    await monterCrise(page, id);
+    const v = vue(page, titre);
+    await expect.poll(() => dits(page)).toHaveLength(1);
+    await figer(page);
+    expect(await sessionVaut(page)).toBe('ambient');
+    // Plus que la veille d'une seconde : le son ne s'est pas rendormi sous la voix.
+    await page.clock.runFor(1500);
+    expect(await sessionVaut(page)).toBe('ambient');
+    expect((await audio(page)).etat).toBe('running');
+    // La consigne suivante est dite dans la même session.
+    await page.clock.runFor(premiereS * 1000);
+    await expect.poll(() => dits(page)).toHaveLength(2);
+    expect(await sessionVaut(page)).toBe('ambient');
+    // En pause, le son dort et la session est rendue, comme dans tout le lecteur.
+    await bouton(v, 'Pause').click();
+    await page.clock.runFor(1500);
+    expect(await sessionVaut(page)).toBe('auto');
+    // À la reprise, la voix retrouve sa session, et la garde.
+    await bouton(v, 'Reprendre').click();
+    expect(await sessionVaut(page)).toBe('ambient');
+    await expect.poll(() => dits(page)).toHaveLength(3);
+    await page.clock.runFor(1500);
+    expect(await sessionVaut(page)).toBe('ambient');
+    expect((await audio(page)).etat).toBe('running');
+    expect(await audio(page)).toMatchObject({ notes: [], oscillateurs: [], souffles: [] });
+    // Quitté : plus de session.
+    await v.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/reglages');
+    await page.clock.runFor(1500);
+    expect(await sessionVaut(page)).toBe('auto');
+  });
+}
+
+test('mode crise, la voix hors d\'un lancement d\'un toucher : « Commencer » la prépare en « ambient », comme « Terminer » touché en pause, qui dit la fin', async ({ page }) => {
+  await espionnerAudio(page, { session: true });
+  await ecrireMeta(page, 'respiration', { duree: 5, rythme: '5-5', son: false, voix: true });
+  await aller(page, '#/aujourdhui');
+  await monterCrise(page, 'colere', { toucher: false });
+  const v = vue(page, 'Colère');
+  await bouton(v, 'Commencer').click();
+  await expect.poll(() => dits(page)).toHaveLength(1);
+  await figer(page);
+  expect(await audio(page)).toMatchObject({ contextes: 1, session: 'ambient' });
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('ambient');
+  await bouton(v, 'Pause').click();
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('auto');
+  await v.getByRole('button', { name: 'Terminer' }).click();
+  await expect.poll(async () => (await dits(page)).at(-1)).toBe('Fin de l\'exercice.');
+  expect(await sessionVaut(page)).toBe('ambient');
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('ambient');
+  expect(await audio(page)).toMatchObject({ notes: [], oscillateurs: [], souffles: [] });
+});
+
+test('mode crise, sans signal ni voix, la voix allumée en pause : le son s\'était rendormi, la reprise le prépare en « ambient » ; éteinte de nouveau, rien n\'est préparé', async ({ page }) => {
+  await espionnerAudio(page, { session: true });
+  await ecrireMeta(page, 'respiration', { duree: 5, rythme: '5-5', son: false, voix: false });
+  await aller(page, '#/aujourdhui');
+  await monterCrise(page, 'trop-plein');
+  const v = vue(page, 'Trop-plein');
+  await expect(bouton(v, 'Pause')).toBeVisible();
+  await figer(page);
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('auto');
+  await bouton(v, 'Pause').click();
+  const voix = v.getByRole('switch', { name: 'Lire les consignes à voix haute' });
+  await voix.click();
+  await expect(voix).toHaveAttribute('aria-checked', 'true');
+  await bouton(v, 'Reprendre').click();
+  await expect.poll(() => dits(page)).toHaveLength(1);
+  expect(await sessionVaut(page)).toBe('ambient');
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('ambient');
+  await bouton(v, 'Pause').click();
+  await voix.click();
+  await expect(voix).toHaveAttribute('aria-checked', 'false');
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('auto');
+  await bouton(v, 'Reprendre').click();
+  await expect(bouton(v, 'Pause')).toBeVisible();
+  await page.clock.runFor(1500);
+  expect(await sessionVaut(page)).toBe('auto');
+  expect(await dits(page)).toHaveLength(1);
 });
 
 test('mode crise, ouvert sans toucher (une adresse) : rien ne joue seul, il attend « Commencer » ; sans épingle, sans durée, sans anneau ; une méta abîmée vaut les réglages par défaut', async ({ page }) => {

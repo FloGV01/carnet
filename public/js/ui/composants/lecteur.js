@@ -41,8 +41,9 @@
 // - `mode` : 'bien-etre' (tout ce qui précède) ou 'crise', les exercices courts de Moment difficile. En crise, un toucher
 //   démarre aussitôt (lancerLecture) ; ni anneau, ni « il reste », ni bols, ni souffle sonore, ni « Noter mon émotion », ni
 //   épingle. Le son et la voix suivent Réglages › Moment difficile (méta `respiration`) : le signal sonore donne un repère
-//   discret à chaque changement d'étape, rien d'autre (session « ambient ») ; « Réveil la nuit » l'ignore, seule la voix peut
-//   y parler. En pause, on peut les changer pour cette fois : rien n'est retenu. La séance prend l'origine `moment-difficile`.
+//   discret à chaque changement d'étape, rien d'autre ; « Réveil la nuit » l'ignore, seule la voix peut y parler. Le signal
+//   comme la voix jouent en session « ambient », la voix seule aussi. En pause, on peut les changer pour cette fois : rien
+//   n'est retenu. La séance prend l'origine `moment-difficile`.
 import { html, useEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { CadreParcours } from './parcours.js';
 import { Epingle } from './epingle.js';
@@ -235,6 +236,9 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     if (!parle.current) return;
     try { window.speechSynthesis.cancel(); } catch { /* rien à couper */ }
   };
+  // Le son est à préparer dans un toucher pour jouer ; en crise, la voix le veut aussi, pour lire en session « ambient ».
+  const voixEnCrise = () => crise && courant.current.lecture;
+  const sonAPreparer = () => courant.current.son !== 'aucun' || voixEnCrise();
   const rendreVerrou = () => { if (verrou.current) { verrou.current.release().catch(() => {}); verrou.current = null; } };
   // Un verrou obtenu après la pause ou la fin est rendu tout de suite.
   const tenir = (v) => { if (v && courant.current.etat !== 'en-cours') { v.release().catch(() => {}); return; } if (v) verrou.current = v; };
@@ -306,7 +310,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     courant.current.place = 0;
     setEtat('en-cours');
     setPlace(0);
-    if (dansToucher && courant.current.son !== 'aucun') preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (dansToucher && sonAPreparer()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
     // La voix parle après le bol, hors du toucher : une parole muette dans le toucher la débloque.
     if (dansToucher && courant.current.lecture) amorcerVoix();
     annoncer(0, true);
@@ -331,8 +335,10 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     rendreVerrou();
     sons.couperSouffle();
     const avecBols = !crise && courant.current.son !== 'aucun';
-    // « Terminer » touché en pause : le contexte dort, le toucher le relance pour les bols. Au bout du temps, il tourne déjà.
-    if (avecBols) { preparerSon({ session: sessionAudio(courant.current.silencieux) }); sons.bolsFin(); }
+    // « Terminer » touché en pause : le contexte dort, le toucher le relance pour les bols, ou pour la voix en crise. Au bout
+    // du temps, il tourne déjà.
+    if (avecBols || voixEnCrise()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (avecBols) sons.bolsFin();
     if (courant.current.lecture) dire(FIN, avecBols ? VOIX_APRES_BOLS_FIN_MS : 0); else couperVoix();
     noter(n === etapes.length - 1);
     fermeture.current = setTimeout(fermer, FERMETURE_MS);
@@ -356,7 +362,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     souffle.current = { origine: t, programme: t, cle: souffle.current.cle + 1 };
     courant.current.etat = 'en-cours';
     setEtat('en-cours');
-    if (courant.current.son !== 'aucun') preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (sonAPreparer()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
     if (courant.current.lecture) dire(etapes[courant.current.place].texte);
     garderEcran().then(tenir);
   };
@@ -409,7 +415,8 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     return () => clearInterval(m);
   }, [etat, place]);
 
-  // En crise, les réglages de la méta. Le toucher a préparé le son sans le savoir : s'il n'en faut pas, il se rendort.
+  // En crise, les réglages de la méta. Le toucher a préparé le son sans le savoir : si ni le signal ni la voix n'en veulent,
+  // il se rendort.
   useEffect(() => {
     if (!crise) return;
     repo.meta.lire('respiration').catch(() => null).then((v) => {
@@ -418,7 +425,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
       setSon(signal ? 'reperes' : 'aucun');
       setVoixVoulue(r.voix);
       setPret(true);
-      if (auto && !signal) suspendreSon();
+      if (auto && !signal && !r.voix) suspendreSon();
     });
   }, []);
   // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus.

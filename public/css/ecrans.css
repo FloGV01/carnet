@@ -1144,8 +1144,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .reglages-lecteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 /* « Son » : sa puce à droite (« Repères + souffle ▾ »), un menu de l'iPhone comme la durée et le rythme. */
 .reglage-son { padding-top: 6px; padding-bottom: 6px; }
-.actions-lecteur { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 4px 0; }
-.actions-lecteur .btn { min-height: 56px; font-size: 1.059rem; }
+/* « Précédent » et « Suivant » à parts égales (la moitié, moins l'écart) : 5rem gardent le plus long mot entier, le chevron
+   cédant la place s'il le faut. Quand la moitié fait moins de 5rem (très grand texte), l'un sous l'autre. */
+.actions-lecteur { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(5rem, calc(50% - 5px)), 1fr)); gap: 10px; padding: 4px 4px 0; }
+.actions-lecteur .btn { min-height: 56px; padding: 0 8px; font-size: 1.059rem; }
 .terminer-lecteur { grid-column: 1 / -1; justify-self: center; padding: 0 16px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
    de l'Humeur du moment. */
