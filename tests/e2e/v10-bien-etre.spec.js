@@ -282,6 +282,8 @@ test('« Réveil la nuit » depuis « Dormir ou me rendormir » : le lecteur de 
   await expect(bouton(v, 'Commencer')).toBeVisible();
   await expect(epingle(v, 'Réveil la nuit')).toBeVisible();
   await expect(v.getByRole('list', { name: 'Réglages du lecteur' }).getByText('Jouer même en mode silencieux')).toBeVisible();
+  // Ce chemin-ci sonne, au contraire de Moment difficile : Repères + souffle au départ (docs/recette-iphone.md).
+  await expect(v.getByRole('list', { name: 'Réglages du lecteur' }).getByRole('combobox', { name: 'Son', exact: true })).toHaveValue('souffle');
   await bouton(v, 'Commencer').click();
   await expect(v.locator('.lecteur-reste')).toHaveText(/^il reste /);
   expect(await page.locator('.parcours').evaluate((x) => getComputedStyle(x).backgroundColor)).toBe('rgb(0, 0, 0)');

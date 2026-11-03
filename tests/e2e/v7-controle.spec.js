@@ -517,9 +517,26 @@ const empattements = (page) => page.evaluate(() => {
 // sont fabriqués sur place). Les gardes (gardes.js) font déjà échouer toute requête vers une autre origine, ici comme ailleurs.
 const telecharges = (adresses) => adresses.filter((u) => /\.(mp3|m4a|aac|wav|ogg|flac|woff2?|ttf|otf)($|\?)/i.test(u) || !u.startsWith('http://127.0.0.1'));
 
-// Ce qui bouge encore : toute animation ou transition en cours, et un disque du souffle qui n'est pas à sa taille fixe.
+// Ce qui a bougé depuis le contrôle d'avant, écouté dès le chargement : `stabiliser` attend la fin des animations finies, qu'on ne
+// verrait donc plus au moment de regarder. Le CSS le dit par ses événements ; une animation lancée par le code n'en a pas.
+const ecouterMouvements = (page) => page.addInitScript(() => {
+  window.__mouvements = [];
+  const noter = (quoi, el) => window.__mouvements.push(`${quoi} de ${el.getAttribute('class')}`);
+  for (const type of ['animationstart', 'transitionrun']) {
+    document.addEventListener(type, (e) => noter(`${type} ${e.animationName || e.propertyName}`, e.target), true);
+  }
+  const animer = Element.prototype.animate;
+  Element.prototype.animate = function animate(...args) {
+    noter('animate()', this);
+    return animer.apply(this, args);
+  };
+});
+
+// Ce qui bouge : ce qui a bougé depuis le contrôle d'avant (ci-dessus), toute animation ou transition en cours, et un disque du
+// souffle qui n'est pas à sa taille fixe.
 const mouvements = (page) => page.evaluate(() => {
-  const fautes = document.getAnimations().map((a) => `animation ${a.animationName || a.transitionProperty || ''} de ${a.effect.target && a.effect.target.className}`);
+  const fautes = (window.__mouvements || []).splice(0);
+  fautes.push(...document.getAnimations().map((a) => `animation ${a.animationName || a.transitionProperty || ''} de ${a.effect.target && a.effect.target.className}`));
   const disque = document.querySelector('.disque-souffle');
   if (disque && getComputedStyle(disque).transform !== 'matrix(0.8, 0, 0, 0.8, 0, 0)') fautes.push(`disque du souffle : ${getComputedStyle(disque).transform}`);
   return fautes;
@@ -531,6 +548,7 @@ for (const schema of ['light', 'dark']) {
   test(`écrans de la v10 ${schema === 'light' ? 'en clair' : 'en sombre'} : cibles de 44 pt, aucun mot interdit, aucune police à empattements, rien de téléchargé, aucune requête sortante ni violation de la CSP, rien qui bouge en mouvement réduit`, async ({ page }) => {
     test.setTimeout(120000);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await ecouterMouvements(page);
     const demandes = [];
     page.on('request', (r) => { if (!['blob:', 'data:'].includes(new URL(r.url()).protocol)) demandes.push(r.url()); });
     const fautes = await parcourir(page, schema, async () => [
@@ -543,6 +561,34 @@ for (const schema of ['light', 'dark']) {
     expect(fautes).toEqual({});
   });
 }
+
+// Le contrôle lui-même, dans le même ordre que `parcourir` : trois mouvements de 50 ms, finis quand il regarde.
+test('le contrôle du mouvement voit ce qui a déjà fini de bouger : une animation CSS, une transition, une animation lancée par le code', async ({ page }) => {
+  await ecouterMouvements(page);
+  await page.reload();
+  await appPrete(page);
+  await stabiliser(page);
+  await mouvements(page); // Ce qu'a lancé l'ouverture de l'app.
+  await page.evaluate(() => {
+    document.styleSheets[0].insertRule('@keyframes essai-mouvement { from { opacity: 0.5; } }');
+    const [a, b, c] = ['essai-a', 'essai-b', 'essai-c'].map((classe) => {
+      const el = document.createElement('div');
+      el.className = classe;
+      document.body.append(el);
+      return el;
+    });
+    a.style.animation = 'essai-mouvement 50ms';
+    b.style.transition = 'opacity 50ms';
+    void getComputedStyle(b).opacity; // Le départ de la transition : sans ce calcul, le navigateur ne voit aucun changement.
+    b.style.opacity = '0.5';
+    c.animate([{ opacity: 0.5 }, { opacity: 1 }], 50);
+  });
+  await stabiliser(page);
+  const essais = async () => (await mouvements(page)).filter((x) => x.includes('essai-'));
+  expect(await page.locator('.essai-a, .essai-b, .essai-c').evaluateAll((els) => els.flatMap((el) => el.getAnimations()).length), 'tout est fini').toBe(0);
+  expect((await essais()).sort()).toEqual(['animate() de essai-c', 'animationstart essai-mouvement de essai-a', 'transitionrun opacity de essai-b']);
+  expect(await essais(), 'la liste se vide à chaque contrôle').toEqual([]);
+});
 
 test('à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l\'écran de côté', async ({ page }) => {
   test.setTimeout(240000);

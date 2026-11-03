@@ -505,6 +505,9 @@ test('un rendu de la carte après un glissement ne remet aucune bulle ailleurs :
   await toucherMot(vue, en(8, 6));
   await expect(mot(vue, en(8, 6))).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => centreDe(page, en(8, 6))).toEqual([195, 422]);
+  // Un doigt reprend la carte, donc le défilement prend la main (pointercancel). Sans cet événement, un seul scrollBy tombait
+  // parfois avant que la lentille ait vu le recentrage arrivé : elle le laissait finir, et aucun autre défilement ne venait.
+  await page.evaluate(() => document.querySelector('.carte-plan').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerType: 'touch' })));
   await glisser(page, 0, PAS);
   await expect(carte(vue)).not.toHaveAttribute('aria-disabled', 'true');
   await finMouvements(page);

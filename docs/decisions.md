@@ -310,44 +310,6 @@ Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur 
 - La lecture à voix haute (voix française du système), le verrou d'écran pendant un exercice et une respiration, la pause écran verrouillé.
 - Le grand texte d'iOS sur les nouveaux écrans (Émotion du moment, Bien-être, exercice).
 
-### « Pour ce moment : » après une émotion (tâche 8)
-
-- **Où** : sur l'écran 3 d'un relevé neuf dont le mot a une zone (un relevé « vers » et un mot à soi compris), après « Ce que je faisais » et « Pour récupérer » : du texte et un contour, aucun fond, aucune couleur de zone, les mêmes dans les deux thèmes.
-- **Le toucher** prépare le son et la voix, attend la fin de la file d'écriture, puis ouvre le lecteur de Bien-être, qui revient à Aujourd'hui. Le relevé est donc complet en base avant que le lecteur démarre (point de vigilance 2). Une seule fois : un second toucher ne relance rien.
-- **Le délai de 3 s** n'est contrôlé qu'à l'ouverture du lecteur. Passé ce délai, ou dans une page cachée (l'iPhone verrouillé pendant l'écriture), le lecteur attend « Commencer », et sait toujours où revenir. Il ne démarre jamais seul dans une page cachée.
-- **Le pied de l'écran 3 monte** à la hauteur de la flèche de l'écran 2 : pour une carte de hauteur minimale, rien du corps ne passe sous elle. Quand la carte grandit (longue définition, très grand texte), la flèche monte aussi, et c'est la garde de 350 ms qui protège d'un second toucher.
-
-### Contrôle global (tâche 9)
-
-- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 26 écrans de la v10 : les quatre boutons de Moment difficile, Panique et « Réveil la nuit » (avant, étape rythmée, en pause), l'accueil de Bien-être plein, les trois listes, le soupir et le noting (avant, en cours, une étiquette touchée), les sons de fond, les deux minuteurs (avant, en cours, en pause ou le temps passé) et l'écran 3 avec « Pour ce moment : » : 82 écrans en tout, contre 56 en v9. Tout texte visible a au moins 4,5:1 sur son fond, en clair et en sombre, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte normal et à 23 px), et aucune violation de la CSP ne survient.
-- **Sur ces 26 écrans, cinq vérifications de plus**, en clair et en sombre, avec « Réduire les animations » allumé :
-  - **cibles de 44 pt** : un doigt de 44 pt visé au centre de chaque élément à toucher ne rencontre que lui. Ce test vise pour de bon, plutôt que de mesurer une boîte : l'interrupteur de 31 de haut, qui touche sur 47 par son pseudo-élément, passe, et un élément recouvert échoue ;
-  - **aucun mot interdit**, dans le texte de l'écran et dans ce qu'entend VoiceOver ;
-  - **aucune police à empattements**, pseudo-éléments compris ;
-  - **rien de téléchargé** : aucun fichier son ni police, aucune requête vers une autre origine ;
-  - **rien qui bouge** : aucune animation ni transition en cours, et le disque du souffle à sa taille fixe.
-
-  Chacune a été essayée sur ces écrans abîmés exprès (une cible réduite, un mot interdit, une police à empattements, un fichier son demandé, une animation) : elle échoue. Aucune n'a trouvé de faute dans l'app.
-- **Captures**, dans WebKit à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, gardées hors du dépôt : ces écrans, Réglages › Moment difficile et le Diagnostic. Rien à corriger.
-- **Version 10.0.0** (package.json, precache).
-- **CLAUDE.md** ne change pas : aucune règle ne bouge.
-
-### En attente de l'utilisateur
-
-- **Les exercices à relire** (plus bas) et **la table « Pour ce moment : »** (plus haut). Un texte se corrige dans `public/js/domain/exercices.js`, la table dans `public/js/domain/propositions.js`.
-- **L'épingle sur les lignes du Programme**, si l'écran est préféré sans elle (« Bien-être par besoin »).
-- **Les points en attente de la v7, de la v8 et de la v9 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé).
-- **Hors de la v10** (spec §3) : les pistes F (prévenir avant que la voix revienne, « Ma voix » enregistrée) et G (« À essayer d'ici le prochain rendez-vous », amorces de note), et la barre d'état noire au-dessus des écrans de l'émotion, qui attend le retour de l'utilisateur sur l'iPhone.
-
-### À essayer sur l'iPhone
-
-Le détail, à cocher, est dans `docs/recette-iphone.md`, « v10 ».
-
-- **Le son de fond écran verrouillé**, d'abord par l'entrée du Diagnostic. C'est la seule inconnue technique de la v10 : si le son s'arrête, un correctif 10.0.1 (spec §14.2).
-- **La lentille de la carte pendant l'élan** : sa fluidité sur l'iPhone 13 Pro, et un toucher juste après.
-- **« Réveil la nuit » la nuit** : assez sombre, assez lisible, et l'écran qui reste allumé.
-- **Le minuteur de concentration** après un passage en arrière-plan, et l'écran gardé allumé des deux minuteurs.
-
 ### Exercices à relire (titres et étapes)
 
 Rédigés pour Carnet selon la spec §6.2 : phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. La durée de chaque étape sert quand la voix est allumée : l'étape passe seule à la suivante. Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas.
@@ -1419,9 +1381,9 @@ Spec §14 :
   - **aucun mot interdit**, dans le texte de l'écran et dans ce qu'entend VoiceOver ;
   - **aucune police à empattements**, pseudo-éléments compris ;
   - **rien de téléchargé** : aucun fichier son ni police, aucune requête vers une autre origine ;
-  - **rien qui bouge** : aucune animation ni transition en cours, et le disque du souffle à sa taille fixe.
+  - **rien qui bouge** : aucune animation ni transition ne démarre en arrivant sur ces écrans, pas même une courte, finie quand le contrôle regarde (les départs sont écoutés dès le chargement), aucune n'est en cours, et le disque du souffle est à sa taille fixe.
 
-  Chacune a été essayée sur ces écrans abîmés exprès (une cible réduite, un mot interdit, une police à empattements, un fichier son demandé, une animation) : elle échoue. Aucune n'a trouvé de faute dans l'app.
+  Chacune a été essayée sur ces écrans abîmés exprès (une cible réduite, un mot interdit, une police à empattements, un fichier son demandé, une animation) : elle échoue. Sans la règle globale du mouvement réduit (`base.css`, `tokens.css`), « rien qui bouge » échoue sur 6 écrans : le disque du souffle et « Pour ce moment ». Aucune de ces vérifications n'a trouvé de faute dans l'app.
 - **Captures**, dans WebKit à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, gardées hors du dépôt : ces écrans, Réglages › Moment difficile et le Diagnostic. Rien à corriger.
 - **Version 10.0.0** (package.json, precache).
 - **CLAUDE.md** ne change pas : aucune règle ne bouge.

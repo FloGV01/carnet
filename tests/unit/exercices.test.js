@@ -288,6 +288,26 @@ test('les titres et les étapes sont repris dans docs/decisions.md, pour être r
   assert.ok(lire(join(RACINE, 'public', 'js', 'domain', 'exercices.js')).includes(`\`nuit\` (écran noir ; ${nuit})`), 'le commentaire du champ `nuit`');
 });
 
+// v10 (9/9, relecture) : sur l'iPhone, la nuit, la recette ne doit pas faire prendre le son d'un chemin pour un défaut de l'autre.
+test('la recette de l\'iPhone dit les deux chemins de « Réveil la nuit » : muet sauf la voix depuis Moment difficile, les réglages du lecteur depuis Bien-être', () => {
+  const ligne = lire(join(RACINE, 'docs', 'recette-iphone.md')).split('\n').find((l) => l.includes('**« Réveil la nuit », la nuit**'));
+  for (const x of ['Lancé de Moment difficile : rien ne sonne sans la voix', 'Lancé de Bien-être › « Dormir ou me rendormir » : il suit les réglages du lecteur, Repères + souffle au départ']) {
+    assert.ok(ligne.includes(x), x);
+  }
+});
+
+// v10 (9/9, relecture) : le bloc de la v10 s'était inséré aussi dans l'entrée v7, à cause d'un titre commun aux deux (« Exercices à
+// relire »). La v7 avait deux « En attente », et « plus bas » y renvoyait aux textes de la v7.
+test('docs/decisions.md : aucune entrée ne répète un titre de section, et le contrôle de la v10 n\'est que dans la sienne', () => {
+  const entrees = lire(join(RACINE, 'docs', 'decisions.md')).split(/^(?=## )/m);
+  const tete = (entree) => entree.split('\n', 1)[0];
+  for (const entree of entrees) {
+    const titres = entree.match(/^### .+$/gm) || [];
+    assert.deepEqual(titres.filter((t, i) => titres.indexOf(t) !== i), [], tete(entree));
+  }
+  assert.deepEqual(entrees.filter((x) => x.includes('**Version 10.0.0**')).map(tete), ['## 2026-11-03 : v10.0.0, des exercices pour chaque moment']);
+});
+
 // Voix allumée, l'étape suivante est lue à la fin de la durée de l'étape. Une consigne se dit à environ 3 mots par seconde
 // (voix française du système : « Inspire par le nez en comptant jusqu'à quatre. » prend de 2 à 2,5 s) : chaque étape
 // laisse au moins 3 s après sa lecture, et une étape qui fait compter jusqu'à quatre en laisse au moins 5 (4 s pour
