@@ -9,6 +9,7 @@
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Epingle } from '../composants/epingle.js';
+import { retourDemande } from '../composants/lecteur.js';
 import { Segmente } from '../composants/segmente.js';
 import { relancerSon, suspendreSon } from '../composants/signal-sonore.js';
 import { FONDU_SORTIE_S, LIBELLES_FOND, SONS_DE_FOND, demarrerFond } from '../composants/sons-de-fond.js';
@@ -53,6 +54,7 @@ export function Sons() {
   const [reglages, setReglages] = useState(lireReglagesSons);
   const [volume, setVolume] = useState(reglages.volume);
   const [enCours, setEnCours] = useState(false);
+  const [retour] = useState(retourDemande);
   const fond = useRef(null);
   const finA = useRef(0);
   const titre = titreElement(ID);
@@ -86,19 +88,19 @@ export function Sons() {
   useEffect(() => {
     if (!enCours) return undefined;
     const verifier = () => { if (Date.now() >= finA.current) arreter(); };
-    const retour = () => {
+    const auRetour = () => {
       if (document.visibilityState === 'hidden') return;
       relancerSon();
       verifier();
     };
     const m = setInterval(verifier, VERIFIE_MS);
-    document.addEventListener('visibilitychange', retour);
-    return () => { clearInterval(m); document.removeEventListener('visibilitychange', retour); };
+    document.addEventListener('visibilitychange', auRetour);
+    return () => { clearInterval(m); document.removeEventListener('visibilitychange', auRetour); };
   }, [enCours]);
   // Quitter l'écran arrête le son : il n'y a pas de son sans son écran.
   useEffect(() => arreter, []);
 
-  const fermer = () => { location.hash = '#/bien-etre'; };
+  const fermer = () => { location.hash = retour; };
   const curseur = html`<${Volume} valeur=${volume} surGlisser=${glisser} surLacher=${(v) => changer('volume', v)} />`;
   const corps = enCours
     ? html`<div class="lecteur lecteur-plein">

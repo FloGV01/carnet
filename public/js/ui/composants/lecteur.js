@@ -140,6 +140,14 @@ function prendreDemande() {
   demande = null;
   return d && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS ? d : null;
 }
+// Un écran de départ (les deux minuteurs, les sons de fond), ouvert d'un toucher ailleurs (une entrée de Bien-être) : comme le
+// lecteur, il revient à l'écran d'où il part (`retour`). Rien ne se prépare ici : il attend son propre « Commencer », où le son naît.
+export function ouvrirDepart(hash, { retour = null } = {}) {
+  demande = { hash, instant: performance.now(), retour };
+  location.hash = hash;
+}
+// L'écran où revenir, pour un écran de départ qui s'ouvre : celui de la demande, sinon Bien-être.
+export const retourDemande = () => prendreDemande()?.retour || '#/bien-etre';
 // Une parole muette dans le toucher : Safari laisse ensuite parler le lecteur hors d'un geste.
 function amorcerVoix() {
   try {

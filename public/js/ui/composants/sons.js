@@ -35,7 +35,8 @@ const garder = (v) => {
 function bol(c, t, { frequence, dureeS, volume }) {
   try {
     const sortie = c.createGain();
-    sortie.gain.setValueAtTime(volume, t);
+    // Posé tout de suite, pas à l'instant t : coupé avant t, le gain repartirait de sa valeur par défaut, 1, et le bol sortirait fort.
+    sortie.gain.value = volume;
     sortie.connect(c.destination);
     const sources = [];
     for (const [rapport, amplitude, part] of PARTIELS) {
@@ -94,6 +95,8 @@ function souffleSur(c, t0, dureeS, phase) {
     filtre.frequency.setValueAtTime(encore ? 700 : inspire ? 380 : 1000, t0);
     filtre.frequency.linearRampToValueAtTime(encore ? 1300 : inspire ? 1100 : 340, t1);
     const g = c.createGain();
+    // De même : coupé avant t0, le souffle reste au silence.
+    g.gain.value = SILENCE;
     g.gain.setValueAtTime(SILENCE, t0);
     g.gain.linearRampToValueAtTime(VOLUME_SOUFFLE, t0 + dureeS * (inspire ? 0.8 : 0.15));
     g.gain.linearRampToValueAtTime(SILENCE, t1);

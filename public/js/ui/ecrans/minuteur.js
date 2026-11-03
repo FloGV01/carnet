@@ -12,7 +12,7 @@
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Epingle } from '../composants/epingle.js';
-import { FERMETURE_MS, FIN, MESSAGE_MS, NOTER_EMOTION } from '../composants/lecteur.js';
+import { FERMETURE_MS, FIN, MESSAGE_MS, NOTER_EMOTION, retourDemande } from '../composants/lecteur.js';
 import { Interrupteur } from '../composants/interrupteur.js';
 import { Segmente } from '../composants/segmente.js';
 import { preparerSon, suspendreSon } from '../composants/signal-sonore.js';
@@ -44,6 +44,7 @@ function lireReglages() {
 export function Minuteur() {
   const [reglages, setReglages] = useState(lireReglages);
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'pause', 'fin'
+  const [retour] = useState(retourDemande);
   const suivi = useSeance(ID, 'bien-etre');
   const verrou = useVerrouEcran();
   const titre = titreElement(ID);
@@ -114,7 +115,7 @@ export function Minuteur() {
     if (courant.current.etat === 'fin' && suivi.notee()) {
       afficherToast(FIN, { libelle: NOTER_EMOTION, faire: () => { location.hash = '#/moment'; } }, MESSAGE_MS);
     }
-    location.hash = '#/bien-etre';
+    location.hash = retour;
   };
   // `auBout` : le temps est écoulé, le bol est parti ou part maintenant. Sinon « Arrêter » : dans ce toucher, le contexte se
   // relance (il dort en pause) et les sons encore à venir sont annulés.
@@ -170,7 +171,7 @@ export function Minuteur() {
         <p class="lecteur-duree">${pourAffichage(`${reglages.duree} min · là où tu es`)}</p>
         <${Epingle} id=${ID} titre=${titre} />
       </div>
-      <p class="lecteur-description">Un bol au début, un bol à la fin, et rien entre les deux. Le temps restant ne s'affiche pas.</p>
+      <p class="lecteur-description">Un bol au début, un bol à la fin. Le temps restant ne s'affiche pas.</p>
       <${Segmente} etiquette="Durée" classe="large" options=${OPTIONS_DUREE} valeur=${reglages.duree} surChoix=${(v) => changer('duree', v)} sansVide=${true} />
       <div class="lecteur-centre">
         <button type="button" class="bouton-lecture grand" aria-label="Commencer" onClick=${commencer}>${Icones.lecture()}</button>

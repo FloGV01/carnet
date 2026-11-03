@@ -22,3 +22,7 @@
 - [ ] Toucher le micro « Dicter » quand le clavier est déjà ouvert ne le referme pas.
 - [ ] « En consultation » : chiffres des 30 jours, questions cochées au doigt, compte rendu dicté ; Terminer revient à Soins.
 - [ ] Les boutons « Pas à pas » et « + Épisode » ne recouvrent ni « Mes points positifs » ni « Mémo vocal ».
+
+## Minuteurs (v10)
+
+- [ ] Minuteur de concentration : lancer 15 min, passer à une autre app au-delà de la durée, revenir. L'écran dit « Le temps est passé. », sans bol. Si iOS a rechargé la page (retour sur Aujourd'hui, sans ce texte), en faire un correctif : retenir l'heure de fin, comme pour le repli du §14.2 de la spec v10.

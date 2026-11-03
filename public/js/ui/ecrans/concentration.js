@@ -11,7 +11,7 @@
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Epingle } from '../composants/epingle.js';
-import { minuteur } from '../composants/lecteur.js';
+import { minuteur, retourDemande } from '../composants/lecteur.js';
 import { PuceReglage } from '../composants/respiration.js';
 import { Segmente } from '../composants/segmente.js';
 import { preparerSon, relancerSon, suspendreSon } from '../composants/signal-sonore.js';
@@ -48,6 +48,7 @@ const pageVisible = () => document.visibilityState !== 'hidden';
 export function Concentration() {
   const [reglages, setReglages] = useState(lireReglages);
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'fini'
+  const [retour] = useState(retourDemande);
   const [, tic] = useReducer((n) => n + 1, 0);
   const verrou = useVerrouEcran();
   const titre = titreElement(ID);
@@ -140,7 +141,7 @@ export function Concentration() {
     suspendreSon({ apresMs: VEILLE_SORTIE_MS });
   }, []);
 
-  const fermer = () => { location.hash = '#/bien-etre'; };
+  const fermer = () => { location.hash = retour; };
   let corps = null;
   let pied = null;
   if (etat === 'avant') {

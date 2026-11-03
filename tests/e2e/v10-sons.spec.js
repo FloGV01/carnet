@@ -56,6 +56,19 @@ const toutArrete = async (page, avantS) => {
     expect(x.fin).toBeLessThanOrEqual(avantS);
   }
 };
+// La durée des tampons qui jouent dit quel son joue : chaque recette a la sienne (composants/sons-de-fond.js). `deja` : les sources
+// d'avant, qu'on saute.
+const DUREES_TAMPONS = Object.freeze([['Bruit brun', 13], ['Bruit rose', 11], ['Vagues', 17], ['Pluie douce', 15]]);
+const tampons = async (page, deja = 0) => (await fond(page)).sources.slice(deja).map((s) => s.dureeS);
+// Les valeurs posées sur les gains, à l'instant où elles ont été programmées.
+const valeursDeGain = (page) => page.evaluate(() => window.__audio.gains.flat().filter((x) => x.quoi === 'valeur').map((x) => x.v));
+const aLeGain = (valeurs, g) => valeurs.filter((x) => Math.abs(x - g) < 1e-6).length;
+// Les notes d'un bol, dans l'ordre : six oscillateurs partis au même instant (composants/sons.js). `fin` : leur arrêt, ramené si le
+// bol a été coupé. Un bol reprogrammé au même instant ne se distingue d'un autre que par elles.
+const NOTES_PAR_BOL = 6;
+const FIN_BOL_S = 4.25;
+const notesDeBols = (page) => page.evaluate(() => window.__audio.oscillateurs.filter((o) => o.f >= 20).map((o) => ({ ...o })));
+const finLaPlusTardive = (liste) => Math.max(...liste.map((o) => o.fin));
 // Rien ne dépasse de côté : ni la page, ni le corps de l'écran, ni aucun de ses boutons.
 const rienNeDeborde = async (page) => {
   const fautes = await page.evaluate(() => {
@@ -148,6 +161,40 @@ test('sons : « Commencer » crée le contexte dans le toucher, en session « pl
   await expect(bouton(v, 'Arrêter')).toBeVisible();
   await page.clock.runFor(5000);
   expect(await audio(page)).toMatchObject({ suspensions: 1, session: 'playback', etat: 'running' });
+});
+
+test('sons : le son choisi est celui qui joue, pour chacun des quatre, et le volume réglé avant « Commencer » est celui du départ, retenu d\'une ouverture à l\'autre', async ({ page }) => {
+  await espionnerAudio(page);
+  let v = await ouvrirSons(page);
+  for (const [nom, dureeS] of DUREES_TAMPONS) {
+    await choix(v, 'Son', nom).click();
+    await expect(choix(v, 'Son', nom)).toHaveAttribute('aria-pressed', 'true');
+    const deja = (await fond(page)).sources.length;
+    await bouton(v, 'Commencer').click();
+    await expect(bouton(v, 'Arrêter')).toBeVisible();
+    await expect(v.locator('.lecteur-consigne')).toHaveText(nom);
+    expect(await tampons(page, deja), nom).toEqual([dureeS, dureeS]);
+    await bouton(v, 'Arrêter').click();
+    await expect(bouton(v, 'Commencer')).toBeVisible();
+  }
+  // Au volume de départ, 0,5 : un gain de 0,25, le carré du curseur. À 0,3 : 0,09, et rien d'autre de neuf.
+  let valeurs = await valeursDeGain(page);
+  expect(aLeGain(valeurs, 0.25)).toBe(DUREES_TAMPONS.length);
+  expect(aLeGain(valeurs, 0.09)).toBe(0);
+  await v.getByRole('slider', { name: 'Volume' }).fill('0.3');
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  valeurs = await valeursDeGain(page);
+  expect(aLeGain(valeurs, 0.09)).toBe(1);
+  expect(aLeGain(valeurs, 0.25)).toBe(DUREES_TAMPONS.length);
+  // Rouvert : le curseur dit 0,3, et le son repart à ce volume.
+  await v.getByRole('button', { name: 'Fermer' }).click();
+  await expect.poll(() => adresse(page)).toBe('#/bien-etre');
+  v = await ouvrirSons(page);
+  await expect(v.getByRole('slider', { name: 'Volume' })).toHaveValue('0.3');
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  expect(aLeGain(await valeursDeGain(page), 0.09)).toBe(2);
 });
 
 for (const [libelle, minutes] of [['15 min', 15], ['60 min', 60]]) {
@@ -370,7 +417,58 @@ test('la minuterie et le volume dans le moteur audio de WebKit : le son monte, t
   expect(m.doux / m.plein).toBeLessThan(0.3);
 });
 
+test('un bol ou un souffle programmé, puis coupé juste avant son départ, ne sort jamais plus fort que joué seul, dans le moteur audio de WebKit (rendu hors ligne)', async ({ page }) => {
+  const mesures = await page.evaluate(async () => {
+    const { sons } = await import('/js/ui/composants/sons.js');
+    const { preparerSon } = await import('/js/ui/composants/signal-sonore.js');
+    const taux = 22050;
+    const DANS_S = 0.4;
+    // Le départ : `dansS`, plus la petite avance de composants/sons.js.
+    const DEPART_S = DANS_S + 0.02;
+    // Le vrai moteur, que l'app voit comme un contexte qui tourne, à l'heure demandée : tout est programmé avant le rendu, qui le
+    // joue comme en direct. `closed` à la fin, pour que preparerSon en prenne un neuf la fois suivante.
+    const crete = async (jouer, coupureS = null) => {
+      const vrai = new OfflineAudioContext(1, taux * 6, taux);
+      const vu = { t: 0, etat: 'running' };
+      const c = new Proxy(vrai, {
+        get(cible, cle) {
+          if (cle === 'currentTime') return vu.t;
+          if (cle === 'state') return vu.etat;
+          if (cle === 'resume') return async () => {};
+          const x = Reflect.get(cible, cle, cible);
+          return typeof x === 'function' ? x.bind(cible) : x;
+        },
+      });
+      window.AudioContext = function Contexte() { return c; };
+      preparerSon();
+      jouer();
+      if (coupureS != null) { vu.t = coupureS; sons.couper(); }
+      vu.etat = 'closed';
+      return (await vrai.startRendering()).getChannelData(0).reduce((m, x) => Math.max(m, Math.abs(x)), 0);
+    };
+    const SONS = {
+      'bol d\'intervalle': () => sons.bolIntervalle({ dansS: DANS_S }),
+      'bol de minuteur': () => sons.bolMinuteur({ dansS: DANS_S }),
+      'souffle, inspiration': () => sons.souffle({ phase: 'inspire', dureeS: 4, dansS: DANS_S }),
+      'souffle, expiration': () => sons.souffle({ phase: 'expire', dureeS: 4, dansS: DANS_S }),
+    };
+    const res = {};
+    for (const [nom, jouer] of Object.entries(SONS)) {
+      res[nom] = { seul: await crete(jouer), coupes: {} };
+      // Avant le départ de 200, 100, 50, 20 et 10 ms ; et 50 ms après.
+      for (const avant of [200, 100, 50, 20, 10, -50]) res[nom].coupes[avant] = await crete(jouer, DEPART_S - avant / 1000);
+    }
+    return res;
+  });
+  for (const [nom, { seul, coupes }] of Object.entries(mesures)) {
+    expect(seul, nom).toBeGreaterThan(0.05);
+    for (const [avant, c] of Object.entries(coupes)) expect(c, `${nom}, coupé ${avant} ms avant son départ`).toBeLessThanOrEqual(seul);
+  }
+});
+
 // ---------- Minuteur silencieux ----------
+
+const PHRASE_MINUTEUR = 'Un bol au début, un bol à la fin. Le temps restant ne s\'affiche pas.';
 
 test('minuteur : avant de commencer, 5 · 10 · 20 min, le son de chaque minute éteint, aucun son ; le contexte naît dans le toucher, en session « ambient », et le bol sonne', async ({ page }) => {
   await espionnerAudio(page, { session: true });
@@ -381,6 +479,7 @@ test('minuteur : avant de commencer, 5 · 10 · 20 min, le son de chaque minute 
   expect(await v.getByRole('group', { name: 'Durée' }).getByRole('button').allTextContents()).toEqual(['5 min', '10 min', '20 min']);
   await expect(choix(v, 'Durée', '5 min')).toHaveAttribute('aria-pressed', 'true');
   await expect(v.getByRole('switch', { name: 'Un son chaque minute' })).toHaveAttribute('aria-checked', 'false');
+  await expect(v.locator('.lecteur-description')).toHaveText(PHRASE_MINUTEUR);
   await page.clock.runFor(2000);
   expect(await audio(page)).toMatchObject({ contextes: 0, oscillateurs: [], session: 'auto' });
   expect(await clesCarnet(page)).toEqual([]);
@@ -437,6 +536,8 @@ test('minuteur : « Un son chaque minute » : un bol d\'intervalle à chaque min
   await v.getByRole('switch', { name: 'Un son chaque minute' }).click();
   await expect(v.getByRole('switch', { name: 'Un son chaque minute' })).toHaveAttribute('aria-checked', 'true');
   expect(await lireCle(page, 'carnet:minuteur')).toEqual({ duree: 5, intervalle: true });
+  // La phrase de départ reste vraie, le son allumé.
+  await expect(v.locator('.lecteur-description')).toHaveText(PHRASE_MINUTEUR);
   await figer(page);
   await bouton(v, 'Commencer').click();
   await expect.poll(() => bols(page)).toHaveLength(1);
@@ -566,6 +667,37 @@ test('minuteur : « Arrêter » avant 60 s : pas de séance, pas de message ; ap
   expect(rendus).toBe(demandes);
 });
 
+test('minuteur : page cachée à moins de 450 ms de la fin, puis « Reprendre » : le bol de fin programmé s\'annule, et le bol de fin sonne quand même, au bout du temps actif', async ({ page }) => {
+  await espionnerAudio(page);
+  const BOLS = await frequencesBols(page);
+  const v = await ouvrirMinuteur(page);
+  await figer(page);
+  await bouton(v, 'Commencer').click();
+  await expect.poll(() => bols(page)).toHaveLength(1);
+  // À 100 ms de la fin : le bol de fin est programmé.
+  await avancer(page, 300000 - 100);
+  await expect.poll(() => bols(page)).toHaveLength(2);
+  const t = await horloge(page);
+  expect(finLaPlusTardive((await notesDeBols(page)).slice(NOTES_PAR_BOL))).toBeGreaterThan(t + 4);
+  await cacher(page);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('En pause');
+  expect(finLaPlusTardive((await notesDeBols(page)).slice(NOTES_PAR_BOL))).toBeLessThanOrEqual(t + 0.2);
+  // Une minute en pause, puis « Reprendre » : il restait 100 ms.
+  await page.clock.runFor(60000);
+  await montrer(page);
+  await bouton(v, 'Reprendre').click();
+  await expect(bouton(v, 'Reprendre')).toHaveCount(0);
+  await page.clock.runFor(1000);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
+  const liste = await bols(page);
+  expect(liste.map((b) => b.f)).toEqual([BOLS.debut, BOLS.debut, BOLS.debut]);
+  expect(liste[2].t - liste[1].t).toBeCloseTo(60, 1);
+  // Celui-ci sonne tout entier.
+  const dernier = (await notesDeBols(page)).slice(2 * NOTES_PAR_BOL);
+  expect(dernier).toHaveLength(NOTES_PAR_BOL);
+  expect(finLaPlusTardive(dernier) - liste[2].t).toBeCloseTo(FIN_BOL_S, 2);
+});
+
 // ---------- Minuteur de concentration ----------
 
 test('concentration : avant de commencer, 15 · 25 · 45 min, « Aucun » ; le contexte naît dans le toucher, en session « ambient », sans son ; le temps restant s\'affiche ; à l\'écran, le bol et « Le temps est passé. », rien en base', async ({ page }) => {
@@ -621,18 +753,22 @@ test('concentration : un son de fond choisi joue en session « ambient », au vo
   await expect(bouton(v, 'Arrêter')).toBeVisible();
   expect(await audio(page)).toMatchObject({ contextes: 1, session: 'ambient' });
   await expect(v.getByText('Pluie douce')).toBeVisible();
+  // Celui de cet écran, pas celui de l'écran des sons.
+  expect(await tampons(page)).toEqual([15, 15]);
   const [j] = await fondus(page);
   expect(j.at(-1).t - t0).toBeCloseTo(25 * 60, 0);
   await toutArrete(page, t0 + 25 * 60 + 1);
   // Le volume est celui de l'écran des sons : 0,6, soit un gain de 0,36.
-  const volumes = await page.evaluate(() => window.__audio.gains.flat().filter((x) => x.quoi === 'valeur').map((x) => x.v));
-  expect(volumes.some((x) => Math.abs(x - 0.36) < 1e-6)).toBe(true);
+  expect(aLeGain(await valeursDeGain(page), 0.36)).toBe(1);
   // « Arrêter » : l'écran de départ, et tout est éteint.
   await bouton(v, 'Arrêter').click();
   await expect(bouton(v, 'Commencer')).toBeVisible();
   let t = await horloge(page);
   await toutArrete(page, t + 1.6);
-  await page.clock.runFor(2000);
+  // Le contexte dort une fois le fondu fini, pas avant : un fondu tronqué rejouerait son reste à la reprise suivante.
+  await page.clock.runFor(1500);
+  expect((await audio(page)).suspensions).toBe(0);
+  await page.clock.runFor(500);
   expect((await audio(page)).suspensions).toBe(1);
   // Relancé puis « Fermer ».
   await bouton(v, 'Commencer').click();
@@ -641,6 +777,10 @@ test('concentration : un son de fond choisi joue en session « ambient », au vo
   await expect.poll(() => adresse(page)).toBe('#/bien-etre');
   t = await horloge(page);
   await toutArrete(page, t + 1.6);
+  await page.clock.runFor(1500);
+  expect((await audio(page)).suspensions).toBe(1);
+  await page.clock.runFor(500);
+  expect((await audio(page)).suspensions).toBe(2);
   // Et mené au bout : le son s'éteint avec la fin.
   v = await ouvrirConcentration(page);
   await choix(v, 'Durée', '15 min').click();
@@ -702,6 +842,73 @@ test('concentration : le retour après la fin, quand le JavaScript était suspen
   expect(await bols(page)).toEqual([]);
 });
 
+test('concentration : l\'écran gardé allumé est rendu à « Arrêter » et en quittant par « Fermer »', async ({ page }) => {
+  await espionnerAudio(page);
+  await installerVerrou(page);
+  const v = await ouvrirConcentration(page);
+  await bouton(v, 'Commencer').click();
+  await expect.poll(async () => (await verrou(page)).demandes).toBe(1);
+  await bouton(v, 'Arrêter').click();
+  await expect(bouton(v, 'Commencer')).toBeVisible();
+  await expect.poll(async () => (await verrou(page)).rendus).toBe(1);
+  await bouton(v, 'Commencer').click();
+  await expect.poll(async () => (await verrou(page)).demandes).toBe(2);
+  await v.getByRole('button', { name: 'Fermer' }).click();
+  await expect.poll(() => adresse(page)).toBe('#/bien-etre');
+  await expect.poll(async () => (await verrou(page)).rendus).toBe(2);
+});
+
+// À 100 ms de la fin d'un quart d'heure, le bol est programmé : rend ses notes et l'heure.
+const concentrationPresDeLaFin = async (page) => {
+  const v = await ouvrirConcentration(page);
+  await choix(v, 'Durée', '15 min').click();
+  await figer(page);
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  await avancer(page, 900000 - 100);
+  const notesDuBol = await notesDeBols(page);
+  expect(notesDuBol).toHaveLength(NOTES_PAR_BOL);
+  const t = await horloge(page);
+  expect(finLaPlusTardive(notesDuBol)).toBeGreaterThan(t + 4);
+  return { v, t, notesDuBol };
+};
+
+for (const [cas, passer] of [
+  ['les minuteries ont continué', (page) => page.clock.runFor(5000)],
+  ['le JavaScript était suspendu', async (page) => page.clock.setSystemTime(await page.evaluate(() => Date.now() + 5000))],
+]) {
+  test(`concentration : page cachée dans les 450 dernières ms, le bol programmé s'annule ; au retour après la fin (${cas}), aucun bol n'est rejoué`, async ({ page }) => {
+    await espionnerAudio(page);
+    const { v, t } = await concentrationPresDeLaFin(page);
+    await cacher(page);
+    expect(finLaPlusTardive(await notesDeBols(page))).toBeLessThanOrEqual(t + 0.2);
+    await passer(page);
+    await montrer(page);
+    await expect(v.locator('.lecteur-consigne')).toHaveText('Le temps est passé.');
+    await page.clock.runFor(1000);
+    expect(await notesDeBols(page)).toHaveLength(NOTES_PAR_BOL);
+    expect(await seances(page)).toEqual([]);
+  });
+}
+
+test('concentration : page cachée puis revenue dans les 450 dernières ms : le contexte est relancé, et le bol annulé revient à la fin, une seule fois', async ({ page }) => {
+  await espionnerAudio(page);
+  const { v, notesDuBol } = await concentrationPresDeLaFin(page);
+  const { reprises } = await audio(page);
+  await cacher(page);
+  await montrer(page);
+  await expect.poll(async () => (await audio(page)).reprises).toBe(reprises + 1);
+  await page.clock.runFor(1000);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Le temps est passé.');
+  const liste = await notesDeBols(page);
+  expect(liste).toHaveLength(2 * NOTES_PAR_BOL);
+  // À son instant exact, ou au tic d'après s'il tombe après la fin : jamais plus de 200 ms de retard.
+  const second = liste.slice(NOTES_PAR_BOL);
+  expect(second[0].t).toBeGreaterThanOrEqual(notesDuBol[0].t - 1e-3);
+  expect(second[0].t - notesDuBol[0].t).toBeLessThan(0.2);
+  expect(finLaPlusTardive(second) - second[0].t).toBeCloseTo(FIN_BOL_S, 2);
+});
+
 // ---------- Les trois écrans ----------
 
 test('aucune clé `carnet:` n\'est écrite sans changement de réglage, même en lançant et en arrêtant les trois écrans ; rien en base pour les sons et la concentration', async ({ page }) => {
@@ -746,6 +953,53 @@ test('l\'épingle de chaque écran de départ ajoute puis retire son élément d
   await expect(page.getByRole('navigation')).toHaveCount(0);
 });
 
+test('ouverts depuis une entrée (ouvrirDepart), les trois écrans attendent « Commencer », et « Fermer » revient à cette entrée, avant, pendant et après ; sinon, à Bien-être', async ({ page }) => {
+  await espionnerAudio(page);
+  // Les entrées arrivent à la tâche 7 : une autre adresse de l'onglet en tient lieu ici.
+  const ENTREE = '#/bien-etre/programme';
+  const depuisEntree = async (hash, titre) => {
+    await aller(page, ENTREE);
+    await page.evaluate(([h, r]) => import('/js/ui/composants/lecteur.js').then((m) => m.ouvrirDepart(h, { retour: r })), [hash, ENTREE]);
+    const v = vue(page, titre);
+    await expect(bouton(v, 'Commencer')).toBeVisible();
+    return v;
+  };
+  const fermerVers = async (v, cible) => {
+    await v.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => adresse(page)).toBe(cible);
+  };
+  for (const [hash, titre] of [['#/sons', 'Sons de fond'], ['#/minuteur', 'Minuteur silencieux'], ['#/concentration', 'Minuteur de concentration']]) {
+    // Ouvert puis refermé : rien ne démarre seul, et le son ne naît que dans « Commencer ».
+    const { contextes, reprises } = await audio(page);
+    let v = await depuisEntree(hash, titre);
+    await expect(bouton(v, 'Arrêter')).toHaveCount(0);
+    await fermerVers(v, ENTREE);
+    expect(await audio(page)).toMatchObject({ contextes, reprises });
+    v = await depuisEntree(hash, titre);
+    await bouton(v, 'Commencer').click();
+    await expect(bouton(v, 'Arrêter')).toBeVisible();
+    await fermerVers(v, ENTREE);
+    // Ouvert autrement, après ce détour : Bien-être, comme avant.
+    v = await ouvrir(page, hash, titre);
+    await fermerVers(v, '#/bien-etre');
+  }
+  // Après la fin : la concentration attend « Fermer », le minuteur se ferme seul.
+  let v = await depuisEntree('#/concentration', 'Minuteur de concentration');
+  await choix(v, 'Durée', '15 min').click();
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  await avancer(page, 901000);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Le temps est passé.');
+  await fermerVers(v, ENTREE);
+  v = await depuisEntree('#/minuteur', 'Minuteur silencieux');
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  await avancer(page, 301000);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
+  await page.clock.runFor(6000);
+  await expect.poll(() => adresse(page)).toBe(ENTREE);
+});
+
 test('très grand texte : rien ne déborde de côté sur les trois écrans, avant et pendant', async ({ page }) => {
   test.setTimeout(60000);
   await espionnerAudio(page);
@@ -779,6 +1033,8 @@ test('Diagnostic : « Son de fond, écran verrouillé » lance 2 min de bruit ro
   const arreter = page.getByRole('button', { name: 'Arrêter le son de fond' });
   await expect(arreter).toBeVisible();
   expect(await audio(page)).toMatchObject({ contextes: 1, session: 'playback' });
+  // Du bruit rose : la durée de son tampon le dit.
+  expect(await tampons(page)).toEqual([11, 11]);
   const [j] = await fondus(page);
   expect(j.at(-2).t - t0).toBeCloseTo(90, 0);
   expect(j.at(-1).t - t0).toBeCloseTo(120, 0);
@@ -787,7 +1043,10 @@ test('Diagnostic : « Son de fond, écran verrouillé » lance 2 min de bruit ro
   await arreter.click();
   await expect(lancer).toBeVisible();
   await toutArrete(page, await horloge(page) + 1.6);
-  await page.clock.runFor(2000);
+  // Le contexte dort une fois le fondu fini, pas avant.
+  await page.clock.runFor(1500);
+  expect((await audio(page)).suspensions).toBe(0);
+  await page.clock.runFor(500);
   expect(await audio(page)).toMatchObject({ suspensions: 1, session: 'auto' });
   // Laissé à lui-même : les 2 min passées, le bouton revient.
   await lancer.click();
@@ -800,4 +1059,8 @@ test('Diagnostic : « Son de fond, écran verrouillé » lance 2 min de bruit ro
   await aller(page, '#/reglages');
   await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
   await toutArrete(page, await horloge(page) + 1.6);
+  await page.clock.runFor(1500);
+  expect((await audio(page)).suspensions).toBe(1);
+  await page.clock.runFor(500);
+  expect((await audio(page)).suspensions).toBe(2);
 });
