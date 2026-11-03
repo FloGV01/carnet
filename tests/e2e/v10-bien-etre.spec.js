@@ -7,7 +7,7 @@ import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub
 // v10 (7/9) · Bien-être par besoin (spec §7 et §14.4) : l'accueil (« Reprendre », « Favoris », quatre entrées, à des places fixes), la
 // liste de chaque entrée (un bouton lecture et une épingle par ligne), ce que lance chaque élément et où il revient, le dernier
 // élément retenu, les favoris et leur sauvegarde, le point de vigilance 4 (favori ou « Reprendre » inconnu), le point de vigilance 5
-// (très grand texte), et un exercice du Programme lancé ailleurs, qui ne date rien.
+// (très grand texte), l'épingle sur chaque ligne du Programme, et un exercice du Programme lancé ailleurs, qui ne date rien.
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
 
 test.beforeEach(async ({ page }) => {
@@ -51,7 +51,7 @@ const rienNeDeborde = async (page) => {
     const largeur = document.documentElement.clientWidth;
     const f = [];
     if (document.documentElement.scrollWidth > largeur) f.push(`page : ${document.documentElement.scrollWidth}`);
-    for (const b of document.querySelectorAll('main a, main button, main li, main section, main .exercice-titre, main .exercice-description, main .ligne-libelle')) {
+    for (const b of document.querySelectorAll('main a, main button, main li, main section, main .exercice-titre, main .exercice-description, main .seance-faite, main .ligne-libelle')) {
       const r = b.getBoundingClientRect();
       if (r.width && (r.left < 0 || r.right > largeur)) f.push(`${b.tagName} ${b.textContent} : ${r.left} à ${r.right}`);
       if (b.scrollWidth > b.clientWidth + 1 && b.clientWidth > 0) f.push(`${b.tagName} ${b.textContent} : ${b.scrollWidth} dans ${b.clientWidth}`);
@@ -98,6 +98,42 @@ test('l\'accueil plein : « Reprendre », « Favoris », les quatre entrées, la
   await expect(entrees(page)).toHaveCount(4);
   expect(await cases()).toEqual(avant);
   expect(await accueil(page).innerText()).toBe(texte);
+});
+
+test('tant que les favoris ne sont pas lus, rien sous « Reprendre » : les quatre entrées arrivent ensemble, à leur place, sans sauter sous le doigt', async ({ page }) => {
+  await ecrireFavoris(page, ['soupir', 'sons-de-fond']);
+  await poser(page, JSON.stringify('expiration-longue'));
+  await page.evaluate(() => {
+    const meta = window.__carnet.repo.meta;
+    const lire = meta.lire;
+    const attente = new Promise((ok) => { window.__leverFavoris = ok; });
+    meta.lire = (cle) => (cle === 'favorisBienEtre' ? attente.then(() => lire(cle)) : lire(cle));
+  });
+  await aller(page, '#/bien-etre');
+  await expect(reprendre(page).locator('.exercice-titre')).toHaveText('Expiration longue');
+  await page.clock.runFor(2000);
+  await expect(favoris(page)).toHaveCount(0);
+  await expect(accueil(page).locator('.entrees')).toHaveCount(0);
+  await expect(accueil(page).locator('.ligne-fixe')).toHaveCount(0);
+  const haut = (await reprendre(page).boundingBox()).y;
+  // Chaque changement de l'écran note ce qu'il voit des entrées : aucune, ou les quatre, jamais une partie.
+  await page.evaluate(() => {
+    window.__vues = [];
+    const ecran = document.querySelector('main.bien-etre');
+    new MutationObserver(() => window.__vues.push(ecran.querySelectorAll('.entrees a').length)).observe(ecran, { childList: true, subtree: true });
+    window.__leverFavoris();
+  });
+  await expect(entrees(page)).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme']);
+  await expect(favoris(page).locator('.exercice-titre')).toHaveText(['Le soupir', 'Sons de fond']);
+  expect(await page.evaluate(() => [...new Set(window.__vues)])).toEqual([4]);
+  expect((await reprendre(page).boundingBox()).y).toBe(haut);
+  const place = (await accueil(page).locator('.entrees').boundingBox()).y;
+  expect(place).toBeGreaterThanOrEqual((await favoris(page).boundingBox()).y + (await favoris(page).boundingBox()).height);
+  // À la même place que si la lecture n'avait pas tardé.
+  await aller(page, '#/aujourdhui');
+  await aller(page, '#/bien-etre');
+  await expect(entrees(page)).toHaveCount(4);
+  expect((await accueil(page).locator('.entrees').boundingBox()).y).toBe(place);
 });
 
 test('les quatre entrées s\'ouvrent ; chaque liste, dans son ordre, avec un bouton lecture et une épingle par ligne, ses durées, et sans Savourer ; « Retour » ramène à l\'accueil, onglet Bien-être allumé', async ({ page }) => {
@@ -322,6 +358,41 @@ test('« Reprendre » retient ce qui est lancé depuis les entrées, les favoris
   await expect(reprendre(page).locator('.exercice-titre')).toHaveText('Les sons');
 });
 
+test('relancer le même élément n\'écrit rien : la clé n\'est écrite que si la valeur change', async ({ page }) => {
+  await page.evaluate((cle) => {
+    window.__ecritures = [];
+    const ecrire = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (c, v) { if (c === cle) window.__ecritures.push(v); return ecrire.call(this, c, v); };
+  }, CLE);
+  const ecritures = () => page.evaluate(() => window.__ecritures);
+  await aller(page, '#/bien-etre/calmer');
+  // Le premier lancement écrit ; le même, relancé depuis sa ligne puis depuis « Reprendre », non.
+  await lancer(liste(page), 'Le soupir').click();
+  await expect(bouton(vue(page, 'Le soupir'), 'Pause')).toBeVisible();
+  expect(await ecritures()).toEqual(['"soupir"']);
+  await fermerVers(page, vue(page, 'Le soupir'), '#/bien-etre/calmer');
+  await lancer(liste(page), 'Le soupir').click();
+  await expect(bouton(vue(page, 'Le soupir'), 'Pause')).toBeVisible();
+  await fermerVers(page, vue(page, 'Le soupir'), '#/bien-etre/calmer');
+  await aller(page, '#/bien-etre');
+  await lancer(reprendre(page), 'Le soupir').click();
+  await expect(bouton(vue(page, 'Le soupir'), 'Pause')).toBeVisible();
+  await fermerVers(page, vue(page, 'Le soupir'), '#/bien-etre');
+  expect(await ecritures()).toEqual(['"soupir"']);
+  // Un minuteur, retenu au toucher sur sa ligne : une écriture, deux touchers.
+  await aller(page, '#/bien-etre/calmer');
+  for (const cible of [lancer, lien]) {
+    await cible(liste(page), 'Minuteur silencieux').click();
+    await fermerVers(page, vue(page, 'Minuteur silencieux'), '#/bien-etre/calmer');
+  }
+  expect(await ecritures()).toEqual(['"soupir"', '"minuteur"']);
+  // Un autre élément réécrit, et la valeur retenue est bien la dernière.
+  await lancer(liste(page), 'Le soupir').click();
+  await expect(bouton(vue(page, 'Le soupir'), 'Pause')).toBeVisible();
+  expect(await ecritures()).toEqual(['"soupir"', '"minuteur"', '"soupir"']);
+  expect(await dernier(page)).toBe('soupir');
+});
+
 // ---------- Les favoris ----------
 
 test('épingler deux éléments depuis une entrée, puis un depuis le lecteur : l\'ordre est gardé ; désépingler ; rien d\'écrit comme saisie ; la région disparaît', async ({ page }) => {
@@ -428,9 +499,68 @@ test('point de vigilance 4 : un favori inconnu, des doublons, une méta ou une c
 
 // ---------- Le Programme ----------
 
+test('l\'épingle sur chaque ligne du Programme (spec §14.4) : à côté du lien, un toucher n\'ouvre rien ; épingler et désépingler, l\'ordre gardé dans la méta ; « Faite le », le lien et la présentation ne bougent pas ; aucun bouton lecture', async ({ page }) => {
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.seances.creer({ date: '2026-10-12', heure: '10:00', exercice: 'les-sons', origine: 'bien-etre', dureeS: 300, fin: true, programme: 'les-sons' });
+    await r.meta.ecrire('derniereEcriture', 'marque');
+  });
+  await aller(page, '#/bien-etre/programme');
+  const ecran = page.locator('main.programme');
+  await expect(ecran.locator('.epingle')).toHaveCount(17);
+  await expect(ecran.locator('.ligne-seance')).toHaveCount(17);
+  // Rien d'autre sur la ligne : l'épingle hors du lien, pas de bouton lecture ; cibles de 44, chacune à droite de son lien.
+  await expect(ecran.locator('a .epingle, a button')).toHaveCount(0);
+  await expect(ecran.locator('.bouton-lecture')).toHaveCount(0);
+  await expect(ecran.getByRole('link')).toHaveCount(17);
+  await expect(ecran.locator('.presentation-programme')).toContainText('Inspiré de la sophrologie');
+  const titres = await ecran.locator('.exercice-titre').allInnerTexts();
+  expect(titres).toHaveLength(17);
+  for (const t of titres) {
+    const b = epingle(ecran, t);
+    await expect(b).toHaveAttribute('aria-pressed', 'false');
+    const [r, l] = await Promise.all([b.boundingBox(), lien(ecran, t).boundingBox()]);
+    expect(r.width).toBeGreaterThanOrEqual(44);
+    expect(r.height).toBeGreaterThanOrEqual(44);
+    expect(l.x + l.width).toBeLessThanOrEqual(r.x);
+    expect(Math.abs((l.y + l.height / 2) - (r.y + r.height / 2))).toBeLessThan(2);
+  }
+  // Une séance d'avant, la cohérence, celle du bout : dans l'ordre des touchers, pas dans celui du Programme. Aucun écran ne s'ouvre.
+  for (const t of ['Scan corporel', 'Cohérence cardiaque', 'Les sons']) {
+    await epingle(ecran, t).click();
+    await expect(epingle(ecran, t)).toHaveAttribute('aria-pressed', 'true');
+  }
+  await expect.poll(() => lireFavoris(page)).toEqual(['scan-corporel', 'coherence', 'les-sons']);
+  expect(await adresse(page)).toBe('#/bien-etre/programme');
+  // « Faite le » est resté, et le lien ouvre toujours l'écran « avant » de la séance, épingle allumée.
+  await expect(lien(ecran, 'Les sons').locator('.seance-faite')).toHaveText('Faite le 12/10');
+  await expect(ecran.locator('.seance-faite')).toHaveCount(1);
+  await lien(ecran, 'Les sons').click();
+  await expect.poll(() => adresse(page)).toBe('#/bien-etre/programme/les-sons');
+  const v = vue(page, 'Les sons');
+  await expect(bouton(v, 'Commencer')).toBeVisible();
+  await expect(epingle(v, 'Les sons')).toHaveAttribute('aria-pressed', 'true');
+  await fermerVers(page, v, '#/bien-etre/programme');
+  // L'accueil les montre dans cet ordre, et l'écran s'en souvient.
+  await aller(page, '#/bien-etre');
+  await expect(favoris(page).locator('.exercice-titre')).toHaveText(['Scan corporel', 'Cohérence cardiaque', 'Les sons']);
+  await page.reload();
+  await appPrete(page);
+  await aller(page, '#/bien-etre/programme');
+  await expect(epingle(ecran, 'Cohérence cardiaque')).toHaveAttribute('aria-pressed', 'true');
+  await expect(ecran.locator('.epingle[aria-pressed="true"]')).toHaveCount(3);
+  // Désépingler celle du milieu ne change pas l'ordre des autres.
+  await epingle(ecran, 'Cohérence cardiaque').click();
+  await expect(epingle(ecran, 'Cohérence cardiaque')).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => lireFavoris(page)).toEqual(['scan-corporel', 'les-sons']);
+  // Une épingle n'est ni une saisie, ni un lancement.
+  expect(await page.evaluate(() => window.__carnet.repo.meta.lire('derniereEcriture'))).toBe('marque');
+  expect(await lireCle(page)).toBeNull();
+});
+
 test('un exercice du Programme lancé en favori puis mené au bout : « Faite le » du Programme ne change pas, et la séance n\'a pas de `programme`', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-10-12', heure: '10:00', exercice: 'pause-une-minute', origine: 'bien-etre', dureeS: 60, fin: true, programme: 'pause-une-minute' }));
-  // Épinglé depuis l'écran du Programme.
+  // Épinglé depuis l'écran « avant » de la séance du Programme.
   await aller(page, '#/bien-etre/programme');
   await page.locator('main.programme').getByRole('link', { name: /^Pause d'une minute/ }).click();
   await epingle(vue(page, 'Pause d\'une minute'), 'Pause d\'une minute').click();
@@ -473,16 +603,23 @@ test('la voix est préparée dans le toucher du bouton lecture, quand elle est a
 
 // ---------- Très grand texte ----------
 
-test('point de vigilance 5, très grand texte : l\'accueil et les listes tiennent sans débordement de côté', async ({ page }) => {
-  test.setTimeout(60000);
+test('point de vigilance 5, très grand texte : l\'accueil, les listes et le Programme tiennent sans débordement de côté ; à 53 px, les boutons passent sous leur lien', async ({ page }) => {
+  test.setTimeout(90000);
   await ecrireFavoris(page, ['minuteur', 'concentration', 'ancrage-54321', 'cinq-zones']);
   await poser(page, JSON.stringify('concentration'));
+  await page.evaluate(() => window.__carnet.repo.seances.creer({ date: '2026-10-12', heure: '10:00', exercice: 'tension-detente', origine: 'bien-etre', dureeS: 300, fin: true, programme: 'tension-detente' }));
+  // Sous son lien : le haut du bouton sous le bas du lien.
+  const dessous = async (l, b) => {
+    const [x, y] = await Promise.all([l.boundingBox(), b.boundingBox()]);
+    expect(y.y).toBeGreaterThanOrEqual(x.y + x.height);
+  };
   for (const taille of [17, 19, 21, 23, 28, 33, 40, 53]) {
     await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
     await aller(page, '#/bien-etre');
     await expect(entrees(page)).toHaveCount(4);
     await expect(favoris(page).getByRole('listitem')).toHaveCount(4);
     await rienNeDeborde(page);
+    if (taille === 53) await dessous(reprendre(page).locator('.lien-reprendre'), lancer(reprendre(page), 'Minuteur de concentration'));
     for (const id of Object.keys(LISTES)) {
       await aller(page, `#/bien-etre/${id}`);
       await expect(liste(page).getByRole('listitem')).toHaveCount(LISTES[id][1].length);
@@ -493,7 +630,20 @@ test('point de vigilance 5, très grand texte : l\'accueil et les listes tiennen
         expect(r.width).toBeGreaterThanOrEqual(44);
         expect(r.height).toBeGreaterThanOrEqual(44);
       }
+      if (taille === 53) for (const t of LISTES[id][1]) await dessous(lien(liste(page), t), lancer(liste(page), t));
     }
+    // Le Programme : ses 17 lignes, une séance faite comprise, et leurs épingles.
+    await aller(page, '#/bien-etre/programme');
+    const ecran = page.locator('main.programme');
+    await expect(ecran.locator('.epingle')).toHaveCount(17);
+    await expect(ecran.locator('.seance-faite')).toHaveCount(1);
+    await rienNeDeborde(page);
+    for (const b of await ecran.locator('.epingle').all()) {
+      const r = await b.boundingBox();
+      expect(r.width).toBeGreaterThanOrEqual(44);
+      expect(r.height).toBeGreaterThanOrEqual(44);
+    }
+    if (taille === 53) for (const t of await ecran.locator('.exercice-titre').allInnerTexts()) await dessous(lien(ecran, t), epingle(ecran, t));
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   // Au texte par défaut : la ligne garde le titre, l'épingle et le bouton côte à côte.

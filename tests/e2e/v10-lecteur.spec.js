@@ -260,6 +260,49 @@ test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
+test('très grand texte, les menus de réglage : chacun reste dans sa carte, chevron compris, et se touche encore (lecteur, concentration, cohérence, Moment difficile)', async ({ page }) => {
+  test.setTimeout(60000);
+  // Chaque menu et son chevron, à l'intérieur de ce qui les porte, et une cible de 44.
+  const menusDedans = async (attendus) => {
+    const mesures = await page.evaluate(() => [...document.querySelectorAll('.puce-reglage')].map((p) => {
+      const cadre = p.closest('.carte, .parcours-corps').getBoundingClientRect();
+      const m = p.querySelector('select').getBoundingClientRect();
+      const c = p.querySelector('svg').getBoundingClientRect();
+      return { nom: p.textContent.slice(0, 12), gauche: cadre.left, droite: cadre.right, m: [m.left, m.right, m.height], c: [c.left, c.right] };
+    }));
+    expect(mesures).toHaveLength(attendus);
+    for (const x of mesures) {
+      expect(x.m[0], x.nom).toBeGreaterThanOrEqual(x.gauche);
+      expect(x.m[1], x.nom).toBeLessThanOrEqual(x.droite);
+      expect(x.c[1], x.nom).toBeLessThanOrEqual(x.m[1]);
+      expect(x.c[0], x.nom).toBeGreaterThanOrEqual(x.m[0]);
+      expect(x.m[2], x.nom).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  };
+  for (const taille of [17, 23, 33, 40, 45, 53]) {
+    await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+    const v = await ouvrir(page, 'noting', 'Noter ce qui passe');
+    await menusDedans(1);
+    const son = v.getByRole('list', { name: 'Réglages du lecteur' }).getByRole('combobox', { name: 'Son', exact: true });
+    await son.scrollIntoViewIfNeeded();
+    await son.selectOption('reperes');
+    await expect(son).toHaveValue('reperes');
+    await son.selectOption('souffle');
+    await aller(page, '#/concentration');
+    await expect(bouton(vue(page, 'Minuteur de concentration'), 'Commencer')).toBeVisible();
+    await menusDedans(1);
+    await aller(page, '#/bien-etre/coherence');
+    await expect(bouton(vue(page, 'Cohérence cardiaque'), 'Commencer')).toBeVisible();
+    await menusDedans(3);
+    await aller(page, '#/moment-difficile');
+    await expect(vue(page, 'Moment difficile').getByRole('combobox', { name: 'Rythme', exact: true })).toBeVisible();
+    await menusDedans(2);
+    await aller(page, '#/bien-etre');
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});
+
 test('très grand texte, le pied du lecteur : « Précédent » et « Suivant » à parts égales, puis l\'un sous l\'autre ; les mots entiers dans leur bouton, le chevron de « Suivant » entier ; en Bien-être comme en crise', async ({ page }) => {
   const pied = async (v) => {
     await rienNeDeborde(page);

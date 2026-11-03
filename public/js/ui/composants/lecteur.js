@@ -155,8 +155,8 @@ export function ouvrirDepart(hash, { retour = null } = {}) {
 // L'écran où revenir, pour un écran de départ qui s'ouvre : celui de la demande, sinon Bien-être.
 export const retourDemande = () => prendreDemande()?.retour || '#/bien-etre';
 // Le dernier élément lancé dans Bien-être (spec §7.3 et §14.4) : une préférence de cet appareil, que « Reprendre » relit. Un
-// identifiant inconnu (une clé abîmée, un exercice retiré) ne compte pas.
-export const retenirDernier = (id) => ecrireLocal(CLE_DERNIER, id);
+// identifiant inconnu (une clé abîmée, un exercice retiré) ne compte pas. La clé n'est écrite que si la valeur change.
+export const retenirDernier = (id) => { if (lireLocal(CLE_DERNIER, null) !== id) ecrireLocal(CLE_DERNIER, id); };
 export function lireDernier() {
   const v = lireLocal(CLE_DERNIER, null);
   return ELEMENTS_BIEN_ETRE.includes(v) ? v : null;

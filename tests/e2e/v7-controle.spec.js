@@ -22,7 +22,9 @@ import { vueMoment, toucherMot } from '../aides/emotion.js';
 // faisais », une activité choisie) et un relevé rouvert depuis Ma journée. v9 (8/8) : la loupe (un mot trouvé, à la
 // couleur de sa zone), l'écran du mot à soi (une couleur choisie : le mot naît), puis ce mot sur la carte, hors du carré de
 // sa zone ; « Tes zones » en tableau ; Réglages › Émotions › « Mes mots », un mot ouvert. Les relevés versés citent un mot
-// à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours.
+// à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours. v10 (7/9) : l'accueil de Bien-être
+// plein (« Reprendre », « Favoris ») et l'épingle allumée, sur le fond de sa teinte puis sur le noir de « Réveil la nuit » : son
+// dessin, qui n'est pas un texte, a au moins 3:1 sur son fond.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -188,6 +190,7 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 // choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau autour du disque (blanc sur le noir du relevé,
 // couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
 // d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
+// L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`.
 const sansCoche = (page) => page.evaluate(() => {
   const rgba = (c) => {
     const m = /rgba?\(([^)]+)\)/.exec(c || '');
@@ -216,9 +219,35 @@ const sansCoche = (page) => page.evaluate(() => {
   return [...document.querySelectorAll('[aria-pressed="true"]')].filter((b) => {
     if (b.getBoundingClientRect().width < 1 || b.closest('.visuellement-cache') || b.classList.contains('question-case')) return false;
     if (b.classList.contains('bulle-mot') || (b.matches('.quatre-bulles.petites .bulle-zone') && anneauVu(b))) return false;
+    if (b.classList.contains('epingle') && getComputedStyle(b.querySelector('svg')).fill !== 'none') return false;
     const svg = b.querySelector(':scope > .coche svg');
     return !svg || svg.getBoundingClientRect().width < 10;
   }).map((b) => b.textContent.trim().slice(0, 30));
+});
+
+// Les épingles dont le dessin (éteint ou allumé) n'a pas 3:1 sur son fond : le fond de l'épingle s'il est opaque, sinon le premier
+// ancêtre opaque. Un dessin n'est pas un texte : `contrastesFaibles` ne le voit pas.
+const epinglesFaibles = (page) => page.evaluate(() => {
+  const rgba = (c) => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const lin = (v) => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const fond = (el) => {
+    for (let e = el; e; e = e.parentElement) {
+      const c = rgba(getComputedStyle(e).backgroundColor);
+      if (c && c[3] >= 0.99) return c;
+    }
+    return rgba(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255, 1];
+  };
+  return [...document.querySelectorAll('.epingle')].filter((b) => b.getBoundingClientRect().width > 0).map((b) => {
+    const r = ratio(rgba(getComputedStyle(b.querySelector('svg')).color), fond(b));
+    return r < 3 ? `épingle ${b.getAttribute('aria-label')} (${b.getAttribute('aria-pressed')}) : ${r.toFixed(2)}` : null;
+  }).filter(Boolean);
 });
 
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
@@ -282,6 +311,18 @@ const ECRANS = (ids) => [
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
   ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .entrees .ligne-carte'],
+  // v10 (7/9) : l'accueil plein, une liste où des épingles sont allumées, et l'écran « avant » de « Réveil la nuit », épinglé, sur
+  // son fond noir. Une séance du Programme est épinglée elle aussi : le Programme, plus bas, a son épingle allumée.
+  ['Bien-être plein', async (p) => {
+    await aller(p, '#/aujourdhui');
+    await p.evaluate(async () => {
+      localStorage.setItem('carnet:bien-etre:dernier', JSON.stringify('expiration-longue'));
+      await window.__carnet.repo.meta.ecrire('favorisBienEtre', ['soupir', 'reveil-nuit', 'sons-de-fond', 'les-sons']);
+    });
+    await aller(p, '#/bien-etre');
+  }, '.bien-etre .carte-reprendre .bouton-lecture'],
+  ['Me calmer vite, une épingle allumée', (p) => aller(p, '#/bien-etre/calmer'), '.entree-bien-etre .epingle[aria-pressed="true"]'],
+  ['Réveil la nuit, épinglé', (p) => aller(p, '#/exercice/reveil-nuit'), '.lecteur-avant .epingle[aria-pressed="true"]'],
   // v8 : le Programme (une séance faite porte « Faite le »), puis le lecteur, avant de commencer, sur une étape rythmée
   // (le disque et « Inspire »), puis en pause (ses réglages, sous l'écran de lecture).
   ['Programme', (p) => aller(p, '#/bien-etre/programme'), '.programme .seance-faite'],
@@ -360,6 +401,7 @@ for (const schema of ['light', 'dark']) {
     test.setTimeout(180000);
     const fautes = await parcourir(page, schema, async (nom) => [
       ...await contrastesFaibles(page, nom === 'Confirmation' ? '.boite-confirmation' : 'body'),
+      ...await epinglesFaibles(page),
       ...(await tirets(page)).map((x) => `tirets : ${x}`),
       ...(await sansCoche(page)).map((x) => `choix fait sans coche : ${x}`),
     ]);

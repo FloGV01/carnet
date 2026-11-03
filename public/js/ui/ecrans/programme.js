@@ -4,9 +4,11 @@
 // séance faite (lancée depuis le Programme et menée au bout) porte une coche et « Faite le 12/10 », sa date la plus
 // récente ; une séance pas faite n'affiche rien, ni case vide ni grisé. Rien n'est verrouillé : un toucher sur une
 // séance ouvre le lecteur (#/bien-etre/programme/<id>), qui attend « Commencer ». Aucun compteur, aucune date de départ,
-// aucun repère de progression ; rien ne s'ouvre seul. En bas, la ligne fixe de Bien-être.
+// aucun repère de progression ; rien ne s'ouvre seul. À côté du lien de chaque séance, l'épingle (v10, spec §14.4). En bas,
+// la ligne fixe de Bien-être.
 import { html, useEffect, useMemo, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
+import { Epingle } from '../composants/epingle.js';
 import { Lecteur } from '../composants/lecteur.js';
 import { Icones } from '../icones.js';
 import { useDonnees } from '../hooks.js';
@@ -22,10 +24,11 @@ import { LIGNE_FIXE } from './bien-etre.js';
 const RETOUR = '#/bien-etre';
 const ADRESSE_PROGRAMME = '#/bien-etre/programme';
 
-// Une séance du Programme dans sa carte : son titre, « 5 min · assis », et, faite, la coche et « Faite le 12/10 ».
+// Une séance du Programme dans sa carte : son titre, « 5 min · assis », et, faite, la coche et « Faite le 12/10 ». L'épingle est à
+// côté du lien, jamais dedans : un toucher sur elle n'ouvre rien.
 function LigneSeance({ id, faiteLe, aujourdhui }) {
   const s = seanceProgramme(id);
-  return html`<li>
+  return html`<li class="rangee-seance">
     <a class="ligne-exercice ligne-seance" href=${versHash('seance-programme', { id })}>
       <span class="ligne-exercice-corps">
         <span class="exercice-titre">${s.titre}</span>
@@ -34,6 +37,7 @@ function LigneSeance({ id, faiteLe, aujourdhui }) {
       </span>
       ${Icones.chevron({ trait: 2 })}
     </a>
+    <${Epingle} id=${id} titre=${s.titre} />
   </li>`;
 }
 

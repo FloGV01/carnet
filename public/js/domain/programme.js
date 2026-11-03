@@ -5,8 +5,7 @@
 // elle a été lancée (`programme`), qui est aussi celui de son exercice.
 // Le suivi n'est fait que de faits : une séance lancée depuis le Programme et menée au bout (`fin` et `programme`) porte
 // « Faite le 12/10 », sa date la plus récente. Rien n'est compté, rien ne dit ce qui n'est pas fait ; aucune date de
-// départ, aucun numéro d'étape. La séance qui vient suit la dernière faite, jamais une séance sautée ; après la
-// dernière, la première. Pur : la date du jour arrive en paramètre.
+// départ, aucun numéro d'étape. Pur : la date du jour arrive en paramètre.
 import { exerciceDe } from './exercices.js';
 import { seanceCoherence } from './respiration.js';
 import { formaterDateNumerique, formaterJourMois, jourEvenement } from './dates.js';
@@ -52,21 +51,6 @@ const faites = (seances) => (Array.isArray(seances) ? seances : [])
 const instant = (s) => `${s.date}T${typeof s.heure === 'string' ? s.heure : '00:00'}`;
 // Le jour d'une séance : avant 4 h, c'est la veille (domain/dates.js).
 const jourDe = (s) => jourEvenement(s.date, s.heure);
-
-// La dernière séance faite, { idSeance, date } (date : son jour), ou null.
-export function derniereFaite(seances) {
-  let d = null;
-  for (const s of faites(seances)) if (!d || instant(s) >= instant(d)) d = s;
-  return d ? { idSeance: d.programme, date: jourDe(d) } : null;
-}
-
-// La séance qui vient : celle qui suit la dernière faite dans l'ordre du Programme ; au tout début, la première ; après
-// la dernière, de nouveau la première.
-export function suivante(seances) {
-  const d = derniereFaite(seances);
-  if (!d) return SEANCES_PROGRAMME[0];
-  return SEANCES_PROGRAMME[(SEANCES_PROGRAMME.indexOf(d.idSeance) + 1) % SEANCES_PROGRAMME.length];
-}
 
 // Le jour le plus récent où chaque séance a été faite : { idSeance: date }. Une séance jamais faite n'y est pas.
 export function faitesLe(seances) {
