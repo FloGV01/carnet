@@ -884,7 +884,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   background: none; color: var(--text); font: 400 var(--t-sous)/1.25 var(--police); overflow-wrap: anywhere;
 }
 .supprimer-releve { align-self: center; }
-/* Le haut du pied est à la hauteur du haut de la flèche de l'écran 2 : rien du corps, même en défilant, ne passe sous elle. */
+/* Le haut du pied est à la hauteur du haut de la flèche de l'écran 2 pour une carte de hauteur minimale : rien du corps, même en
+   défilant, ne passe alors sous elle. Une carte qui grandit (une longue définition, le très grand texte) fait monter la flèche :
+   le corps passe sous elle, et c'est la garde de 350 ms qui protège d'un second toucher. */
 .pied-faisais { flex: none; padding: 28px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
 .terminer-releve {
   display: block; width: 100%; max-width: 358px; min-height: 56px; margin: 0 auto; padding: 8px 20px; border: 0; border-radius: 28px;

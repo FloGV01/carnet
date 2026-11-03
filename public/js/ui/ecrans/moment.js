@@ -13,9 +13,11 @@
 //   `activiteMoment`, écrites au toucher ; enfin « Terminer ». « Terminer » et ✕ ferment l'écran : « Émotion du moment
 //   notée » (avec Annuler). Rien n'y est obligatoire ; il n'y a ni fermeture automatique, ni appui long.
 // - « Pour ce moment : » (v10, spec §8), sur l'écran 3 d'un relevé neuf dont le mot a une zone : après « Ce que je faisais »,
-//   dans le corps qui défile, deux ou trois exercices (domain/propositions.js), jamais sous la flèche de l'écran 2 ni à la
-//   place de « Terminer ». En toucher un : son et voix préparés dans ce toucher, écriture en cours finie, puis le lecteur de
-//   Bien-être sur cet exercice, qui revient à Aujourd'hui. Pas de message « notée » ici : le relevé se reprend dans Ma journée.
+//   dans le corps qui défile, deux ou trois exercices (domain/propositions.js), jamais à la place de « Terminer ». Ils ne sont
+//   pas sous la flèche de l'écran 2 pour une carte de hauteur minimale ; quand elle grandit, la flèche monte, et la garde protège
+//   d'un second toucher (ecrans.css). En toucher un : son et voix préparés dans ce toucher, écriture en cours finie, puis le
+//   lecteur de Bien-être sur cet exercice, qui revient à Aujourd'hui. Pas de message « notée » ici : le relevé se reprend dans
+//   Ma journée.
 // - Un relevé rouvert (#/moment/ID, depuis Ma journée de n'importe quel jour, spec §13.1) s'ouvre directement sur l'écran
 //   3, comme un épisode rouvert sur son récapitulatif : son mot, ou « Aucun mot » pour un ancien relevé (énergie seule,
 //   famille seule, note de 1 à 10), avec son jour et son heure, et « Changer le mot » (la carte, son mot choisi ; ← et la
@@ -31,7 +33,8 @@
 // à l'écran 1 ou fermer le garde. Chaque ouverture de #/moment part d'un relevé neuf, la liste des heures repliée.
 // Après chaque changement de vue, et après chaque mot choisi, une garde de 350 ms : les boutons de l'écran ignorent les
 // touchers et sont aria-disabled. Un second toucher rapide tomberait sur un mot jamais vu (point de vigilance 5), sur un
-// autre mot que celui qu'on vient de toucher (la carte glissant jusqu'à lui), ou, sous la flèche, sur « Terminer ».
+// autre mot que celui qu'on vient de toucher (la carte glissant jusqu'à lui), ou, sous la flèche, sur « Terminer » ou sur un
+// exercice de « Pour ce moment : ».
 // - La loupe (v9, spec §4.4), en haut à droite des écrans 1 et 2 : la recherche plein écran (ui/composants/
 //   recherche-emotion.js), champ actif. Un mot trouvé est choisi comme sur la carte (écrit, s'il ne l'était pas déjà ; la
 //   loupe ne l'efface jamais), puis la carte s'ouvre centrée sur lui, avec la carte du bas. ← ramène où l'on était.

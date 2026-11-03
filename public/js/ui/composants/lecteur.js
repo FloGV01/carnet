@@ -127,8 +127,9 @@ export function useVoixFrancaise() {
 // prépare donc le son et la voix dans tous les cas, sans bruit (session « ambient », parole muette) ; le lecteur laisse le son
 // se rendormir si le réglage ne le demande pas.
 // `attendre` : ce que l'écran doit voir fini avant de partir (v10 : la file d'écriture de l'écran 3 de l'émotion, spec §8). Le son
-// et la voix restent préparés dans le toucher. Le lecteur ne démarre seul que dans le délai, compté depuis ce toucher : au-delà
-// (une écriture qui échoue et réessaie), il attend « Commencer », et revient quand même au bon écran.
+// et la voix restent préparés dans le toucher.
+// Le lecteur ne démarre seul que s'il s'ouvre dans le délai, compté depuis ce toucher, et dans une page visible. Sinon (une écriture
+// qui échoue et réessaie, l'iPhone verrouillé entre-temps), il attend « Commencer », et revient quand même au bon écran.
 let demande = null;
 const DEMANDE_MS = 3000;
 export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendre = null } = {}) {
@@ -139,20 +140,16 @@ export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendr
     if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
     if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
   }
-  const instant = performance.now();
-  demande = { hash, instant, retour };
-  if (!attendre) { location.hash = hash; return; }
-  attendre.then(() => {
-    const maintenant = performance.now();
-    if (maintenant - instant >= DEMANDE_MS) demande = { hash, instant: maintenant, retour, attend: true };
-    location.hash = hash;
-  });
+  demande = { hash, instant: performance.now(), retour };
+  if (attendre) attendre.then(() => { location.hash = hash; });
+  else location.hash = hash;
 }
-// La demande de lecture qui vient d'ouvrir ce lecteur, ou null.
+// La demande qui vient d'ouvrir cet écran, ou null. Passé le délai, elle ne démarre plus rien, mais dit toujours où revenir.
 function prendreDemande() {
   const d = demande;
   demande = null;
-  return d && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS ? d : null;
+  if (!d || d.hash !== location.hash) return null;
+  return performance.now() - d.instant < DEMANDE_MS ? d : { ...d, attend: true };
 }
 // Un écran de départ (l'écran « avant » du lecteur, les deux minuteurs, les sons de fond), ouvert d'un toucher ailleurs (une
 // entrée de Bien-être) : comme le lecteur, il revient à l'écran d'où il part (`retour`). Rien ne se prépare ici : il attend son
@@ -194,7 +191,7 @@ export const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); r
 export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', origineSeance, programme = null, reglagesAvant = null }) {
   const crise = mode === 'crise';
   const [lancee] = useState(prendreDemande);
-  const auto = lancee != null && !lancee.attend;
+  const [auto, setAuto] = useState(lancee != null && !lancee.attend);
   const adresseRetour = (lancee && lancee.retour) || retour;
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'pause', 'fin'
   const [place, setPlace] = useState(0);
@@ -463,8 +460,13 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
       if (auto) { if (signal || r.voix) preparerSon({ session: 'ambient' }); else suspendreSon(); }
     });
   }, []);
-  // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus.
-  useEffect(() => { if (auto && pret) commencer(false); }, [pret]);
+  // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus. Jamais seule dans une page cachée, ce qui se juge à cet
+  // instant (l'iPhone verrouillé pendant l'écriture ou la lecture des réglages) : aucun événement ne la mettrait plus en pause,
+  // l'exercice jouerait sans être vu et son temps courrait. Le lecteur attend alors « Commencer ».
+  useEffect(() => {
+    if (!auto || !pret) return;
+    if (document.visibilityState === 'hidden') setAuto(false); else commencer(false);
+  }, [pret]);
   // Page cachée (écran verrouillé, autre app) ou quittée : pause.
   useEffect(() => {
     const cachee = () => { if (document.visibilityState === 'hidden') pause(); };

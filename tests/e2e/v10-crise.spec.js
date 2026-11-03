@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete, simulerZonesSures } from '../aides/saisie.js';
 import { espionnerAudio, audio, notes } from '../aides/audio.js';
-import { installerParole, parole, installerVerrou, verrou, cacher, seances, environ } from '../aides/lecteur.js';
+import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 import { contraste } from '../aides/couleurs.js';
 
 // v10 (5/9) · Moment difficile par état (spec §5 et §14.5) : quatre boutons en tête, un toucher démarre un exercice court dans
@@ -296,6 +296,49 @@ test('page cachée pendant un exercice lancé de Moment difficile : pause, verro
   await expect.poll(() => verrou(page)).toMatchObject({ rendus: 1 });
   await bouton(l, 'Reprendre').click();
   await expect(bouton(l, 'Pause')).toBeVisible();
+  await l.getByRole('button', { name: 'Fermer' }).click();
+  await expect.poll(() => adresse(page)).toBe('#/moment-difficile');
+});
+
+// Un exercice court touché : les réglages (la méta) ne se lisent que quand le test les lâche.
+const toucherAvantLesReglages = async (page, v, nom) => {
+  await page.evaluate(() => {
+    const { meta } = window.__carnet.repo;
+    const lire = meta.lire;
+    window.__lectures = [];
+    meta.lire = (...a) => new Promise((ok) => { window.__lectures.push(ok); }).then(() => lire.apply(meta, a));
+  });
+  await court(v, nom).click();
+  await expect.poll(() => page.evaluate(() => window.__lectures.length)).toBeGreaterThan(0);
+  return () => page.evaluate(() => window.__lectures.forEach((ok) => ok()));
+};
+
+test('des réglages longs à lire (plus de 3 s) : un toucher suffit quand même, l\'exercice démarre seul, sans autre toucher', async ({ page }) => {
+  const v = await ouvrir(page);
+  const lacher = await toucherAvantLesReglages(page, v, 'Panique');
+  await page.clock.runFor(3500);
+  await lacher();
+  const l = vue(page, 'Panique');
+  await expect(bouton(l, 'Pause')).toBeVisible();
+  await expect(bouton(l, 'Commencer')).toHaveCount(0);
+  await expect(consigne(l)).toHaveText(texte(PANIQUE));
+});
+
+test('la page cachée juste après le toucher, les réglages encore en lecture : le lecteur ne démarre pas seul, au retour il attend « Commencer » ; le retour reste Moment difficile', async ({ page }) => {
+  const v = await ouvrir(page);
+  const lacher = await toucherAvantLesReglages(page, v, 'Panique');
+  await cacher(page);
+  await lacher();
+  const l = vue(page, 'Panique');
+  await expect(bouton(l, 'Commencer')).toBeVisible();
+  await expect(bouton(l, 'Pause')).toHaveCount(0);
+  await expect(consigne(l)).toHaveCount(0);
+  await montrer(page);
+  await page.clock.runFor(1000);
+  await expect(bouton(l, 'Pause')).toHaveCount(0);
+  await bouton(l, 'Commencer').click();
+  await expect(bouton(l, 'Pause')).toBeVisible();
+  await expect(consigne(l)).toHaveText(texte(PANIQUE));
   await l.getByRole('button', { name: 'Fermer' }).click();
   await expect.poll(() => adresse(page)).toBe('#/moment-difficile');
 });
