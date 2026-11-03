@@ -86,13 +86,8 @@ function orphelins(modules, entrees) {
   return [...modules.keys()].filter((f) => !atteints.has(f));
 }
 
-// v10, en construction : le contenu pur de la tâche 3, que les écrans branchent ensuite (propositions.js à la tâche 8). La
-// liste est exacte, et non une exception : un autre orphelin échoue, et un module branché échoue aussi tant qu'il n'est pas
-// retiré d'ici. Elle est vide à la fin de la v10.
-const PAS_ENCORE_BRANCHES = ['public/js/domain/propositions.js'];
-
 test('aucun module de l\'app n\'est oublié dans un coin : chacun est atteint par ses imports depuis main.js', () => {
-  assert.deepEqual(orphelins(MODULES, [join(PUBLIC, 'js', 'main.js')]).map(rel).sort(), PAS_ENCORE_BRANCHES);
+  assert.deepEqual(orphelins(MODULES, [join(PUBLIC, 'js', 'main.js')]).map(rel).sort(), []);
 });
 
 test('le contrôle des modules repère bien un orphelin, même nommé dans la liste du service worker', () => {

@@ -126,9 +126,12 @@ export function useVoixFrancaise() {
 // `mode` : celui du lecteur qui s'ouvre (v10). En crise, le réglage est dans la méta, qui se lit après le toucher : le toucher
 // prépare donc le son et la voix dans tous les cas, sans bruit (session « ambient », parole muette) ; le lecteur laisse le son
 // se rendormir si le réglage ne le demande pas.
+// `attendre` : ce que l'écran doit voir fini avant de partir (v10 : la file d'écriture de l'écran 3 de l'émotion, spec §8). Le son
+// et la voix restent préparés dans le toucher. Le lecteur ne démarre seul que dans le délai, compté depuis ce toucher : au-delà
+// (une écriture qui échoue et réessaie), il attend « Commencer », et revient quand même au bon écran.
 let demande = null;
 const DEMANDE_MS = 3000;
-export function lancerLecture(hash, { retour = null, mode = 'bien-etre' } = {}) {
+export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendre = null } = {}) {
   if (mode === 'crise') {
     preparerSon({ session: 'ambient' });
     amorcerVoix();
@@ -136,8 +139,14 @@ export function lancerLecture(hash, { retour = null, mode = 'bien-etre' } = {}) 
     if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
     if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
   }
-  demande = { hash, instant: performance.now(), retour };
-  location.hash = hash;
+  const instant = performance.now();
+  demande = { hash, instant, retour };
+  if (!attendre) { location.hash = hash; return; }
+  attendre.then(() => {
+    const maintenant = performance.now();
+    if (maintenant - instant >= DEMANDE_MS) demande = { hash, instant: maintenant, retour, attend: true };
+    location.hash = hash;
+  });
 }
 // La demande de lecture qui vient d'ouvrir ce lecteur, ou null.
 function prendreDemande() {

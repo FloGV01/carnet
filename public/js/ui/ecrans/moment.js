@@ -12,6 +12,10 @@
 //   règle « Me ressourcer » joue (domain/ressourcer.js) ; puis « Ce que je faisais », les pastilles de la liste
 //   `activiteMoment`, écrites au toucher ; enfin « Terminer ». « Terminer » et ✕ ferment l'écran : « Émotion du moment
 //   notée » (avec Annuler). Rien n'y est obligatoire ; il n'y a ni fermeture automatique, ni appui long.
+// - « Pour ce moment : » (v10, spec §8), sur l'écran 3 d'un relevé neuf dont le mot a une zone : après « Ce que je faisais »,
+//   dans le corps qui défile, deux ou trois exercices (domain/propositions.js), jamais sous la flèche de l'écran 2 ni à la
+//   place de « Terminer ». En toucher un : son et voix préparés dans ce toucher, écriture en cours finie, puis le lecteur de
+//   Bien-être sur cet exercice, qui revient à Aujourd'hui. Pas de message « notée » ici : le relevé se reprend dans Ma journée.
 // - Un relevé rouvert (#/moment/ID, depuis Ma journée de n'importe quel jour, spec §13.1) s'ouvre directement sur l'écran
 //   3, comme un épisode rouvert sur son récapitulatif : son mot, ou « Aucun mot » pour un ancien relevé (énergie seule,
 //   famille seule, note de 1 à 10), avec son jour et son heure, et « Changer le mot » (la carte, son mot choisi ; ← et la
@@ -50,6 +54,10 @@ import { motsDeLaCarte, energieDe, zoneDe } from '../../domain/carte-roue.js';
 import { definition } from '../../domain/definitions-roue.js';
 import { chercher, nomPropose, creerMot, modifierMot, nouvelIdMot } from '../../domain/mots-perso.js';
 import { texteReleve } from '../../domain/releves.js';
+import { propositionsPour } from '../../domain/propositions.js';
+import { titreElement } from '../../domain/entrees-bien-etre.js';
+import { pourAffichage } from '../../domain/typographie.js';
+import { versHash } from '../../routeur.js';
 import { couleurLisible } from '../carte-geometrie.js';
 import { usePleinEcran } from '../composants/parcours.js';
 import { QuatreBulles } from '../composants/quatre-bulles.js';
@@ -60,6 +68,7 @@ import { FormulaireMot } from '../composants/mot-perso.js';
 import { PastillesMultiples } from '../composants/multiples.js';
 import { lirePlan } from '../composants/mon-plan.js';
 import { PourRecuperer, lireRessourcer } from '../composants/ressourcer.js';
+import { lancerLecture } from '../composants/lecteur.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { coche, libelleChoix } from '../composants/coche.js';
 import { afficherToast, fermerToast } from '../composants/toast.js';
@@ -114,6 +123,16 @@ function ListeVers({ quand, heures, surChoix }) {
     ${choix.map(({ h, texte }) => html`<button type="button" class="pastille" aria-pressed=${h === choisie ? 'true' : 'false'}
       onClick=${() => surChoix(h)}>${coche()}${libelleChoix(texte)}</button>`)}
   </div>`;
+}
+
+// Les exercices proposés pour ce moment : texte et contour, sans fond de couleur ; rien n'invite ni n'insiste.
+function PourCeMoment({ exercices, ariaGarde, surExercice }) {
+  return html`<section class="pour-ce-moment" aria-labelledby="titre-pour-ce-moment">
+    <h2 class="titre-pour-ce-moment" id="titre-pour-ce-moment">${pourAffichage('Pour ce moment :')}</h2>
+    <div class="propositions">
+      ${exercices.map((x) => html`<button type="button" class="proposition" aria-disabled=${ariaGarde} onClick=${() => surExercice(x)}>${titreElement(x)}</button>`)}
+    </div>
+  </section>`;
 }
 
 // `id` : le relevé rouvert (#/moment/ID) ; sans lui, un relevé neuf (#/moment).
@@ -211,6 +230,13 @@ export function Moment({ id = null }) {
     revenir();
     if (depart) afficherToast(idFin ? NOTEE : SUPPRIME, { libelle: 'Annuler', faire: () => repo.humeurs.restaurer({ entree: depart }) });
     else if (idFin) afficherToast(NOTEE, { libelle: 'Annuler', faire: () => repo.humeurs.supprimer(idFin) });
+  };
+  // Un exercice de « Pour ce moment : ». Comme « Terminer », l'écran part une fois l'écriture en cours finie, une seule fois,
+  // mais sans message : le lecteur prend la place. Le toucher prépare le son et la voix (lancerLecture).
+  const lancerExercice = (exercice) => {
+    if (enGarde || ferme.current) return;
+    ferme.current = true;
+    lancerLecture(versHash('exercice', { id: exercice }), { retour: '#/aujourdhui', attendre: file.current });
   };
   // « Supprimer ce relevé », confirmé : « Annuler » le remet tel qu'il était.
   const supprimer = async () => {
@@ -392,6 +418,7 @@ export function Moment({ id = null }) {
     const regle = !rouvert && donnees && regleRessourcer({
       reglage: donnees.reglage, releve: { vers: releve.quand ? true : null, energie: releve.energie }, plan: donnees.plan,
     });
+    const exercices = rouvert ? [] : propositionsPour(zone);
     ecran = html`<div class=${`ecran-faisais${zone ? ` zone-${zone}` : ''}`} key="faisais" style=${couleur}>
       ${fermer}
       <div class="corps-faisais">
@@ -410,6 +437,7 @@ export function Moment({ id = null }) {
               valeurs=${releve.faisais} surChoix=${choisirFaisais} />
           </div>`}
         </section>
+        ${exercices.length > 0 && html`<${PourCeMoment} exercices=${exercices} ariaGarde=${ariaGarde} surExercice=${lancerExercice} />`}
         ${rouvert && html`<button type="button" class="lien-discret supprimer-releve" aria-disabled=${ariaGarde}
           onClick=${gardee(() => setConfirmer(true))}>Supprimer ce relevé</button>`}
       </div>

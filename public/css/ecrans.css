@@ -873,13 +873,24 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .titre-faisais svg { flex: none; width: 20px; height: 20px; color: #909090; }
 .choix-faisais { width: 100%; max-width: 358px; }
 .choix-faisais .pastilles { justify-content: center; }
+/* « Pour ce moment : » (v10, spec §8), après « Ce que je faisais », dans le corps qui défile : une ligne en gris, puis deux ou
+   trois boutons d'exercice, au corps et à la couleur de texte des activités, avec un contour et sans fond (rien n'invite, rien
+   n'insiste), les mêmes dans les deux thèmes. En très grand texte, ils passent à la ligne, et leur texte aussi. */
+.pour-ce-moment { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.titre-pour-ce-moment { max-width: 358px; text-align: center; color: #909090; font: 400 var(--t-sous)/1.35 var(--police); }
+.propositions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; max-width: 358px; }
+.proposition {
+  max-width: 100%; min-height: var(--cible); padding: 4px 14px; border: 1px solid #6e6e73; border-radius: 22px;
+  background: none; color: var(--text); font: 400 var(--t-sous)/1.25 var(--police); overflow-wrap: anywhere;
+}
 .supprimer-releve { align-self: center; }
-.pied-faisais { flex: none; padding: 12px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
+/* Le haut du pied est à la hauteur du haut de la flèche de l'écran 2 : rien du corps, même en défilant, ne passe sous elle. */
+.pied-faisais { flex: none; padding: 28px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
 .terminer-releve {
   display: block; width: 100%; max-width: 358px; min-height: 56px; margin: 0 auto; padding: 8px 20px; border: 0; border-radius: 28px;
   background: #fff; color: #000; font: 600 1.059rem/1.25 var(--police);
 }
-.terminer-releve:focus-visible, .changer-mot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.terminer-releve:focus-visible, .changer-mot:focus-visible, .proposition:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 /* La loupe (v9, spec §4.4) : ← en verre et, à sa droite, le champ, une capsule de verre de 44 de haut ; dessous, les mots
    trouvés, chacun à la couleur de sa zone (-fill, la même dans les deux thèmes, AA sur le noir) en police système grasse, et le
    début de sa définition en gris ; puis « Ajouter mon mot « … » », derrière un rond blanc au « + » noir. */
