@@ -7,7 +7,8 @@ import {
 // v10 (1/9) · Une seule police (spec §4.3) : la police système partout, carte des émotions comprise, en gras comme en v9.
 // Aucun élément des écrans qui étaient en New York n'en garde la trace ; les libellés des quatre bulles tiennent sans
 // réduire leur corps au texte par défaut, et dans leur disque en très grand texte (point de vigilance 5, les écrans du
-// relevé sont dans v9-emotion et v9-mot-perso). Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
+// relevé sont dans v9-emotion et v9-mot-perso). Relecture finale : l'interligne suit le corps ajusté, jusqu'à 53 px (AX5).
+// Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const FLOTTANT = 'roue:perso:u-0a1b2c3d';
 const MOTS_PERSO = { [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-01T08:00:00.000Z' } };
 // Six relevés, un par zone et deux de plus : assez pour les bulles de Tes zones.
@@ -25,6 +26,39 @@ const charger = (page) => page.evaluate(async ([releves, perso]) => {
   for (const [i, emotion] of releves.entries()) await r.humeurs.creer({ date: '2026-10-15', heure: `1${i}:00`, emotion, energie: 'energie:moyenne' });
 }, [RELEVES, MOTS_PERSO]);
 const bullesZones = (page) => page.getByRole('region', { name: 'Tes zones' }).getByRole('list', { name: 'Relevés par zone, sur la période' });
+// De la taille du texte par défaut au plus grand texte d'iOS (AX5).
+const TAILLES = [17, 19, 21, 23, 28, 33, 40, 47, 53];
+const texteA = (page, taille) => page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+// Les libellés de `selecteur` : chaque ligne sur une ligne, dans le disque, l'interligne qui suit le corps, le corps jamais sous
+// celui du texte par défaut. Les libellés se réajustent au rendu de l'écran, qui vient d'être ouvert à cette taille.
+const libellesTiennent = async (page, selecteur, nbLignes, corpsMin, contexte) => {
+  await page.evaluate(() => document.fonts.ready);
+  const mesures = await corpsEtLignes(page, selecteur);
+  expect(mesures.length, contexte).toBe(4);
+  for (const { corps, interligne, lignes } of mesures) {
+    expect(lignes, contexte).toEqual(Array(nbLignes).fill(1));
+    expect(interligne / corps, contexte).toBeLessThan(1.2);
+    expect(corps, contexte).toBeGreaterThanOrEqual(corpsMin);
+  }
+  expect(await horsDuDisque(page, selecteur), contexte).toEqual([]);
+};
+// Les textes des libellés de `selecteur` qui sortent de leur disque.
+const horsDuDisque = (page, selecteur) => page.evaluate((sel) => {
+  const res = [];
+  const plage = document.createRange();
+  for (const e of document.querySelectorAll(`${sel} .etiquette-bulle`)) {
+    const r = e.closest('.face').getBoundingClientRect();
+    const [cx, cy, rayon] = [r.left + r.width / 2, r.top + r.height / 2, r.width / 2];
+    const textes = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    for (let n = textes.nextNode(); n; n = textes.nextNode()) {
+      plage.selectNodeContents(n);
+      for (const q of plage.getClientRects()) {
+        if ([[q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]].some(([x, y]) => Math.hypot(x - cx, y - cy) > rayon + 0.5)) res.push(`${n.textContent} : hors de sa bulle`);
+      }
+    }
+  }
+  return [...new Set(res)];
+}, selecteur);
 
 // Toute police à empattements calculée sur la page, pseudo-éléments compris.
 const serifs = (page) => page.evaluate(() => {
@@ -51,6 +85,7 @@ const arrondi = (x) => Math.round(parseFloat(x) * 10) / 10;
 // Le corps de chaque libellé des bulles de `selecteur`, et le nombre de lignes de texte de chacune de ses lignes.
 const corpsEtLignes = (page, selecteur) => page.locator(`${selecteur} .etiquette-bulle`).evaluateAll((es) => es.map((e) => ({
   corps: parseFloat(getComputedStyle(e).fontSize),
+  interligne: parseFloat(getComputedStyle(e).lineHeight),
   lignes: [...e.querySelectorAll('.ligne-bulle')].map((l) => {
     const plage = document.createRange();
     plage.selectNodeContents(l);
@@ -147,18 +182,19 @@ test('au texte par défaut, les libellés des quatre bulles gardent leur corps e
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
-test('très grand texte (17 à 23) : les libellés de Tes zones restent dans leur disque, leur carte ne défile pas de côté', async ({ page }) => {
-  test.setTimeout(60000);
+test('très grand texte (17 à 53) : les libellés de Tes zones restent dans leur disque, sur une ligne chacun, et leurs lignes ne s\'écartent pas ; leur carte, « Par semaine » comprise, ne défile pas de côté', async ({ page }) => {
+  test.setTimeout(120000);
   await charger(page);
   await aller(page, '#/analyse');
   await expect(bullesZones(page)).toBeVisible({ timeout: 15000 });
-  for (const taille of [17, 19, 21, 23]) {
-    await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+  for (const taille of TAILLES) {
+    await texteA(page, taille);
     // Les libellés se réajustent au rendu de l'écran : on y revient à cette taille.
     await aller(page, '#/aujourdhui');
     await aller(page, '#/analyse');
     await expect(bullesZones(page)).toBeVisible({ timeout: 15000 });
-    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator('.tes-zones .graphe-droite')).toHaveText('12 dernières semaines');
+    await libellesTiennent(page, '.quatre-bulles.comptes', 3, 12, `Tes zones, ${taille} px`);
     const fautes = await page.evaluate(() => {
       const res = [];
       if (document.documentElement.scrollWidth > innerWidth + 0.5) res.push(`page : ${document.documentElement.scrollWidth} px`);
@@ -166,25 +202,30 @@ test('très grand texte (17 à 23) : les libellés de Tes zones restent dans leu
       const carte = document.querySelector('.tes-zones');
       if (carte.scrollWidth > carte.clientWidth + 0.5) res.push(`carte : ${carte.scrollWidth} px pour ${carte.clientWidth}`);
       const cadre = carte.getBoundingClientRect();
-      for (const b of carte.querySelectorAll('.bulle-zone')) {
+      for (const b of carte.querySelectorAll('.bulle-zone, .graphe-tete > *')) {
         const r = b.getBoundingClientRect();
         if (r.left < cadre.left - 0.5 || r.right > cadre.right + 0.5 || r.top < cadre.top - 0.5 || r.bottom > cadre.bottom + 0.5) res.push(`${b.className} : de ${r.left} à ${r.right}, hors de sa carte (de ${cadre.left} à ${cadre.right})`);
-      }
-      const plage = document.createRange();
-      for (const e of document.querySelectorAll('.quatre-bulles.comptes .etiquette-bulle')) {
-        const r = e.closest('.face').getBoundingClientRect();
-        const [cx, cy, rayon] = [r.left + r.width / 2, r.top + r.height / 2, r.width / 2];
-        const textes = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
-        for (let n = textes.nextNode(); n; n = textes.nextNode()) {
-          plage.selectNodeContents(n);
-          for (const q of plage.getClientRects()) {
-            if ([[q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]].some(([x, y]) => Math.hypot(x - cx, y - cy) > rayon + 0.5)) res.push(`${n.textContent} : hors de sa bulle`);
-          }
-        }
       }
       return [...new Set(res)];
     });
     expect(fautes, `${taille} px`).toEqual([]);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});
+
+test('très grand texte (17 à 53) : les libellés de l\'écran 1 et de Mon mot gardent une ligne chacun, dans leur disque ; le corps ne passe jamais sous celui du texte par défaut, et l\'interligne le suit', async ({ page }) => {
+  test.setTimeout(120000);
+  for (const taille of TAILLES) {
+    await texteA(page, taille);
+    const vue = await ouvrir(page);
+    await libellesTiennent(page, '.quatre-bulles', 2, 16.5, `écran 1, ${taille} px`);
+    await loupe(vue).click();
+    await champLoupe(vue).fill('Un mot à soi');
+    await ajouterMot(vue).click();
+    await expect(couleurMot(vue, 'rouge')).toBeVisible();
+    await libellesTiennent(page, '.quatre-bulles.petites', 2, 12, `Mon mot, ${taille} px`);
+    // Rien n'est né : on ressort sans couleur.
+    await aller(page, '#/aujourdhui');
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });

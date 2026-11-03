@@ -27,8 +27,8 @@ import { trouverInterdits } from '../aides/mots-interdits.js';
 // à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours. v10 (7/9) : l'accueil de Bien-être
 // plein (« Reprendre », « Favoris ») et l'épingle allumée, sur le fond de sa teinte puis sur le noir de « Réveil la nuit » : son
 // dessin, qui n'est pas un texte, a au moins 3:1 sur son fond. v10 (9/9) : les écrans nouveaux (ECRANS_V10 : les exercices de
-// crise, les listes des entrées, le soupir, le noting, les sons de fond, les deux minuteurs, « Pour ce moment : »), dans ce
-// parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de téléchargé, mouvement réduit.
+// crise, les listes des entrées, le soupir, le noting, les sons de fond, les deux minuteurs, « Pour ce moment : », et Réglages ›
+// Moment difficile, où la voix s'ajoute), dans ce parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de téléchargé, mouvement réduit.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -316,6 +316,8 @@ const ECRANS_V10 = [
     await continuer(vue).click();
     await expect(terminer(vue)).not.toHaveAttribute('aria-disabled', 'true');
   }, '.pour-ce-moment .proposition'],
+  // Relecture finale : Réglages › Moment difficile, où « Lire les consignes à voix haute » s'ajoute au signal sonore.
+  ['Réglages › Moment difficile, la voix', (p) => aller(p, '#/reglages/moment-difficile'), '.reglages-moment-difficile .interrupteur[aria-label="Lire les consignes à voix haute"]'],
 ];
 
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.

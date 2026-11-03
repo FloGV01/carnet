@@ -275,7 +275,7 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
 - **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée. Seul le temps page visible compte : page cachée (écran verrouillé, autre app), le cercle s'arrête, le verrou d'écran est rendu et la séance est notée dès ce moment si elle a duré 60 s ; au retour, la respiration reprend là où elle en était, et c'est la même séance. Elle n'est menée au bout que si toute sa durée s'est écoulée page visible.
 - **Dans une carte**, la respiration a la forme du rendu 2b de Moment difficile (tâches 8 et 9) : dans Moment difficile et dans Bien-être, « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces (« 5 minutes ▾ », « 5 s · 5 s ▾ »), réglés au même endroit que Réglages › Moment difficile. Dans « Pour récupérer, je… », plus étroite, la durée passe sous « Cohérence cardiaque », sans « · ».
 - **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
-- **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
+- **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions. Précisé en v10 : une séance lancée depuis « Pour ce moment : » garde l'origine `bien-etre` et compte aussi ; la règle et la phrase de VoiceOver le disent (voir l'entrée v10.0.0, « Relecture finale »).
 
 ### Relecture finale (22/10)
 
@@ -1275,7 +1275,7 @@ Spec §14 :
 - **§14.1, les sons vivent sur leur écran** : un écran plein, sans état audio global ni indicateur ailleurs. Quitter l'écran (« Fermer », retour) arrête le son, en fondu court. Verrouiller l'iPhone ou passer à une autre app ne le quitte pas, et le retour à Aujourd'hui après 30 min d'absence ne s'y applique pas.
 - **§14.2, une seule version** : `playback`, sans garder l'écran allumé, et l'entrée « Son de fond, écran verrouillé » du Diagnostic. Si le son s'arrête au verrouillage, un correctif 10.0.1 passera à l'écran noir gardé allumé pendant la minuterie : pas de double comportement construit d'avance.
 - **§14.3, les deux minuteurs** : le silencieux se comporte comme le lecteur (écran gardé allumé, pause page cachée, session `ambient`). Celui de concentration calcule son heure de fin une fois, au départ, à l'horloge murale : écran gardé allumé, session `ambient`, pas de pause. Si Carnet n'est plus à l'écran à la fin, le bol ne sonne pas, et l'écran dit au retour « Le temps est passé. », sans chiffre.
-- **§14.4, épingle, favoris et « Reprendre »** : l'épingle est sur chaque ligne des quatre entrées et sur l'écran de départ de tout élément de Bien-être (Programme et Savourer compris, minuteurs et sons aussi). « Reprendre » retient le dernier élément lancé, d'où qu'il vienne sauf Moment difficile : entrées, favoris, Programme, ligne « Pour ce moment : ». Son bouton lecture relance depuis le début.
+- **§14.4, épingle, favoris et « Reprendre »** : l'épingle est sur chaque ligne des quatre entrées et sur l'écran de départ de tout élément de Bien-être (Programme et Savourer compris, minuteurs et sons aussi). « Reprendre » retient le dernier élément lancé, d'où qu'il vienne sauf Moment difficile : entrées, favoris, Programme, ligne « Pour ce moment : ». **Dérogation au §14.4**, qui dit que « le bouton lecture d'un favori ou de « Reprendre » ouvre l'écran de départ de l'élément » : pour un exercice et la cohérence, ce bouton démarre aussitôt, depuis le début, sans passer par l'écran « avant » (choix de la tâche 7, appuyé sur le §3 : « en un toucher »). Les minuteurs et les sons ouvrent bien leur écran. C'est à trancher : « En attente de l'utilisateur ».
 - **§14.5, un toucher démarre** : toucher Panique démarre l'exercice aussitôt, puisque c'est l'utilisateur qui le demande. Le son et la voix suivent Réglages › Moment difficile : le « Signal sonore » existant vaut aussi pour ces exercices (un repère discret à chaque changement d'étape, rien d'autre), « Lire les consignes à voix haute » s'y ajoute, éteint au départ. En pause, on peut les changer pour cette fois. « Réveil la nuit » ignore le signal : seule la voix peut y parler.
 
 ### Règles levées ou changées
@@ -1354,6 +1354,8 @@ Spec §14 :
 - **Le son de fond de concentration** reprend le volume de l'écran des sons, en session `ambient`.
 - **Un bol ou un souffle programmé puis coupé avant son départ** ne sort plus plus fort que joué seul : leur volume est posé tout de suite, et non à l'instant futur (mesuré dans le moteur audio de WebKit).
 - **Après le fondu de sortie**, le contexte dort : la session audio est rendue à iOS, et la musique peut repartir.
+- **Les valeurs de départ** (rien n'est écrit tant qu'on ne les change pas) : pour les sons de fond, le bruit brun, 30 min et un volume de 0,5 ; pour le minuteur silencieux, 5 min, sans son chaque minute ; pour la concentration, 25 min, sans son.
+- **Le message « Noter mon émotion »** paraît à la fin du minuteur silencieux, si la séance est notée, et reste 6 s, comme à la fin du lecteur. La règle de la v7 le permet : il paraît dans Bien-être, une fois une séance notée. La concentration et les sons, qui ne sont pas des séances, n'en ont pas.
 
 ### Bien-être par besoin (tâche 7)
 
@@ -1375,8 +1377,8 @@ Spec §14 :
 
 ### Contrôle global (tâche 9)
 
-- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 26 écrans de la v10 : les quatre boutons de Moment difficile, Panique et « Réveil la nuit » (avant, étape rythmée, en pause), l'accueil de Bien-être plein, les trois listes, le soupir et le noting (avant, en cours, une étiquette touchée), les sons de fond, les deux minuteurs (avant, en cours, en pause ou le temps passé) et l'écran 3 avec « Pour ce moment : » : 82 écrans en tout, contre 56 en v9. Tout texte visible a au moins 4,5:1 sur son fond, en clair et en sombre, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte normal et à 23 px), et aucune violation de la CSP ne survient.
-- **Sur ces 26 écrans, cinq vérifications de plus**, en clair et en sombre, avec « Réduire les animations » allumé :
+- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 27 écrans de la v10 : les quatre boutons de Moment difficile, Panique et « Réveil la nuit » (avant, étape rythmée, en pause), l'accueil de Bien-être plein, les trois listes, le soupir et le noting (avant, en cours, une étiquette touchée), les sons de fond, les deux minuteurs (avant, en cours, en pause ou le temps passé) l'écran 3 avec « Pour ce moment : » et Réglages › Moment difficile, où la voix s'ajoute : 83 écrans en tout, contre 56 en v9. Tout texte visible a au moins 4,5:1 sur son fond, en clair et en sombre, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte normal et à 23 px), et aucune violation de la CSP ne survient.
+- **Sur ces 27 écrans, cinq vérifications de plus**, en clair et en sombre, avec « Réduire les animations » allumé :
   - **cibles de 44 pt** : un doigt de 44 pt visé au centre de chaque élément à toucher ne rencontre que lui. Ce test vise pour de bon, plutôt que de mesurer une boîte : l'interrupteur de 31 de haut, qui touche sur 47 par son pseudo-élément, passe, et un élément recouvert échoue ;
   - **aucun mot interdit**, dans le texte de l'écran et dans ce qu'entend VoiceOver ;
   - **aucune police à empattements**, pseudo-éléments compris ;
@@ -1388,9 +1390,27 @@ Spec §14 :
 - **Version 10.0.0** (package.json, precache).
 - **CLAUDE.md** ne change pas : aucune règle ne bouge.
 
+### Relecture finale (trois relecteurs : écrans, données, règles)
+
+- **Les interrupteurs de Réglages** : la zone de toucher de 47 pt n'existait que dans le lecteur. Elle vaut pour tout interrupteur d'une rangée, et Réglages › Moment difficile entre dans le contrôle des 44 pt.
+- **Le mot de phase en très grand texte** : à 47 et 53 px, « Encore un peu » passait sur deux lignes, et l'anneau descendait de 82 à 93 pt, puis remontait, à chaque cycle du soupir. Son corps se borne à 54 px : une ligne, un anneau immobile, et rien ne change jusqu'à 40 px.
+- **Les étiquettes du noting** passent l'une sous l'autre au-delà de 40 px : « Pensée » et « Émotion » étaient coupés au milieu du mot, sans rien déborder de côté.
+- **Les libellés des quatre bulles** (hérité de la v9) : leur interligne, en rem, ne suivait pas le corps réduit par `ajusterEtiquettes`. Plus le texte réglé grandissait, plus le libellé rapetissait et plus ses lignes s'écartaient, jusqu'à 16 sur 59 à 53 px. L'interligne est relatif et chaque ligne reste une ligne : 19 sur 22 à l'écran 1, de 21 à 53 px, et rien ne change à 17 et 19 px.
+- **La tête d'un graphique** (hérité) : à 53 px, « 12 dernières semaines » sortait de Tes zones, et la page défilait de côté. Elle passe à la ligne.
+- **Une lecture préparée qui ne démarre pas seule** (l'écriture de l'écran 3 a passé 3 s, ou l'iPhone s'est verrouillé entre-temps) : le contexte restait éveillé et la session `playback` gardait la musique en pause, alors que rien ne jouait. Le son se rendort, et « Commencer » le relance dans son toucher.
+- **« Autour du Bien-être »** : la règle et la phrase de VoiceOver disaient « lancée depuis Bien-être », alors qu'une séance lancée depuis « Pour ce moment : » compte (appel 7). Elles le disent, et la ligne de la v7 est précisée.
+- **Les retours après plus de 30 min** : le minuteur de concentration et le minuteur silencieux restent sur leur écran, comme les sons (§14.1). Le comportement était juste, mais seuls les sons avaient ce test, alors que c'est le cas normal d'une concentration de 45 min. Deux tests le verrouillent.
+- **Trois textes** ont été reformulés : voir « En attente de l'utilisateur ». Le comportement du §14.4, et les réserves qui n'avaient été notées nulle part, y sont aussi.
+- **Les journaux de version** : `docs/v6-specification.md` et `docs/design/integration.md` ont leur section v10.
+- **Restes retirés** : la prop `origineSeance` du lecteur, qu'aucun appelant ne passait ; un import et un tri inutiles dans les tests. Les commentaires de `champs.js` et de `seances.js` disent que `exercice` peut valoir `minuteur`.
+
 ### En attente de l'utilisateur
 
 - **Les exercices à relire** (plus bas) et **la table « Pour ce moment : »** (plus haut). Un texte se corrige dans `public/js/domain/exercices.js`, la table dans `public/js/domain/propositions.js`.
+- **Trois textes reformulés à la relecture finale**, à relire d'abord. Ancrage court, étape 1 : « Si un sens ne répond pas, passe au suivant. » devient « Si tu ne trouves rien pour un sens, passe au suivant. » (un sens ne « répond » pas). Savourer, étape 6 : « Garde ça encore quelques souffles » devient « Reste avec ce moment encore quelques souffles » (« ça » ne désignait rien de précis). Trop-plein, description : « une pression » devient « les mains qui appuient » (« une pression » peut se lire comme une pression psychologique). Les durées ne changent pas.
+- **Le bouton lecture d'un favori ou de « Reprendre »** (dérogation au §14.4 de la spec, voir « Appels du concepteur ») : il démarre aussitôt un exercice ou la cohérence, en un toucher. L'autre lecture possible, celle du §14.4 : il ouvrirait l'écran « avant », où se règlent le son et la durée, et il faudrait un toucher de plus. Le cas à juger : « Réveil la nuit » épinglé, lancé à 3 h, où le bol et le souffle partent sans passer par cet écran. Pour changer : `lancerElement` (`ui/composants/ligne-element.js`) et `ui/ecrans/bien-etre.js`.
+- **La fin de « Réveil la nuit » en thème clair** : le fond reste noir jusqu'à « Fin de l'exercice. », puis l'écran revient 6 s plus tard à Moment difficile, en clair, en pleine nuit. À juger la nuit.
+- **Les quatre boutons de Moment difficile en thème sombre** (réserve de la tâche 5) : à la couleur du parcours (`-fill`), ils restent lumineux, même en thème sombre. À juger la nuit, avec le point d'avant.
 - **L'épingle sur les lignes du Programme**, si l'écran est préféré sans elle (« Bien-être par besoin »).
 - **Les points en attente de la v7, de la v8 et de la v9 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé).
 - **Hors de la v10** (spec §3) : les pistes F (prévenir avant que la voix revienne, « Ma voix » enregistrée) et G (« À essayer d'ici le prochain rendez-vous », amorces de note), et la barre d'état noire au-dessus des écrans de l'émotion, qui attend le retour de l'utilisateur sur l'iPhone.
@@ -1401,7 +1421,7 @@ Le détail, à cocher, est dans `docs/recette-iphone.md`, « v10 ».
 
 - **Le son de fond écran verrouillé**, d'abord par l'entrée du Diagnostic. C'est la seule inconnue technique de la v10 : si le son s'arrête, un correctif 10.0.1 (spec §14.2).
 - **La lentille de la carte pendant l'élan** : sa fluidité sur l'iPhone 13 Pro, et un toucher juste après.
-- **« Réveil la nuit » la nuit** : assez sombre, assez lisible, et l'écran qui reste allumé.
+- **« Réveil la nuit » la nuit** : assez sombre, assez lisible, et l'écran qui reste allumé. En thème clair, la barre d'état ne doit pas faire de bande claire au-dessus du noir : `theme-color` n'y change pas, et WebKit sous Playwright n'a pas de barre d'état, ce qui reste donc à constater. Si la bande existe, passer `theme-color` à `#000000` tant qu'un `CadreParcours` `noir` est ouvert, et le rétablir à la sortie (la piste notée pour les écrans de l'émotion en v9, qui restent hors de la v10).
 - **Le minuteur de concentration** après un passage en arrière-plan, et l'écran gardé allumé des deux minuteurs.
 
 ### Exercices à relire (titres et étapes)
@@ -1442,7 +1462,7 @@ Toucher l'étiquette de ce qui passe, puis revenir au souffle. Posture : là où
 
 Trois choses vues, deux sons, une chose touchée. Posture : là où tu es.
 
-1. Garde les yeux ouverts. Si un sens ne répond pas, passe au suivant. *(10 s)*
+1. Garde les yeux ouverts. Si tu ne trouves rien pour un sens, passe au suivant. *(10 s)*
 2. Nomme trois choses que tu vois. *(35 s)*
 3. Nomme deux sons que tu entends. *(30 s)*
 4. Nomme une chose que tu touches. Touche-la si tu veux. *(25 s)*
@@ -1470,7 +1490,7 @@ Remarquer trois détails de ce moment, et où il se sent dans le corps. Posture 
 3. Remarque un deuxième détail. *(20 s)*
 4. Remarque un troisième détail. *(20 s)*
 5. Où ce moment se sent-il dans ton corps ? La poitrine, le ventre, les mains, ou nulle part. *(20 s)*
-6. Garde ça encore quelques souffles, sans rien y changer. *(15 s)*
+6. Reste avec ce moment encore quelques souffles, sans rien y changer. *(15 s)*
 7. Reprends ce que tu faisais quand tu veux. *(10 s)*
 
 #### Panique (2 min, `panique`)
@@ -1502,7 +1522,7 @@ S'éloigner, serrer les poings puis relâcher, expirer longuement. Posture : deb
 
 #### Trop-plein (2 min, `trop-plein`)
 
-Moins de choses qui entrent, une pression, de longues expirations. Posture : là où tu es.
+Moins de choses qui entrent, les mains qui appuient, de longues expirations. Posture : là où tu es.
 
 1. Regarde un seul point devant toi : un mur, le sol, un objet. Tu peux bouger, ou passer une étape. *(20 s)*
 2. Couvre-toi les oreilles si le bruit est de trop. *(12 s)*

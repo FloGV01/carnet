@@ -129,7 +129,8 @@ export function useVoixFrancaise() {
 // `attendre` : ce que l'écran doit voir fini avant de partir (v10 : la file d'écriture de l'écran 3 de l'émotion, spec §8). Le son
 // et la voix restent préparés dans le toucher.
 // Le lecteur ne démarre seul que s'il s'ouvre dans le délai, compté depuis ce toucher, et dans une page visible. Sinon (une écriture
-// qui échoue et réessaie, l'iPhone verrouillé entre-temps), il attend « Commencer », et revient quand même au bon écran.
+// qui échoue et réessaie, l'iPhone verrouillé entre-temps), il attend « Commencer », et revient quand même au bon écran. Le son
+// préparé (`prepare`) se rendort alors : la session « playback » garderait la musique en pause, alors que rien ne joue.
 let demande = null;
 const DEMANDE_MS = 3000;
 export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendre = null } = {}) {
@@ -140,7 +141,7 @@ export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendr
     if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
     if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
   }
-  demande = { hash, instant: performance.now(), retour };
+  demande = { hash, instant: performance.now(), retour, prepare: true };
   if (attendre) attendre.then(() => { location.hash = hash; });
   else location.hash = hash;
 }
@@ -185,10 +186,9 @@ export const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); r
 // seance : { id, titre, dureeMin, posture, description, nuit?, etapes: [{ texte, dureeS, souffle?, etiquettes? }] } (un
 // exercice de domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). mode : 'bien-etre' ou 'crise' (v10).
 // retour : l'écran où revenir (« Fermer » et la fermeture après la fin), sauf si la lecture a été lancée avec un autre retour.
-// origineSeance : l'origine de la séance enregistrée, celle du mode si elle n'est pas donnée. programme : l'identifiant de la
-// séance du Programme, quand la lecture en est une (v8). reglagesAvant : ce que l'écran « avant » montre en plus (la durée et le
-// rythme de la cohérence cardiaque).
-export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', origineSeance, programme = null, reglagesAvant = null }) {
+// programme : l'identifiant de la séance du Programme, quand la lecture en est une (v8). reglagesAvant : ce que l'écran « avant »
+// montre en plus (la durée et le rythme de la cohérence cardiaque).
+export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', programme = null, reglagesAvant = null }) {
   const crise = mode === 'crise';
   const [lancee] = useState(prendreDemande);
   const [auto, setAuto] = useState(lancee != null && !lancee.attend);
@@ -209,7 +209,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
   const seance = useMemo(() => (avecDuree ? exerciceAvecDuree(exercice, duree) : exercice), [exercice, duree]);
   const [brille, setBrille] = useState(null);
   const finBrille = useRef(null);
-  const suivi = useSeance(seance.id, origineSeance || (crise ? 'moment-difficile' : 'bien-etre'), { programme });
+  const suivi = useSeance(seance.id, crise ? 'moment-difficile' : 'bien-etre', { programme });
   const etapes = seance.etapes;
   const totalMs = dureeExerciceS(seance) * 1000;
   // Le temps actif, en ms : cumulé aux pauses, compté depuis `depuis` quand la lecture tourne ; `debutEtape`, celui où
@@ -462,11 +462,14 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
   }, []);
   // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus. Jamais seule dans une page cachée, ce qui se juge à cet
   // instant (l'iPhone verrouillé pendant l'écriture ou la lecture des réglages) : aucun événement ne la mettrait plus en pause,
-  // l'exercice jouerait sans être vu et son temps courrait. Le lecteur attend alors « Commencer ».
+  // l'exercice jouerait sans être vu et son temps courrait. Le lecteur attend alors « Commencer », et le son préparé se rendort.
   useEffect(() => {
     if (!auto || !pret) return;
-    if (document.visibilityState === 'hidden') setAuto(false); else commencer(false);
+    if (document.visibilityState === 'hidden') { setAuto(false); suspendreSon(); } else commencer(false);
   }, [pret]);
+  // Préparée dans le toucher, mais trop tard pour démarrer seule : rien ne joue avant « Commencer », qui relance le son dans son
+  // propre toucher. Jusque-là, le contexte dort et la session est rendue à iOS.
+  useEffect(() => { if (lancee && lancee.prepare && lancee.attend) suspendreSon(); }, []);
   // Page cachée (écran verrouillé, autre app) ou quittée : pause.
   useEffect(() => {
     const cachee = () => { if (document.visibilityState === 'hidden') pause(); };

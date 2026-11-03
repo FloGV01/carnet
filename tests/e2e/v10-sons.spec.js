@@ -818,6 +818,36 @@ test('concentration : page cachée, le temps continue, sans pause ; horloge pass
   expect(rendus).toBeGreaterThanOrEqual(demandes - 1);
 });
 
+test('concentration (spec §14.1 et §14.3) : 45 min, la page cachée plus de 30 min : le retour à Aujourd\'hui ne s\'applique pas, l\'écran reste ouvert et dit « Le temps est passé. », sans bol ni séance', async ({ page }) => {
+  await espionnerAudio(page);
+  const v = await ouvrirConcentration(page);
+  await choix(v, 'Durée', '45 min').click();
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  await cacher(page);
+  // 46 min plus tard (20:30 au départ) : seule l'horloge murale a avancé, comme un iPhone qui a suspendu le JavaScript.
+  await page.clock.setSystemTime(new Date(2026, 9, 15, 21, 16));
+  await montrer(page);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('Le temps est passé.');
+  await expect(v.getByRole('timer')).toHaveCount(0);
+  expect(await adresse(page)).toBe('#/concentration');
+  expect(await bols(page)).toEqual([]);
+  expect(await seances(page)).toEqual([]);
+});
+
+test('minuteur silencieux (spec §14.3) : la page cachée plus de 30 min : le retour à Aujourd\'hui ne s\'applique pas, l\'écran reste ouvert et dit « En pause »', async ({ page }) => {
+  await espionnerAudio(page);
+  const v = await ouvrirMinuteur(page);
+  await bouton(v, 'Commencer').click();
+  await expect(bouton(v, 'Arrêter')).toBeVisible();
+  await cacher(page);
+  await page.clock.setSystemTime(new Date(2026, 9, 15, 21, 14));
+  await montrer(page);
+  await expect(v.locator('.lecteur-consigne')).toHaveText('En pause');
+  await expect(bouton(v, 'Reprendre')).toBeVisible();
+  expect(await adresse(page)).toBe('#/minuteur');
+});
+
 test('concentration : le retour après la fin, quand le JavaScript était suspendu : pas de bol, que les minuteries repartent avant l\'événement ou après', async ({ page }) => {
   await espionnerAudio(page);
   let v = await ouvrirConcentration(page);

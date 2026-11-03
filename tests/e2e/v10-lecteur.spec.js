@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { espionnerAudio, audio, notes } from '../aides/audio.js';
-import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ, bols, frequencesBols, souffles } from '../aides/lecteur.js';
+import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ, frequencesBols, souffles } from '../aides/lecteur.js';
 import { contraste } from '../aides/couleurs.js';
 
 // v10 (4/9) · Le lecteur (spec §5.3, §6, §7.3 et §14) : la durée au choix, le noting, le soupir, l'épingle, l'exercice de
@@ -239,9 +239,10 @@ test('noting, mouvement réduit : seul le fond change, sans animation ; en mouve
   await expect(corps).not.toHaveClass(/brille/);
 });
 
-test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l\'épingle tiennent, sans rien faire déborder de côté', async ({ page }) => {
-  // Jusqu'à 33 px (AX2), l'échelle de parcours-quotidien.spec.js.
-  for (const taille of [17, 19, 21, 23, 28, 33]) {
+test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l\'épingle tiennent, sans rien faire déborder de côté ; chaque étiquette reste entière, sur une ligne, en 2 × 2 puis l\'une sous l\'autre', async ({ page }) => {
+  test.setTimeout(60000);
+  // Jusqu'à 53 px (AX5) : à 47 px, la moitié de la largeur ne garde plus « Émotion » entier.
+  for (const taille of [17, 19, 21, 23, 28, 33, 40, 47, 53]) {
     await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
     const v = await ouvrir(page, 'noting', 'Noter ce qui passe');
     await rienNeDeborde(page);
@@ -250,12 +251,64 @@ test('très grand texte (point de vigilance 5) : les étiquettes, la durée et l
     const groupe = v.getByRole('group', { name: 'Ce qui passe' });
     await expect(groupe.getByRole('button')).toHaveCount(4);
     await rienNeDeborde(page);
-    for (const x of ['Pensée', 'Corps', 'Son', 'Émotion']) expect((await bouton(groupe, x).boundingBox()).height).toBeGreaterThanOrEqual(60);
-    // Le mot entier sur une ligne, quand il tient.
+    const boites = await Promise.all(['Pensée', 'Corps', 'Son', 'Émotion'].map((x) => bouton(groupe, x).boundingBox()));
+    for (const b of boites) expect(b.height, `${taille} px`).toBeGreaterThanOrEqual(60);
+    // Deux colonnes tant que le mot y tient, puis une seule.
+    expect(new Set(boites.map((b) => Math.round(b.x))).size, `colonnes à ${taille} px`).toBe(taille <= 40 ? 2 : 1);
+    // Le mot entier sur une ligne.
     const lignes = await groupe.getByRole('button').evaluateAll((l) => l.map((b) => { const r = document.createRange(); r.selectNodeContents(b); return r.getClientRects().length; }));
-    expect(lignes).toEqual([1, 1, 1, 1]);
+    expect(lignes, `${taille} px`).toEqual([1, 1, 1, 1]);
     await v.getByRole('button', { name: 'Fermer' }).click();
     await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/bien-etre');
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});
+
+test('très grand texte, le mot de phase : « Inspire », « Encore un peu » et « Expire » gardent une ligne, et l\'anneau ne bouge pas d\'une phase à l\'autre (17 à 53 px) ; en Bien-être comme en crise', async ({ page }) => {
+  test.setTimeout(120000);
+  // Les trois phases, relevées tic par tic, l'horloge arrêtée : le nombre de lignes du mot et la place de l'anneau.
+  const phases = async (v) => {
+    const mot = v.locator('.mot-souffle');
+    const vues = new Map();
+    await figer(page);
+    for (let t = 0; t <= 12000 && vues.size < 3; t += 200) {
+      if (await mot.count()) {
+        vues.set(await mot.textContent(), await mot.evaluate((m) => {
+          const r = document.createRange();
+          r.selectNodeContents(m);
+          return { lignes: r.getClientRects().length, haut: m.parentElement.querySelector('.lecteur-anneau').getBoundingClientRect().top };
+        }));
+      }
+      await page.clock.runFor(200);
+    }
+    await page.clock.resume();
+    return vues;
+  };
+  const controler = (vues, contexte) => {
+    expect([...vues.keys()].sort(), contexte).toEqual(['Encore un peu', 'Expire', 'Inspire']);
+    const hauts = [...vues.values()].map((x) => x.haut);
+    for (const { lignes, haut } of vues.values()) {
+      expect(lignes, contexte).toBe(1);
+      expect(Math.abs(haut - hauts[0]), contexte).toBeLessThan(0.5);
+    }
+  };
+  for (const taille of [17, 23, 33, 40, 47, 53]) {
+    await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
+    let v = await ouvrir(page, 'soupir', 'Le soupir');
+    await bouton(v, 'Commencer').click();
+    await bouton(v, 'Suivant').click();
+    await bouton(v, 'Suivant').click();
+    await expect(v.locator('.mot-souffle')).toBeVisible();
+    controler(await phases(v), `le soupir, ${taille} px`);
+    await v.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/bien-etre');
+    await monterCrise(page, 'panique');
+    v = vue(page, 'Panique');
+    await bouton(v, 'Suivant').click();
+    await expect(v.locator('.mot-souffle')).toBeVisible();
+    controler(await phases(v), `Panique, ${taille} px`);
+    await v.getByRole('button', { name: 'Fermer' }).click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/reglages');
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });

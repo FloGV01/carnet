@@ -87,7 +87,7 @@ function orphelins(modules, entrees) {
 }
 
 test('aucun module de l\'app n\'est oublié dans un coin : chacun est atteint par ses imports depuis main.js', () => {
-  assert.deepEqual(orphelins(MODULES, [join(PUBLIC, 'js', 'main.js')]).map(rel).sort(), []);
+  assert.deepEqual(orphelins(MODULES, [join(PUBLIC, 'js', 'main.js')]).map(rel), []);
 });
 
 test('le contrôle des modules repère bien un orphelin, même nommé dans la liste du service worker', () => {

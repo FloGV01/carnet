@@ -412,7 +412,7 @@ export const EXERCICES = Object.freeze([
     posture: 'là où tu es',
     description: 'Trois choses vues, deux sons, une chose touchée.',
     etapes: [
-      e('Garde les yeux ouverts. Si un sens ne répond pas, passe au suivant.', 10),
+      e('Garde les yeux ouverts. Si tu ne trouves rien pour un sens, passe au suivant.', 10),
       e('Nomme trois choses que tu vois.', 35),
       e('Nomme deux sons que tu entends.', 30),
       e('Nomme une chose que tu touches. Touche-la si tu veux.', 25),
@@ -448,7 +448,7 @@ export const EXERCICES = Object.freeze([
       e('Remarque un deuxième détail.', 20),
       e('Remarque un troisième détail.', 20),
       e('Où ce moment se sent-il dans ton corps ? La poitrine, le ventre, les mains, ou nulle part.', 20),
-      e('Garde ça encore quelques souffles, sans rien y changer.', 15),
+      e('Reste avec ce moment encore quelques souffles, sans rien y changer.', 15),
       e('Reprends ce que tu faisais quand tu veux.', 10),
     ],
   },
@@ -493,7 +493,7 @@ export const EXERCICES = Object.freeze([
     titre: 'Trop-plein',
     dureeMin: 2,
     posture: 'là où tu es',
-    description: 'Moins de choses qui entrent, une pression, de longues expirations.',
+    description: 'Moins de choses qui entrent, les mains qui appuient, de longues expirations.',
     etapes: [
       e('Regarde un seul point devant toi : un mur, le sol, un objet. Tu peux bouger, ou passer une étape.', 20),
       e('Couvre-toi les oreilles si le bruit est de trop.', 12),

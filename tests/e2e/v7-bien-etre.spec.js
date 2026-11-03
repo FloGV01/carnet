@@ -611,7 +611,7 @@ test('Comprendre › Énergie : « Autour du Bien-être », sous son seuil puis 
   const carte = page.locator('figure', { hasText: 'Autour du Bien-être' });
   await expect(carte.getByText('Pas encore assez de données pour le dire.')).toBeVisible();
   await carte.getByRole('button', { name: 'Pourquoi ?' }).click();
-  await expect(carte.locator('.encadre-regle')).toHaveText(/séance lancée depuis Bien-être/);
+  await expect(carte.locator('.encadre-regle')).toHaveText(/séance lancée depuis Bien-être ou « Pour ce moment : »/);
 
   await page.evaluate(async () => {
     const r = window.__carnet.repo;
@@ -626,7 +626,7 @@ test('Comprendre › Énergie : « Autour du Bien-être », sous son seuil puis 
   });
   await aller(page, '#/analyse');
   await aller(page, '#/comprendre/energie');
-  await expect(carte.getByRole('img', { name: /^Autour du Bien-être, sur tout ce que tu as noté/ })).toBeVisible();
+  await expect(carte.getByRole('img', { name: /^Autour du Bien-être, sur tout ce que tu as noté.* séance lancée depuis Bien-être ou « Pour ce moment : »/ })).toBeVisible();
   await carte.getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(carte.locator('table tbody tr')).toHaveText([/3 heures avant\s*peur 3\s*3/, /3 heures après\s*sérénité 3\s*3/]);
   await expect(carte).not.toContainText(/colère/i);

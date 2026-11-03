@@ -1,7 +1,7 @@
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { espionnerAudio, audio } from '../aides/audio.js';
-import { installerParole, parole, seances, cacher, montrer } from '../aides/lecteur.js';
+import { installerParole, parole, seances, cacher, montrer, bols } from '../aides/lecteur.js';
 import { contraste } from '../aides/couleurs.js';
 import {
   vueMoment, bulle, noter, toucherMot, finMouvements, continuer, fermer, terminer, faisais, activite, changerMot, loupe, champLoupe, trouve, NOTEE,
@@ -64,6 +64,23 @@ const ralentirEcritures = (page, ms) => page.evaluate((d) => {
 const toucher = async (page, cible) => {
   const b = await cible.boundingBox();
   await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+};
+// « Jouer même en mode silencieux » : la session demandée met la musique en pause, tant qu'elle n'est pas rendue.
+const avecSessionForte = async (page) => {
+  await espionnerAudio(page, { session: true });
+  await page.evaluate(() => localStorage.setItem('carnet:lecteur:silencieux', 'true'));
+};
+// Le lecteur attend « Commencer » : le son préparé dans le toucher se rend ; rien ne joue, et rien n'en retient la musique.
+const sonRendu = async (page) => {
+  await expect.poll(async () => (await audio(page)).session).toBe('auto');
+  expect(await audio(page)).toMatchObject({ contextes: 1, suspensions: 1, etat: 'suspended', notes: [] });
+};
+// « Commencer », touché : la session demandée revient, et le bol de début sonne.
+const commencerAvecSon = async (page, l) => {
+  await bouton(l, 'Commencer').click();
+  await expect(bouton(l, 'Pause')).toBeVisible();
+  expect((await audio(page)).session).toBe('playback');
+  await expect.poll(async () => (await bols(page)).length).toBe(1);
 };
 
 // ---------- La section ----------
@@ -370,12 +387,14 @@ test('la garde : juste après la flèche, un exercice touché est ignoré, rien 
   await expect(bouton(lecteur(page, 'Le soupir'), 'Pause')).toBeVisible();
 });
 
-test('une écriture de plus de 3 s : le lecteur s\'ouvre sans jouer seul, il attend « Commencer » ; il revient quand même à Aujourd\'hui', async ({ page }) => {
+test('une écriture de plus de 3 s : le lecteur s\'ouvre sans jouer seul, il attend « Commencer », et le son préparé se rendort ; il revient quand même à Aujourd\'hui', async ({ page }) => {
+  await avecSessionForte(page);
   const vue = await ecran3(page, 'vert', 'Calme');
   await ralentirEcritures(page, 3200);
   await figer(page);
   await toucher(page, activite(vue, 'Repos'));
   await toucher(page, exercice(vue, 'Savourer'));
+  expect((await audio(page)).session).toBe('playback');
   await page.clock.runFor(3200);
   await expect.poll(() => adresse(page)).toBe('#/exercice/savourer');
   await page.clock.resume();
@@ -384,14 +403,15 @@ test('une écriture de plus de 3 s : le lecteur s\'ouvre sans jouer seul, il att
   await expect(bouton(l, 'Pause')).toHaveCount(0);
   expect(await lireDernier(page)).toBeNull();
   expect(await releves(page)).toMatchObject([{ emotion: 'roue:serenite:calme', faisais: ['activiteMoment:repos'] }]);
-  await bouton(l, 'Commencer').click();
-  await expect(bouton(l, 'Pause')).toBeVisible();
+  await sonRendu(page);
+  await commencerAvecSon(page, l);
   expect(JSON.parse(await lireDernier(page))).toBe('savourer');
   await bouton(l, 'Fermer').click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 });
 
-test('une écriture finie juste sous 3 s, et l\'ouverture qui passe les 3 s : le lecteur attend « Commencer », et revient quand même à Aujourd\'hui', async ({ page }) => {
+test('une écriture finie juste sous 3 s, et l\'ouverture qui passe les 3 s : le lecteur attend « Commencer », le son préparé se rendort, et il revient quand même à Aujourd\'hui', async ({ page }) => {
+  await avecSessionForte(page);
   const vue = await ecran3(page, 'vert', 'Calme');
   await ralentirEcritures(page, 2990);
   // Une ouverture lente, comme sur un iPhone occupé : l'adresse changée, l'horloge a pris 20 ms de plus.
@@ -409,12 +429,15 @@ test('une écriture finie juste sous 3 s, et l\'ouverture qui passe les 3 s : le
   await expect(bouton(l, 'Commencer')).toBeVisible();
   await expect(bouton(l, 'Pause')).toHaveCount(0);
   expect(await lireDernier(page)).toBeNull();
+  await sonRendu(page);
+  await commencerAvecSon(page, l);
   await bouton(l, 'Fermer').click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);
   expect(await releves(page)).toMatchObject([{ emotion: 'roue:serenite:calme', faisais: ['activiteMoment:repos'] }]);
 });
 
-test('point de vigilance 3 : l\'iPhone verrouillé pendant l\'écriture : le lecteur s\'ouvre sans jouer et rien n\'est retenu ; au retour, rien ne part seul, il attend « Commencer », et revient quand même à Aujourd\'hui', async ({ page }) => {
+test('point de vigilance 3 : l\'iPhone verrouillé pendant l\'écriture : le lecteur s\'ouvre sans jouer, le son préparé se rendort, et rien n\'est retenu ; au retour, rien ne part seul, il attend « Commencer », et revient quand même à Aujourd\'hui', async ({ page }) => {
+  await avecSessionForte(page);
   const vue = await ecran3(page, 'vert', 'Calme');
   await ralentirEcritures(page, 800);
   await figer(page);
@@ -430,13 +453,13 @@ test('point de vigilance 3 : l\'iPhone verrouillé pendant l\'écriture : le lec
   await expect(l.locator('.lecteur-consigne')).toHaveCount(0);
   expect(await lireDernier(page)).toBeNull();
   expect(await releves(page)).toMatchObject([{ emotion: 'roue:serenite:calme', faisais: ['activiteMoment:repos'] }]);
+  await sonRendu(page);
   await montrer(page);
   await page.clock.runFor(1000);
   await expect(bouton(l, 'Commencer')).toBeVisible();
   await expect(bouton(l, 'Pause')).toHaveCount(0);
   expect(await lireDernier(page)).toBeNull();
-  await bouton(l, 'Commencer').click();
-  await expect(bouton(l, 'Pause')).toBeVisible();
+  await commencerAvecSon(page, l);
   expect(JSON.parse(await lireDernier(page))).toBe('savourer');
   await bouton(l, 'Fermer').click();
   await expect(page).toHaveURL(/#\/aujourdhui$/);

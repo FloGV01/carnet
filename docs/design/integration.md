@@ -115,3 +115,12 @@ Les écrans du relevé d'émotion quittent le système 2b : ils reprennent How W
 - **Couleurs de zone** : `--c-zone-rouge`, `-jaune`, `-bleu`, `-vert`, avec les six rôles du lot 2b, en clair et en sombre (`tokens.css`) ; `-fill` est la couleur médiane de la bulle de How We Feel. Ailleurs dans l'app (Ma journée, en-tête d'Aujourd'hui, Historique, Après coup, Mes jours en mode jour, « Tes zones »), un mot ou un relevé prend la couleur de sa zone ; les graphiques par famille gardent les couleurs de famille.
 - **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre), hors dépôt, comparées à la maquette et aux captures de How We Feel, et le test de contrôle étendu aux écrans de la v9. Le détail est dans `docs/decisions.md`, à l'entrée du 30/10.
 
+## v10 : les exercices et les minuteurs dans le système 2b (03/11)
+
+Aucun écran de la v10 n'est dessiné par Claude Design ; tous sont déduits du système 2b, sans couleur nouvelle.
+
+- **Moment difficile** : une grille de quatre boutons en tête d'écran, en 2 × 2 et de même taille, à la couleur du parcours (`-fill` et `-on`). En très grand texte, ils passent l'un sous l'autre.
+- **L'épingle** : un rond de 44 pt, en texte secondaire au repos ; allumée, le fond `-tint`, le dessin plein et `-text`. Elle est sur les lignes des entrées de Bien-être et sur les écrans de départ.
+- **Écrans déduits du lecteur de la v8** : les listes des entrées, les deux minuteurs, les sons de fond et la ligne « Pour ce moment : », à la couleur de Bien-être. Les réglages restent en liste groupée, sous le bouton lecture.
+- **« Réveil la nuit »** : le fond noir des écrans du relevé, dans les deux thèmes, mais avec ses propres jetons : texte gris, à 4,5:1 au moins, et teinte éteinte, pour ne pas éclairer la chambre (`.parcours.ecran-noir`).
+- **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre, jusqu'à 53 px de texte), hors dépôt, et le test de contrôle étendu aux écrans de la v10. Le détail est dans `docs/decisions.md`, à l'entrée du 03/11.

@@ -248,6 +248,9 @@ test('autourDuBienEtre : seules les séances lancées depuis Bien-être, dont le
   assert.equal(r.statut, 'insuffisant');
   // La période qui contient le 19 : la séance de 2 h du 20 y entre.
   assert.equal(autourDuBienEtre(seances, humeurs, { du: '2026-10-19', au: '2026-10-21' }).avant.joie, 1);
+  // v10 : une séance lancée depuis « Pour ce moment : » garde l'origine `bien-etre` et compte, comme la règle le dit (analyse/textes.js).
+  const pourCeMoment = [{ date: '2026-10-12', heure: '09:00', exercice: 'soupir', origine: 'bien-etre', dureeS: 180 }];
+  assert.equal(autourDuBienEtre(pourCeMoment, [releve('2026-10-12', '08:59', 'roue:peur:craintif')], { du: '2026-10-01', au: '2026-10-18' }).avant.peur, 1);
   assert.deepEqual(autourDuBienEtre([], humeurs, { du: '2026-10-01', au: '2026-10-31' }), autourDe([], humeurs));
   assert.equal(autourDuBienEtre(undefined, humeurs, { du: '2026-10-01', au: '2026-10-31' }).instants, 0);
 });

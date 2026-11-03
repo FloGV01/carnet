@@ -10,7 +10,7 @@ export const SEANCE_MIN_S = 60;
 export const doitEnregistrer = ({ dureeS, terminee } = {}) => terminee === true || (Number.isFinite(dureeS) && dureeS >= SEANCE_MIN_S);
 
 // La fiche d'une séance : la date calendaire et l'heure de son début (rattachées au jour par jourEvenement, bascule à 4 h),
-// l'exercice (`coherence` ou l'identifiant d'un exercice), son origine et sa durée en secondes entières.
+// l'exercice (`coherence`, l'identifiant d'un exercice ou `minuteur`, v10), son origine et sa durée en secondes entières.
 export function nouvelleSeance({ exercice, origine, debut, dureeS }) {
   return { date: cleLocale(debut), heure: heureLocale(debut), exercice, origine, dureeS: dureeSeance(dureeS) };
 }

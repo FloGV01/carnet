@@ -296,6 +296,35 @@ test('la recette de l\'iPhone dit les deux chemins de « Réveil la nuit » : mu
   }
 });
 
+// v10 (relecture finale) : ce qui ne se voit que sur l'iPhone, la nuit, et ce que le code ne peut pas trancher seul : la recette le
+// demande, et l'utilisateur le retrouve dans « En attente ».
+test('la v10 consigne ce qui reste à juger : la recette de l\'iPhone, et « En attente de l\'utilisateur » dans l\'entrée v10.0.0', () => {
+  const recette = lire(join(RACINE, 'docs', 'recette-iphone.md'));
+  const v10 = recette.slice(recette.indexOf('## v10'));
+  for (const x of ['En thème clair, la barre d\'état ne fait pas de bande claire au-dessus du noir', '**La fin de « Réveil la nuit »**', '**« Réveil la nuit » lancé par ▶**']) {
+    assert.ok(v10.includes(x), `recette : ${x}`);
+  }
+  const entree = lire(join(RACINE, 'docs', 'decisions.md')).split(/^(?=## )/m).find((e) => e.startsWith('## 2026-11-03 : v10.0.0'));
+  assert.ok(entree.includes('**Dérogation au §14.4**'), 'la dérogation, dans les appels du concepteur');
+  const attente = entree.slice(entree.indexOf('### En attente de l\'utilisateur'), entree.indexOf('### À essayer sur l\'iPhone'));
+  for (const x of ['**Le bouton lecture d\'un favori ou de « Reprendre »**', '**La fin de « Réveil la nuit » en thème clair**', '**Les quatre boutons de Moment difficile en thème sombre**', '**Trois textes reformulés à la relecture finale**']) {
+    assert.ok(attente.includes(x), `en attente : ${x}`);
+  }
+  const taches6 = entree.slice(entree.indexOf('### Sons de fond et minuteurs (tâche 6)'), entree.indexOf('### Bien-être par besoin (tâche 7)'));
+  for (const x of ['le bruit brun, 30 min et un volume de 0,5', 'pour le minuteur silencieux, 5 min', 'pour la concentration, 25 min', '**Le message « Noter mon émotion »**']) {
+    assert.ok(taches6.includes(x), `tâche 6 : ${x}`);
+  }
+});
+
+// v10 (relecture finale) : les deux journaux de version disent la v10, et où est sa spécification.
+test('les journaux de version ont leur section v10, qui renvoie à sa spécification et à docs/decisions.md', () => {
+  const spec = lire(join(RACINE, 'docs', 'v6-specification.md'));
+  const section = spec.slice(spec.indexOf('## 18. v10 (03/11)'));
+  assert.ok(spec.includes('## 18. v10 (03/11)'));
+  for (const x of ['docs/superpowers/specs/2026-10-30-carnet-v10-design.md', 'docs/decisions.md', 'Moment difficile', 'Bien-être']) assert.ok(section.includes(x), x);
+  assert.match(lire(join(RACINE, 'docs', 'design', 'integration.md')), /^## v10 : .*\(03\/11\)$/m);
+});
+
 // v10 (9/9, relecture) : le bloc de la v10 s'était inséré aussi dans l'entrée v7, à cause d'un titre commun aux deux (« Exercices à
 // relire »). La v7 avait deux « En attente », et « plus bas » y renvoyait aux textes de la v7.
 test('docs/decisions.md : aucune entrée ne répète un titre de section, et le contrôle de la v10 n\'est que dans la sienne', () => {

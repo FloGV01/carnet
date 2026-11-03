@@ -257,7 +257,7 @@
 .point-rubrique.petit { width: 8px; height: 8px; border-radius: 4px; }
 .graphe { margin: 0; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .graphe figcaption { display: flex; flex-direction: column; gap: 2px; }
-.graphe-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.graphe-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .graphe-titre { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--t-bloc); }
 .graphe-droite { font-size: var(--t-note); color: var(--text-2); }
 .graphe-resume { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); }
@@ -572,6 +572,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-interrupteur { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
 /* Le libellé prend la place : l'interrupteur va à droite, comme dans Réglages › Le soir (v6.1). */
 .ligne-interrupteur .ligne-libelle { flex: 1; }
+/* Un interrupteur fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans sa rangée de 52. */
+.ligne-interrupteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 .libelle-carte { font-size: var(--t-sous); }
 .a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); }
 .a-propos .ligne-info > span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
@@ -753,20 +755,20 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* La face : un dégradé vertical à trois arrêts (visuel §1.6) ; sa couleur médiane en fond, sous le dégradé. Le libellé
    noir sur deux lignes, 16,5/19 en police système grasse. How We Feel y garde 110 pt utiles ; « Énergie basse », la plus
    longue, en demande 109 : 126 (87 % du disque, encore loin de son bord à cette hauteur) la laissent sans réduction au
-   texte par défaut, et sur une ligne jusqu'à la taille suivante (19). En très grand texte, une ligne passe à la ligne et
-   un mot trop long réduit son corps (ui/mesures.js). */
+   texte par défaut, et sur une ligne jusqu'à la taille suivante (19). En très grand texte, chaque ligne du libellé reste une
+   ligne : son corps est réduit pour tenir (ui/mesures.js), et l'interligne, relatif, le suit. */
 .bulle-zone .face {
   position: absolute; inset: 0; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background-color: var(--mediane); background-image: linear-gradient(180deg, var(--haut) 0%, var(--mediane) 50%, var(--bas) 100%);
 }
-.etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.118rem var(--police); letter-spacing: -0.01em; overflow-wrap: normal; }
-.ligne-bulle { display: block; }
+.etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.151 var(--police); letter-spacing: -0.01em; overflow-wrap: normal; }
+.ligne-bulle { display: block; white-space: nowrap; }
 /* En petit (v9, spec §4.5 : la couleur d'un mot à soi) : 104 de diamètre, sans halo, le libellé à 12 (le corps des bulles
    de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond, noir
    ou carte), de blanc sur le noir (--anneau, posé par .moment-plein), du texte ailleurs (Réglages). */
 .quatre-bulles.petites { grid-template-columns: repeat(2, 104px); gap: 12px; align-self: center; }
 .quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
-.quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 0.812rem; }
+.quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 1.15; }
 .quatre-bulles.petites .bulle-zone[aria-pressed="true"] { outline: 2.5px solid var(--anneau, var(--text)); outline-offset: 3px; }
 /* Avec leurs comptes (v9, spec §13.2 : Tes zones, dans l'Analyse) : une liste de 2 × 2 disques de 120 (7,06 rem : ils
    grandissent avec le texte, jusqu'à la moitié de la carte), sans halo, qui ne se touchent pas ; sous le libellé,
@@ -774,7 +776,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .quatre-bulles.comptes { margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, min(7.06rem, calc((100% - 12px) / 2))); gap: 12px; justify-content: center; }
 .quatre-bulles.comptes .bulle-zone { width: 100%; height: auto; aspect-ratio: 1; transition: none; }
 .quatre-bulles.comptes .bulle-zone:active { transform: none; }
-.quatre-bulles.comptes .etiquette-bulle { width: 87%; font-size: 0.706rem; line-height: 0.812rem; }
+.quatre-bulles.comptes .etiquette-bulle { width: 87%; font-size: 0.706rem; line-height: 1.15; }
 .compte-bulle { margin-top: 5px; font: 600 1.1em/1.2 var(--police); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 /* « Maintenant ▾ » sous les bulles, en petit, et les heures de « C'était vers… » dessous (à la couleur Humeur, v6). */
 .moment-plein .puce-quand { flex: none; margin-top: 30px; padding: 0; }
@@ -1114,11 +1116,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lecteur-consigne { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }
 .lecteur-centre { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 10px 0; }
 .lecteur-avant .lecteur-centre { padding: 14px 0 18px; }
-.mot-souffle { font: 600 1.35rem/1.3 var(--police); color: var(--text); text-align: center; }
+/* Le mot de phase se borne à 54 : « Encore un peu » reste sur une ligne en très grand texte, comme « Inspire » et « Expire », et
+   le disque ne bouge pas d'une phase à l'autre. Rien ne change jusqu'à 40 px. */
+.mot-souffle { font: 600 min(1.35rem, 54px)/1.3 var(--police); color: var(--text); text-align: center; }
 .lecteur-reste { min-height: 1.4em; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
-/* Le noting (v10, spec §6) : quatre étiquettes de 60 au moins, en 2 × 2. Touchée, l'une brille 600 ms : son fond change et,
-   sauf avec « Réduire les animations », un halo s'étend et s'efface. Rien d'autre ne bouge. */
-.etiquettes-noting { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Le noting (v10, spec §6) : quatre étiquettes de 60 au moins, en 2 × 2 ; quand la moitié de la largeur fait moins de 4,2 rem
+   (très grand texte, plus de 40 px), l'une sous l'autre, le mot entier. Touchée, l'une brille 600 ms : son fond change et, sauf
+   avec « Réduire les animations », un halo s'étend et s'efface. Rien d'autre ne bouge. */
+.etiquettes-noting { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.2rem), 1fr)); gap: 10px; }
 .etiquette-noting {
   min-width: 0; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-moyen); background: var(--fond-choix);
   color: var(--text); font: 600 var(--t-corps)/1.25 var(--police); overflow-wrap: anywhere;
@@ -1170,8 +1175,6 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   --c: #5c5e62; --c-fill: #303235; --c-on: #c4c5c8; --c-tint: #0e0f10; --c-tint-2: #16171a; --c-text: #8e8f92;
 }
 .reglages-lecteur { margin-top: 4px; }
-/* Un interrupteur fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans sa rangée de 52. */
-.reglages-lecteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 /* « Son » : sa puce à droite (« Repères + souffle ▾ »), un menu de l'iPhone comme la durée et le rythme. */
 .reglage-son { padding-top: 6px; padding-bottom: 6px; flex-wrap: wrap; }
 /* « Précédent » et « Suivant » à parts égales (la moitié, moins l'écart) : 5rem gardent le plus long mot entier, le chevron

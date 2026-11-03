@@ -81,7 +81,7 @@ const G = {
   autourExplosions: { titre: 'Autour de tes explosions',
     montre: () => 'une barre des émotions du moment notées dans les heures avant une explosion, une autre dans les heures après, découpées par famille' },
   autourBienEtre: { titre: 'Autour du Bien-être',
-    montre: () => 'une barre des émotions du moment notées dans les heures avant une séance lancée depuis Bien-être, une autre dans les heures après, découpées par famille' },
+    montre: () => 'une barre des émotions du moment notées dans les heures avant une séance lancée depuis Bien-être ou « Pour ce moment : », une autre dans les heures après, découpées par famille' },
   // v8 · Q18
   emotionsActivites: { titre: 'Émotions selon ce que je faisais',
     montre: () => 'pour chaque activité de « Ce que je faisais », une barre des émotions du moment notées, découpée par famille, longue comme le nombre de relevés' },

@@ -521,8 +521,9 @@ test('v6 · Comprendre, « Pourquoi ? » : une règle par graphique, tirée de S
   assert.match(R.mesNuits, new RegExp(`les ${S.nuitsSemaines} dernières semaines`));
   assert.match(R.emotionsActivites, /« Ce que je faisais »/);
   for (const g of ['autourExplosions', 'autourBienEtre']) assert.match(R[g], new RegExp(`les ${SEUILS.emotions.heuresAutour} heures`), g);
-  // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit.
-  assert.match(R.autourBienEtre, /séance lancée depuis Bien-être/);
+  // v7 · Autour du Bien-être : seules les séances lancées depuis Bien-être comptent, et la règle le dit ; v10 : ou depuis « Pour ce
+  // moment : », qui garde l'origine `bien-etre`.
+  assert.match(R.autourBienEtre, /séance lancée depuis Bien-être ou « Pour ce moment : »/);
   // Aucun chiffre écrit à la main dans le bloc des règles : ils viennent tous de SEUILS.comprendre.
   const code = sansCommentaires(lire(`${RACINE}/public/js/analyse/textes.js`));
   const bloc = code.slice(code.indexOf('SEUILS.comprendre'), code.indexOf('export const PIED_EXPLOSIONS'));
