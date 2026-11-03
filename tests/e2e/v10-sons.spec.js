@@ -953,13 +953,13 @@ test('l\'épingle de chaque écran de départ ajoute puis retire son élément d
   await expect(page.getByRole('navigation')).toHaveCount(0);
 });
 
-test('ouverts depuis une entrée (ouvrirDepart), les trois écrans attendent « Commencer », et « Fermer » revient à cette entrée, avant, pendant et après ; sinon, à Bien-être', async ({ page }) => {
+test('ouverts depuis une entrée, les trois écrans attendent « Commencer », et « Fermer » revient à cette entrée, avant, pendant et après ; sinon, à Bien-être', async ({ page }) => {
   await espionnerAudio(page);
-  // Les entrées arrivent à la tâche 7 : une autre adresse de l'onglet en tient lieu ici.
-  const ENTREE = '#/bien-etre/programme';
+  // Le bouton lecture de sa ligne, dans l'entrée où il est.
+  const ENTREE = { '#/sons': '#/bien-etre/dormir', '#/minuteur': '#/bien-etre/calmer', '#/concentration': '#/bien-etre/concentrer' };
   const depuisEntree = async (hash, titre) => {
-    await aller(page, ENTREE);
-    await page.evaluate(([h, r]) => import('/js/ui/composants/lecteur.js').then((m) => m.ouvrirDepart(h, { retour: r })), [hash, ENTREE]);
+    await aller(page, ENTREE[hash]);
+    await page.getByRole('button', { name: `Commencer ${titre}`, exact: true }).click();
     const v = vue(page, titre);
     await expect(bouton(v, 'Commencer')).toBeVisible();
     return v;
@@ -973,12 +973,12 @@ test('ouverts depuis une entrée (ouvrirDepart), les trois écrans attendent « 
     const { contextes, reprises } = await audio(page);
     let v = await depuisEntree(hash, titre);
     await expect(bouton(v, 'Arrêter')).toHaveCount(0);
-    await fermerVers(v, ENTREE);
+    await fermerVers(v, ENTREE[hash]);
     expect(await audio(page)).toMatchObject({ contextes, reprises });
     v = await depuisEntree(hash, titre);
     await bouton(v, 'Commencer').click();
     await expect(bouton(v, 'Arrêter')).toBeVisible();
-    await fermerVers(v, ENTREE);
+    await fermerVers(v, ENTREE[hash]);
     // Ouvert autrement, après ce détour : Bien-être, comme avant.
     v = await ouvrir(page, hash, titre);
     await fermerVers(v, '#/bien-etre');
@@ -990,14 +990,14 @@ test('ouverts depuis une entrée (ouvrirDepart), les trois écrans attendent « 
   await expect(bouton(v, 'Arrêter')).toBeVisible();
   await avancer(page, 901000);
   await expect(v.locator('.lecteur-consigne')).toHaveText('Le temps est passé.');
-  await fermerVers(v, ENTREE);
+  await fermerVers(v, ENTREE['#/concentration']);
   v = await depuisEntree('#/minuteur', 'Minuteur silencieux');
   await bouton(v, 'Commencer').click();
   await expect(bouton(v, 'Arrêter')).toBeVisible();
   await avancer(page, 301000);
   await expect(v.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
   await page.clock.runFor(6000);
-  await expect.poll(() => adresse(page)).toBe(ENTREE);
+  await expect.poll(() => adresse(page)).toBe(ENTREE['#/minuteur']);
 });
 
 test('très grand texte : rien ne déborde de côté sur les trois écrans, avant et pendant', async ({ page }) => {

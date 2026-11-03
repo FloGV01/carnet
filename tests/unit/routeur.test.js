@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lireRoute, versHash, ongletDe, ROUTES } from '../../public/js/routeur.js';
+import { lireRoute, versHash, ongletDe, ROUTES, ENTREES_BIEN_ETRE } from '../../public/js/routeur.js';
+import { ENTREES } from '../../public/js/domain/entrees-bien-etre.js';
 
 test('routes connues', () => {
   assert.deepEqual(lireRoute('#/aujourdhui'), { nom: 'aujourdhui', params: {}, chemin: '/aujourdhui' });
@@ -24,7 +25,7 @@ test('hash vide ou inconnu : retour sur Aujourd\'hui', () => {
 });
 
 test('aller-retour versHash / lireRoute pour chaque route', () => {
-  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes' };
+  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes', entree: 'dormir' };
   for (const r of ROUTES) {
     const params = Object.fromEntries((r.params || []).map((p) => [p, exemples[p]]));
     const lu = lireRoute(versHash(r.nom, params));
@@ -117,6 +118,20 @@ test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour
   for (const h of ['#/historique/jour', '#/historique/jour/', '#/historique/jour/2026-9-21', '#/historique/2026-09-21']) {
     assert.equal(lireRoute(h).inconnue, true, h);
   }
+});
+
+test('v10 · la liste d\'une entrée de Bien-être : /bien-etre/calmer, dormir ou concentrer, onglet Bien-être ; rien d\'autre', () => {
+  assert.deepEqual(ENTREES_BIEN_ETRE, ENTREES.map((x) => x.id), 'les routes suivent les entrées du domaine');
+  for (const entree of ENTREES_BIEN_ETRE) {
+    assert.deepEqual(lireRoute(`#/bien-etre/${entree}`), { nom: 'entree-bien-etre', params: { entree }, chemin: `/bien-etre/${entree}` });
+    assert.equal(versHash('entree-bien-etre', { entree }), `#/bien-etre/${entree}`);
+    assert.equal(lireRoute(`#/bien-etre/${entree}/x`).inconnue, true);
+  }
+  assert.equal(ongletDe('entree-bien-etre'), 'bien-etre');
+  assert.equal(lireRoute('#/bien-etre/autre').inconnue, true);
+  // Les adresses d'à côté ne changent pas.
+  assert.equal(lireRoute('#/bien-etre/coherence').nom, 'coherence');
+  assert.equal(lireRoute('#/bien-etre/programme').nom, 'programme');
 });
 
 test('v10 · le minuteur silencieux, le minuteur de concentration et les sons de fond : des routes de l\'onglet Bien-être', () => {

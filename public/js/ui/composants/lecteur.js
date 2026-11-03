@@ -37,6 +37,7 @@
 // - Une étape à `etiquettes` (le noting) : quatre grosses étiquettes ; un toucher en fait briller une 600 ms et n'écrit rien.
 // - Un souffle à `inspi2` (le soupir) : le disque, le mot et le souffle sonore suivent la petite inspiration en plus.
 // - L'épingle, sur l'écran « avant » (composants/epingle.js).
+// - « Reprendre » (spec §7.3 et §14.4) : commencer retient l'exercice sur cet appareil, depuis n'importe où sauf en crise.
 // - Un exercice `nuit` (« Réveil la nuit ») : fond noir dans les deux thèmes, texte gris.
 // - `mode` : 'bien-etre' (tout ce qui précède) ou 'crise', les exercices courts de Moment difficile. En crise, un toucher
 //   démarre aussitôt (lancerLecture) ; ni anneau, ni « il reste », ni bols, ni souffle sonore, ni « Noter mon émotion », ni
@@ -57,6 +58,7 @@ import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { garderEcran, useSeance } from '../seance.js';
 import { repo } from '../../donnees.js';
+import { ELEMENTS_BIEN_ETRE } from '../../domain/entrees-bien-etre.js';
 import { DUREES_AU_CHOIX, aDureeAuChoix, dureeEtPosture, dureeExerciceS, exerciceAvecDuree, exerciceMeneAuBout } from '../../domain/exercices.js';
 import { TEMPS_SOUFFLE, motPhase, normaliserRespiration, phaseSouffle, phasesEntre } from '../../domain/respiration.js';
 import { pourAffichage } from '../../domain/typographie.js';
@@ -64,6 +66,7 @@ import { pourAffichage } from '../../domain/typographie.js';
 export const CLE_VOIX = 'carnet:exercice:voix';
 export const CLE_SON = 'carnet:lecteur:son';
 export const CLE_SILENCIEUX = 'carnet:lecteur:silencieux';
+export const CLE_DERNIER = 'carnet:bien-etre:dernier';
 export const SONS = [{ valeur: 'aucun', libelle: 'Aucun' }, { valeur: 'reperes', libelle: 'Repères' }, { valeur: 'souffle', libelle: 'Repères + souffle' }];
 const SON_DEFAUT = 'souffle';
 const lireSon = () => { const v = lireLocal(CLE_SON, null); return SONS.some((s) => s.valeur === v) ? v : SON_DEFAUT; };
@@ -72,6 +75,8 @@ const sessionAudio = (silencieux) => (silencieux ? 'playback' : 'ambient');
 // La durée retenue d'un exercice (v10), ou null : une valeur hors liste (clé abîmée) ne compte pas.
 const cleDuree = (id) => `carnet:duree:${id}`;
 const lireDuree = (id) => { const v = lireLocal(cleDuree(id), null); return DUREES_AU_CHOIX.includes(v) ? v : null; };
+// La durée que le lecteur jouera, en minutes.
+export const dureeRetenue = (exercice) => (aDureeAuChoix(exercice) ? lireDuree(exercice.id) ?? exercice.dureeMin : exercice.dureeMin);
 const OPTIONS_DUREE = DUREES_AU_CHOIX.map((d) => ({ valeur: d, libelle: `${d} min` }));
 
 export const FIN = 'Fin de l\'exercice.';
@@ -116,8 +121,8 @@ export function useVoixFrancaise() {
 
 // Une lecture lancée d'un toucher ailleurs (le bouton lecture d'une carte de Bien-être) : le toucher prépare le son et la
 // voix, puis ouvre l'écran du lecteur, qui démarre aussitôt. Sans ce toucher (une adresse ouverte autrement), le lecteur
-// attend « Commencer » : rien ne joue seul. `retour` : l'écran où revenir, s'il n'est pas celui que donne l'adresse (la
-// carte Programme de Bien-être lance une séance du Programme, et le lecteur revient à Bien-être).
+// attend « Commencer » : rien ne joue seul. `retour` : l'écran où revenir, s'il n'est pas celui que donne l'adresse (une ligne
+// d'une entrée de Bien-être lance un exercice, et le lecteur revient à cette entrée).
 // `mode` : celui du lecteur qui s'ouvre (v10). En crise, le réglage est dans la méta, qui se lit après le toucher : le toucher
 // prépare donc le son et la voix dans tous les cas, sans bruit (session « ambient », parole muette) ; le lecteur laisse le son
 // se rendormir si le réglage ne le demande pas.
@@ -140,14 +145,22 @@ function prendreDemande() {
   demande = null;
   return d && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS ? d : null;
 }
-// Un écran de départ (les deux minuteurs, les sons de fond), ouvert d'un toucher ailleurs (une entrée de Bien-être) : comme le
-// lecteur, il revient à l'écran d'où il part (`retour`). Rien ne se prépare ici : il attend son propre « Commencer », où le son naît.
+// Un écran de départ (l'écran « avant » du lecteur, les deux minuteurs, les sons de fond), ouvert d'un toucher ailleurs (une
+// entrée de Bien-être) : comme le lecteur, il revient à l'écran d'où il part (`retour`). Rien ne se prépare ici : il attend son
+// propre « Commencer », où le son naît.
 export function ouvrirDepart(hash, { retour = null } = {}) {
-  demande = { hash, instant: performance.now(), retour };
+  demande = { hash, instant: performance.now(), retour, attend: true };
   location.hash = hash;
 }
 // L'écran où revenir, pour un écran de départ qui s'ouvre : celui de la demande, sinon Bien-être.
 export const retourDemande = () => prendreDemande()?.retour || '#/bien-etre';
+// Le dernier élément lancé dans Bien-être (spec §7.3 et §14.4) : une préférence de cet appareil, que « Reprendre » relit. Un
+// identifiant inconnu (une clé abîmée, un exercice retiré) ne compte pas.
+export const retenirDernier = (id) => ecrireLocal(CLE_DERNIER, id);
+export function lireDernier() {
+  const v = lireLocal(CLE_DERNIER, null);
+  return ELEMENTS_BIEN_ETRE.includes(v) ? v : null;
+}
 // Une parole muette dans le toucher : Safari laisse ensuite parler le lecteur hors d'un geste.
 function amorcerVoix() {
   try {
@@ -167,11 +180,12 @@ export const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); r
 // exercice de domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). mode : 'bien-etre' ou 'crise' (v10).
 // retour : l'écran où revenir (« Fermer » et la fermeture après la fin), sauf si la lecture a été lancée avec un autre retour.
 // origineSeance : l'origine de la séance enregistrée, celle du mode si elle n'est pas donnée. programme : l'identifiant de la
-// séance du Programme, quand la lecture en est une (v8).
-export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', origineSeance, programme = null }) {
+// séance du Programme, quand la lecture en est une (v8). reglagesAvant : ce que l'écran « avant » montre en plus (la durée et le
+// rythme de la cohérence cardiaque).
+export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', origineSeance, programme = null, reglagesAvant = null }) {
   const crise = mode === 'crise';
   const [lancee] = useState(prendreDemande);
-  const auto = lancee != null;
+  const auto = lancee != null && !lancee.attend;
   const adresseRetour = (lancee && lancee.retour) || retour;
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'pause', 'fin'
   const [place, setPlace] = useState(0);
@@ -185,7 +199,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
   const lecture = voixVoulue && voix != null;
   // La durée au choix : l'exercice joué est celui de la durée retenue. Elle ne change que sur l'écran « avant ».
   const avecDuree = !crise && aDureeAuChoix(exercice);
-  const [duree, setDuree] = useState(() => (avecDuree ? lireDuree(exercice.id) ?? exercice.dureeMin : null));
+  const [duree, setDuree] = useState(() => (avecDuree ? dureeRetenue(exercice) : null));
   const seance = useMemo(() => (avecDuree ? exerciceAvecDuree(exercice, duree) : exercice), [exercice, duree]);
   const [brille, setBrille] = useState(null);
   const finBrille = useRef(null);
@@ -311,6 +325,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
   };
   // `dansToucher` : « Commencer » touché ici ; sinon (lancerLecture), le toucher a déjà préparé le son.
   const commencer = (dansToucher) => {
+    if (!crise) retenirDernier(exercice.id);
     suivi.commencer();
     temps.current = { cumul: 0, depuis: performance.now(), debutEtape: 0 };
     souffle.current = { origine: 0, programme: 0, cle: souffle.current.cle + 1 };
@@ -532,6 +547,7 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
       </div>
       <p class="lecteur-description">${pourAffichage(seance.description)}</p>
       ${avecDuree && html`<${Segmente} etiquette="Durée" classe="large" options=${OPTIONS_DUREE} valeur=${duree} surChoix=${choisirDuree} sansVide=${true} />`}
+      ${reglagesAvant}
       <div class="lecteur-centre">${anneau}</div>
       ${reglages}
     </div>`;

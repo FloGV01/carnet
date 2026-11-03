@@ -3,7 +3,7 @@ import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { noter, continuer } from '../aides/emotion.js';
 import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
-// v7 · Bien-être (spec §6) : l'onglet (v8 : le Programme, la cohérence cardiaque, la ligne fixe), un exercice une
+// v7 · Bien-être (spec §6) : l'onglet (v10 : les quatre entrées, la ligne fixe ; le reste dans v10-bien-etre.spec.js), un exercice une
 // consigne par écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran
 // (factice), les séances (menées au bout ou arrêtées après 60 s, une seule, avec leur origine), le repère de Mes jours,
 // et aucun compteur.
@@ -68,39 +68,46 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 });
 
-test('l\'écran Bien-être (v8) : le Programme en tête, la cohérence cardiaque, la ligne fixe en bas ; plus de liste d\'exercices ; aucun compteur', async ({ page }) => {
+test('l\'écran Bien-être (v10) : sans rien, ni « Reprendre » ni « Favoris » ; les quatre entrées dans l\'ordre, la ligne fixe en bas ; plus de cohérence cardiaque ni de séance qui vient ; aucun compteur', async ({ page }) => {
   await aller(page, '#/bien-etre');
   const ecran = page.locator('main.bien-etre');
-  const programme = ecran.getByRole('region', { name: 'Programme' });
-  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
-  // v8 : la carte compacte de la cohérence cardiaque, sa durée, son rythme et son bouton lecture.
-  const respiration = ecran.getByRole('region', { name: 'Cohérence cardiaque' });
-  await expect(respiration.getByRole('button', { name: 'Commencer la cohérence cardiaque' })).toBeVisible();
-  await expect(respiration.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
+  const entrees = ecran.getByRole('list', { name: 'Entrées' }).getByRole('link');
+  await expect(entrees).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme']);
+  // Ni carte ni région : ni « Reprendre », ni « Favoris », ni cohérence cardiaque, ni séance du Programme à lancer.
+  await expect(ecran.getByRole('region')).toHaveCount(0);
+  await expect(ecran.getByRole('heading', { level: 2 })).toHaveCount(0);
+  await expect(ecran.getByRole('button')).toHaveCount(0);
+  await expect(ecran.getByRole('combobox')).toHaveCount(0);
   await expect(ecran.getByRole('list', { name: 'Exercices' })).toHaveCount(0);
   await expect(ecran.locator('.ligne-exercice')).toHaveCount(0);
-  // Dans l'ordre : le Programme, la respiration, la ligne fixe, qui est la dernière chose de l'écran. Les deux cartes ont
-  // un titre de niveau 2, que le rotor « Titres » de VoiceOver trouve ; celui du Programme reste dans le lien.
-  await expect(ecran.getByRole('heading', { level: 2 })).toHaveText(['Programme', 'Cohérence cardiaque']);
-  await expect(programme.getByRole('link').getByRole('heading', { name: 'Programme', level: 2 })).toBeVisible();
-  const [p, r, f] = await Promise.all([programme.boundingBox(), respiration.boundingBox(), ecran.locator('.ligne-fixe').boundingBox()]);
-  expect(p.y + p.height).toBeLessThanOrEqual(r.y);
-  expect(r.y + r.height).toBeLessThanOrEqual(f.y);
+  await expect(ecran.getByRole('heading', { name: 'Bien-être', level: 1 })).toBeVisible();
   await expect(ecran.locator(':scope > *').last()).toHaveText('Tu peux t\'arrêter à tout moment.');
-  // Rien ne compte les séances : l'écran est le même avant et après six séances de toutes origines, hors du Programme.
+  // Dans l'ordre, chacune sous la précédente, avec une cible de 44 au moins, puis la ligne fixe.
+  const places = () => entrees.evaluateAll((l) => l.map((a) => { const r = a.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }));
+  const avantPlaces = await places();
+  for (const [i, [, y, , h]] of avantPlaces.entries()) {
+    expect(h).toBeGreaterThanOrEqual(44);
+    if (i) expect(y).toBeGreaterThanOrEqual(avantPlaces[i - 1][1] + avantPlaces[i - 1][3]);
+  }
+  expect((await ecran.locator('.ligne-fixe').boundingBox()).y).toBeGreaterThanOrEqual(avantPlaces[3][1] + avantPlaces[3][3]);
+  // Rien ne compte les séances : l'écran est le même, aux mêmes places, avant et après six séances de toutes origines.
   const avant = await ecran.innerText();
   await page.evaluate(async () => {
     const rp = window.__carnet.repo;
     for (const [date, origine] of [['2026-10-15', 'bien-etre'], ['2026-10-15', 'bien-etre'], ['2026-10-14', 'moment-difficile'], ['2026-10-13', 'ressourcer'], ['2026-10-12', 'bien-etre'], ['2026-10-11', 'bien-etre']]) {
-      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine, fin: true });
+      await rp.seances.creer({ date, heure: '10:00', exercice: 'coherence', dureeS: 300, origine, fin: true, programme: origine === 'bien-etre' ? 'coherence' : null });
     }
   });
   await page.reload();
   await appPrete(page);
   await aller(page, '#/bien-etre');
-  await expect(programme.getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
+  await expect(entrees).toHaveCount(4);
   expect(await ecran.innerText()).toBe(avant);
-  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d+\s*\/\s*\d+|%/i);
+  expect(await places()).toEqual(avantPlaces);
+  // Ni « séance », ni « déjà », ni « fois », ni chiffre.
+  expect(avant).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d|%/i);
+  // Rien d'écrit dans l'appareil pour une simple ouverture.
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('carnet:')))).toEqual([]);
 });
 
 test('un exercice complet, voix éteinte (v8) : une consigne par écran, les étapes avancent seules ; verrou d\'écran ; une séance', async ({ page }) => {
@@ -305,13 +312,13 @@ test('aucune séance pour un arrêt avant 60 s : « Fermer », « Terminer » av
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 
   // La cohérence cardiaque de Bien-être, arrêtée à 30 s : rien.
-  await aller(page, '#/bien-etre');
-  await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
+  await aller(page, '#/bien-etre/calmer');
+  await page.getByRole('button', { name: 'Commencer Cohérence cardiaque' }).click();
   v = vue(page, 'Cohérence cardiaque');
   await expect(bouton(v, 'Pause')).toBeVisible();
   await page.clock.runFor(30000);
   await bouton(v, 'Fermer').click();
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/calmer$/);
   await page.clock.runFor(2000);
   expect(await seances(page)).toEqual([]);
 });
@@ -472,17 +479,18 @@ const versPourRecuperer = async (page) => {
 };
 
 test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, réglés au même endroit ; « Pour récupérer, je… » : la durée sous « Cohérence cardiaque », sans « · », en grand texte aussi', async ({ page }) => {
-  // Bien-être (v8) : la carte compacte, son titre, la durée et le rythme sur leurs puces, comme Moment difficile ; un choix
-  // se règle au même endroit (méta respiration).
-  await aller(page, '#/bien-etre');
-  const carteBe = page.locator('main.bien-etre .carte-coherence');
-  await expect(carteBe.getByRole('heading', { name: 'Cohérence cardiaque', level: 2 })).toBeVisible();
+  // Bien-être (v10) : avant de commencer la cohérence cardiaque, la durée et le rythme sur leurs puces, comme Moment difficile ;
+  // un choix se règle au même endroit (méta respiration).
+  await aller(page, '#/bien-etre/coherence');
+  const carteBe = vue(page, 'Cohérence cardiaque');
+  await expect(carteBe.getByRole('heading', { name: 'Cohérence cardiaque', level: 1 })).toBeVisible();
   await expect(carteBe.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('5');
   await expect(carteBe.getByRole('combobox', { name: 'Rythme', exact: true })).toHaveValue('5-5');
   await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('2');
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(2);
   await carteBe.getByRole('combobox', { name: 'Durée', exact: true }).selectOption('5');
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.meta.lire('respiration').then((r) => r && r.duree))).toBe(5);
+  await bouton(carteBe, 'Fermer').click();
 
   // « Pour récupérer, je… » : une fois la respiration arrêtée.
   const { emo, carte } = await versPourRecuperer(page);
@@ -509,15 +517,16 @@ test('Bien-être et Moment difficile : la durée et le rythme sur leurs puces, r
 test('la respiration crée une séance avec son origine : Bien-être (au bout, dans le lecteur), Moment difficile, « Pour récupérer, je… »', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('respiration', { duree: 2, rythme: '5-5', son: false }));
   // Bien-être : menée au bout (2 min), dans le lecteur.
-  await aller(page, '#/bien-etre');
-  await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
+  await aller(page, '#/bien-etre/calmer');
+  await page.getByRole('button', { name: 'Commencer Cohérence cardiaque' }).click();
   const lecteur = vue(page, 'Cohérence cardiaque');
+  await expect(bouton(lecteur, 'Pause')).toBeVisible();
   await page.clock.runFor(120400);
   await expect(lecteur.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
   await expect.poll(() => seances(page)).toHaveLength(1);
   expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'bien-etre', dureeS: 120, date: '2026-10-15', heure: '20:30' });
   await page.clock.runFor(6200);
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/calmer$/);
 
   // Moment difficile : arrêtée après 61 s.
   await aller(page, '#/moment-difficile');

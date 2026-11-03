@@ -1,4 +1,4 @@
-// Le Programme de Bien-être (v8, spec §6, §12.2 et §12.4) : #/bien-etre/programme, ouvert depuis sa carte de Bien-être.
+// Le Programme de Bien-être (v8, spec §6, §12.2 et §12.4) : #/bien-etre/programme, ouvert depuis son entrée de Bien-être.
 // En tête, la présentation, écrite une fois (d'où vient le programme, un rythme proposé, jamais mesuré). Puis une carte par
 // étape, avec son titre seul (aucun numéro) ; dans chaque carte, ses séances, avec leur titre et « 5 min · assis ». Une
 // séance faite (lancée depuis le Programme et menée au bout) porte une coche et « Faite le 12/10 », sa date la plus
@@ -53,9 +53,8 @@ export function Programme() {
 }
 
 // Une séance du Programme dans le lecteur (#/bien-etre/programme/<id>) : la séance enregistrée porte son identifiant
-// (`programme`), et le lecteur revient au Programme. La cohérence cardiaque y dure 5 min, au rythme réglé. Lancée par la
-// carte Programme de Bien-être (lancerLecture), elle démarre aussitôt et revient à Bien-être. Une séance inconnue ramène
-// au Programme.
+// (`programme`), et le lecteur revient au Programme. La cohérence cardiaque y dure 5 min, au rythme réglé. Une séance inconnue
+// ramène au Programme.
 export function SeanceProgramme({ id }) {
   const connue = estSeanceProgramme(id);
   const [reglages, setReglages] = useState(() => (id === 'coherence' ? null : {}));

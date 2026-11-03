@@ -3,8 +3,8 @@ import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { espionnerAudio, audio } from '../aides/audio.js';
 import { installerParole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
-// v8 · Le Programme (spec §6, §12.2 et §12.4) : la carte Programme de Bien-être (la séance qui vient, lancée d'un
-// toucher), l'écran Programme (une carte par étape, ses séances, « Faite le 12/10 » sur une séance lancée depuis le
+// v8 · Le Programme (spec §6, §12.2 et §12.4) : son entrée de Bien-être (v10), l'écran Programme (une carte par étape, ses séances,
+// « Faite le 12/10 » sur une séance lancée depuis le
 // Programme et menée au bout, rien sur les autres), le point de vigilance 4 (une séance interrompue ne date rien, une seule
 // séance, le verrou rendu), aucun chiffre ni pourcentage, et la cohérence cardiaque lancée ailleurs, qui ne marque rien.
 // Horloge : jeudi 15 octobre 2026, 20:30 (390 × 844). Données inventées.
@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 
 const vue = (page, titre) => page.getByRole('dialog', { name: titre });
 const bouton = (zone, nom) => zone.getByRole('button', { name: nom, exact: true });
-const carteProgramme = (page) => page.locator('main.bien-etre').getByRole('region', { name: 'Programme' });
+const entreeProgramme = (page) => page.locator('main.bien-etre').getByRole('link', { name: 'Programme' });
 const ecranProgramme = (page) => page.locator('main.programme');
 // La rangée d'une séance de l'écran Programme : le lien, nommé par son titre.
 const rangee = (page, titre) => ecranProgramme(page).getByRole('link', { name: new RegExp(`^${titre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) });
@@ -40,8 +40,8 @@ const sansPermis = (t) => t.replace(/\d+\s*min\b/g, '').replace(/Faite le \d{2}\
 
 test('l\'écran Programme : la présentation, une carte par étape (son titre seul), 17 séances avec « 5 min · assis » ; tout s\'ouvre d\'un toucher ; rien sur ce qui n\'est pas fait', async ({ page }) => {
   await aller(page, '#/bien-etre');
-  // La carte Programme ouvre l'écran Programme ; « Retour » ramène à Bien-être.
-  await carteProgramme(page).getByRole('link').click();
+  // L'entrée Programme ouvre l'écran Programme ; « Retour » ramène à Bien-être.
+  await entreeProgramme(page).click();
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   const ecran = ecranProgramme(page);
   await expect(ecran.getByRole('heading', { name: 'Programme', level: 1 })).toBeVisible();
@@ -81,30 +81,24 @@ test('l\'écran Programme : la présentation, une carte par étape (son titre se
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 });
 
-test('reprise en 1 toucher : la carte Programme lance la séance qui suit la dernière faite ; menée au bout, elle porte « Faite le » et la suivante vient', async ({ page }) => {
-  // Au tout début : la première séance.
-  await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Respiration abdominale\s*3\smin\s·\sassis ou allongé$/);
-  // Respiration abdominale faite le 12/10 : vient Pause d'une minute.
+test('une séance lancée depuis le Programme : le son né dans « Commencer », menée au bout, elle porte `fin` et `programme`, et « Faite le » sur son écran, la date la plus récente ; rien sur l\'accueil', async ({ page }) => {
   await faite(page, 'respiration-abdominale', '2026-10-12');
   await page.reload();
   await appPrete(page);
   await espionnerAudio(page);
   await installerVerrou(page);
   await aller(page, '#/bien-etre');
-  const lancer = carteProgramme(page).getByRole('button', { name: 'Commencer Pause d\'une minute' });
-  await expect(lancer).toBeVisible();
-  expect(Math.round((await lancer.boundingBox()).width)).toBe(64);
-  expect((await audio(page)).contextes).toBe(0);
-  // Un seul toucher : le lecteur s'ouvre et démarre, le son né dans le toucher.
-  await lancer.click();
+  await entreeProgramme(page).click();
+  await rangee(page, 'Pause d\'une minute').click();
   await expect(page).toHaveURL(/#\/bien-etre\/programme\/pause-une-minute$/);
   const v = vue(page, 'Pause d\'une minute');
+  await expect(bouton(v, 'Commencer')).toBeVisible();
+  expect((await audio(page)).contextes).toBe(0);
+  await bouton(v, 'Commencer').click();
   await expect(bouton(v, 'Pause')).toBeVisible();
-  await expect(bouton(v, 'Commencer')).toHaveCount(0);
   expect((await audio(page)).contextes).toBe(1);
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
-  // Menée au bout : une séance, avec `fin` et `programme` ; le lecteur revient à Bien-être, d'où il a été lancé.
+  // Menée au bout : une séance, avec `fin` et `programme` ; le lecteur revient au Programme.
   await page.clock.runFor(60300);
   await expect(v.locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
   await expect.poll(async () => (await seances(page)).filter((s) => s.exercice === 'pause-une-minute')).toHaveLength(1);
@@ -112,21 +106,17 @@ test('reprise en 1 toucher : la carte Programme lance la séance qui suit la der
   expect(s).toMatchObject({ date: '2026-10-15', heure: '20:30', origine: 'bien-etre', fin: true, programme: 'pause-une-minute' });
   environ(s.dureeS, 60);
   await page.clock.runFor(6200);
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(page.getByRole('status').getByRole('button', { name: 'Noter mon émotion' })).toBeVisible();
-  // La séance qui vient : celle qui suit.
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Les sons' })).toBeVisible();
-  await expect(carteProgramme(page).locator('.seance-qui-vient')).toHaveText(/^Les sons\s*5\smin\s·\sassis$/);
   // L'écran Programme : la coche et « Faite le », la date la plus récente ; rien ailleurs.
-  await carteProgramme(page).getByRole('link').click();
   await expect(rangee(page, 'Pause d\'une minute').locator('.seance-faite')).toHaveText('Faite le 15/10');
   await expect(rangee(page, 'Pause d\'une minute').locator('.seance-faite svg')).toHaveCount(1);
   await expect(rangee(page, 'Respiration abdominale').locator('.seance-faite')).toHaveText('Faite le 12/10');
   await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(2);
-  // Après la dernière séance, la première revient.
-  await faite(page, 'ce-qui-compte', '2026-10-15', '21:00');
+  // L'accueil de Bien-être n'en dit rien (v10) : ni la séance qui vient, ni date, ni durée.
   await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
+  await expect(page.locator('main.bien-etre .entrees')).toBeVisible();
+  await expect(page.locator('main.bien-etre')).not.toContainText(/Les sons|Faite|\d/);
 });
 
 test('une séance menée au bout depuis l\'écran Programme : 2 touchers, puis le retour au Programme, où elle porte « Faite le 15/10 »', async ({ page }) => {
@@ -185,7 +175,7 @@ test('point de vigilance 4 : une séance du Programme interrompue (arrière-plan
   await expect(page.getByRole('button', { name: 'Noter mon émotion' })).toHaveCount(0);
   await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(0);
   await expect(ecranProgramme(page)).not.toContainText('Faite');
-  // « Terminer » avant la fin : rien non plus. La séance qui vient reste la première.
+  // « Terminer » avant la fin : rien non plus.
   await rangee(page, 'Pause d\'une minute').click();
   await bouton(vue(page, 'Pause d\'une minute'), 'Commencer').click();
   await page.clock.runFor(20000);
@@ -193,8 +183,6 @@ test('point de vigilance 4 : une séance du Programme interrompue (arrière-plan
   await page.clock.runFor(7000);
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(0);
-  await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
 });
 
 test('une séance notée en arrière-plan (après 60 s), reprise puis menée au bout : une seule séance, qui prend `fin` et date la séance', async ({ page }) => {
@@ -238,26 +226,26 @@ test('aucun chiffre ni pourcentage, sauf les durées et « Faite le » ; ni tota
     await expect(ecran.locator('progress, meter, [role=progressbar], svg circle, input[type=checkbox]')).toHaveCount(0);
     // Rien ne déborde de côté.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    // L'accueil de Bien-être (v10) : aucun chiffre du tout.
     await aller(page, '#/bien-etre');
-    const carte = carteProgramme(page);
-    await expect(carte.getByRole('button', { name: 'Commencer Relaxation dynamique des épaules' })).toHaveCount(0);
-    await expect(carte.getByRole('button', { name: 'Commencer Lieu ressource' })).toBeVisible();
-    expect(sansPermis(await carte.innerText())).not.toMatch(/\d|%/);
+    await expect(entreeProgramme(page)).toBeVisible();
+    expect(await page.locator('main.bien-etre').innerText()).not.toMatch(/\d|%/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
-test('une cohérence cardiaque lancée depuis sa carte ou Moment difficile ne marque rien ; dans le Programme, elle dure 5 min', async ({ page }) => {
+test('une cohérence cardiaque lancée depuis « Me calmer vite » ou Moment difficile ne marque rien ; dans le Programme, elle dure 5 min', async ({ page }) => {
   test.setTimeout(60000);
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: false }));
-  // La carte de Bien-être : menée au bout (2 min).
-  await aller(page, '#/bien-etre');
-  await page.getByRole('region', { name: 'Cohérence cardiaque' }).getByRole('button', { name: 'Commencer la cohérence cardiaque' }).click();
+  // Sa ligne dans « Me calmer vite » : menée au bout (2 min).
+  await aller(page, '#/bien-etre/calmer');
+  await page.getByRole('button', { name: 'Commencer Cohérence cardiaque' }).click();
+  await expect(bouton(vue(page, 'Cohérence cardiaque'), 'Pause')).toBeVisible();
   await page.clock.runFor(120400);
   await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-consigne')).toHaveText('Fin de l\'exercice.');
   await page.clock.runFor(6200);
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/calmer$/);
   // Moment difficile : menée au bout (2 min).
   await aller(page, '#/moment-difficile');
   const md = vue(page, 'Moment difficile');
@@ -270,12 +258,10 @@ test('une cohérence cardiaque lancée depuis sa carte ou Moment difficile ne ma
     expect(s).toMatchObject({ exercice: 'coherence', fin: true });
     expect(s.programme).toBeNull();
   }
-  // Rien dans le Programme ; la séance qui vient reste la première.
+  // Rien dans le Programme.
   await aller(page, '#/bien-etre/programme');
   await expect(rangee(page, 'Cohérence cardiaque')).toBeVisible();
   await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(0);
-  await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
 
   // Dans le Programme, la cohérence dure 5 min, au rythme réglé, quel que soit le réglage de durée ; menée au bout,
   // elle y porte « Faite le ».
@@ -295,13 +281,11 @@ test('une cohérence cardiaque lancée depuis sa carte ou Moment difficile ne ma
   await page.clock.runFor(6200);
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(rangee(page, 'Cohérence cardiaque').locator('.seance-faite')).toHaveText('Faite le 15/10');
-  await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Lieu ressource' })).toBeVisible();
   // Le réglage de Moment difficile n'a pas bougé.
   expect(await page.evaluate(() => window.__carnet.repo.meta.lire('respiration'))).toEqual({ duree: 2, rythme: '4-6', son: false });
 });
 
-test('la cohérence cardiaque du Programme arrêtée en route (« Terminer » à 2:31 sur 5:00) : une séance sans `fin`, aucune « Faite le », la séance qui vient ne bouge pas', async ({ page }) => {
+test('la cohérence cardiaque du Programme arrêtée en route (« Terminer » à 2:31 sur 5:00) : une séance sans `fin`, aucune « Faite le »', async ({ page }) => {
   // Une séance d'une seule étape est sur sa dernière étape dès le début : passé la moitié du temps, « Terminer » reste un
   // arrêt en route (spec §6 et §12.2), comme dans Moment difficile.
   await aller(page, '#/bien-etre/programme');
@@ -322,7 +306,5 @@ test('la cohérence cardiaque du Programme arrêtée en route (« Terminer » à
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
   await expect(ecranProgramme(page).locator('.seance-faite')).toHaveCount(0);
   await expect(ecranProgramme(page)).not.toContainText('Faite');
-  await aller(page, '#/bien-etre');
-  await expect(carteProgramme(page).getByRole('button', { name: 'Commencer Respiration abdominale' })).toBeVisible();
   expect(await seances(page)).toHaveLength(1);
 });

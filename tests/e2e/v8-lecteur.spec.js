@@ -354,19 +354,16 @@ test('« Terminer » touché en pause : le toucher relance le son endormi, les t
   expect(await audio(page)).toMatchObject({ etat: 'suspended', session: 'auto', fermes: 0 });
 });
 
-test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme réglé (4-6, 2 min), puis la fin et « Noter mon émotion »', async ({ page }) => {
+test('la cohérence cardiaque : lancée d\'un toucher sur sa ligne, au rythme réglé (4-6, 2 min), puis la fin et « Noter mon émotion »', async ({ page }) => {
   test.setTimeout(60000);
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: false }));
   await page.evaluate(() => localStorage.setItem('carnet:exercice:voix', 'true'));
   await espionnerAudio(page, { session: true });
   await installerVerrou(page);
   const BOLS = await frequencesBols(page);
-  await aller(page, '#/bien-etre');
-  const carte = page.getByRole('region', { name: 'Cohérence cardiaque' });
-  await expect(carte.getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('2');
-  await expect(carte.getByRole('combobox', { name: 'Rythme', exact: true })).toHaveValue('4-6');
-  const lancer = carte.getByRole('button', { name: 'Commencer la cohérence cardiaque' });
-  expect(Math.round((await lancer.boundingBox()).width)).toBe(64);
+  await aller(page, '#/bien-etre/calmer');
+  const lancer = page.locator('main.entree-bien-etre').getByRole('button', { name: 'Commencer Cohérence cardiaque' });
+  expect((await lancer.boundingBox()).width).toBeGreaterThanOrEqual(44);
   expect((await audio(page)).contextes).toBe(0);
   await lancer.click();
   // Un seul toucher : le lecteur s'ouvre et démarre, le contexte né dans le toucher.
@@ -384,7 +381,7 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   expect((await bols(page))[0].f).toBe(BOLS.debut);
   expect(await audio(page)).toMatchObject({ contextes: 1, session: 'ambient' });
   await expect.poll(() => verrou(page)).toEqual({ demandes: 1, rendus: 0 });
-  // La voix, débloquée dans le toucher de la carte, dit la consigne après le bol.
+  // La voix, débloquée dans le toucher de la ligne, dit la consigne après le bol.
   expect(await parole(page)).toMatchObject({ dits: [], amorces: 1 });
   await page.clock.runFor(4300);
   expect((await parole(page)).dits).toEqual(['Respire au rythme des mots, sans forcer.']);
@@ -400,19 +397,21 @@ test('la cohérence cardiaque : lancée d\'un toucher sur sa carte, au rythme r�
   for (const [i, s] of tous.entries()) if (i > 0) expect(s.fin - s.t).toBeCloseTo(i % 2 ? 6 : 4, 1);
   await expect.poll(() => seances(page)).toHaveLength(1);
   expect((await seances(page))[0]).toMatchObject({ exercice: 'coherence', origine: 'bien-etre', dureeS: 120, fin: true });
-  // Lancée par sa carte, et non depuis le Programme : elle n'y compte pas.
+  // Lancée de sa ligne, et non depuis le Programme : elle n'y compte pas.
   expect((await seances(page))[0].programme).toBeNull();
   await page.clock.runFor(6200);
-  await expect(page).toHaveURL(/#\/bien-etre$/);
+  await expect(page).toHaveURL(/#\/bien-etre\/calmer$/);
   await page.getByRole('status').getByRole('button', { name: 'Noter mon émotion' }).click();
   await expect(page).toHaveURL(/#\/moment$/);
   await expect(vue(page, 'Émotion du moment')).toBeVisible();
   // Le réglage de Moment difficile n'a pas bougé.
   expect(await page.evaluate(() => window.__carnet.repo.meta.lire('respiration'))).toEqual({ duree: 2, rythme: '4-6', son: false });
 
-  // Ouverte autrement que par sa carte (l'adresse seule) : elle attend « Commencer ».
+  // Ouverte autrement que par ce bouton (l'adresse seule) : elle attend « Commencer », avec sa durée et son rythme en puces.
   await aller(page, '#/bien-etre/coherence');
   await expect(bouton(vue(page, 'Cohérence cardiaque'), 'Commencer')).toBeVisible();
+  await expect(vue(page, 'Cohérence cardiaque').getByRole('combobox', { name: 'Durée', exact: true })).toHaveValue('2');
+  await expect(vue(page, 'Cohérence cardiaque').getByRole('combobox', { name: 'Rythme', exact: true })).toHaveValue('4-6');
   await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-duree')).toHaveText(/^2\smin\s·\sassis$/);
   await expect(vue(page, 'Cohérence cardiaque').locator('.lecteur-description')).toHaveText(texte('Inspirer sur « Inspire », expirer sur « Expire ».'));
   const avant = await audio(page);

@@ -281,7 +281,7 @@ const ECRANS = (ids) => [
     '.comprendre figure.g-mes-nuits table'],
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
-  ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .carte-programme .seance-qui-vient'],
+  ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .entrees .ligne-carte'],
   // v8 : le Programme (une séance faite porte « Faite le »), puis le lecteur, avant de commencer, sur une étape rythmée
   // (le disque et « Inspire »), puis en pause (ses réglages, sous l'écran de lecture).
   ['Programme', (p) => aller(p, '#/bien-etre/programme'), '.programme .seance-faite'],

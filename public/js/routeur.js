@@ -5,6 +5,8 @@ const ID = '([A-Za-z0-9_-]+)';
 const DATE = '(\\d{4}-\\d{2}-\\d{2})';
 // Les onglets de l'écran Comprendre (v6, spec §2.1).
 export const ONGLETS_COMPRENDRE = ['explosions', 'energie', 'rythmes'];
+// Les entrées de Bien-être qui ont leur liste (v10, spec §7 ; domain/entrees-bien-etre.js).
+export const ENTREES_BIEN_ETRE = ['calmer', 'dormir', 'concentrer'];
 export const ROUTES = [
   { nom: 'aujourdhui', motif: '/aujourdhui' },
   { nom: 'jour', motif: `/jour/${DATE}`, params: ['date'] },
@@ -49,6 +51,8 @@ export const ROUTES = [
   { nom: 'coherence', motif: '/bien-etre/coherence' },
   { nom: 'programme', motif: '/bien-etre/programme' },
   { nom: 'seance-programme', motif: `/bien-etre/programme/${ID}`, params: ['id'] },
+  // v10 (spec §7) : la liste d'une entrée de Bien-être.
+  { nom: 'entree-bien-etre', motif: `/bien-etre/(${ENTREES_BIEN_ETRE.join('|')})`, params: ['entree'] },
   // v10 (spec §7.4) : un exercice seul dans le lecteur, hors du Programme.
   { nom: 'exercice', motif: `/exercice/${ID}`, params: ['id'] },
   // v10 (spec §9) : le minuteur silencieux, le minuteur de concentration et les sons de fond, des écrans pleins.
@@ -83,7 +87,7 @@ export function versHash(nom, params = {}) {
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'crise', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
-  if (['bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons'].includes(nom)) return 'bien-etre';
+  if (['bien-etre', 'entree-bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

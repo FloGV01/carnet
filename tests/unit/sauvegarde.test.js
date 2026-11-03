@@ -652,6 +652,24 @@ test('v10 : aperçu de l\'import, une épingle posée puis retirée ne laisse ri
   assert.deepEqual(metaRemplacee(epingle, [{ cle: 'favorisBienEtre', valeur: ['soupir'] }]), []);
 });
 
+test('v10 : les exercices épinglés survivent à un aller-retour de sauvegarde, dans leur ordre ; absents du fichier, ils sont retirés', async () => {
+  const a = nouveauRepo();
+  await a.repo.meta.ecrire('favorisBienEtre', ['savourer', 'sons-de-fond', 'coherence']);
+  const [f] = await exporter(a.repo, { versionApp: '10.0.0' });
+  assert.deepEqual(contenuDe(f).data.meta.find((m) => m.cle === 'favorisBienEtre'), { cle: 'favorisBienEtre', valeur: ['savourer', 'sons-de-fond', 'coherence'] });
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  const b = nouveauRepo();
+  await b.repo.meta.ecrire('favorisBienEtre', ['soupir']);
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.meta.lire('favorisBienEtre'), ['savourer', 'sons-de-fond', 'coherence']);
+  // Une sauvegarde sans épingle (une autre version) : la méta qui n'est pas dans le fichier s'en va, comme les autres.
+  const c = nouveauRepo();
+  const [g] = await exporter(c.repo, { versionApp: '10.0.0' });
+  await remplacer(b.repo, analyserFichiers([{ nom: g.nom, octets: octetsDe(g) }]));
+  assert.equal(await b.repo.meta.lire('favorisBienEtre'), null);
+});
+
 test('v8 : « Revenir » vers une copie prise avant la v8 remet les sujets d\'un rendez-vous, sans écraser ceux de la copie', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);

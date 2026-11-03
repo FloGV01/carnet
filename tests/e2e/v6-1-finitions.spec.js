@@ -158,9 +158,9 @@ test('A3 : « 5 minutes » ne se coupe pas, « · Mouvement » ne commence pas u
   const puce = page.getByRole('dialog', { name: 'Moment difficile' }).getByRole('combobox', { name: 'Durée', exact: true });
   await expect(puce).toHaveValue('5');
   expect(await puce.evaluate((s) => s.selectedOptions[0].textContent)).toBe('5 minutes');
-  // Bien-être (2b, v7 tâche 9) : la même carte que Moment difficile, la durée sur sa puce, d'un tenant aussi.
-  await aller(page, '#/bien-etre');
-  const puceBe = page.locator('main.bien-etre').getByRole('combobox', { name: 'Durée', exact: true });
+  // Bien-être (v10 : avant de commencer la cohérence cardiaque, qui a quitté l'accueil) : la durée sur sa puce, d'un tenant aussi.
+  await aller(page, '#/bien-etre/coherence');
+  const puceBe = page.getByRole('dialog', { name: 'Cohérence cardiaque' }).getByRole('combobox', { name: 'Durée', exact: true });
   await expect(puceBe).toHaveValue('5');
   expect(await puceBe.evaluate((s) => s.selectedOptions[0].textContent)).toBe('5 minutes');
 

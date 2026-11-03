@@ -38,7 +38,7 @@ a { color: var(--action); }
 
 /* Titres (2b) : police système, 600. Titre d'écran et question d'un parcours 30/38, titre de bloc 17/22. */
 .titre-onglet { font: 600 var(--t-ecran)/var(--l-ecran) var(--police); margin: 4px 0 0; color: var(--text); }
-.titre-ecran { font: 600 var(--t-ecran)/var(--l-ecran) var(--police); margin: 0; color: var(--text); }
+.titre-ecran { font: 600 var(--t-ecran)/var(--l-ecran) var(--police); margin: 0; color: var(--text); overflow-wrap: anywhere; }
 .titre-question { font: 600 var(--t-ecran)/var(--l-ecran) var(--police); text-wrap: pretty; color: var(--text); }
 .titre-carte { font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
 

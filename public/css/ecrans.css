@@ -977,7 +977,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 /* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
    « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours.
-   Les puces servent aussi à la carte de la cohérence cardiaque de Bien-être (v8). */
+   Les puces servent aussi à l'écran « avant » de la cohérence cardiaque de Bien-être (v10). */
 .moment-difficile .respiration { gap: 12px; }
 .moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
 /* « Commencer » : 30 de marge à côté du mot en texte normal ; elle fond avec le très grand texte. Le mot se borne à 44 px :
@@ -1015,23 +1015,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; font-weight: 600; }
-/* Bien-être (v7 ; v8 : le Programme et la cohérence cardiaque, chacun dans sa carte), la ligne fixe en bas. Aucun
-   compteur. */
+/* Bien-être (v7 ; v10 : « Reprendre », les favoris, les quatre entrées), la ligne fixe en bas. Aucun compteur. */
 .bien-etre { gap: 12px; }
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
+/* Les quatre entrées : des rangées de 60, le carré à la couleur de Bien-être, le libellé 17/600, le chevron. */
+.entrees .ligne-carte { min-height: 60px; padding-block: 8px; font-weight: 600; }
+.entrees .ligne-libelle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
-/* La carte de la cohérence cardiaque (v8), compacte, à la couleur de Bien-être : en tête, un carré de 28 avec l'icône et
-   le titre (17/600) ; dessous, la durée et le rythme en puces ; à droite, le bouton lecture rond, qui la lance. */
-.carte-coherence {
-  display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; row-gap: 12px;
-  padding: 14px 14px 16px 16px;
-}
-.carte-coherence > .bouton-lecture { grid-column: 2; grid-row: 1 / span 2; }
-.carte-coherence .puces-respiration { justify-content: flex-start; }
-.titre-coherence { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.carre-carte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
-.carre-carte svg { width: 17px; height: 17px; }
 /* Dans une carte (Moment difficile), la respiration prend la couleur du parcours, comme dans le rendu 2b :
    un cercle de 152 en -tint-2, cerclé de 2 px à la couleur, et dedans le disque qui respire, en -tint ; « Commencer » en
    -fill / -on. Sans mouvement, le disque reste figé et, à l'inspiration, se remplit de la couleur. */
@@ -1041,16 +1032,25 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 @media (prefers-reduced-motion: reduce) {
   .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c); }
 }
-/* La carte Programme (v8), comme celle de la cohérence cardiaque : à gauche, un lien vers l'écran Programme (le carré et
-   le titre 17/600 suivis d'un chevron ; dessous, alignée sur le titre, la séance qui vient en 16/600 et sa durée en 14
-   --text-2) ; à droite, le bouton lecture rond, qui la lance. */
-.carte-programme { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; padding: 0 14px 0 0; }
-.lien-programme {
-  display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: var(--cible); padding: 14px 0 16px 16px;
-  color: var(--text); text-decoration: none;
+/* La carte « Reprendre » (v10) : à gauche, un lien vers l'écran de départ (le titre de la carte en 17/600, puis celui de l'élément
+   en 16) ; à droite, le bouton lecture rond, qui le relance. En très grand texte, le bouton passe sous le lien. */
+.carte-reprendre { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; column-gap: 12px; padding: 0 14px 0 0; }
+.lien-reprendre {
+  flex: 1 1 11rem; display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: var(--cible); padding: 14px 0 14px 16px;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
 }
-.titre-programme > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); margin-left: -6px; }
-.seance-qui-vient { display: flex; flex-direction: column; gap: 2px; padding-left: 40px; }
+.lien-reprendre .exercice-titre { font-weight: 400; }
+.carte-reprendre > .bouton-lecture { margin-block: 10px; }
+/* Une ligne d'un élément de Bien-être (v10) : le titre et sa ligne de description, l'épingle, et le bouton lecture de 48 (toutes
+   deux des cibles de 44 au moins). En très grand texte, le titre prend la ligne et les boutons passent dessous, à droite. */
+.ligne-element { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; padding-right: 10px; }
+.ligne-element-corps {
+  flex: 1 1 11rem; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 62px; justify-content: center; padding: 9px 0 9px 16px;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
+}
+.ligne-element-actions { flex: none; display: flex; align-items: center; gap: 8px; padding-block: 7px; }
+.bouton-lecture.petit { width: 48px; height: 48px; }
+.bouton-lecture.petit svg { width: 22px; height: 22px; }
 /* L'écran Programme (v8) : la présentation en 15 --text-2, une carte par étape (son titre 17/600 en tête, puis ses
    séances en rangées de liste 2b, chevron), la ligne fixe en bas. Une séance faite : une coche à la couleur de Bien-être
    (accent, 3:1) et « Faite le 12/10 » en 14 --text-2, sous sa durée ; pas faite : rien. */
@@ -1083,12 +1083,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    les atteint en défilant), et « Reprendre » est à la place exacte de « Pause ». */
 .lecteur { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--marge) 16px; }
 .lecteur-plein { min-height: 100%; padding-top: 6px; }
-/* La durée et la posture, et l'épingle à droite (v10, spec §14.4) : une cible de 44 ; épinglé, le fond à la couleur. */
+/* La durée et la posture, et l'épingle à droite (v10, spec §14.4) : une cible de 44 ; épinglé, le dessin se remplit sur un fond
+   teinté, pour ne pas se confondre avec le bouton lecture voisin dans une liste. */
 .lecteur-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -14px; min-height: var(--cible); }
 .lecteur-duree { min-width: 0; font-size: var(--t-sous); color: var(--text-2); }
 .epingle { flex: none; width: var(--cible); height: var(--cible); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); display: grid; place-items: center; }
 .epingle svg { width: 22px; height: 22px; }
-.epingle[aria-pressed="true"] { background: var(--c-fill); color: var(--c-on); }
+.epingle[aria-pressed="true"] { background: var(--c-tint); color: var(--c-text); }
+.epingle[aria-pressed="true"] svg { fill: currentColor; }
 .epingle[disabled] { opacity: .45; cursor: default; }
 .lecteur-description { font-size: var(--t-corps); line-height: 1.4; color: var(--text); text-wrap: pretty; }
 .lecteur-consigne { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }

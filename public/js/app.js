@@ -38,6 +38,7 @@ import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
 import { BienEtre, Coherence, ExerciceSeul } from './ui/ecrans/bien-etre.js';
+import { EntreeBienEtre } from './ui/ecrans/entree-bien-etre.js';
 import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 import { Minuteur } from './ui/ecrans/minuteur.js';
 import { Concentration } from './ui/ecrans/concentration.js';
@@ -79,6 +80,7 @@ const ECRANS = {
   soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
   'bien-etre': () => html`<${BienEtre} />`,
+  'entree-bien-etre': (p) => html`<${EntreeBienEtre} key=${p.entree} id=${p.entree} />`,
   coherence: () => html`<${Coherence} />`,
   programme: () => html`<${Programme} />`,
   'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
