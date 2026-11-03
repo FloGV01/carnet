@@ -12,7 +12,7 @@
 
 ```json
 { "format": "carnet-sauvegarde", "formatVersion": 7, "schemaVersion": 6,
-  "exportedAt": "2026-10-30T19:02:11.412Z", "app": { "version": "9.0.0" },
+  "exportedAt": "2026-11-03T19:02:11.412Z", "app": { "version": "10.0.0" },
   "partie": { "numero": 1, "total": 2 },
   "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "notes": 1, "seances": 2, "listes": 204, "meta": 2, "audios": 1 },
   "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "notes": [], "seances": [], "listes": [], "meta": [],
@@ -23,6 +23,11 @@
 - **Champ `partie`** : présent seulement dans un export en plusieurs fichiers.
 - **Enregistrements** : ils suivent le schéma du plan (§5.3). Les références de liste sont des identifiants (`liste:slug`), jamais des libellés.
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
+- **Ce que la v10 ajoute, sans changer de format** : une sauvegarde de la v10 reste en formatVersion 7, et rien n'est à transformer à l'import.
+  - méta `favorisBienEtre` : les éléments épinglés dans Bien-être, dans l'ordre où ils l'ont été, `["soupir", "reveil-nuit", "sons-de-fond"]`. Chacun est l'identifiant d'un exercice, ou `coherence`, `minuteur`, `concentration`, `sons-de-fond`. Elle est remplacée à l'import comme toute clé de l'utilisateur. Elle n'est pas validée à l'import, mais à la lecture : un identifiant inconnu, un doublon ou une valeur qui n'est pas une liste sont ignorés, sans erreur ni ligne vide. Une épingle touchée ne compte pas comme une saisie : `derniereEcriture` ne bouge pas ;
+  - méta `respiration` : champ `voix` (booléen, « Lire les consignes à voix haute »), faux s'il est absent ;
+  - séances : `exercice` peut aussi valoir `minuteur` (le minuteur silencieux) ou l'identifiant d'un des dix exercices nouveaux. `origine` garde ses valeurs : `moment-difficile` pour Panique, Colère, Trop-plein et Réveil la nuit lancés depuis Moment difficile, `bien-etre` pour le reste. Le minuteur de concentration et les sons de fond n'écrivent aucune séance ;
+  - hors de la sauvegarde, comme les réglages du lecteur : « Reprendre » (`carnet:bien-etre:dernier`), les durées retenues (`carnet:duree:<id>`) et les réglages des minuteurs et des sons (`carnet:minuteur`, `carnet:concentration`, `carnet:sons`) restent sur l'appareil, perdus à la réinstallation.
 - **formatVersion 7 (v9)** :
   - champ `emotion` des humeurs du moment : un des 144 mots de la carte (`domain/roue.js`), `roue:<famille>:<mot>` ou, pour Fatigué et Épuisé, qui n'ont pas de famille, `roue:aucune:fatigue` et `roue:aucune:epuise` ; une famille seule `roue:<famille>` (relevés de la v7) ; ou un mot à soi, `roue:perso:u-<8 chiffres hexadécimaux>`. Un mot à soi n'est valable que s'il est dans la méta `motsPerso` du même fichier ;
   - méta `motsPerso` : les mots ajoutés à la carte des émotions, `{ "roue:perso:u-0a1b2c3d": { "libelle": "Flottant", "zone": "vert", "famille": null, "definition": null, "archive": false, "createdAt": "2026-10-28T19:02:11.412Z" } }`. `zone` vaut `rouge`, `jaune`, `bleu` ou `vert` (`null` pour un mot recréé à l'import, sans couleur) ; `famille`, la clé d'une des 7 familles ou `null` ; `definition`, un texte ou `null` ; `archive` vaut `true` pour un mot mis de côté (il a quitté la carte et la loupe, ses relevés le gardent). L'identifiant ne porte ni le libellé, ni la zone, ni la famille : un mot renommé ou changé de zone garde ses relevés, qui ne sont pas réécrits. Elle est remplacée à l'import comme toute clé de l'utilisateur, remise d'abord dans cette forme (un fichier écrit à la main peut tout y mettre) : une entrée sans libellé ou dont l'identifiant n'a pas cette forme est écartée, un libellé est coupé à 40 signes, une famille ou une définition hors de ces valeurs devient `null`, une zone hors de ces valeurs devient `null`, et le mot est mis de côté (il revient par sa couleur, puis « Remettre sur la carte », qui refuse un nom déjà pris), sinon seul `true` met de côté, et un mot de la carte dont le nom est déjà pris (par un des 144 mots, ou par un mot à soi créé avant lui, sans tenir compte des accents ni de la casse) est mis de côté ;
@@ -73,7 +78,7 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
 5. **Application** :
    - copie de secours `avant-import`, 3 au maximum, sans les audios ;
    - puis une seule transaction qui vide et réécrit tout.
-6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions, mots ajoutés à la carte…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
+6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions, mots ajoutés à la carte, exercices épinglés…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
 7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant.
    - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes, une copie prise avant la v7 n'a pas de séances : elles restent alors telles quelles.
    - Les listes par défaut absentes de la copie (v4, v6, v8) sont ajoutées.

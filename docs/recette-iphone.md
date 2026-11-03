@@ -23,6 +23,16 @@
 - [ ] « En consultation » : chiffres des 30 jours, questions cochées au doigt, compte rendu dicté ; Terminer revient à Soins.
 - [ ] Les boutons « Pas à pas » et « + Épisode » ne recouvrent ni « Mes points positifs » ni « Mémo vocal ».
 
-## Minuteurs (v10)
+## v10
 
+- [ ] **Son de fond, écran verrouillé** : Diagnostic (appui long sur la version, dans Réglages) › « Son de fond, écran verrouillé », puis verrouiller l'iPhone. Le bruit rose continue, en mode silencieux aussi, et s'éteint en fondu à la fin des 2 min. S'il s'arrête au verrouillage, en faire un correctif 10.0.1 : l'écran noir gardé allumé pendant la minuterie (§14.2 de la spec v10).
+- [ ] Sons de fond : ni claquement ni répétition qu'on entende, sur les quatre sons. « Fermer » arrête le son, et la musique peut repartir. Le fondu de la minuterie ne s'entend pas comme une coupure.
+- [ ] **La lentille de la carte pendant l'élan** : lancer la carte d'un coup de doigt. Le mot du milieu grossit, ses voisins un peu, sans saccade, et rien n'est noté. Un toucher juste après l'arrêt choisit le mot sous le doigt, jamais un voisin. Avec « Réduire les animations », rien ne grossit en glissant.
+- [ ] Moment difficile : les quatre boutons sont à l'écran sans défiler. Toucher Panique démarre aussitôt, sans son. « Signal sonore » et « Lire les consignes à voix haute » (Réglages › Moment difficile) valent pour ces exercices.
+- [ ] **« Réveil la nuit », la nuit**, dans le noir, luminosité basse : le texte gris se lit sans éclairer la chambre, rien ne sonne sans la voix, et l'écran reste allumé pendant l'exercice, et seulement pendant.
+- [ ] **Les textes des exercices, à relire** : les dix exercices de `docs/decisions.md`, « Exercices à relire », dans le lecteur, une consigne par écran, assez de temps pour chacune, voix allumée aussi. La lecture à voix haute ne coupe pas une consigne.
+- [ ] **La table « Pour ce moment : », à relire** (`docs/decisions.md`, entrée v10.0.0) : noter un mot de chaque couleur. Les exercices proposés conviennent à ce moment-là. Toucher l'un d'eux lance le lecteur, et le relevé est là dans Ma journée.
+- [ ] Le soupir : le disque, le mot « Encore un peu » et le son suivent la petite inspiration en plus. Le noting : les quatre étiquettes se touchent sans viser.
+- [ ] Bien-être : « Reprendre » revient après une relance de l'app. Une épingle survit à une sauvegarde restaurée.
+- [ ] Minuteur silencieux : l'écran reste allumé, le bol sonne au début et à la fin ; verrouiller l'iPhone le met en pause.
 - [ ] Minuteur de concentration : lancer 15 min, passer à une autre app au-delà de la durée, revenir. L'écran dit « Le temps est passé. », sans bol. Si iOS a rechargé la page (retour sur Aujourd'hui, sans ce texte), en faire un correctif : retenir l'heure de fin, comme pour le repli du §14.2 de la spec v10.

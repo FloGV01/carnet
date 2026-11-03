@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
-import { vueMoment, toucherMot } from '../aides/emotion.js';
+import { vueMoment, toucherMot, noter, continuer, terminer } from '../aides/emotion.js';
+import { installerParole, cacher, montrer } from '../aides/lecteur.js';
+import { trouverInterdits } from '../aides/mots-interdits.js';
 
 // v7 (9/9) · Contrôle global (plan v6.2, tâches 6 et 7) : on parcourt les écrans principaux, avec des données inventées,
 // en clair et en sombre.
@@ -24,7 +26,9 @@ import { vueMoment, toucherMot } from '../aides/emotion.js';
 // sa zone ; « Tes zones » en tableau ; Réglages › Émotions › « Mes mots », un mot ouvert. Les relevés versés citent un mot
 // à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours. v10 (7/9) : l'accueil de Bien-être
 // plein (« Reprendre », « Favoris ») et l'épingle allumée, sur le fond de sa teinte puis sur le noir de « Réveil la nuit » : son
-// dessin, qui n'est pas un texte, a au moins 3:1 sur son fond.
+// dessin, qui n'est pas un texte, a au moins 3:1 sur son fond. v10 (9/9) : les écrans nouveaux (ECRANS_V10 : les exercices de
+// crise, les listes des entrées, le soupir, le noting, les sons de fond, les deux minuteurs, « Pour ce moment : »), dans ce
+// parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de téléchargé, mouvement réduit.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -250,6 +254,70 @@ const epinglesFaibles = (page) => page.evaluate(() => {
   }).filter(Boolean);
 });
 
+// Les écrans nouveaux de la v10, de quoi les atteindre sans rien attendre du parcours : chacun part de son adresse, ou de l'écran
+// qui le précède ici.
+const bouton = (p, nom) => p.getByRole('button', { name: nom, exact: true });
+// Jusqu'à l'étape voulue. Les étapes avancent aussi seules : le lecteur y est peut-être déjà.
+const jusqua = async (p, selecteur) => {
+  for (let i = 0; i < 4 && await p.locator(selecteur).count() === 0; i += 1) await bouton(p, 'Suivant').click();
+};
+const ECRANS_V10 = [
+  // v10 (5/9, 9/9) : les quatre boutons de Moment difficile. Un toucher démarre aussitôt : une consigne, une étape rythmée, la
+  // pause (ses réglages, pour cette fois). Ouvert par son adresse, l'exercice attend « Commencer ». Puis « Réveil la nuit », sur son
+  // fond noir : avant, sur son étape rythmée, en pause (la voix seule, sans signal).
+  ['Moment difficile, les quatre boutons', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.exercices-courts .exercice-court'],
+  ['Panique, lancée d\'un toucher', (p) => p.getByRole('group', { name: 'Un exercice court' }).getByRole('button', { name: 'Panique', exact: true }).click(), '.lecteur-plein .lecteur-consigne'],
+  ['Panique, étape rythmée', (p) => jusqua(p, '.mot-souffle'), '.mot-souffle'],
+  ['Panique, en pause', (p) => bouton(p, 'Pause').click(), '.reglages-pause .reglages-lecteur'],
+  ['Panique, ouverte par son adresse', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/crise/panique'); }, '.lecteur-avant .reglages-lecteur'],
+  ['Réveil la nuit, ouvert par son adresse', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/crise/reveil-nuit'); }, '.parcours.ecran-noir .lecteur-avant'],
+  ['Réveil la nuit, étape rythmée', async (p) => { await bouton(p, 'Commencer').click(); await jusqua(p, '.mot-souffle'); }, '.parcours.ecran-noir .mot-souffle'],
+  ['Réveil la nuit, en pause', (p) => bouton(p, 'Pause').click(), '.parcours.ecran-noir .reglages-pause .reglages-lecteur'],
+  // v10 (7/9) : l'accueil plein, une liste où des épingles sont allumées, et l'écran « avant » de « Réveil la nuit », épinglé, sur
+  // son fond noir. Une séance du Programme est épinglée elle aussi : le Programme a son épingle allumée.
+  ['Bien-être plein', async (p) => {
+    await aller(p, '#/aujourdhui');
+    await p.evaluate(async () => {
+      localStorage.setItem('carnet:bien-etre:dernier', JSON.stringify('expiration-longue'));
+      await window.__carnet.repo.meta.ecrire('favorisBienEtre', ['soupir', 'reveil-nuit', 'sons-de-fond', 'les-sons']);
+    });
+    await aller(p, '#/bien-etre');
+  }, '.bien-etre .carte-reprendre .bouton-lecture'],
+  ['Me calmer vite, une épingle allumée', (p) => aller(p, '#/bien-etre/calmer'), '.entree-bien-etre .epingle[aria-pressed="true"]'],
+  ['Dormir ou me rendormir', (p) => aller(p, '#/bien-etre/dormir'), '.entree-bien-etre .ligne-element'],
+  ['Me concentrer', (p) => aller(p, '#/bien-etre/concentrer'), '.entree-bien-etre .ligne-element'],
+  ['Réveil la nuit, épinglé', (p) => aller(p, '#/exercice/reveil-nuit'), '.lecteur-avant .epingle[aria-pressed="true"]'],
+  // v10 (4/9, 9/9) : le soupir (sa durée au choix, puis son étape rythmée et sa petite inspiration en plus), et le noting (ses
+  // quatre étiquettes, l'une d'elles touchée).
+  ['Le soupir', (p) => aller(p, '#/exercice/soupir'), '.lecteur-avant .reglages-lecteur'],
+  ['Le soupir, étape rythmée', async (p) => { await bouton(p, 'Commencer').click(); await jusqua(p, '.mot-souffle'); }, '.mot-souffle'],
+  ['Noter ce qui passe', (p) => aller(p, '#/exercice/noting'), '.lecteur-avant .reglages-lecteur'],
+  ['Noter ce qui passe, les étiquettes', async (p) => {
+    await bouton(p, 'Commencer').click();
+    await jusqua(p, '.etiquettes-noting');
+    await bouton(p, 'Corps').click();
+  }, '.etiquettes-noting .etiquette-noting'],
+  // v10 (6/9, 9/9) : les sons de fond, le minuteur silencieux (en cours, puis en pause, la page cachée puis revue) et le minuteur de
+  // concentration (en cours, puis le temps passé), chacun avant et pendant.
+  ['Sons de fond', (p) => aller(p, '#/sons'), '.lecteur-avant .choix-son'],
+  ['Sons de fond en cours', (p) => bouton(p, 'Commencer').click(), '.lecteur-plein .reglage-volume'],
+  ['Minuteur silencieux', (p) => aller(p, '#/minuteur'), '.lecteur-avant .reglages-lecteur'],
+  ['Minuteur silencieux en cours', (p) => bouton(p, 'Commencer').click(), '.lecteur-plein .lecteur-consigne'],
+  ['Minuteur silencieux en pause', async (p) => { await cacher(p); await montrer(p); }, '.lecteur-plein .bouton-lecture'],
+  ['Minuteur de concentration', (p) => aller(p, '#/concentration'), '.lecteur-avant .reglages-lecteur'],
+  ['Minuteur de concentration en cours', (p) => bouton(p, 'Commencer').click(), '.lecteur-plein .temps-restant'],
+  ['Minuteur de concentration, le temps passé', (p) => p.clock.fastForward('25:01'), '.lecteur-plein > .lecteur-consigne'],
+  // v10 (8/9, 9/9) : l'écran 3 d'un relevé neuf, sa garde passée : « Pour ce moment : » et ses exercices.
+  ['Émotion du moment, Pour ce moment', async (p) => {
+    await aller(p, '#/aujourdhui');
+    await aller(p, '#/moment');
+    const vue = vueMoment(p);
+    await noter(vue, 'rouge', 'Irrité');
+    await continuer(vue).click();
+    await expect(terminer(vue)).not.toHaveAttribute('aria-disabled', 'true');
+  }, '.pour-ce-moment .proposition'],
+];
+
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
@@ -311,18 +379,7 @@ const ECRANS = (ids) => [
   ['Historique', (p) => aller(p, '#/historique'), '.historique .semaine'],
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
   ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .entrees .ligne-carte'],
-  // v10 (7/9) : l'accueil plein, une liste où des épingles sont allumées, et l'écran « avant » de « Réveil la nuit », épinglé, sur
-  // son fond noir. Une séance du Programme est épinglée elle aussi : le Programme, plus bas, a son épingle allumée.
-  ['Bien-être plein', async (p) => {
-    await aller(p, '#/aujourdhui');
-    await p.evaluate(async () => {
-      localStorage.setItem('carnet:bien-etre:dernier', JSON.stringify('expiration-longue'));
-      await window.__carnet.repo.meta.ecrire('favorisBienEtre', ['soupir', 'reveil-nuit', 'sons-de-fond', 'les-sons']);
-    });
-    await aller(p, '#/bien-etre');
-  }, '.bien-etre .carte-reprendre .bouton-lecture'],
-  ['Me calmer vite, une épingle allumée', (p) => aller(p, '#/bien-etre/calmer'), '.entree-bien-etre .epingle[aria-pressed="true"]'],
-  ['Réveil la nuit, épinglé', (p) => aller(p, '#/exercice/reveil-nuit'), '.lecteur-avant .epingle[aria-pressed="true"]'],
+  ...ECRANS_V10,
   // v8 : le Programme (une séance faite porte « Faite le »), puis le lecteur, avant de commencer, sur une étape rythmée
   // (le disque et « Inspire »), puis en pause (ses réglages, sous l'écran de lecture).
   ['Programme', (p) => aller(p, '#/bien-etre/programme'), '.programme .seance-faite'],
@@ -367,8 +424,9 @@ const ECRANS = (ids) => [
   ['Guide d\'installation', async (p) => { await p.goto('/?forcer-guide'); }, '.guide'],
 ];
 
-// v9 (8/8) : chaque écran dit aussi les violations de la CSP survenues depuis l'écran d'avant.
-async function parcourir(page, schema, verifier) {
+// v9 (8/8) : chaque écran dit aussi les violations de la CSP survenues depuis l'écran d'avant. `ecrans` : la liste parcourue,
+// tous les écrans au départ (v10 : ou ceux de la v10 seuls).
+async function parcourir(page, schema, verifier, ecrans = ECRANS) {
   await page.emulateMedia({ colorScheme: schema });
   await page.addInitScript(() => {
     window.__csp = [];
@@ -378,7 +436,7 @@ async function parcourir(page, schema, verifier) {
   await page.reload();
   await appPrete(page);
   const fautes = {};
-  for (const [nom, preparer, attendu] of ECRANS(ids)) {
+  for (const [nom, preparer, attendu] of ecrans(ids)) {
     await preparer(page);
     await expect(page.locator(attendu).first(), `${schema} : ${nom}`).toBeVisible({ timeout: 15000 });
     if (nom === 'Analyse') await expect(page.locator('main')).not.toContainText('Calcul…', { timeout: 30000 });
@@ -392,6 +450,8 @@ async function parcourir(page, schema, verifier) {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
+  // Une voix française : les réglages de la voix du lecteur sont à l'écran, et seuls sur le noir de « Réveil la nuit ».
+  await installerParole(page);
   await page.goto('/');
   await viderBase(page);
 });
@@ -405,6 +465,81 @@ for (const schema of ['light', 'dark']) {
       ...(await tirets(page)).map((x) => `tirets : ${x}`),
       ...(await sansCoche(page)).map((x) => `choix fait sans coche : ${x}`),
     ]);
+    expect(fautes).toEqual({});
+  });
+}
+
+// Les cibles qu'un doigt de 44 pt ne touche pas tout entier : on vise le centre de chaque élément à toucher, puis 21,5 pt de chaque
+// côté. Ce que le point rencontre doit être cet élément : les pseudo-éléments qui agrandissent une cible comptent (un
+// interrupteur de 31 de haut touche sur 47), et un voisin ou un élément posé dessus ne compte pas. L'élément vient au milieu de
+// l'écran d'abord : ce qui est plus bas s'atteint en défilant.
+const ciblesPetites = (page) => page.evaluate(() => {
+  const nom = (el) => (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30);
+  const COTE = 21.5;
+  const fautes = [];
+  for (const el of document.querySelectorAll('a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="slider"]')) {
+    if (el.disabled || el.closest('.visuellement-cache, [hidden]') || !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+    el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    const manques = [[x, y], [x - COTE, y], [x + COTE, y], [x, y - COTE], [x, y + COTE]].filter(([a, b]) => {
+      const vise = document.elementFromPoint(a, b);
+      return !vise || !el.contains(vise);
+    });
+    if (manques.length) fautes.push(`${el.tagName.toLowerCase()}.${el.className} « ${nom(el)} » : ${Math.round(r.width)} × ${Math.round(r.height)}, centre (${Math.round(x)}, ${Math.round(y)})`);
+  }
+  return fautes;
+});
+
+// Tout ce que l'écran dit, à voir ou à entendre : son texte et les noms donnés aux lecteurs d'écran.
+const motsInterdits = (page) => page.evaluate(() => {
+  const textes = [document.body.innerText];
+  for (const el of document.querySelectorAll('[aria-label], [aria-valuetext], [title], [placeholder]')) {
+    textes.push(...['aria-label', 'aria-valuetext', 'title', 'placeholder'].map((a) => el.getAttribute(a) || ''));
+  }
+  return textes.join('\n');
+}).then(trouverInterdits);
+
+// Toute police à empattements calculée sur la page, pseudo-éléments compris.
+const empattements = (page) => page.evaluate(() => {
+  const fautes = new Set();
+  for (const e of document.querySelectorAll('*')) {
+    for (const pseudo of [null, '::before', '::after']) {
+      const f = getComputedStyle(e, pseudo).fontFamily;
+      if (/ui-serif|georgia|new york|times|(?<!sans-)serif/i.test(f)) fautes.add(`${e.tagName} ${e.getAttribute('class') || ''} ${pseudo || ''} : ${f}`);
+    }
+  }
+  return [...fautes];
+});
+
+// Un fichier son, une police, ou quoi que ce soit d'une autre origine, parmi ces adresses demandées par la page (les sons de fond
+// sont fabriqués sur place). Les gardes (gardes.js) font déjà échouer toute requête vers une autre origine, ici comme ailleurs.
+const telecharges = (adresses) => adresses.filter((u) => /\.(mp3|m4a|aac|wav|ogg|flac|woff2?|ttf|otf)($|\?)/i.test(u) || !u.startsWith('http://127.0.0.1'));
+
+// Ce qui bouge encore : toute animation ou transition en cours, et un disque du souffle qui n'est pas à sa taille fixe.
+const mouvements = (page) => page.evaluate(() => {
+  const fautes = document.getAnimations().map((a) => `animation ${a.animationName || a.transitionProperty || ''} de ${a.effect.target && a.effect.target.className}`);
+  const disque = document.querySelector('.disque-souffle');
+  if (disque && getComputedStyle(disque).transform !== 'matrix(0.8, 0, 0, 0.8, 0, 0)') fautes.push(`disque du souffle : ${getComputedStyle(disque).transform}`);
+  return fautes;
+});
+
+// Le contrôle des écrans de la v10, en clair et en sombre, avec « Réduire les animations » allumé : le contraste, les tirets et
+// le débordement sont vérifiés plus haut, sur le parcours entier.
+for (const schema of ['light', 'dark']) {
+  test(`écrans de la v10 ${schema === 'light' ? 'en clair' : 'en sombre'} : cibles de 44 pt, aucun mot interdit, aucune police à empattements, rien de téléchargé, aucune requête sortante ni violation de la CSP, rien qui bouge en mouvement réduit`, async ({ page }) => {
+    test.setTimeout(120000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const demandes = [];
+    page.on('request', (r) => { if (!['blob:', 'data:'].includes(new URL(r.url()).protocol)) demandes.push(r.url()); });
+    const fautes = await parcourir(page, schema, async () => [
+      ...(await ciblesPetites(page)).map((x) => `cible : ${x}`),
+      ...(await motsInterdits(page)).map((x) => `mot interdit : ${x}`),
+      ...(await empattements(page)).map((x) => `police : ${x}`),
+      ...telecharges(demandes.splice(0)).map((x) => `téléchargé : ${x}`),
+      ...(await mouvements(page)).map((x) => `mouvement : ${x}`),
+    ], () => ECRANS_V10);
     expect(fautes).toEqual({});
   });
 }
