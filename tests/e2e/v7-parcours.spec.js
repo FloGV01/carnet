@@ -448,6 +448,8 @@ test('Moment difficile : les puces règlent la durée et le rythme d\'un toucher
   // Pendant la respiration : rien ne saute, les puces sont inactives ; la respiration suit le réglage (2 min).
   await ecrireMeta(page, 'respiration', { duree: 2, rythme: '5-5', son: false });
   const v = await ouvrirDifficile(page);
+  // Les puces arrivent une fois les réglages lus, ce qui agrandit la carte : on mesure après, sinon l'écart vient de là.
+  await expect(puce(v, 'Durée')).toBeEnabled();
   const avant = await v.locator('.respiration').boundingBox();
   await v.getByRole('button', { name: 'Commencer' }).click();
   await expect(v.locator('.phase-respiration')).toHaveText('Inspire');
