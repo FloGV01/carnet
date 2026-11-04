@@ -474,7 +474,8 @@ for (const schema of ['light', 'dark']) {
 // Les cibles qu'un doigt de 44 pt ne touche pas tout entier : on vise le centre de chaque élément à toucher, puis 21,5 pt de chaque
 // côté. Ce que le point rencontre doit être cet élément : les pseudo-éléments qui agrandissent une cible comptent (un
 // interrupteur de 31 de haut touche sur 47), et un voisin ou un élément posé dessus ne compte pas. L'élément vient au milieu de
-// l'écran d'abord : ce qui est plus bas s'atteint en défilant.
+// l'écran d'abord : ce qui est plus bas s'atteint en défilant. Les points tombent sur un pixel entier, du côté du centre : WebKit donne
+// un point fractionnaire au pixel d'après, et deux flèches de 44 collées (de 213 à 257, de 257 à 301) se volaient 256,5 sans raison.
 const ciblesPetites = (page) => page.evaluate(() => {
   const nom = (el) => (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30);
   const COTE = 21.5;
@@ -485,7 +486,8 @@ const ciblesPetites = (page) => page.evaluate(() => {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) continue;
     const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
-    const manques = [[x, y], [x - COTE, y], [x + COTE, y], [x, y - COTE], [x, y + COTE]].filter(([a, b]) => {
+    const [gauche, droite, haut, bas] = [Math.ceil(x - COTE), Math.floor(x + COTE), Math.ceil(y - COTE), Math.floor(y + COTE)];
+    const manques = [[x, y], [gauche, y], [droite, y], [x, haut], [x, bas]].filter(([a, b]) => {
       const vise = document.elementFromPoint(a, b);
       return !vise || !el.contains(vise);
     });
@@ -564,6 +566,27 @@ for (const schema of ['light', 'dark']) {
   });
 }
 
+// Contre-relecture : Réglages › Le soir, hérité de la v6.1. Ses interrupteurs n'avaient pas la zone de toucher de 47 : une touche à 21 pt
+// du centre tombait sur la rangée, qui ne bascule rien. Ils voisinent avec les flèches : chacun garde ses 44 pt, sans mordre sur l'autre.
+test('Réglages › Le soir : cibles de 44 pt, les interrupteurs et leurs flèches voisines compris', async ({ page }) => {
+  await aller(page, '#/reglages/journee');
+  await expect(page.locator('.ma-journee .interrupteur').first()).toBeVisible();
+  await stabiliser(page);
+  const nombre = await page.locator('.ligne-champ-reglage .interrupteur').count();
+  expect(nombre).toBeGreaterThanOrEqual(10);
+  expect(await page.locator('.ligne-champ-reglage .fleche').count()).toBeGreaterThan(0);
+  expect(await ciblesPetites(page)).toEqual([]);
+  // Le contrôle voit pour de bon un interrupteur sans sa zone et une flèche de 42.
+  await page.evaluate(() => {
+    const feuille = document.styleSheets[0];
+    feuille.insertRule('.interrupteur::after { content: none !important; }', feuille.cssRules.length);
+    feuille.insertRule('.fleche { width: 42px !important; }', feuille.cssRules.length);
+  });
+  const abimees = await ciblesPetites(page);
+  expect(abimees.filter((x) => x.startsWith('button.interrupteur'))).toHaveLength(nombre);
+  expect(abimees.filter((x) => x.startsWith('button.fleche')).length).toBeGreaterThan(0);
+});
+
 // Le contrôle lui-même, dans le même ordre que `parcourir` : trois mouvements de 50 ms, finis quand il regarde.
 test('le contrôle du mouvement voit ce qui a déjà fini de bouger : une animation CSS, une transition, une animation lancée par le code', async ({ page }) => {
   await ecouterMouvements(page);
@@ -604,6 +627,39 @@ test('à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
     return f;
   });
+  expect(fautes).toEqual({});
+});
+
+// Contre-relecture : l'Analyse et Comprendre, tout ouvert (les replis, tous les tableaux), là où ces écrans débordaient : leurs tableaux
+// défilent dans leur carte, les tuiles de « Tous les chiffres » passent sur une colonne, et rien ne bouge à la page.
+test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableaux ouverts, ne défilent pas de côté', async ({ page }) => {
+  test.setTimeout(180000);
+  await verser(page);
+  await page.reload();
+  await appPrete(page);
+  const fautes = {};
+  for (const taille of [33, 40, 47, 53]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+    for (const route of ['#/analyse', '#/comprendre/explosions', '#/comprendre/energie', '#/comprendre/rythmes']) {
+      await aller(page, '#/aujourdhui');
+      await aller(page, route);
+      await expect(page.locator('main figure.graphe').first()).toBeVisible({ timeout: 15000 });
+      await page.evaluate(async () => {
+        for (let f = document.querySelector('main .repli-tete[aria-expanded="false"]'); f; f = document.querySelector('main .repli-tete[aria-expanded="false"]')) {
+          f.click();
+          await new Promise((ok) => setTimeout(ok, 30));
+        }
+        for (const b of document.querySelectorAll('main .bascule-graphe')) if (b.textContent === 'Voir en tableau') b.click();
+      });
+      await expect(page.locator('main .bascule-graphe', { hasText: 'Voir en tableau' })).toHaveCount(0);
+      await stabiliser(page);
+      const f = await debordements(page);
+      // Un tableau plus large que sa carte y défile sans rien gagner en hauteur : la page seule défile vers le bas.
+      f.push(...await page.locator('main figure.graphe').evaluateAll((gs) => gs.filter((g) => g.scrollHeight > g.clientHeight + 0.5).map((g) => `défile en hauteur : ${g.textContent.slice(0, 30)}`)));
+      if (f.length) fautes[`${route}, ${taille} px`] = f;
+    }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});
 });
 

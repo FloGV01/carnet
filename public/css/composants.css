@@ -97,6 +97,8 @@
 }
 .interrupteur[aria-checked="true"] { background: var(--action); border-color: var(--action); }
 .interrupteur[aria-checked="true"] .interrupteur-bouton { left: 22px; background: var(--action-on); }
+/* Il fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans ses rangées de 52 (.ligne-interrupteur, .ligne-champ-reglage). */
+.interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 
 /* ---------- Barre d'onglets (2b) ---------- */
 /* Neutre : fond --bg et filet en haut ; icônes de 22. L'onglet actif a une pilule de 56 × 30 en --surface-2

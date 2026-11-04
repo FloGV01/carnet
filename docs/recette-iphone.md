@@ -17,7 +17,7 @@
 ## Design (J2.0)
 
 - [ ] Tous les textes s'affichent dans la police de l'iPhone (SF Pro), titres et carte des émotions compris, en clair et en sombre.
-- [ ] Réglages iOS › Luminosité et affichage › Taille du texte au plus grand : l'app reste lisible et défile, rien n'est coupé.
+- [ ] Réglages iOS › Luminosité et affichage › Taille du texte au plus grand : l'app reste lisible et défile, rien n'est coupé. Résultat attendu pour l'instant, hérité et sans rapport avec la v10 (`docs/decisions.md`, v10, « En attente de l'utilisateur ») : aux tailles d'accessibilité, à l'étape 1 de l'Épisode, des pastilles sortent de l'écran sans s'atteindre, et la page défile de côté sur Aujourd'hui, Rendez-vous, Traitement, Soins › Traitement et la Vue soignants, puis, au plus grand, sur Réglages et Rappels. L'Analyse et Comprendre, eux, ne défilent pas de côté.
 - [ ] « Pas à pas » : la journée se remplit une question par écran ; Fermer garde tout.
 - [ ] Toucher le micro « Dicter » quand le clavier est déjà ouvert ne le referme pas.
 - [ ] « En consultation » : chiffres des 30 jours, questions cochées au doigt, compte rendu dicté ; Terminer revient à Soins.

@@ -8,6 +8,7 @@ import {
 // Aucun élément des écrans qui étaient en New York n'en garde la trace ; les libellés des quatre bulles tiennent sans
 // réduire leur corps au texte par défaut, et dans leur disque en très grand texte (point de vigilance 5, les écrans du
 // relevé sont dans v9-emotion et v9-mot-perso). Relecture finale : l'interligne suit le corps ajusté, jusqu'à 53 px (AX5).
+// Contre-relecture : à ces tailles, l'Analyse ne défile pas de côté, avec un point positif noté et le tableau de Tes zones ouvert.
 // Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const FLOTTANT = 'roue:perso:u-0a1b2c3d';
 const MOTS_PERSO = { [FLOTTANT]: { libelle: 'Flottant', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-01T08:00:00.000Z' } };
@@ -24,6 +25,8 @@ const charger = (page) => page.evaluate(async ([releves, perso]) => {
   const r = window.__carnet.repo;
   await r.meta.ecrire('motsPerso', perso);
   for (const [i, emotion] of releves.entries()) await r.humeurs.creer({ date: '2026-10-15', heure: `1${i}:00`, emotion, energie: 'energie:moyenne' });
+  // Un point positif : « Tes points positifs » est dans Ma semaine.
+  await r.journal.patch('2026-10-15', { pointsPositifs: 'Une bonne marche.' });
 }, [RELEVES, MOTS_PERSO]);
 const bullesZones = (page) => page.getByRole('region', { name: 'Tes zones' }).getByRole('list', { name: 'Relevés par zone, sur la période' });
 // De la taille du texte par défaut au plus grand texte d'iOS (AX5).
@@ -182,7 +185,7 @@ test('au texte par défaut, les libellés des quatre bulles gardent leur corps e
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
-test('très grand texte (17 à 53) : les libellés de Tes zones restent dans leur disque, sur une ligne chacun, et leurs lignes ne s\'écartent pas ; leur carte, « Par semaine » comprise, ne défile pas de côté', async ({ page }) => {
+test('très grand texte (17 à 53) : les libellés de Tes zones restent dans leur disque, sur une ligne chacun, et leurs lignes ne s\'écartent pas ; leur carte, « Par semaine » comprise, ne défile pas de côté, ni la page, « Tes points positifs » compris et le tableau de Tes zones ouvert', async ({ page }) => {
   test.setTimeout(120000);
   await charger(page);
   await aller(page, '#/analyse');
@@ -206,9 +209,39 @@ test('très grand texte (17 à 53) : les libellés de Tes zones restent dans leu
         const r = b.getBoundingClientRect();
         if (r.left < cadre.left - 0.5 || r.right > cadre.right + 0.5 || r.top < cadre.top - 0.5 || r.bottom > cadre.bottom + 0.5) res.push(`${b.className} : de ${r.left} à ${r.right}, hors de sa carte (de ${cadre.left} à ${cadre.right})`);
       }
+      // Contre-relecture : « Tes points positifs » et sa flèche, en entier dans l'écran.
+      for (const b of document.querySelectorAll('.ma-semaine .repli-titre, .ma-semaine .repli-fleche')) {
+        const r = b.getBoundingClientRect();
+        if (r.right > innerWidth + 0.5) res.push(`${b.className} : jusqu'à ${r.right}, hors de l'écran`);
+      }
       return [...new Set(res)];
     });
     expect(fautes, `${taille} px`).toEqual([]);
+    // Contre-relecture : le tableau de Tes zones ouvert, la page ne défile toujours pas de côté. S'il est plus large que sa carte,
+    // il y défile : ses en-têtes restent sur une ligne, et « Relevés » s'atteint.
+    await page.locator('.tes-zones').getByRole('button', { name: 'Voir en tableau' }).click();
+    await expect(page.locator('.tes-zones .tableau-lignes')).toBeVisible();
+    const tableau = await page.evaluate(() => {
+      const graphe = document.querySelector('.tes-zones .graphe');
+      const lignes = (th) => {
+        const plage = document.createRange();
+        plage.selectNodeContents(th);
+        return new Set([...plage.getClientRects()].map((q) => Math.round(q.top))).size;
+      };
+      const entetes = [...graphe.querySelectorAll('thead th')];
+      graphe.scrollLeft = graphe.scrollWidth;
+      const dernier = entetes.at(-1).getBoundingClientRect();
+      const cadre = graphe.getBoundingClientRect();
+      const res = {
+        page: document.documentElement.scrollWidth, carte: document.querySelector('.tes-zones').scrollWidth <= document.querySelector('.tes-zones').clientWidth,
+        entetes: entetes.map((th) => th.textContent), lignes: entetes.map(lignes),
+        hauteur: graphe.scrollHeight <= graphe.clientHeight,
+        releves: dernier.left >= cadre.left - 0.5 && dernier.right <= Math.min(cadre.right, innerWidth) + 0.5,
+      };
+      graphe.scrollLeft = 0;
+      return res;
+    });
+    expect(tableau, `${taille} px, le tableau ouvert`).toEqual({ page: 390, carte: true, entetes: ['Semaine', 'Zones', 'Relevés'], lignes: [1, 1, 1], hauteur: true, releves: true });
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
