@@ -9,6 +9,8 @@
 // musique. Quand Safari propose `navigator.audioSession`, elle est réglée sur « ambient » pendant l'exercice.
 // v8 : le même contexte sert aux sons du lecteur de Bien-être (sons.js). Le lecteur peut demander la session « playback »
 // (« Jouer même en mode silencieux », qui met la musique en pause) ; les écrans de crise gardent « ambient » (spec §12.1).
+// v10 : la session reste demandée par l'appelant : « playback » pour un son de fond (sons-de-fond.js), qui doit continuer écran
+// verrouillé, « ambient » pour les deux minuteurs. Un son de fond vit sur son écran : il n'y a jamais deux demandes à la fois.
 const FREQUENCE = { inspire: 440, expire: 330, fini: 330 };
 const DUREE_NOTE_S = 0.7;
 // Le temps de laisser finir la dernière note avant de mettre le contexte en veille.
@@ -95,9 +97,14 @@ export function quandSonPret(jouerSon) {
   reprendre(c).then(() => { if (c.state === 'running' && performance.now() - instant < NOTE_PERIMEE_MS) jouerSon(c); });
 }
 
+// Le contexte préparé, ou null. Pour un son de fond (sons-de-fond.js), qui se pose sur son horloge sans attendre la reprise :
+// un contexte qui dort encore n'avance pas, le son partira de son début à la reprise, même si elle tarde.
+export const contexteSon = () => (contexte && contexte.state !== 'closed' ? contexte : null);
+
 // Fin ou arrêt de l'exercice : le contexte dort après la dernière note, et la session audio est rendue à
-// iOS (la dictée d'un mémo ne doit pas rester en session « ambiante »).
-export function suspendreSon() {
+// iOS (la dictée d'un mémo ne doit pas rester en session « ambiante »). `apresMs` : le temps de laisser finir ce qui s'éteint
+// (le fondu d'un son de fond, le bol d'un minuteur).
+export function suspendreSon({ apresMs = VEILLE_APRES_MS } = {}) {
   if (!contexte) return;
   annulerVeille();
   veille = setTimeout(() => {
@@ -105,5 +112,5 @@ export function suspendreSon() {
     enAttente = null;
     reglerSession('auto');
     try { Promise.resolve(contexte.suspend()).catch(() => {}); } catch { /* facultatif */ }
-  }, VEILLE_APRES_MS);
+  }, apresMs);
 }

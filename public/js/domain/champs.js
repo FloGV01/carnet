@@ -100,7 +100,7 @@ export const SCHEMAS = {
   },
   // Séance de Bien-être (v7) : une respiration ou un exercice mené au bout, ou arrêté après 60 s au moins.
   // Date calendaire réelle et heure, rattachées au jour par jourEvenement, comme l'humeur du moment.
-  // exercice : `coherence` ou l'identifiant d'un exercice, posé par l'app, donc obligatoire (spec v7 §6.3) :
+  // exercice : `coherence`, l'identifiant d'un exercice ou `minuteur` (v10), posé par l'app, donc obligatoire (spec v7 §6.3) :
   // une séance sans exercice est refusée. origine : l'écran d'où elle a été lancée.
   // v8, posés par l'app : fin vaut true pour une séance menée jusqu'au bout, et rien sinon (une séance de la
   // v7 n'en a pas) ; programme est l'id de la séance du Programme d'où elle a été lancée, et rien ailleurs.

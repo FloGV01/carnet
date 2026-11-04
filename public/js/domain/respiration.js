@@ -1,9 +1,10 @@
 // Respiration guidée (v6) : durée, rythme et signal sonore, réglés dans Réglages › Moment difficile
 // (méta `respiration`). Pur : la phase se déduit du temps écoulé, rien n'est compté ni enregistré. v8 : le souffle à
-// quatre temps du lecteur de Bien-être, et la cohérence cardiaque en séance du lecteur.
+// quatre temps du lecteur de Bien-être, et la cohérence cardiaque en séance du lecteur. v10 (spec §6 et §14.5) : la seconde
+// inspiration du soupir, et `voix` (« Lire les consignes à voix haute », pour les exercices courts de Moment difficile).
 export const DUREES = [2, 5, 10];
 export const RYTHMES = ['5-5', '4-6'];
-export const RESPIRATION_DEFAUT = Object.freeze({ duree: 5, rythme: '5-5', son: false });
+export const RESPIRATION_DEFAUT = Object.freeze({ duree: 5, rythme: '5-5', son: false, voix: false });
 
 // Les deux rythmes font un cycle de 10 s, et chaque durée est un nombre entier de cycles : l'exercice
 // s'arrête toujours à une fin d'expiration. L'animation CSS dure donc 10 s dans les deux rythmes.
@@ -17,6 +18,7 @@ export function normaliserRespiration(brut) {
     duree: DUREES.includes(b.duree) ? b.duree : RESPIRATION_DEFAUT.duree,
     rythme: RYTHMES.includes(b.rythme) ? b.rythme : RESPIRATION_DEFAUT.rythme,
     son: b.son === true,
+    voix: b.voix === true,
   };
 }
 
@@ -32,28 +34,34 @@ export function phaseRespiration(ecouleMs, rythme = RESPIRATION_DEFAUT.rythme, d
 // Le souffle du lecteur de Bien-être (v8, spec §5 et §12.3) : quatre temps en secondes entières, { inspi, retiens1, expi,
 // retiens2 } (inspirer, retenir poumons pleins, expirer, retenir poumons vides). Un temps de 0 n'existe pas. Le cycle se
 // répète depuis son origine ; la phase d'un instant se lit sur le temps écoulé depuis cette origine.
-export const TEMPS_SOUFFLE = ['inspi', 'retiens1', 'expi', 'retiens2'];
-const PHASES_SOUFFLE = { inspi: 'inspire', retiens1: 'retiens-plein', expi: 'expire', retiens2: 'retiens-vide' };
+// v10 (spec §6) : un temps de plus pour le soupir, `inspi2`, la petite inspiration qui suit la première, sans expirer entre
+// les deux. Absent, il vaut 0 : les souffles d'avant la v10 restent tels quels.
+export const TEMPS_SOUFFLE = ['inspi', 'inspi2', 'retiens1', 'expi', 'retiens2'];
+const PHASES_SOUFFLE = { inspi: 'inspire', inspi2: 'inspire-encore', retiens1: 'retiens-plein', expi: 'expire', retiens2: 'retiens-vide' };
 // Le plus long temps accepté : l'animation du disque a une classe par durée, de 1 à 12 s (ecrans.css).
 export const TEMPS_MAX_S = 12;
+// Une petite inspiration en plus : 3 s au plus.
+export const INSPI2_MAX_S = 3;
 
-// Un souffle valide : quatre entiers de 0 à 12, une inspiration et une expiration d'au moins 1 s.
+const tempsValide = (v, max) => Number.isInteger(v) && v >= 0 && v <= max;
+// Un souffle valide : des entiers de 0 à 12 (`inspi2` : absent, ou de 0 à 3), une inspiration et une expiration d'au moins 1 s.
 export function souffleValide(s) {
   if (!s || typeof s !== 'object') return false;
-  if (!TEMPS_SOUFFLE.every((k) => Number.isInteger(s[k]) && s[k] >= 0 && s[k] <= TEMPS_MAX_S)) return false;
+  const valide = (k) => (k === 'inspi2' ? s[k] === undefined || tempsValide(s[k], INSPI2_MAX_S) : tempsValide(s[k], TEMPS_MAX_S));
+  if (!TEMPS_SOUFFLE.every(valide)) return false;
   return s.inspi >= 1 && s.expi >= 1;
 }
-export const cycleSouffleMs = (s) => TEMPS_SOUFFLE.reduce((n, k) => n + s[k], 0) * 1000;
+export const cycleSouffleMs = (s) => TEMPS_SOUFFLE.reduce((n, k) => n + (s[k] || 0), 0) * 1000;
 
 // La phase à `ms` du début du cycle : { phase, debutMs, dureeMs }, debutMs compté depuis l'origine (et non depuis le début
-// du cycle en cours). phase : 'inspire', 'retiens-plein', 'expire' ou 'retiens-vide'.
+// du cycle en cours). phase : 'inspire', 'inspire-encore', 'retiens-plein', 'expire' ou 'retiens-vide'.
 export function phaseSouffle(ms, s) {
   const cycle = cycleSouffleMs(s);
   const t = Math.max(0, ms);
   const base = Math.floor(t / cycle) * cycle;
   let debut = base;
   for (const k of TEMPS_SOUFFLE) {
-    const duree = s[k] * 1000;
+    const duree = (s[k] || 0) * 1000;
     if (duree > 0 && t < debut + duree) return { phase: PHASES_SOUFFLE[k], debutMs: debut, dureeMs: duree };
     debut += duree;
   }
@@ -74,7 +82,8 @@ export function phasesEntre(deMs, aMs, s) {
 }
 
 // Le mot de la phase, sous lequel le disque grandit ou rétrécit.
-export const motPhase = (phase) => (phase === 'inspire' ? 'Inspire' : phase === 'expire' ? 'Expire' : 'Retiens');
+const MOTS_PHASE = Object.freeze({ inspire: 'Inspire', 'inspire-encore': 'Encore un peu', expire: 'Expire' });
+export const motPhase = (phase) => MOTS_PHASE[phase] || 'Retiens';
 
 // Le souffle d'un rythme de la cohérence cardiaque (sans rétention).
 export const souffleDeRythme = (rythme) => {

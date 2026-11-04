@@ -1,11 +1,10 @@
 // v8 · Le Programme (spec §6, §12.2 et §12.4 ; annexe programme-sophro.md §3) : 8 étapes et 17 séances aux identifiants
-// figés, la dernière séance faite (lancée depuis le Programme et menée au bout), la séance qui vient, « Faite le 12/10 »,
-// et des textes sans compteur ni promesse. Données inventées.
+// figés, « Faite le 12/10 » sur une séance lancée depuis le Programme et menée au bout, et des textes sans compteur ni
+// promesse. La séance qui vient (v8) a quitté Bien-être en v10 (spec §7), et son calcul avec elle. Données inventées.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ETAPES, SEANCES_PROGRAMME, PRESENTATION, DUREE_COHERENCE_MIN, estSeanceProgramme, seanceProgramme, derniereFaite, suivante,
-  faitesLe, texteFaite,
+  ETAPES, SEANCES_PROGRAMME, PRESENTATION, DUREE_COHERENCE_MIN, estSeanceProgramme, seanceProgramme, faitesLe, texteFaite,
 } from '../../public/js/domain/programme.js';
 import { EXERCICES, dureeExerciceS, exerciceDe } from '../../public/js/domain/exercices.js';
 import { trouverInterdits, normaliser } from '../aides/mots-interdits.js';
@@ -33,8 +32,12 @@ test('8 étapes, 17 séances dans l\'ordre de l\'annexe (Respiration abdominale 
   assert.equal(new Set(ETAPES.map((e) => e.id)).size, 8);
   assert.ok(Object.isFrozen(ETAPES) && Object.isFrozen(SEANCES_PROGRAMME));
   for (const e of ETAPES) assert.ok(Object.isFrozen(e) && Object.isFrozen(e.seances), e.id);
-  // Tous les exercices sont dans le Programme (aucune séance hors du Programme, sauf la cohérence de l'onglet), une fois.
-  assert.deepEqual(EXERCICES.map((x) => x.id).sort(), ORDRE.filter((id) => id !== 'coherence').sort());
+  // Tous les exercices d'avant la v10 sont dans le Programme, une fois. Le Programme ne change pas (spec v10 §6) : les
+  // 10 exercices de la v10 n'y entrent pas.
+  const avantV10 = EXERCICES.slice(0, EXERCICES.findIndex((x) => x.id === 'soupir'));
+  assert.equal(avantV10.length, 16);
+  assert.deepEqual(avantV10.map((x) => x.id).sort(), ORDRE.filter((id) => id !== 'coherence').sort());
+  for (const x of EXERCICES.slice(16)) assert.equal(estSeanceProgramme(x.id), false, x.id);
   assert.ok(!SEANCES_PROGRAMME.includes('premiers-pas'));
   for (const id of SEANCES_PROGRAMME) assert.match(id, /^[a-z0-9]+(-[a-z0-9]+)*$/, 'identifiant accepté par la route');
   assert.equal(estSeanceProgramme('scan-corporel'), true);
@@ -63,14 +66,19 @@ test('seanceProgramme : l\'exercice, ou la cohérence cardiaque de 5 min au ryth
   assert.equal(seanceProgramme(undefined), null);
 });
 
-test('derniereFaite : la plus récente des séances lancées depuis le Programme et menées au bout ; son jour (bascule à 4 h)', () => {
-  assert.equal(derniereFaite([]), null);
-  assert.equal(derniereFaite(undefined), null);
-  assert.deepEqual(derniereFaite([s('les-sons', '2026-10-12'), s('epaules', '2026-10-14'), s('cinq-zones', '2026-10-13')]), { idSeance: 'epaules', date: '2026-10-14' });
-  // Le même jour, l'heure départage.
-  assert.deepEqual(derniereFaite([s('epaules', '2026-10-14', '21:00'), s('les-sons', '2026-10-14', '09:00')]), { idSeance: 'epaules', date: '2026-10-14' });
-  // À 1 h 30 le 15, c'est encore le 14 ; et c'est la plus récente.
-  assert.deepEqual(derniereFaite([s('epaules', '2026-10-14', '21:00'), s('les-sons', '2026-10-15', '01:30')]), { idSeance: 'les-sons', date: '2026-10-14' });
+test('faitesLe : le jour le plus récent de chaque séance faite ; une séance jamais faite n\'y est pas', () => {
+  assert.deepEqual(faitesLe([]), {});
+  assert.deepEqual(faitesLe(undefined), {});
+  const l = [
+    s('les-sons', '2026-10-12'), s('les-sons', '2026-10-14', '08:00'), s('les-sons', '2026-10-13'),
+    s('epaules', '2026-10-15', '02:00'),
+    s('scan-corporel', '2026-10-15', '10:00', { fin: undefined }),
+    s('coherence', '2026-10-15', '10:00', { programme: undefined }),
+  ];
+  assert.deepEqual(faitesLe(l), { 'les-sons': '2026-10-14', epaules: '2026-10-14' });
+  // Le même jour, l'heure départage ; à 1 h 30 le 15, c'est encore le 14, et c'est la plus récente.
+  assert.deepEqual(faitesLe([s('epaules', '2026-10-14', '21:00'), s('epaules', '2026-10-14', '09:00')]), { epaules: '2026-10-14' });
+  assert.deepEqual(faitesLe([s('epaules', '2026-10-15', '01:30'), s('epaules', '2026-10-13', '21:00')]), { epaules: '2026-10-14' });
   // Ignorées : sans `fin` (arrêtée en route, ou une séance de la v7), sans `programme` (lancée ailleurs), un programme
   // inconnu, un `fin` qui n'est pas `true`.
   const ignorees = [
@@ -82,42 +90,8 @@ test('derniereFaite : la plus récente des séances lancées depuis le Programme
     { date: '2026-10-20', heure: '15:00', exercice: 'scan-corporel', origine: 'bien-etre', dureeS: 600 },
     null,
   ];
-  assert.equal(derniereFaite(ignorees), null);
-  assert.deepEqual(derniereFaite([...ignorees, s('ancrage-54321', '2026-10-01')]), { idSeance: 'ancrage-54321', date: '2026-10-01' });
-});
-
-test('suivante : la première au début ; celle qui suit la dernière faite, jamais une séance sautée ; après la dernière, la première', () => {
-  assert.equal(suivante([]), 'respiration-abdominale');
-  assert.equal(suivante(undefined), 'respiration-abdominale');
-  assert.equal(suivante([s('respiration-abdominale', '2026-10-12')]), 'pause-une-minute');
-  // En milieu : l'étape « Tendre et relâcher » faite sans les précédentes : la suite, pas la première sautée.
-  assert.equal(suivante([s('respiration-abdominale', '2026-10-01'), s('epaules', '2026-10-12')]), 'mouvements-lents');
-  // D'une étape à la suivante, et dans l'étape à trois séances.
-  assert.equal(suivante([s('ancrage-54321', '2026-10-12')]), 'cinq-zones');
-  assert.equal(suivante([s('bon-moment-passe', '2026-10-12')]), 'moment-a-venir');
-  assert.equal(suivante([s('moment-a-venir', '2026-10-12')]), 'scan-corporel');
-  assert.equal(suivante([s('marche-lente', '2026-10-12')]), 'coherence');
-  assert.equal(suivante([s('coherence', '2026-10-12')]), 'lieu-ressource');
-  // C'est la plus récente qui compte, même plus tôt dans l'ordre : refaire une séance d'avant y ramène.
-  assert.equal(suivante([s('scan-corporel', '2026-10-10'), s('les-sons', '2026-10-12')]), 'ancrage-54321');
-  // Après la dernière, de nouveau la première.
-  assert.equal(suivante([s('ce-qui-compte', '2026-10-12')]), 'respiration-abdominale');
-  // Les séances sans `fin` ou hors du Programme ne comptent pas.
-  assert.equal(suivante([s('epaules', '2026-10-12'), s('tension-detente', '2026-10-13', '10:00', { fin: undefined })]), 'mouvements-lents');
-  assert.equal(suivante([s('epaules', '2026-10-12'), s('coherence', '2026-10-13', '10:00', { programme: undefined })]), 'mouvements-lents');
-  assert.equal(suivante([s('tension-detente', '2026-10-13', '10:00', { fin: undefined })]), 'respiration-abdominale');
-});
-
-test('faitesLe : le jour le plus récent de chaque séance faite ; une séance jamais faite n\'y est pas', () => {
-  assert.deepEqual(faitesLe([]), {});
-  assert.deepEqual(faitesLe(undefined), {});
-  const l = [
-    s('les-sons', '2026-10-12'), s('les-sons', '2026-10-14', '08:00'), s('les-sons', '2026-10-13'),
-    s('epaules', '2026-10-15', '02:00'),
-    s('scan-corporel', '2026-10-15', '10:00', { fin: undefined }),
-    s('coherence', '2026-10-15', '10:00', { programme: undefined }),
-  ];
-  assert.deepEqual(faitesLe(l), { 'les-sons': '2026-10-14', epaules: '2026-10-14' });
+  assert.deepEqual(faitesLe(ignorees), {});
+  assert.deepEqual(faitesLe([...ignorees, s('ancrage-54321', '2026-10-01')]), { 'ancrage-54321': '2026-10-01' });
 });
 
 test('texteFaite : « Faite le 12/10 », l\'année seulement si ce n\'est pas celle du jour', () => {

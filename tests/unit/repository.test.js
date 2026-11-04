@@ -245,6 +245,12 @@ test('meta.ecrire marque une écriture, sauf pour les méta techniques', async (
   horloge.t = new Date(2026, 8, 30, 23, 0);
   await repo.meta.ecrire('derniereSauvegarde', horloge.t.toISOString());
   assert.equal(await repo.meta.lire('derniereEcriture'), avant);
+  // v10 : une épingle n'est pas une saisie.
+  horloge.t = new Date(2026, 8, 30, 23, 30);
+  await repo.meta.ecrire('favorisBienEtre', ['soupir']);
+  await repo.meta.modifier('favorisBienEtre', () => []);
+  assert.deepEqual(await repo.meta.lire('favorisBienEtre'), []);
+  assert.equal(await repo.meta.lire('derniereEcriture'), avant);
 });
 
 test('listes.libelles rend la carte id → libellé, archivés compris', async () => {

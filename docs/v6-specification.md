@@ -643,3 +643,13 @@ Version 9.0.0, construite du 28 au 30/10 en 8 tâches sur la branche `dev`. Elle
 - la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 7 (méta `motsPerso`).
 
 Le détail, les appels du concepteur, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 30/10.
+
+## 18. v10 (03/11)
+
+Version 10.0.0, construite du 30/10 au 03/11 en 9 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-10-30-carnet-v10-design.md`, qui fait foi, §14 compris, là où elle s'écarte de celle-ci et de celles des v7 à v9 :
+- **Moment difficile** gagne quatre exercices courts en haut de l'écran (Panique, Colère, Trop-plein, Réveil la nuit) : un toucher démarre aussitôt, sans choix de durée ni compte à rebours, et « Réveil la nuit » est sur fond noir ;
+- **Bien-être** s'organise par besoin : « Reprendre », les favoris, puis Me calmer vite, Dormir ou me rendormir, Me concentrer et le Programme ; six exercices, le minuteur silencieux, le minuteur de concentration et les sons de fond, fabriqués par Web Audio, s'y ajoutent ;
+- après une **émotion**, « Pour ce moment : » propose des exercices selon sa zone, sur l'écran 3 d'un relevé neuf ; sur la **carte**, le mot du milieu grossit pendant le glissement, sans rien écrire ; la **police système** vaut partout ;
+- la base reste en `DB_VERSION` 6 et la sauvegarde au format 7 : la méta `favorisBienEtre` et la clé `voix` de `respiration` s'y ajoutent sans changer le format.
+
+Le détail, les appels du concepteur, ce qui attend l'utilisateur et les exercices à relire sont dans `docs/decisions.md`, à l'entrée du 03/11.

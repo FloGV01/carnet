@@ -14,7 +14,7 @@ import { Diagnostic } from './ui/ecrans/diagnostic.js';
 import { Aujourdhui } from './ui/ecrans/aujourdhui.js';
 import { Episode } from './ui/ecrans/episode.js';
 import { Moment } from './ui/ecrans/moment.js';
-import { MomentDifficile } from './ui/ecrans/moment-difficile.js';
+import { ExerciceCrise, MomentDifficile } from './ui/ecrans/moment-difficile.js';
 import { MonPlan } from './ui/ecrans/mon-plan.js';
 import { ApresCoup } from './ui/ecrans/apres-coup.js';
 import { ApresCoupListe } from './ui/ecrans/apres-coup-liste.js';
@@ -37,8 +37,12 @@ import { Comprendre } from './ui/ecrans/comprendre.js';
 import { ExportPsy } from './ui/ecrans/export-psy.js';
 import { IndexListes, EcranListe } from './ui/ecrans/listes.js';
 import { Soignants } from './ui/ecrans/soignants.js';
-import { BienEtre, Coherence } from './ui/ecrans/bien-etre.js';
+import { BienEtre, Coherence, ExerciceSeul } from './ui/ecrans/bien-etre.js';
+import { EntreeBienEtre } from './ui/ecrans/entree-bien-etre.js';
 import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
+import { Minuteur } from './ui/ecrans/minuteur.js';
+import { Concentration } from './ui/ecrans/concentration.js';
+import { Sons } from './ui/ecrans/sons.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -48,6 +52,7 @@ const ECRANS = {
   moment: () => html`<${Moment} key="neuf" />`,
   'moment-releve': (p) => html`<${Moment} key=${`releve-${p.id}`} id=${p.id} />`,
   'moment-difficile': () => html`<${MomentDifficile} />`,
+  crise: (p) => html`<${ExerciceCrise} key=${p.id} id=${p.id} />`,
   'mon-plan': () => html`<${MonPlan} />`,
   'apres-coup-liste': () => html`<${ApresCoupListe} />`,
   'apres-coup': (p) => html`<${ApresCoup} key=${p.id} id=${p.id} />`,
@@ -75,9 +80,14 @@ const ECRANS = {
   soignants: () => html`<${Soignants} />`,
   listes: (p) => html`<${EcranListe} key=${p.liste} liste=${p.liste} />`,
   'bien-etre': () => html`<${BienEtre} />`,
+  'entree-bien-etre': (p) => html`<${EntreeBienEtre} key=${p.entree} id=${p.entree} />`,
   coherence: () => html`<${Coherence} />`,
   programme: () => html`<${Programme} />`,
   'seance-programme': (p) => html`<${SeanceProgramme} key=${p.id} id=${p.id} />`,
+  exercice: (p) => html`<${ExerciceSeul} key=${p.id} id=${p.id} />`,
+  minuteur: () => html`<${Minuteur} />`,
+  concentration: () => html`<${Concentration} />`,
+  sons: () => html`<${Sons} />`,
 };
 
 function useEtatApp() {

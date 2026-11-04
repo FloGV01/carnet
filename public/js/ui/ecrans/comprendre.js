@@ -72,7 +72,8 @@ function AutourExplosions({ d, periode, choixPeriode }) {
 }
 
 // Autour du Bien-être (v7, spec §6.4) : les émotions du moment notées dans les 3 heures avant et après une séance lancée
-// depuis l'onglet Bien-être (les respirations de Moment difficile et de « Pour récupérer » ne comptent pas), sur la période.
+// depuis l'onglet Bien-être ou, en v10, depuis « Pour ce moment : » (les respirations de Moment difficile et de « Pour récupérer »
+// ne comptent pas), sur la période.
 // Une description, sans phrase calculée ni verdict.
 function AutourBienEtre({ d, periode, choixPeriode }) {
   const r = autourDuBienEtre(d.seances, d.humeurs, periode, d.perso);

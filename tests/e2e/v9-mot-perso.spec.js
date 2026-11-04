@@ -3,7 +3,7 @@ import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { contraste } from '../aides/couleurs.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
 import {
-  vueMoment, bulle, carte, mot, retour, continuer, carteDuBas, terminer, loupe, champLoupe, trouves, trouve, ajouterMot,
+  vueMoment, bulle, carte, mot, toucherMot, retour, continuer, carteDuBas, terminer, loupe, champLoupe, trouves, trouve, ajouterMot,
   nomMot, couleurMot, familleMot, definitionMot, NOMS_BULLES,
 } from '../aides/emotion.js';
 import { DEFINITIONS } from '../../public/js/domain/definitions-roue.js';
@@ -109,7 +109,7 @@ test('un mot de définition trouve son mot ; noms d\'abord, définitions ensuite
 test('la loupe de la carte : ← y ramène ; un mot trouvé déjà choisi reste choisi (la loupe n\'efface pas) ; un autre le remplace, énergie comprise', async ({ page }) => {
   const vue = await ouvrir(page);
   await bulle(vue, 'rouge').click();
-  await mot(vue, 'Irrité').click();
+  await toucherMot(vue, 'Irrité');
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:colere:irrite', energie: 'energie:haute' }]);
   // ← d'abord, la loupe ensuite, puis les mots.
   const noms = await vue.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label') || b.textContent));

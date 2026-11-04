@@ -270,12 +270,12 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
 - **Couleur** : Bien-être prend celle de la cohérence cardiaque (le bleu de Moment difficile). Aucune couleur nouvelle.
 - **Un exercice commence par « Commencer »** : Safari ne parle qu'après un toucher, et l'écran d'avant permet d'allumer la voix avant de fermer les yeux. Puis une consigne par écran, « Précédent », « Suivant », « Terminer », et le temps qui reste à l'étape. Aucun repère « 3 sur 8 ».
 - **Lecture à voix haute** : éteinte au départ, gardée sur l'iPhone (pas dans la sauvegarde) ; sans voix française, l'interrupteur n'apparaît pas. Allumée pendant une étape, elle lit l'étape et son temps repart.
-- **Arrière-plan, écran verrouillé, page cachée** : l'exercice se met en pause (voix coupée, verrou d'écran rendu) et attend « Reprendre ». S'il a duré 60 s ou plus, la séance est notée dès la pause (l'app peut ne pas revenir) ; reprise et finie, c'est la même séance, dont la durée est mise à jour.
+- **Arrière-plan, écran verrouillé, page cachée** : l'exercice se met en pause (voix coupée, verrou d'écran rendu) et attend « Reprendre ». S'il a duré 60 s ou plus, la séance est notée dès la pause (l'app peut ne pas revenir) ; reprise et finie, c'est la même séance, dont la durée est mise à jour. En v10, cela vaut aussi pour le minuteur silencieux, mais ni pour les sons de fond ni pour le minuteur de concentration (voir l'entrée v10.0.0, « Règles levées ou changées »).
 - **Une séance** commence à l'heure de « Commencer », et sa durée est celle de l'exercice actif, pauses exclues. « Terminer » avant la dernière étape, ou « Fermer », compte comme un arrêt (gardé à partir de 60 s). Un exercice n'est mené au bout que si sa dernière étape est atteinte après la moitié de sa durée au moins, en temps actif : parcourir les textes pour les relire ne crée pas de séance (la règle des 60 s joue alors seule).
 - **La respiration** crée une séance dans Bien-être, dans Moment difficile et dans « Pour récupérer, je… », chacune avec son origine. « Noter mon émotion » ne paraît que dans Bien-être, une fois une séance notée. Seul le temps page visible compte : page cachée (écran verrouillé, autre app), le cercle s'arrête, le verrou d'écran est rendu et la séance est notée dès ce moment si elle a duré 60 s ; au retour, la respiration reprend là où elle en était, et c'est la même séance. Elle n'est menée au bout que si toute sa durée s'est écoulée page visible.
 - **Dans une carte**, la respiration a la forme du rendu 2b de Moment difficile (tâches 8 et 9) : dans Moment difficile et dans Bien-être, « Cohérence cardiaque » seul, la durée et le rythme sur leurs puces (« 5 minutes ▾ », « 5 s · 5 s ▾ »), réglés au même endroit que Réglages › Moment difficile. Dans « Pour récupérer, je… », plus étroite, la durée passe sous « Cohérence cardiaque », sans « · ».
 - **Mes jours** : la rangée « Bien-être » n'apparaît que sur une période qui a une séance (toutes origines) ; un repère par jour, par semaine ou par mois, toujours le même, sans nombre. Ni l'Export PSY ni la Vue soignants n'en parlent.
-- **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions.
+- **« Autour du Bien-être »** est le dernier graphique de l'onglet Énergie de Comprendre (seules les séances lancées depuis Bien-être), au seuil des autres vues d'émotions. Précisé en v10 : une séance lancée depuis « Pour ce moment : » garde l'origine `bien-etre` et compte aussi ; la règle et la phrase de VoiceOver le disent (voir l'entrée v10.0.0, « Relecture finale »).
 
 ### Relecture finale (22/10)
 
@@ -491,7 +491,7 @@ La base passe à `DB_VERSION` 6 (liste `sujetRdv`, `MIGRATIONS[6]`, copie avant 
 - Les définitions se corrigent dans Réglages › Émotions.
 - Le son du lecteur vaut « Repères + souffle » au départ, et seulement pour le lecteur de Bien-être (Programme et cohérence cardiaque de l'onglet). Moment difficile et « Respirer » gardent leur réglage : éteint au départ, avec les deux notes de la v7. Rien ne joue seul en pleine crise.
 - Le lecteur se ferme 6 s après la fin.
-- La séance qui vient suit la dernière faite. Après la dernière, on revient à la première.
+- La séance qui vient suit la dernière faite. Après la dernière, on revient à la première. Levé en v10 : la séance qui vient est retirée (voir l'entrée v10.0.0, « Bien-être par besoin »).
 - Une séance arrêtée en route compte pour Mes jours, mais pas dans le Programme. Seule une séance lancée depuis le Programme et menée au bout y porte une date.
 - Respiration abdominale ouvre le Programme à la place de « Premiers pas », qui n'est pas écrite : il y a donc 8 séances nouvelles, et non 9.
 - Q5 ne vaut plus que pour Sport et Contact. « Nuit en détail » est masqué, et se réaffiche dans Réglages › Le soir.
@@ -577,7 +577,7 @@ La base passe à `DB_VERSION` 6 (liste `sujetRdv`, `MIGRATIONS[6]`, copie avant 
 - **Les sons sont fabriqués dans l'app** (`ui/composants/sons.js`, Web Audio), sans fichier ni réseau, et calés sur l'horloge audio : un bol de début d'environ 4 s, un bol d'étape plus court et plus doux, joué avant la voix, trois bols de fin à 1,2 s d'écart. Le souffle est un bruit rose filtré qui monte à l'inspiration et redescend à l'expiration ; il se tait pendant « Retiens ». Le son ne naît que dans un toucher (« Commencer », « Reprendre », le bouton lecture d'une carte).
 - **Les réglages du lecteur** sont gardés sur l'iPhone (comme la voix en v7) : « Son : Aucun · Repères · Repères + souffle », « Jouer même en mode silencieux » (éteint : le son se tait en silencieux et se mêle à la musique ; allumé : il joue, et la musique se met en pause) et la lecture à voix haute, qui n'apparaît qu'avec une voix française. Ils ne valent que pour ce lecteur.
 - **Pause, écran verrouillé, autre app ou sortie** coupent la voix et les sons et rendent le verrou d'écran ; « Reprendre » repart de l'étape, le souffle d'un début de cycle. Une seule séance par lecture.
-- **La carte de la cohérence cardiaque** de Bien-être garde ses puces de durée et de rythme, réglées au même endroit que Moment difficile, et un bouton lecture qui la lance d'un toucher (`#/bien-etre/coherence`).
+- **La carte de la cohérence cardiaque** de Bien-être garde ses puces de durée et de rythme, réglées au même endroit que Moment difficile, et un bouton lecture qui la lance d'un toucher (`#/bien-etre/coherence`). Levé en v10 : la carte quitte l'accueil, et la durée et le rythme se règlent sur l'écran « avant » de la cohérence (voir l'entrée v10.0.0, « Bien-être par besoin »).
 
 **Relecture de la tâche 3**
 - **Une étape rythmée dure un nombre entier de cycles.** Les deux étapes rythmées de la respiration carrée passent de 52 à 48 s, soit trois cycles de 16 s ; leurs textes ne changent pas, et l'exercice dure 2:52 au lieu de 3:00. À 52 s, la première finissait sur une inspiration et la seconde repartait d'une inspiration : 8 s d'« Inspire » d'affilée.
@@ -605,18 +605,18 @@ La base passe à `DB_VERSION` 6 (liste `sujetRdv`, `MIGRATIONS[6]`, copie avant 
 
 **Choix faits pendant la construction**
 - **8 séances nouvelles, et non 9** : la spec §6 en compte 9 avec « Premiers pas », que le §12.4 retire. Elles sont ajoutées à la fin de `domain/exercices.js`, avec les deux blocs « Arriver » (60 s) et « Revenir » (55 s), qui ouvrent et ferment Les sons, Les cinq zones, Un bon moment passé, Un moment à venir et Ce qui compte pour moi. Aucune n'a de rythme écrit : ni disque ni souffle.
-- **Les exercices ne se lancent plus que depuis le Programme** (spec §2 et §3, « pas de séance hors du Programme, sauf la cohérence cardiaque ») : l'adresse `#/bien-etre/exercice/<id>` et son écran sont retirés, remplacés par `#/bien-etre/programme/<id>`. Une séance inconnue ramène au Programme.
+- **Les exercices ne se lancent plus que depuis le Programme** (spec §2 et §3, « pas de séance hors du Programme, sauf la cohérence cardiaque ») : l'adresse `#/bien-etre/exercice/<id>` et son écran sont retirés, remplacés par `#/bien-etre/programme/<id>`. Une séance inconnue ramène au Programme. Levé en v10 : les exercices se lancent aussi hors du Programme, à l'adresse `#/exercice/<id>`, sans rien y dater (voir l'entrée v10.0.0, « Règles levées ou changées »).
 - **« Faite le 12/10 »** : seule compte une séance lancée depuis le Programme et menée au bout (`programme` et `fin: true`, spec §12.2). La date est le jour de la séance (avant 4 h, la veille, comme partout), la plus récente ; l'année ne s'écrit que si ce n'est pas celle du jour (« Faite le 12/10/2025 »). Une coche à la couleur de Bien-être et le texte en secondaire, sous la durée. Une séance pas faite n'affiche rien.
 - **`fin: true`** est posé sur toute séance menée au bout, d'où qu'elle vienne (Moment difficile, « Respirer », la carte de la cohérence) : le champ dit seulement « menée au bout ». Sans `programme`, elle ne date rien dans le Programme. Une séance notée en pause (après 60 s), puis reprise et menée au bout, reste une seule séance et prend `fin` à la fin.
-- **La séance qui vient** : celle qui suit, dans l'ordre du Programme, la dernière séance faite (la plus récente, à l'heure près) ; au tout début, Respiration abdominale ; après Ce qui compte pour moi, de nouveau Respiration abdominale. Une séance sautée n'est jamais signalée.
-- **La carte Programme de Bien-être** : un lien vers l'écran Programme (le carré à la feuille de Bien-être, « Programme › », la séance qui vient et « 5 min · assis ») et, à droite, le bouton lecture de 64, qui la lance d'un toucher ; le lecteur revient alors à Bien-être. Depuis l'écran Programme, un toucher sur une séance ouvre le lecteur, qui attend « Commencer », et revient au Programme : 1 toucher pour reprendre, 3 pour une séance au choix (la carte, la séance, lecture), comme dans l'annexe des propositions.
+- **La séance qui vient** : celle qui suit, dans l'ordre du Programme, la dernière séance faite (la plus récente, à l'heure près) ; au tout début, Respiration abdominale ; après Ce qui compte pour moi, de nouveau Respiration abdominale. Une séance sautée n'est jamais signalée. Levé en v10 : ce calcul est retiré (voir l'entrée v10.0.0, « Bien-être par besoin »).
+- **La carte Programme de Bien-être** : un lien vers l'écran Programme (le carré à la feuille de Bien-être, « Programme › », la séance qui vient et « 5 min · assis ») et, à droite, le bouton lecture de 64, qui la lance d'un toucher ; le lecteur revient alors à Bien-être. Depuis l'écran Programme, un toucher sur une séance ouvre le lecteur, qui attend « Commencer », et revient au Programme : 1 toucher pour reprendre, 3 pour une séance au choix (la carte, la séance, lecture), comme dans l'annexe des propositions. Levé en v10 : la carte devient une entrée, sans lecture ; le Programme se prend en trois touchers (voir l'entrée v10.0.0, « Bien-être par besoin »).
 - **La cohérence cardiaque du Programme** dure 5 min, au rythme réglé dans Réglages › Moment difficile. Celle de la carte de Bien-être, de Moment difficile et de « Respirer » ne compte pas.
 - **Les textes de l'annexe, retouchés** pour les règles de l'app : « Garde l'attention sur… » devient « Continue de remarquer tes pieds. » et « remarque ta respiration » ; « Pense à… » devient « Cherche… » et « Imagine… » ; « Tu n'as pas besoin de les nommer » devient « Pas besoin de les nommer » ; « Tu vas passer par cinq zones » devient « Cinq zones du corps, l'une après l'autre ». « Tu peux t'arrêter à tout moment. » est ajouté à chaque séance nouvelle (à la fin du bloc « Arriver », sinon dans la première étape), comme le demande la spec §6 : la première étape de Faire le point avec mon corps passe de 10 à 15 s pour le dire.
 - **Le son dans « Les sons »** (question 11 de l'annexe, non tranchée) : le bol d'étape, comme ailleurs ; « Son : Aucun » le coupe.
 
 **Relecture de la tâche 4**
 - **Une séance d'une seule étape n'est menée au bout qu'au bout de tout son temps.** La cohérence cardiaque est sur sa dernière étape dès le début : avec la règle de la moitié, « Terminer » à 2:31 sur 5:00 la disait menée au bout, et le Programme affichait « Faite le 15/10 ». Elle ne l'est plus qu'une fois ses 5 min écoulées, comme dans Moment difficile ; arrêtée en route après 60 s, elle reste une séance pour Mes jours, sans `fin`. Les séances de plusieurs étapes gardent la règle de la moitié (annexe `programme-sophro.md`, §6.8). La carte de la cohérence de Bien-être suit la même règle, comme en v7.
-- **Le titre « Programme » de la carte de Bien-être est un titre de niveau 2**, comme celui de la carte de la cohérence, et reste dans le lien : le rotor « Titres » de VoiceOver passe par les deux cartes. L'apparence ne change pas.
+- **Le titre « Programme » de la carte de Bien-être est un titre de niveau 2**, comme celui de la carte de la cohérence, et reste dans le lien : le rotor « Titres » de VoiceOver passe par les deux cartes. L'apparence ne change pas. Levé en v10 : ces deux cartes ont quitté l'accueil, dont les titres de niveau 2 sont « Reprendre » et « Favoris » (voir l'entrée v10.0.0, « Bien-être par besoin »).
 
 ### Sommeil en heures, détails dans les cartes (tâche 5)
 
@@ -1061,9 +1061,9 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 ### Écrans 1 et 2 : les quatre bulles et la carte (tâche 4)
 
 - **Plein écran noir**, dans les deux thèmes, sans barre d'onglets ni en-tête de Carnet ; la route reste `#/moment`.
-- **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en `ui-serif` gras, les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
+- **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en gras (`ui-serif` en v9, police système depuis la v10), les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
 - **Toucher une couleur** ouvre la carte sur le milieu de sa zone, sans rien écrire. La carte s'y arrête au bord des bulles : des bulles jusqu'aux bords de l'écran, jamais de noir vide sur le côté.
-- **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en `ui-serif` gras, corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
+- **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en gras (`ui-serif` en v9, police système depuis la v10), corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
 - **Toucher un mot** écrit le relevé tout de suite (le mot et l'énergie de sa case) : la bulle devient la double capsule de 156, recentrée au milieu de l'écran, ses voisines passent à 120 puis 108, et la carte du bas monte (le mot dans la couleur de sa case, éclaircie jusqu'à 4,5:1 sur le gris, sa définition, le rond blanc et la flèche « Continuer »). Un autre mot remplace le premier, énergie comprise ; retouché, le mot s'efface avec son énergie, et le relevé part s'il ne reste rien.
 - **Garde de 350 ms** après chaque changement de vue (point de vigilance 5). « Réduire les animations » fige tout : halos à leurs décalages mesurés, recentrage d'un coup. En très grand texte, les libellés se réduisent jusqu'à un plancher et passent à la ligne dans leur bulle ; la carte du bas grandit au lieu de couper la définition (point de vigilance 2).
 - **Relecture** : la garde vaut aussi après un mot choisi, pendant que la carte glisse jusqu'à lui (un second toucher rapide tombait sur un autre mot). ← vient avant la carte pour VoiceOver et le clavier. Spec §13.5 à la lettre : le mot effacé, une heure « vers » garde le relevé, qui se lit « Aucun mot ».
@@ -1132,7 +1132,7 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 ### À essayer sur l'iPhone
 
 - **La barre d'état en thème clair au-dessus des écrans noirs** (spec §12) : rien n'est réglé. Si elle reste claire au-dessus du noir, une piste est de passer `theme-color` en noir le temps du relevé.
-- **La police** : New York a un œil plus petit que la serif de How We Feel ; les corps des titres et des bulles sont à caler sur l'appareil, d'après les largeurs mesurées (visuel §6).
+- **La police** : levé en v10, la police système remplace New York partout (« Utilise la police iPhone »), carte des émotions comprise ; il n'y a plus de corps à caler pour elle.
 - **La carte sous le doigt** : le défilement dans les deux sens, sa fluidité sur l'iPhone 13 Pro, le recentrage doux après un mot, les halos qui tournent, et « Réduire les animations ».
 - **La loupe** : le clavier qui s'ouvre dès le toucher.
 - **Le grand texte d'iOS** sur les bulles, la carte du bas et l'écran du mot à soi.
@@ -1240,3 +1240,317 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 
 - **Fatigué** : Le corps ou la tête demandent du repos.
 - **Épuisé** : À bout de forces, même les petites choses coûtent.
+
+## 2026-11-03 : v10.0.0, des exercices pour chaque moment
+
+Source : une recherche sur Headspace, demandée par l'utilisateur après la v9, dont il a retenu cinq pistes d'un coup (A à E), et ses deux retours sur la carte de la v9. Spec : `docs/superpowers/specs/2026-10-30-carnet-v10-design.md`, qui fait foi, avec son §14 (précisions après relecture). Plan : `docs/superpowers/plans/2026-10-30-carnet-v10.md`, en 9 tâches, une par commit, chacune relue puis corrigée. Version 10.0.0, à publier en une fois, avec l'accord de l'utilisateur.
+
+La base reste en `DB_VERSION` 6 et la sauvegarde au `FORMAT_VERSION` 7 : ni magasin, ni champ, ni origine de séance nouveaux. Les favoris sont une méta (`docs/format-sauvegarde.md`) ; « Reprendre », les durées retenues et les réglages des minuteurs et des sons restent sur l'appareil. Les exercices et le vocabulaire figé (roue, `declencheur`, `dessous`) gardent leurs identifiants et leurs libellés.
+
+### Décisions de l'utilisateur (spec §2, 30/10)
+
+- **Les pistes A à E, d'un coup.**
+- **La carte des émotions** : pendant qu'on la fait glisser, le mot qui passe au milieu de l'écran grossit « comme si on appuyait dessus », ses voisins un peu, puis il reprend sa taille. Toucher reste le seul geste qui enregistre : glisser n'écrit jamais rien. Des cercles : pas de forme propre à chaque émotion.
+- **La police** : « Utilise la police iPhone ». La police système partout, carte des émotions comprise.
+- **A. Moment difficile** : quatre boutons en haut, Panique, Colère, Trop-plein, Réveil la nuit, chacun un seul exercice court ; la respiration, « Une chose à la fois » et Mon plan restent en dessous.
+- **C. Après une émotion notée** : deux ou trois exercices sur une ligne discrète, pour toutes les couleurs.
+- **D. Bien-être** : « Reprendre » et les favoris en tête, puis quatre entrées : Me calmer vite, Dormir ou me rendormir, Me concentrer, Programme.
+- **E. Sons de fond fabriqués par l'iPhone** (bruit brun, bruit rose, vagues, pluie douce) : rien à télécharger.
+
+### Appels du concepteur, à vérifier (spec §13 et §14)
+
+Spec §13 :
+1. Pas de choix de durée pour les exercices de crise.
+2. Durée au choix (1, 3 ou 5 min) seulement pour le soupir, l'expiration longue et le noting ; les minuteurs et les sons ont leurs propres durées.
+3. La cohérence cardiaque quitte l'accueil de Bien-être pour « Me calmer vite ».
+4. Les favoris sont dans la méta, donc dans la sauvegarde ; « Reprendre » et les durées restent sur l'appareil. Une écriture de favori ne compte pas comme une saisie.
+5. Un exercice du Programme relancé ailleurs (favori, « Reprendre ») ne date rien : seul le Programme écrit « Faite le ».
+6. La table « Pour ce moment : » (plus bas, à relire), dont « Savourer » pour le jaune et le vert.
+7. Après un exercice lancé depuis l'écran 3, pas de message « notée » ; la séance garde l'origine `bien-etre`, le format ne change pas. L'Analyse « Autour du Bien-être » compte donc ces séances, avec l'émotion qui les précède.
+8. Le minuteur silencieux est une séance ; le minuteur de concentration et les sons de fond n'en sont pas.
+9. Les sons de fond jouent en session `playback` pour continuer écran verrouillé (le son joue aussi en mode silencieux et met la musique en pause : l'écran le dit en une ligne), ce qui reste à vérifier par le Diagnostic.
+10. Mouvement réduit : la lentille ne suit pas le glissement, seul le mot touché prend sa taille.
+
+Spec §14 :
+- **§14.1, les sons vivent sur leur écran** : un écran plein, sans état audio global ni indicateur ailleurs. Quitter l'écran (« Fermer », retour) arrête le son, en fondu court. Verrouiller l'iPhone ou passer à une autre app ne le quitte pas, et le retour à Aujourd'hui après 30 min d'absence ne s'y applique pas.
+- **§14.2, une seule version** : `playback`, sans garder l'écran allumé, et l'entrée « Son de fond, écran verrouillé » du Diagnostic. Si le son s'arrête au verrouillage, un correctif 10.0.1 passera à l'écran noir gardé allumé pendant la minuterie : pas de double comportement construit d'avance.
+- **§14.3, les deux minuteurs** : le silencieux se comporte comme le lecteur (écran gardé allumé, pause page cachée, session `ambient`). Celui de concentration calcule son heure de fin une fois, au départ, à l'horloge murale : écran gardé allumé, session `ambient`, pas de pause. Si Carnet n'est plus à l'écran à la fin, le bol ne sonne pas, et l'écran dit au retour « Le temps est passé. », sans chiffre.
+- **§14.4, épingle, favoris et « Reprendre »** : l'épingle est sur chaque ligne des quatre entrées et sur l'écran de départ de tout élément de Bien-être (Programme et Savourer compris, minuteurs et sons aussi). « Reprendre » retient le dernier élément lancé, d'où qu'il vienne sauf Moment difficile : entrées, favoris, Programme, ligne « Pour ce moment : ». **Dérogation au §14.4**, qui dit que « le bouton lecture d'un favori ou de « Reprendre » ouvre l'écran de départ de l'élément » : pour un exercice et la cohérence, ce bouton démarre aussitôt, depuis le début, sans passer par l'écran « avant » (choix de la tâche 7, appuyé sur le §3 : « en un toucher »). Les minuteurs et les sons ouvrent bien leur écran. C'est à trancher : « En attente de l'utilisateur ».
+- **§14.5, un toucher démarre** : toucher Panique démarre l'exercice aussitôt, puisque c'est l'utilisateur qui le demande. Le son et la voix suivent Réglages › Moment difficile : le « Signal sonore » existant vaut aussi pour ces exercices (un repère discret à chaque changement d'étape, rien d'autre), « Lire les consignes à voix haute » s'y ajoute, éteint au départ. En pause, on peut les changer pour cette fois. « Réveil la nuit » ignore le signal : seule la voix peut y parler.
+
+### Règles levées ou changées
+
+- **Des séances hors du Programme.** En v8, « les exercices ne se lancent plus que depuis le Programme ». La v10 lève cette règle : tout exercice se lance aussi depuis une entrée, un favori, « Reprendre » ou « Pour ce moment : », à l'adresse `#/exercice/<id>`. La séance n'y porte pas `programme` et ne date rien. Le test qui verrouillait l'absence de cette adresse est mis à jour. Le Programme lui-même ne change ni de semaine ni de séance.
+- **L'écran Moment difficile défile.** Les quatre boutons sont en tête, à l'écran sans défiler au texte normal, au-dessus de la respiration. « Une chose à la fois » et Mon plan peuvent passer plus bas, et le pied « Noter un épisode » reste à sa place.
+- **Les sons de fond ne se mettent pas en pause page cachée.** La pause du lecteur (v8, « Arrière-plan, écran verrouillé, page cachée ») vaut toujours pour les exercices, de crise ou non, et pour le minuteur silencieux. Un son de fond, lui, continue : c'est ce qu'on lui demande la nuit. Sa minuterie et son fondu sont programmés d'avance sur l'horloge audio, le JavaScript étant suspendu.
+- **Le minuteur de concentration continue page cachée.** C'est un outil de travail : le temps passe, le bol seulement si Carnet est à l'écran.
+- **Rien ne joue seul en pleine crise (v8), précisé.** La règle tient : son éteint au départ, session `ambient`. Un toucher sur un des quatre boutons démarre l'exercice parce qu'il le demande ; ouvert autrement (par son adresse), il attend « Commencer ».
+- **Le « Signal sonore » de Réglages › Moment difficile** ne parlait que de la cohérence cardiaque ; il vaut aussi pour les exercices courts, comme le dit son texte d'aide.
+- **La cohérence, la séance qui vient et la carte Programme** quittent l'accueil de Bien-être : voir « Bien-être par besoin », plus bas.
+
+### Identifiants (plan)
+
+- **Exercices ajoutés à la fin de `EXERCICES`**, dans cet ordre : `soupir`, `expiration-longue`, `noting`, `ancrage-court`, `scan-court`, `savourer`, `panique`, `colere`, `trop-plein`, `reveil-nuit`.
+- **Éléments de Bien-être hors `EXERCICES`** : `coherence` (existant), `minuteur`, `concentration`, `sons-de-fond`.
+- **Routes** : `#/crise/:id` (onglet Aujourd'hui) ; `#/bien-etre/calmer`, `#/bien-etre/dormir`, `#/bien-etre/concentrer`, `#/exercice/:id`, `#/minuteur`, `#/concentration`, `#/sons` (onglet Bien-être). Les routes existantes ne changent pas.
+- **Méta** : `favorisBienEtre` ; `respiration` gagne `voix`.
+- **Sur l'appareil**, écrit seulement quand la valeur change : `carnet:bien-etre:dernier`, `carnet:duree:<id>`, `carnet:minuteur`, `carnet:concentration`, `carnet:sons`.
+- **Séances** : `exercice` vaut l'identifiant ci-dessus, `minuteur` pour le minuteur silencieux ; `origine` vaut `moment-difficile` pour les exercices de crise, `bien-etre` pour le reste.
+
+### Une seule police (tâche 1)
+
+- **New York (`ui-serif`) disparaît de `public/`**, commentaires compris : `--police-serif` est retiré, et ses sept usages passent à la police système, en gras 700.
+- **La largeur de 126 des libellés des quatre bulles est gardée** : « Énergie basse » demande 109 en police système, le corps n'est pas réduit au texte normal, et chaque ligne tient encore sur une ligne à 19 px.
+
+### La carte suit le glissement (tâche 2)
+
+- **Le mot du milieu** se calcule sur les places régulières (`motDuMilieu`, `ui/carte-geometrie.js`) ; l'hystérésis est de 15 % du pas (appel du constructeur, spec §12), et l'égalité entre quatre mots va au plus haut, puis au plus à gauche.
+- **Technique** (spec §12) : un écouteur de défilement passif et une pose par image au plus, seulement quand le centre change, par CSSOM, sans rendu des 144 bulles. La transition reste celle de la v9, 450 ms.
+- **Un toucher choisit le mot sous le doigt quand il se pose**, et il est ignoré si un autre le remplace quand il se lève : jamais un voisin venu se placer là (point de vigilance 1).
+- **Pendant un recentrage doux**, la lentille reste sur le mot touché ; seul un défilement qui prend la main la libère, ou 1,2 s. Un second toucher, que la garde ignore, ne la fait pas repasser par les mots croisés.
+- **À l'ouverture**, la lentille se pose aussi sur le mot du milieu, et les mots du rang 12 du rouge et du jaune ne passent toujours pas sous le voile et les boutons. Deux tests de la v9 suivent cette lentille posée à l'ouverture.
+
+### Le contenu : exercices, souffle, propositions, favoris, entrées (tâche 3)
+
+- **10 exercices ajoutés à la fin de `EXERCICES`** (les 16 identifiants d'avant ne bougent pas) : six pour Bien-être et l'écran 3, puis les quatre de Moment difficile. Ils n'entrent pas dans le Programme, qui ne change pas.
+- **Le soupir** : le souffle gagne un temps, `inspi2` (absent, il vaut 0 : les souffles d'avant la v10 ne changent pas ; sinon 3 s au plus), avec la phase `inspire-encore` et le mot « Encore un peu ». Le disque, le mot et le son le suivent.
+- **Durée au choix** (1, 3 ou 5 min) : l'étape marquée `repete` s'allonge ou se raccourcit, en cycles entiers si elle est rythmée, et l'arrivée et la fin ne changent pas. **3 min au départ**, tant que rien n'est retenu. Le temps des étapes fixes (27 s pour le soupir, 30 s pour les deux autres) est choisi pour que tout tombe juste à 3 min, et pour qu'à 1 min, la durée qu'on choisit quand on est pressé, l'étape qui se répète garde au moins la moitié du temps : 4 soupirs (36 s sur 63), 3 longues expirations (30 s sur 60), 30 s sur 60 pour le noting. Aucune étape ne répète la posture : l'écran « avant » dit déjà « là où tu es ». L'expiration longue et le noting font exactement 1, 3 et 5 min ; le soupir, en cycles de 9 s, fait 63 s, 180 s et 297 s.
+- **Les exercices de Moment difficile ont des étapes rythmées** (trois soupirs, longues expirations) : le disque et le mot de la phase y guident, sans son de souffle. Ils font 2 min, 3 pour « Réveil la nuit ». Chacun dit qu'on peut bouger et passer une étape : le bouton « Suivant » du lecteur le permet déjà.
+- **« Poser l'attention » n'est pas écrit** : « attention » est un mot interdit de l'app (`tests/aides/mots-interdits.js`). « Réveil la nuit » dit « Sens tes pieds. », et ne parle pas de sommeil (liste `PROMESSES`).
+- **`voix`** s'ajoute à la méta `respiration` (booléen, faux au départ) : une méta écrite avant la v10 reste valide. L'interrupteur est dans Réglages › Moment difficile.
+- **Favoris** : `normaliserFavoris` ignore un identifiant inconnu, un doublon et ce qui n'est pas une liste ; rien n'est tiré de la liste, aucun nombre. `basculerFavori` n'ajoute pas un identifiant inconnu.
+- **Trois modules nouveaux dans `domain/`** : `propositions.js`, `favoris.js`, `entrees-bien-etre.js`. Purs, ils portent la table, les favoris et les entrées.
+
+**La table « Pour ce moment : »** (spec §8), à relire, dans `domain/propositions.js` :
+
+| zone | exercices proposés |
+|---|---|
+| rouge | Le soupir · Ancrage court · Expiration longue |
+| jaune | Savourer · Noter ce qui passe |
+| bleu | Scan court · Expiration longue · Noter ce qui passe |
+| vert | Savourer · Expiration longue |
+
+### Le lecteur (tâche 4)
+
+- **Un seul lecteur, deux modes** : `bien-etre` (comme avant) et `crise` : ni anneau, ni « il reste », ni bols, ni souffle sonore, ni « Noter mon émotion », ni épingle. La séance prend l'origine `moment-difficile`.
+- **Le toucher prépare le son et la voix sans bruit** (session `ambient`, parole muette) ; le réglage de la méta se lit après lui, et le lecteur laisse le son se rendormir s'il ne le demande pas. La voix garde la session `ambient` en crise, le signal éteint et la nuit comprise.
+- **Noting** : un toucher fait briller une étiquette 600 ms ; rien n'est écrit, et le temps avance seul.
+- **« Réveil la nuit »** : le fond noir des écrans de l'émotion, dans les deux thèmes, mais rien n'y éclaire la chambre : texte gris, 4,5:1 au moins, teinte éteinte. Dans Bien-être, il suit les réglages du lecteur (spec §7.2) ; en crise, il reste muet sauf la voix.
+- **Le pied du lecteur** : « Précédent » et « Suivant » à parts égales tant que le mot tient, puis l'un sous l'autre : « Suivant » ne sort plus de l'écran à 33 px.
+- **L'aperçu d'import** nomme les exercices épinglés ; une liste vide n'annonce rien à remplacer.
+
+### Moment difficile par état (tâche 5)
+
+- **`#/crise/:id`** n'ouvre que l'un des quatre exercices ; une autre valeur, un autre exercice compris, ramène à Moment difficile. Le lecteur revient à Moment difficile à la fin, et le bouton touché n'est pas une donnée.
+- **« Lire les consignes à voix haute »** est sous « Signal sonore », et absent sans voix française. La cohérence cardiaque ne lit rien à voix haute : un test l'épingle, et le texte d'aide le dit (« et la voix pour eux seuls »).
+- **Une respiration en cours, quittée par un de ces touchers**, garde le son éveillé pour l'exercice qui s'ouvre.
+- **En très grand texte**, « Commencer » et « Recommencer » restent dans leur carte : leur texte se borne à 44 px, et rien ne change jusqu'à 40 px.
+
+### Sons de fond et minuteurs (tâche 6)
+
+- **La recette des sons** (spec §12) : un tampon de plus de 10 s par son (13, 11, 17 et 15 s), dont la fin revient en fondu sur le début. Deux sources le jouent, une par oreille, à des vitesses à peine différentes (1 et 0,94) : la répétition ne s'entend pas. Puis des filtres et une houle lente, branchée sur les paramètres : tout tourne dans le moteur audio, sans JavaScript.
+- **Volume et fondus ont chacun leur gain** : l'un ne dérange pas l'autre. Le volume bouge le son pendant le geste et n'est retenu qu'au lâcher.
+- **Une minuterie finie pendant que l'app dormait** : l'écran revient à son début au retour, et un contexte interrompu ne rejoue rien.
+- **Le son de fond de concentration** reprend le volume de l'écran des sons, en session `ambient`.
+- **Un bol ou un souffle programmé puis coupé avant son départ** ne sort plus plus fort que joué seul : leur volume est posé tout de suite, et non à l'instant futur (mesuré dans le moteur audio de WebKit).
+- **Après le fondu de sortie**, le contexte dort : la session audio est rendue à iOS, et la musique peut repartir.
+- **Les valeurs de départ** (rien n'est écrit tant qu'on ne les change pas) : pour les sons de fond, le bruit brun, 30 min et un volume de 0,5 ; pour le minuteur silencieux, 5 min, sans son chaque minute ; pour la concentration, 25 min, sans son.
+- **Le message « Noter mon émotion »** paraît à la fin du minuteur silencieux, si la séance est notée, et reste 6 s, comme à la fin du lecteur. La règle de la v7 le permet : il paraît dans Bien-être, une fois une séance notée. La concentration et les sons, qui ne sont pas des séances, n'en ont pas.
+
+### Bien-être par besoin (tâche 7)
+
+- **La reprise du Programme en un toucher et la séance qui vient sont retirées** : l'accueil ne pousse aucune séance, et les entrées gardent des places fixes (spec §7.1). `suivante` et `derniereFaite` quittent `domain/programme.js`, avec leurs tests ; `faitesLe` et `texteFaite` restent pour « Faite le ». Le Programme se prend désormais en trois touchers : l'entrée Programme, la séance, « Commencer ». « Reprendre » relance la dernière séance lancée, sans la dater : seul l'écran Programme écrit `programme`.
+- **La cohérence cardiaque quitte l'accueil pour « Me calmer vite »** (spec §7.1), et ses puces de durée et de rythme pour son écran « avant », où elles se règlent au même endroit que Moment difficile. Les mentions de « la carte de la cohérence » dans l'entrée v8 se lisent désormais « la cohérence de Me calmer vite » : elle ne date toujours rien dans le Programme.
+- **Une ligne a deux gestes** : le bouton lecture démarre aussitôt, le son et la voix préparés dans ce toucher ; le reste de la ligne ouvre l'écran « avant », qui attend « Commencer ». Les minuteurs et les sons de fond ouvrent leur écran dans les deux cas, et il attend son propre « Commencer ».
+- **Ce que « Reprendre » retient** : un exercice au moment où il commence, jamais sur un coup d'œil à son écran « avant » ; un minuteur ou les sons au toucher sur leur ligne, puisque leur écran peut rester sans suite. La clé n'est écrite que si la valeur change.
+- **L'épingle sur chaque ligne du Programme** : le §14.4 de la spec (« chaque ligne des quatre entrées ») prime sur « Programme inchangé » du §7.1. Elle est à côté du lien, jamais dedans ; « Faite le », la présentation et le lien ne changent pas, et il n'y a pas de bouton lecture. Si l'écran est préféré sans elle, il faudra noter ici cette dérogation au §14.4.
+- **L'accueil attend les favoris** : tant qu'ils ne sont pas lus, rien sous « Reprendre ». Les entrées arrivent ensemble, à leur place, et ne sautent pas sous le doigt.
+- **En très grand texte**, le bouton lecture et l'épingle passent sous leur lien, à droite. Les menus de réglage (`.puce-reglage`, depuis la v8) se bornent à leur carte : à partir de 45 px de texte, « Repères + souffle » se coupe avant le chevron, et le menu reste touchable.
+- **Le contrôle global** parcourt aussi l'accueil plein et une épingle allumée, sur le fond de sa teinte et sur le noir de « Réveil la nuit » : son dessin garde au moins 3:1, en clair et en sombre.
+
+### « Pour ce moment : » après une émotion (tâche 8)
+
+- **Où** : sur l'écran 3 d'un relevé neuf dont le mot a une zone (un relevé « vers » et un mot à soi compris), après « Ce que je faisais » et « Pour récupérer » : du texte et un contour, aucun fond, aucune couleur de zone, les mêmes dans les deux thèmes.
+- **Le toucher** prépare le son et la voix, attend la fin de la file d'écriture, puis ouvre le lecteur de Bien-être, qui revient à Aujourd'hui. Le relevé est donc complet en base avant que le lecteur démarre (point de vigilance 2). Une seule fois : un second toucher ne relance rien.
+- **Le délai de 3 s** n'est contrôlé qu'à l'ouverture du lecteur. Passé ce délai, ou dans une page cachée (l'iPhone verrouillé pendant l'écriture), le lecteur attend « Commencer », et sait toujours où revenir. Il ne démarre jamais seul dans une page cachée.
+- **Le pied de l'écran 3 monte** à la hauteur de la flèche de l'écran 2 : pour une carte de hauteur minimale, rien du corps ne passe sous elle. Quand la carte grandit (longue définition, très grand texte), la flèche monte aussi, et c'est la garde de 350 ms qui protège d'un second toucher.
+
+### Contrôle global (tâche 9)
+
+- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 27 écrans de la v10 : les quatre boutons de Moment difficile, Panique et « Réveil la nuit » (avant, étape rythmée, en pause), l'accueil de Bien-être plein, les trois listes, le soupir et le noting (avant, en cours, une étiquette touchée), les sons de fond, les deux minuteurs (avant, en cours, en pause ou le temps passé), l'écran 3 avec « Pour ce moment : » et Réglages › Moment difficile, où la voix s'ajoute : 83 écrans en tout, contre 56 en v9. Tout texte visible a au moins 4,5:1 sur son fond, en clair et en sombre, rien n'est en tirets, rien ne sort de l'écran à 390 px (au texte normal et à 23 px), et aucune violation de la CSP ne survient.
+- **Sur ces 27 écrans, cinq vérifications de plus**, en clair et en sombre, avec « Réduire les animations » allumé :
+  - **cibles de 44 pt** : un doigt de 44 pt visé au centre de chaque élément à toucher ne rencontre que lui. Ce test vise pour de bon, plutôt que de mesurer une boîte : l'interrupteur de 31 de haut, qui touche sur 47 par son pseudo-élément, passe, et un élément recouvert échoue ;
+  - **aucun mot interdit**, dans le texte de l'écran et dans ce qu'entend VoiceOver ;
+  - **aucune police à empattements**, pseudo-éléments compris ;
+  - **rien de téléchargé** : aucun fichier son ni police, aucune requête vers une autre origine ;
+  - **rien qui bouge** : aucune animation ni transition ne démarre en arrivant sur ces écrans, pas même une courte, finie quand le contrôle regarde (les départs sont écoutés dès le chargement), aucune n'est en cours, et le disque du souffle est à sa taille fixe.
+
+  Chacune a été essayée sur ces écrans abîmés exprès (une cible réduite, un mot interdit, une police à empattements, un fichier son demandé, une animation) : elle échoue. Sans la règle globale du mouvement réduit (`base.css`, `tokens.css`), « rien qui bouge » échoue sur 6 écrans : le disque du souffle et « Pour ce moment ». Aucune de ces vérifications n'a trouvé de faute dans l'app.
+- **Captures**, dans WebKit à 390 × 844 avec les zones sûres de l'iPhone simulées, en clair et en sombre, gardées hors du dépôt : ces écrans, Réglages › Moment difficile et le Diagnostic. Rien à corriger.
+- **Version 10.0.0** (package.json, precache).
+- **CLAUDE.md** ne change pas : aucune règle ne bouge.
+
+### Relecture finale (trois relecteurs : écrans, données, règles)
+
+- **Les interrupteurs de Réglages** : la zone de toucher de 47 pt n'existait que dans le lecteur. Elle vaut pour tout interrupteur d'une rangée, et Réglages › Moment difficile entre dans le contrôle des 44 pt.
+- **Le mot de phase en très grand texte** : à 47 et 53 px, « Encore un peu » passait sur deux lignes, et l'anneau descendait de 82 à 93 pt, puis remontait, à chaque cycle du soupir. Son corps se borne à 54 px : une ligne, un anneau immobile, et rien ne change jusqu'à 40 px.
+- **Les étiquettes du noting** passent l'une sous l'autre au-delà de 40 px : « Pensée » et « Émotion » étaient coupés au milieu du mot, sans rien déborder de côté.
+- **Les libellés des quatre bulles** (hérité de la v9) : leur interligne, en rem, ne suivait pas le corps réduit par `ajusterEtiquettes`. Plus le texte réglé grandissait, plus le libellé rapetissait et plus ses lignes s'écartaient, jusqu'à 16 sur 59 à 53 px. L'interligne est relatif et chaque ligne reste une ligne : 19 sur 22 à l'écran 1, de 21 à 53 px, et rien ne change à 17 et 19 px.
+- **La tête d'un graphique** (hérité) : à 53 px, « 12 dernières semaines » sortait de Tes zones, et la page défilait de côté. Elle passe à la ligne.
+- **Une lecture préparée qui ne démarre pas seule** (l'écriture de l'écran 3 a passé 3 s, ou l'iPhone s'est verrouillé entre-temps) : le contexte restait éveillé et la session `playback` gardait la musique en pause, alors que rien ne jouait. Le son se rendort, et « Commencer » le relance dans son toucher.
+- **« Autour du Bien-être »** : la règle et la phrase de VoiceOver disaient « lancée depuis Bien-être », alors qu'une séance lancée depuis « Pour ce moment : » compte (appel 7). Elles le disent, et la ligne de la v7 est précisée.
+- **Les retours après plus de 30 min** : le minuteur de concentration et le minuteur silencieux restent sur leur écran, comme les sons (§14.1). Le comportement était juste, mais seuls les sons avaient ce test, alors que c'est le cas normal d'une concentration de 45 min. Deux tests le verrouillent.
+- **Trois textes** ont été reformulés : voir « En attente de l'utilisateur ». Le comportement du §14.4, et les réserves qui n'avaient été notées nulle part, y sont aussi.
+- **Les journaux de version** : `docs/v6-specification.md` et `docs/design/integration.md` ont leur section v10.
+- **Restes retirés** : la prop `origineSeance` du lecteur, qu'aucun appelant ne passait ; un import et un tri inutiles dans les tests. Les commentaires de `champs.js` et de `seances.js` disent que `exercice` peut valoir `minuteur`.
+
+### Contre-relecture
+
+- **L'Analyse et Comprendre en très grand texte** (hérité) : la relecture finale avait corrigé « 12 dernières semaines », pas le symptôme. L'Analyse défilait encore de côté à 40 px et plus : par « Tes points positifs » et sa flèche (page de 395, 445 puis 488 px pour 390), par le tableau de Tes zones (417, 479 puis 532), et, repli ouvert, par « Tous les chiffres » (« mouvement » plus large que sa demi-tuile dès 40 px, son tableau à 53 px). Comprendre défilait de même, tableau ouvert, dès 33 px (491 px sur Énergie). Le titre passe à la ligne, les tuiles passent sur une colonne à partir de 40 px, et un tableau plus large que sa carte ou son repli y défile, ses en-têtes sur une ligne (pas de coupure au milieu d'un mot : « Relevés » se couperait sur 6 lignes à 47 px). Comparaison de captures, graphiques puis tableaux ouverts : rien ne change à 17 et 23 px sur l'Analyse et les trois onglets de Comprendre, et, à 33 px, seul change le tableau d'Énergie qui débordait.
+- **Ce qui défile de côté coupe ce qui dépasse** : Tes zones n'avait pas de retrait, et la queue d'un « j » en début de ligne y perdait un pixel à 33 px. Un retrait de 4, compensé par sa marge, le rend, avec l'anneau du focus. Le défilement du repli se limite pour la même raison à « Tous les chiffres » : « Tes points positifs » n'a pas de retrait non plus.
+- **Les interrupteurs de Réglages › Le soir** (hérité de la v6.1) : la zone de toucher de 47 pt ne valait que pour `.ligne-interrupteur`. Ils sont dans `.ligne-champ-reglage` : à 21 pt du centre, une touche tombait sur la rangée, qui ne bascule rien. La zone vit maintenant sur le composant (`.interrupteur::after`), et tout interrupteur l'a.
+- **Le contrôle des 44 pt passe par cet écran**, dans un test à lui : l'écran n'est pas de la v10, et les 27 écrans plus haut ne changent pas. Il y a relevé les flèches « Monter », à tort : deux flèches de 44 collées (de 213 à 257, de 257 à 301) se volaient le point visé à 256,5, parce que WebKit donne un point fractionnaire au pixel d'après. Les points visés tombent maintenant sur un pixel entier, du côté du centre. Il voit toujours : une flèche de 42 et un interrupteur sans sa zone échouent, dans le test lui-même.
+- **Un test de plus** : l'Analyse et Comprendre, tous les replis et tous les tableaux ouverts, de 33 à 53 px, ne débordent nulle part et aucune carte n'y défile en hauteur. Il échoue sur le CSS d'avant.
+- **Les écrans hérités qui débordent encore** ne sont pas corrigés : voir « En attente de l'utilisateur ».
+
+### En attente de l'utilisateur
+
+- **Les exercices à relire** (plus bas) et **la table « Pour ce moment : »** (plus haut). Un texte se corrige dans `public/js/domain/exercices.js`, la table dans `public/js/domain/propositions.js`.
+- **Trois textes reformulés à la relecture finale**, à relire d'abord. Ancrage court, étape 1 : « Si un sens ne répond pas, passe au suivant. » devient « Si tu ne trouves rien pour un sens, passe au suivant. » (un sens ne « répond » pas). Savourer, étape 6 : « Garde ça encore quelques souffles » devient « Reste avec ce moment encore quelques souffles » (« ça » ne désignait rien de précis). Trop-plein, description : « une pression » devient « les mains qui appuient » (« une pression » peut se lire comme une pression psychologique). Les durées ne changent pas.
+- **Le bouton lecture d'un favori ou de « Reprendre »** (dérogation au §14.4 de la spec, voir « Appels du concepteur ») : il démarre aussitôt un exercice ou la cohérence, en un toucher. L'autre lecture possible, celle du §14.4 : il ouvrirait l'écran « avant », où se règlent le son et la durée, et il faudrait un toucher de plus. Le cas à juger : « Réveil la nuit » épinglé, lancé à 3 h, où le bol et le souffle partent sans passer par cet écran. Pour changer : `lancerElement` (`ui/composants/ligne-element.js`) et `ui/ecrans/bien-etre.js`.
+- **La fin de « Réveil la nuit » en thème clair** : le fond reste noir jusqu'à « Fin de l'exercice. », puis l'écran revient 6 s plus tard à Moment difficile, en clair, en pleine nuit. À juger la nuit.
+- **Les quatre boutons de Moment difficile en thème sombre** (réserve de la tâche 5) : à la couleur du parcours (`-fill`), ils restent lumineux, même en thème sombre. À juger la nuit, avec le point d'avant.
+- **L'épingle sur les lignes du Programme**, si l'écran est préféré sans elle (« Bien-être par besoin »).
+- **Des écrans hérités sortent de l'écran en très grand texte**, à décider : ils ne sont pas corrigés dans la v10. Ce n'est pas une régression : aucun n'est un écran de la v10, et aucune règle en cause ne change en v10. Le plus gênant, **l'étape 1 de l'Épisode** : dès 33 px, 6 pastilles sur 13 sortent de l'écran (bord droit à 425 px pour 390, 498 à 40 px, 634 à 53 px), et son corps ne défile pas de côté : elles ne s'atteignent pas. Ailleurs, la page défile de côté, et tout s'atteint. À 47 puis 53 px, page pour 390 : Aujourd'hui 449 et 496, Rendez-vous 418 et 462, Traitement 431 et 479, Soins › Traitement 454 et 506, Vue soignants 418 et 462. À 53 px seulement : Réglages 400, Rappels 408. Dès 40 px, de quelques pixels : Aujourd'hui 395, Soins › Traitement 394. En cause : `button.pastille`, `.libelle-choix` et `.rubrique-sous`, entre autres. La recette le dit aussi (`docs/recette-iphone.md`, « Design »).
+- **Les points en attente de la v7, de la v8 et de la v9 restent ouverts** (le soir avec les zones sûres, « Durée › » en deux touchers, Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé).
+- **Hors de la v10** (spec §3) : les pistes F (prévenir avant que la voix revienne, « Ma voix » enregistrée) et G (« À essayer d'ici le prochain rendez-vous », amorces de note), et la barre d'état noire au-dessus des écrans de l'émotion, qui attend le retour de l'utilisateur sur l'iPhone.
+
+### À essayer sur l'iPhone
+
+Le détail, à cocher, est dans `docs/recette-iphone.md`, « v10 ».
+
+- **Le son de fond écran verrouillé**, d'abord par l'entrée du Diagnostic. C'est la seule inconnue technique de la v10 : si le son s'arrête, un correctif 10.0.1 (spec §14.2).
+- **La lentille de la carte pendant l'élan** : sa fluidité sur l'iPhone 13 Pro, et un toucher juste après.
+- **« Réveil la nuit » la nuit** : assez sombre, assez lisible, et l'écran qui reste allumé. En thème clair, la barre d'état ne doit pas faire de bande claire au-dessus du noir : `theme-color` n'y change pas, et WebKit sous Playwright n'a pas de barre d'état, ce qui reste donc à constater. Si la bande existe, passer `theme-color` à `#000000` tant qu'un `CadreParcours` `noir` est ouvert, et le rétablir à la sortie (la piste notée pour les écrans de l'émotion en v9, qui restent hors de la v10).
+- **Le minuteur de concentration** après un passage en arrière-plan, et l'écran gardé allumé des deux minuteurs.
+
+### Exercices à relire (titres et étapes)
+
+Écrits pour Carnet, à relire par l'utilisateur : une consigne par écran, phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. Ce sont des techniques communes : aucun texte, aucun nom de séance n'est repris d'une autre app. Un texte se corrige dans `public/js/domain/exercices.js` ; les identifiants ne changent pas.
+
+#### Le soupir (1, 3 ou 5 min, `soupir`)
+
+Une inspiration, une petite en plus, une longue expiration. Posture : là où tu es.
+
+1. Inspire par le nez. Puis une petite inspiration en plus, sans expirer entre les deux. *(8 s)*
+2. Expire longuement par la bouche, jusqu'au bout, sans forcer. *(8 s)*
+3. Inspire, encore un peu, puis expire longuement. Sans forcer. *(153 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (36 s à 1 min, 270 s à 5 min).
+4. Laisse ta respiration redevenir libre. *(5 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
+
+#### Expiration longue (1, 3 ou 5 min, `expiration-longue`)
+
+Inspirer sur quatre temps, expirer sur six. Posture : là où tu es.
+
+1. Inspire par le nez, sur quatre temps. *(8 s)*
+2. Expire par la bouche, sur six temps, sans forcer. *(10 s)*
+3. Inspire, quatre temps. Expire, six temps. Sans forcer. *(150 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (30 s à 1 min, 270 s à 5 min).
+4. Laisse ta respiration redevenir libre. *(6 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
+
+#### Noter ce qui passe (1, 3 ou 5 min, `noting`)
+
+Toucher l'étiquette de ce qui passe, puis revenir au souffle. Posture : là où tu es.
+
+1. Sens l'air qui entre et qui sort, sans rien changer. *(7 s)*
+2. Quelque chose passe ? Une pensée, le corps, un son, une émotion. *(9 s)*
+3. Touche l'étiquette de ce qui passe, puis reviens au souffle. Rien n'est gardé. *(150 s)* : l'étape qui s'allonge ou se raccourcit, ici à 3 min (30 s à 1 min, 270 s à 5 min), avec les étiquettes Pensée, Corps, Son, Émotion.
+4. Laisse les étiquettes. Sens encore une fois l'air qui entre et qui sort. *(8 s)*
+5. Reprends ce que tu faisais quand tu veux. *(6 s)*
+
+#### Ancrage court (2 min, `ancrage-court`)
+
+Trois choses vues, deux sons, une chose touchée. Posture : là où tu es.
+
+1. Garde les yeux ouverts. Si tu ne trouves rien pour un sens, passe au suivant. *(10 s)*
+2. Nomme trois choses que tu vois. *(35 s)*
+3. Nomme deux sons que tu entends. *(30 s)*
+4. Nomme une chose que tu touches. Touche-la si tu veux. *(25 s)*
+5. Respire une fois, lentement. *(10 s)*
+6. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Scan court (3 min, `scan-court`)
+
+Les pieds, les mains, le ventre, les épaules, la mâchoire. Posture : assis ou allongé.
+
+1. Installe-toi assis ou allongé. Les yeux ouverts ou fermés, les deux vont. *(15 s)*
+2. Tes pieds : remarque ce qui est là. « Rien de spécial » est une réponse normale. *(30 s)*
+3. Tes mains : les doigts, les paumes. *(30 s)*
+4. Ton ventre, qui bouge avec la respiration. *(30 s)*
+5. Tes épaules : hautes ou basses, sans rien changer. *(30 s)*
+6. Ta mâchoire. Si elle est serrée, laisse les dents se séparer un peu. *(30 s)*
+7. Bouge les doigts. Reprends ce que tu faisais quand tu veux. *(15 s)*
+
+#### Savourer (2 min, `savourer`)
+
+Remarquer trois détails de ce moment, et où il se sent dans le corps. Posture : là où tu es.
+
+1. Reste là où tu es, les yeux ouverts. *(10 s)*
+2. Remarque un détail de ce moment : une lumière, un son, une matière. *(25 s)*
+3. Remarque un deuxième détail. *(20 s)*
+4. Remarque un troisième détail. *(20 s)*
+5. Où ce moment se sent-il dans ton corps ? La poitrine, le ventre, les mains, ou nulle part. *(20 s)*
+6. Reste avec ce moment encore quelques souffles, sans rien y changer. *(15 s)*
+7. Reprends ce que tu faisais quand tu veux. *(10 s)*
+
+#### Panique (2 min, `panique`)
+
+Les pieds au sol, trois soupirs, ce qu'il y a autour de toi. Posture : là où tu es.
+
+1. Pose les pieds bien à plat et appuie. Tu peux bouger, ou passer une étape, quand tu veux. *(12 s)*
+2. Trois soupirs : inspire, une petite inspiration en plus, une longue expiration. *(27 s)*
+3. Regarde autour de toi. Nomme trois choses que tu vois. *(20 s)*
+4. Nomme deux sons que tu entends. *(18 s)*
+5. Touche une chose près de toi. Nomme-la. *(12 s)*
+6. Encore deux longues expirations : inspire, puis souffle lentement. *(20 s)*
+7. Reste là, ou bouge, comme tu veux. *(11 s)*
+
+#### Colère (2 min, `colere`)
+
+S'éloigner, serrer les poings puis relâcher, expirer longuement. Posture : debout ou en marchant.
+
+1. Éloigne-toi si tu peux. Sinon, tourne-toi. Marcher, bouger ou passer une étape est permis tout du long. *(15 s)*
+2. Serre les poings fort, cinq secondes. *(8 s)*
+3. Relâche. Ouvre les mains. *(7 s)*
+4. Serre encore, cinq secondes. *(8 s)*
+5. Relâche. Ouvre les mains. *(7 s)*
+6. Une dernière fois : serre, cinq secondes. *(8 s)*
+7. Relâche tout. Secoue les mains si tu veux. *(7 s)*
+8. Longues expirations : inspire, puis souffle lentement par la bouche. *(40 s)*
+9. Marche, ou reste là, comme tu veux. *(15 s)*
+10. Reprends quand tu veux. *(5 s)*
+
+#### Trop-plein (2 min, `trop-plein`)
+
+Moins de choses qui entrent, les mains qui appuient, de longues expirations. Posture : là où tu es.
+
+1. Regarde un seul point devant toi : un mur, le sol, un objet. Tu peux bouger, ou passer une étape. *(20 s)*
+2. Couvre-toi les oreilles si le bruit est de trop. *(12 s)*
+3. Croise les bras et serre. Ou pose les mains à plat, sur la poitrine ou les cuisses. *(15 s)*
+4. Appuie un peu plus fort. Garde cette pression. *(13 s)*
+5. Longues expirations : inspire, puis souffle lentement. *(30 s)*
+6. Reste là. Il n'y a rien à faire. *(25 s)*
+7. Reprends quand tu veux. *(5 s)*
+
+#### Réveil la nuit (3 min, `reveil-nuit`)
+
+Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allongé. Écran noir ; dans Moment difficile, muet sauf la voix ; dans Bien-être, les réglages du lecteur.
+
+1. Reste là où tu es, allongé. Tu peux bouger, ou passer une étape. *(10 s)*
+2. Inspire sur quatre temps. Expire sur six temps, sans forcer. *(50 s)*
+3. Sens tes pieds. *(20 s)*
+4. Sens tes mains. *(20 s)*
+5. Sens ton ventre, qui monte et qui descend. *(20 s)*
+6. Sens tes épaules, là où elles touchent le lit. *(20 s)*
+7. Sens ta mâchoire. Les dents peuvent se séparer un peu. *(20 s)*
+8. Reste là. Il n'y a rien à attendre. *(20 s)*

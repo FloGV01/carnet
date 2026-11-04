@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lireRoute, versHash, ongletDe, ROUTES } from '../../public/js/routeur.js';
+import { lireRoute, versHash, ongletDe, ROUTES, ENTREES_BIEN_ETRE } from '../../public/js/routeur.js';
+import { ENTREES } from '../../public/js/domain/entrees-bien-etre.js';
 
 test('routes connues', () => {
   assert.deepEqual(lireRoute('#/aujourdhui'), { nom: 'aujourdhui', params: {}, chemin: '/aujourdhui' });
@@ -24,7 +25,7 @@ test('hash vide ou inconnu : retour sur Aujourd\'hui', () => {
 });
 
 test('aller-retour versHash / lireRoute pour chaque route', () => {
-  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes' };
+  const exemples = { date: '2026-01-05', id: 'x1', liste: 'emotion', onglet: 'rythmes', entree: 'dormir' };
   for (const r of ROUTES) {
     const params = Object.fromEntries((r.params || []).map((p) => [p, exemples[p]]));
     const lu = lireRoute(versHash(r.nom, params));
@@ -41,6 +42,7 @@ test('onglet actif', () => {
   assert.equal(ongletDe('reglages-journee'), 'reglages');
   assert.equal(ongletDe('reglages-moment-difficile'), 'reglages', 'les réglages ne sont pas l\'écran Moment difficile');
   assert.equal(ongletDe('moment-difficile'), 'aujourdhui');
+  assert.equal(ongletDe('crise'), 'aujourdhui', 'v10 : un exercice court reste à l\'onglet de Moment difficile');
   assert.equal(ongletDe('reglages-ressourcer'), 'reglages', 'Me ressourcer (la règle) se règle dans Réglages');
   assert.equal(ongletDe('reglages-aide-iphone'), 'reglages', 'l\'aide iPhone s\'ouvre depuis Réglages');
   assert.equal(ongletDe('reglages-emotions'), 'reglages', 'v8 : le sens des mots se règle dans Réglages');
@@ -48,6 +50,14 @@ test('onglet actif', () => {
   assert.equal(ongletDe('consultation'), 'soins');
   assert.equal(ongletDe('diagnostic'), 'reglages');
   assert.equal(ongletDe('comprendre'), 'analyse', 'Comprendre s\'ouvre depuis l\'Analyse');
+});
+
+test('v10 · un exercice court de Moment difficile : /crise/ID, à côté de la route de Moment difficile', () => {
+  assert.deepEqual(lireRoute('#/crise/trop-plein'), { nom: 'crise', params: { id: 'trop-plein' }, chemin: '/crise/trop-plein' });
+  assert.equal(versHash('crise', { id: 'reveil-nuit' }), '#/crise/reveil-nuit');
+  assert.equal(lireRoute('#/moment-difficile').nom, 'moment-difficile');
+  // Sans identifiant, l'adresse n'existe pas.
+  for (const h of ['#/crise', '#/crise/']) assert.equal(lireRoute(h).inconnue, true, h);
 });
 
 test('v6.1 · « Pour mes soignants » : Export PSY et Vue soignants allument l\'onglet Soins, l\'Analyse garde Comprendre', () => {
@@ -110,12 +120,35 @@ test('v6.1 · Historique : un jour ouvert depuis l\'Historique (/historique/jour
   }
 });
 
+test('v10 · la liste d\'une entrée de Bien-être : /bien-etre/calmer, dormir ou concentrer, onglet Bien-être ; rien d\'autre', () => {
+  assert.deepEqual(ENTREES_BIEN_ETRE, ENTREES.map((x) => x.id), 'les routes suivent les entrées du domaine');
+  for (const entree of ENTREES_BIEN_ETRE) {
+    assert.deepEqual(lireRoute(`#/bien-etre/${entree}`), { nom: 'entree-bien-etre', params: { entree }, chemin: `/bien-etre/${entree}` });
+    assert.equal(versHash('entree-bien-etre', { entree }), `#/bien-etre/${entree}`);
+    assert.equal(lireRoute(`#/bien-etre/${entree}/x`).inconnue, true);
+  }
+  assert.equal(ongletDe('entree-bien-etre'), 'bien-etre');
+  assert.equal(lireRoute('#/bien-etre/autre').inconnue, true);
+  // Les adresses d'à côté ne changent pas.
+  assert.equal(lireRoute('#/bien-etre/coherence').nom, 'coherence');
+  assert.equal(lireRoute('#/bien-etre/programme').nom, 'programme');
+});
+
+test('v10 · le minuteur silencieux, le minuteur de concentration et les sons de fond : des routes de l\'onglet Bien-être', () => {
+  for (const nom of ['minuteur', 'concentration', 'sons']) {
+    assert.deepEqual(lireRoute(`#/${nom}`), { nom, params: {}, chemin: `/${nom}` });
+    assert.equal(versHash(nom), `#/${nom}`);
+    assert.equal(ongletDe(nom), 'bien-etre');
+    assert.equal(lireRoute(`#/${nom}/x`).inconnue, true);
+  }
+});
+
 test('v7 · Bien-être : /bien-etre allume l\'onglet Bien-être ; l\'Historique, sorti de la barre, allume l\'Analyse', () => {
   assert.deepEqual(lireRoute('#/bien-etre'), { nom: 'bien-etre', params: {}, chemin: '/bien-etre' });
   assert.equal(versHash('bien-etre'), '#/bien-etre');
   assert.equal(ongletDe('bien-etre'), 'bien-etre');
-  // v8 : les exercices ne se font plus que dans le Programme ; l'adresse d'un exercice seul n'existe plus.
-  for (const h of ['#/bien-etre/', '#/bien-etre/exercice/ancrage-54321', '#/bien-etre/exercice/', '#/exercice/scan-corporel']) assert.equal(lireRoute(h).inconnue, true, h);
+  // L'adresse d'un exercice seul de la v7 n'existe plus (v10 : c'est #/exercice/<id>).
+  for (const h of ['#/bien-etre/', '#/bien-etre/exercice/ancrage-54321', '#/bien-etre/exercice/']) assert.equal(lireRoute(h).inconnue, true, h);
   // L'Historique garde sa route et ses jours ; il n'a plus d'onglet à lui.
   assert.equal(lireRoute('#/historique').nom, 'historique');
   assert.equal(ongletDe('historique'), 'analyse');
@@ -131,6 +164,15 @@ test('v8 · le Programme : /bien-etre/programme, et une séance du Programme dan
   assert.equal(ongletDe('programme'), 'bien-etre');
   assert.equal(ongletDe('seance-programme'), 'bien-etre');
   for (const h of ['#/bien-etre/programme/', '#/programme', '#/bien-etre/programme/a/b']) assert.equal(lireRoute(h).inconnue, true, h);
+});
+
+test('v10 · un exercice seul dans le lecteur : /exercice/ID, onglet Bien-être ; les routes d\'avant ne changent pas', () => {
+  assert.deepEqual(lireRoute('#/exercice/scan-corporel'), { nom: 'exercice', params: { id: 'scan-corporel' }, chemin: '/exercice/scan-corporel' });
+  assert.equal(versHash('exercice', { id: 'soupir' }), '#/exercice/soupir');
+  assert.equal(ongletDe('exercice'), 'bien-etre');
+  for (const h of ['#/exercice', '#/exercice/', '#/exercice/a/b']) assert.equal(lireRoute(h).inconnue, true, h);
+  assert.equal(lireRoute('#/bien-etre/programme/soupir').nom, 'seance-programme');
+  assert.equal(lireRoute('#/bien-etre/coherence').nom, 'coherence');
 });
 
 test('v8 · la cohérence cardiaque de Bien-être dans le lecteur : /bien-etre/coherence, onglet Bien-être', () => {

@@ -30,32 +30,60 @@
 //   elle y porte alors « Faite le 12/10 ». Arrêtée en route, rien.
 // Le son ne naît que dans un toucher (« Commencer », « Reprendre », « Terminer », ou le bouton lecture d'une carte, par
 // lancerLecture) ; la voix est débloquée de même, par une parole muette (Safari ne parle qu'après un geste).
-import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
+// v10 (spec §5.3, §6, §7.3, §14.4 et §14.5) :
+// - Durée au choix (le soupir, l'expiration longue, le noting) : 1 · 3 · 5 min sur l'écran « avant » ; la dernière est
+//   gardée par exercice sur cet appareil, écrite seulement quand elle change. L'étape qui se répète s'allonge
+//   (domain/exercices.js).
+// - Une étape à `etiquettes` (le noting) : quatre grosses étiquettes ; un toucher en fait briller une 600 ms et n'écrit rien.
+// - Un souffle à `inspi2` (le soupir) : le disque, le mot et le souffle sonore suivent la petite inspiration en plus.
+// - L'épingle, sur l'écran « avant » (composants/epingle.js).
+// - « Reprendre » (spec §7.3 et §14.4) : commencer retient l'exercice sur cet appareil, depuis n'importe où sauf en crise.
+// - Un exercice `nuit` (« Réveil la nuit ») : fond noir dans les deux thèmes, texte gris.
+// - `mode` : 'bien-etre' (tout ce qui précède) ou 'crise', les exercices courts de Moment difficile. En crise, un toucher
+//   démarre aussitôt (lancerLecture) ; ni anneau, ni « il reste », ni bols, ni souffle sonore, ni « Noter mon émotion », ni
+//   épingle. Le son et la voix suivent Réglages › Moment difficile (méta `respiration`) : le signal sonore donne un repère
+//   discret à chaque changement d'étape, rien d'autre ; « Réveil la nuit » l'ignore, seule la voix peut y parler. Le signal
+//   comme la voix jouent en session « ambient », la voix seule aussi. En pause, on peut les changer pour cette fois : rien
+//   n'est retenu. La séance prend l'origine `moment-difficile`.
+import { html, useEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { CadreParcours } from './parcours.js';
+import { Epingle } from './epingle.js';
 import { Interrupteur } from './interrupteur.js';
 import { PuceReglage } from './respiration.js';
+import { Segmente } from './segmente.js';
 import { afficherToast } from './toast.js';
-import { preparerSon, suspendreSon } from './signal-sonore.js';
+import { preparerSon, sonner, suspendreSon } from './signal-sonore.js';
 import { sons } from './sons.js';
 import { Icones } from '../icones.js';
 import { lireLocal, ecrireLocal } from '../hooks.js';
 import { garderEcran, useSeance } from '../seance.js';
-import { dureeEtPosture, dureeExerciceS, exerciceMeneAuBout } from '../../domain/exercices.js';
-import { TEMPS_SOUFFLE, motPhase, phaseSouffle, phasesEntre } from '../../domain/respiration.js';
+import { repo } from '../../donnees.js';
+import { ELEMENTS_BIEN_ETRE } from '../../domain/entrees-bien-etre.js';
+import { DUREES_AU_CHOIX, aDureeAuChoix, dureeEtPosture, dureeExerciceS, exerciceAvecDuree, exerciceMeneAuBout } from '../../domain/exercices.js';
+import { TEMPS_SOUFFLE, motPhase, normaliserRespiration, phaseSouffle, phasesEntre } from '../../domain/respiration.js';
 import { pourAffichage } from '../../domain/typographie.js';
 
 export const CLE_VOIX = 'carnet:exercice:voix';
 export const CLE_SON = 'carnet:lecteur:son';
 export const CLE_SILENCIEUX = 'carnet:lecteur:silencieux';
+export const CLE_DERNIER = 'carnet:bien-etre:dernier';
 export const SONS = [{ valeur: 'aucun', libelle: 'Aucun' }, { valeur: 'reperes', libelle: 'Repères' }, { valeur: 'souffle', libelle: 'Repères + souffle' }];
 const SON_DEFAUT = 'souffle';
 const lireSon = () => { const v = lireLocal(CLE_SON, null); return SONS.some((s) => s.valeur === v) ? v : SON_DEFAUT; };
 const lireSilencieux = () => lireLocal(CLE_SILENCIEUX, false) === true;
 const sessionAudio = (silencieux) => (silencieux ? 'playback' : 'ambient');
+// La durée retenue d'un exercice (v10), ou null : une valeur hors liste (clé abîmée) ne compte pas.
+const cleDuree = (id) => `carnet:duree:${id}`;
+const lireDuree = (id) => { const v = lireLocal(cleDuree(id), null); return DUREES_AU_CHOIX.includes(v) ? v : null; };
+// La durée que le lecteur jouera, en minutes.
+export const dureeRetenue = (exercice) => (aDureeAuChoix(exercice) ? lireDuree(exercice.id) ?? exercice.dureeMin : exercice.dureeMin);
+const OPTIONS_DUREE = DUREES_AU_CHOIX.map((d) => ({ valeur: d, libelle: `${d} min` }));
 
 export const FIN = 'Fin de l\'exercice.';
 export const NOTER_EMOTION = 'Noter mon émotion';
 const TIC_MS = 200;
+// Une étiquette du noting brille ce temps-là.
+const BRILLE_MS = 600;
 // Le souffle sonore est programmé un peu en avance, à l'instant exact de chaque phase sur l'horloge audio.
 const AVANCE_MS = 450;
 export const FERMETURE_MS = 6000;
@@ -79,7 +107,7 @@ function voixFrancaise() {
 }
 
 // Les voix arrivent parfois après le premier rendu (événement voiceschanged).
-function useVoixFrancaise() {
+export function useVoixFrancaise() {
   const [voix, setVoix] = useState(voixFrancaise);
   useEffect(() => {
     const s = window.speechSynthesis;
@@ -93,21 +121,52 @@ function useVoixFrancaise() {
 
 // Une lecture lancée d'un toucher ailleurs (le bouton lecture d'une carte de Bien-être) : le toucher prépare le son et la
 // voix, puis ouvre l'écran du lecteur, qui démarre aussitôt. Sans ce toucher (une adresse ouverte autrement), le lecteur
-// attend « Commencer » : rien ne joue seul. `retour` : l'écran où revenir, s'il n'est pas celui que donne l'adresse (la
-// carte Programme de Bien-être lance une séance du Programme, et le lecteur revient à Bien-être).
+// attend « Commencer » : rien ne joue seul. `retour` : l'écran où revenir, s'il n'est pas celui que donne l'adresse (une ligne
+// d'une entrée de Bien-être lance un exercice, et le lecteur revient à cette entrée).
+// `mode` : celui du lecteur qui s'ouvre (v10). En crise, le réglage est dans la méta, qui se lit après le toucher : le toucher
+// prépare donc le son et la voix dans tous les cas, sans bruit (session « ambient », parole muette) ; le lecteur laisse le son
+// se rendormir si le réglage ne le demande pas.
+// `attendre` : ce que l'écran doit voir fini avant de partir (v10 : la file d'écriture de l'écran 3 de l'émotion, spec §8). Le son
+// et la voix restent préparés dans le toucher.
+// Le lecteur ne démarre seul que s'il s'ouvre dans le délai, compté depuis ce toucher, et dans une page visible. Sinon (une écriture
+// qui échoue et réessaie, l'iPhone verrouillé entre-temps), il attend « Commencer », et revient quand même au bon écran. Le son
+// préparé (`prepare`) se rendort alors : la session « playback » garderait la musique en pause, alors que rien ne joue.
 let demande = null;
 const DEMANDE_MS = 3000;
-export function lancerLecture(hash, { retour = null } = {}) {
-  if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
-  if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
-  demande = { hash, instant: performance.now(), retour };
-  location.hash = hash;
+export function lancerLecture(hash, { retour = null, mode = 'bien-etre', attendre = null } = {}) {
+  if (mode === 'crise') {
+    preparerSon({ session: 'ambient' });
+    amorcerVoix();
+  } else {
+    if (lireSon() !== 'aucun') preparerSon({ session: sessionAudio(lireSilencieux()) });
+    if (lireLocal(CLE_VOIX, false) === true) amorcerVoix();
+  }
+  demande = { hash, instant: performance.now(), retour, prepare: true };
+  if (attendre) attendre.then(() => { location.hash = hash; });
+  else location.hash = hash;
 }
-// La demande de lecture qui vient d'ouvrir ce lecteur, ou null.
+// La demande qui vient d'ouvrir cet écran, ou null. Passé le délai, elle ne démarre plus rien, mais dit toujours où revenir.
 function prendreDemande() {
   const d = demande;
   demande = null;
-  return d && d.hash === location.hash && performance.now() - d.instant < DEMANDE_MS ? d : null;
+  if (!d || d.hash !== location.hash) return null;
+  return performance.now() - d.instant < DEMANDE_MS ? d : { ...d, attend: true };
+}
+// Un écran de départ (l'écran « avant » du lecteur, les deux minuteurs, les sons de fond), ouvert d'un toucher ailleurs (une
+// entrée de Bien-être) : comme le lecteur, il revient à l'écran d'où il part (`retour`). Rien ne se prépare ici : il attend son
+// propre « Commencer », où le son naît.
+export function ouvrirDepart(hash, { retour = null } = {}) {
+  demande = { hash, instant: performance.now(), retour, attend: true };
+  location.hash = hash;
+}
+// L'écran où revenir, pour un écran de départ qui s'ouvre : celui de la demande, sinon Bien-être.
+export const retourDemande = () => prendreDemande()?.retour || '#/bien-etre';
+// Le dernier élément lancé dans Bien-être (spec §7.3 et §14.4) : une préférence de cet appareil, que « Reprendre » relit. Un
+// identifiant inconnu (une clé abîmée, un exercice retiré) ne compte pas. La clé n'est écrite que si la valeur change.
+export const retenirDernier = (id) => { if (lireLocal(CLE_DERNIER, null) !== id) ecrireLocal(CLE_DERNIER, id); };
+export function lireDernier() {
+  const v = lireLocal(CLE_DERNIER, null);
+  return ELEMENTS_BIEN_ETRE.includes(v) ? v : null;
 }
 // Une parole muette dans le toucher : Safari laisse ensuite parler le lecteur hors d'un geste.
 function amorcerVoix() {
@@ -122,25 +181,35 @@ function amorcerVoix() {
 const memeSouffle = (a, b) => Boolean(a && b) && TEMPS_SOUFFLE.every((k) => a[k] === b[k]);
 
 // « 6:40 » : le temps qui reste, jamais négatif.
-const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+export const minuteur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
-// seance : { id, titre, dureeMin, posture, description, etapes: [{ texte, dureeS, souffle? }] } (un exercice de
-// domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). origine : l'écran où revenir (« Fermer » et
-// la fermeture après la fin), sauf si la lecture a été lancée avec un autre retour. programme : l'identifiant de la
-// séance du Programme, quand la lecture en est une (v8).
-export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
+// seance : { id, titre, dureeMin, posture, description, nuit?, etapes: [{ texte, dureeS, souffle?, etiquettes? }] } (un
+// exercice de domain/exercices.js, ou la cohérence cardiaque de domain/respiration.js). mode : 'bien-etre' ou 'crise' (v10).
+// retour : l'écran où revenir (« Fermer » et la fermeture après la fin), sauf si la lecture a été lancée avec un autre retour.
+// programme : l'identifiant de la séance du Programme, quand la lecture en est une (v8). reglagesAvant : ce que l'écran « avant »
+// montre en plus (la durée et le rythme de la cohérence cardiaque).
+export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien-etre', programme = null, reglagesAvant = null }) {
+  const crise = mode === 'crise';
   const [lancee] = useState(prendreDemande);
-  const auto = lancee != null;
-  const retour = (lancee && lancee.retour) || origine;
+  const [auto, setAuto] = useState(lancee != null && !lancee.attend);
+  const adresseRetour = (lancee && lancee.retour) || retour;
   const [etat, setEtat] = useState('avant'); // 'avant', 'en-cours', 'pause', 'fin'
   const [place, setPlace] = useState(0);
-  const [voixVoulue, setVoixVoulue] = useState(() => lireLocal(CLE_VOIX, false) === true);
-  const [son, setSon] = useState(lireSon);
-  const [silencieux, setSilencieux] = useState(lireSilencieux);
+  // Les réglages : ceux de ce lecteur, gardés sur l'appareil ; en crise, ceux de la méta, lus à l'ouverture (`pret`).
+  const [voixVoulue, setVoixVoulue] = useState(() => !crise && lireLocal(CLE_VOIX, false) === true);
+  const [son, setSon] = useState(() => (crise ? 'aucun' : lireSon()));
+  const [silencieux, setSilencieux] = useState(() => !crise && lireSilencieux());
+  const [pret, setPret] = useState(!crise);
   const [, tic] = useReducer((n) => n + 1, 0);
   const voix = useVoixFrancaise();
   const lecture = voixVoulue && voix != null;
-  const suivi = useSeance(seance.id, 'bien-etre', { programme });
+  // La durée au choix : l'exercice joué est celui de la durée retenue. Elle ne change que sur l'écran « avant ».
+  const avecDuree = !crise && aDureeAuChoix(exercice);
+  const [duree, setDuree] = useState(() => (avecDuree ? dureeRetenue(exercice) : null));
+  const seance = useMemo(() => (avecDuree ? exerciceAvecDuree(exercice, duree) : exercice), [exercice, duree]);
+  const [brille, setBrille] = useState(null);
+  const finBrille = useRef(null);
+  const suivi = useSeance(seance.id, crise ? 'moment-difficile' : 'bien-etre', { programme });
   const etapes = seance.etapes;
   const totalMs = dureeExerciceS(seance) * 1000;
   // Le temps actif, en ms : cumulé aux pauses, compté depuis `depuis` quand la lecture tourne ; `debutEtape`, celui où
@@ -195,6 +264,9 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     if (!parle.current) return;
     try { window.speechSynthesis.cancel(); } catch { /* rien à couper */ }
   };
+  // Le son est à préparer dans un toucher pour jouer ; en crise, la voix le veut aussi, pour lire en session « ambient ».
+  const voixEnCrise = () => crise && courant.current.lecture;
+  const sonAPreparer = () => courant.current.son !== 'aucun' || voixEnCrise();
   const rendreVerrou = () => { if (verrou.current) { verrou.current.release().catch(() => {}); verrou.current = null; } };
   // Un verrou obtenu après la pause ou la fin est rendu tout de suite.
   const tenir = (v) => { if (v && courant.current.etat !== 'en-cours') { v.release().catch(() => {}); return; } if (v) verrou.current = v; };
@@ -207,11 +279,12 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     return suivi.noter({ dureeS, terminee: exerciceMeneAuBout(seance, { derniereAtteinte, dureeS }) });
   };
 
-  // Le bol (de début, ou d'étape), puis la voix, le temps qu'il sonne.
+  // Le bol (de début, ou d'étape), puis la voix, le temps qu'il sonne. En crise : le signal sonore, à un changement d'étape
+  // seulement, et non au début.
   const annoncer = (n, debut = false) => {
     const { son: s, lecture: l } = courant.current;
-    const avecBol = s !== 'aucun';
-    if (avecBol) (debut ? sons.bolDebut : sons.bolEtape)();
+    const avecBol = s !== 'aucun' && !(crise && debut);
+    if (avecBol) { if (crise) sonner('expire'); else (debut ? sons.bolDebut : sons.bolEtape)(); }
     if (l) dire(etapes[n].texte, !avecBol ? 0 : debut ? VOIX_APRES_BOL_DEBUT_MS : VOIX_APRES_BOL_MS);
   };
   // Le souffle sonore de l'étape rythmée, programmé jusqu'à un peu plus loin que maintenant, sans dépasser l'étape (sauf
@@ -258,6 +331,7 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
   };
   // `dansToucher` : « Commencer » touché ici ; sinon (lancerLecture), le toucher a déjà préparé le son.
   const commencer = (dansToucher) => {
+    if (!crise) retenirDernier(exercice.id);
     suivi.commencer();
     temps.current = { cumul: 0, depuis: performance.now(), debutEtape: 0 };
     souffle.current = { origine: 0, programme: 0, cle: souffle.current.cle + 1 };
@@ -265,20 +339,21 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     courant.current.place = 0;
     setEtat('en-cours');
     setPlace(0);
-    if (dansToucher && courant.current.son !== 'aucun') preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (dansToucher && sonAPreparer()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
     // La voix parle après le bol, hors du toucher : une parole muette dans le toucher la débloque.
     if (dansToucher && courant.current.lecture) amorcerVoix();
     annoncer(0, true);
     garderEcran().then(tenir);
   };
   // Après la fin, le message « Noter mon émotion » ne paraît qu'après une séance notée (v8, Q29) : « Terminer » touché
-  // trop tôt (moins de 60 s, sans être allé au bout) ne laisse aucun message, comme une respiration arrêtée tôt.
+  // trop tôt (moins de 60 s, sans être allé au bout) ne laisse aucun message, comme une respiration arrêtée tôt. Jamais en
+  // crise (v10).
   const fermer = () => {
     clearTimeout(fermeture.current);
-    if (courant.current.etat === 'fin' && suivi.notee()) {
+    if (!crise && courant.current.etat === 'fin' && suivi.notee()) {
       afficherToast(FIN, { libelle: NOTER_EMOTION, faire: () => { location.hash = '#/moment'; } }, MESSAGE_MS);
     }
-    location.hash = retour;
+    location.hash = adresseRetour;
   };
   // La fin : au bout du temps de la dernière étape, ou « Terminer ».
   const finir = () => {
@@ -288,9 +363,11 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     setEtat('fin');
     rendreVerrou();
     sons.couperSouffle();
-    const avecBols = courant.current.son !== 'aucun';
-    // « Terminer » touché en pause : le contexte dort, le toucher le relance pour les bols. Au bout du temps, il tourne déjà.
-    if (avecBols) { preparerSon({ session: sessionAudio(courant.current.silencieux) }); sons.bolsFin(); }
+    const avecBols = !crise && courant.current.son !== 'aucun';
+    // « Terminer » touché en pause : le contexte dort, le toucher le relance pour les bols, ou pour la voix en crise. Au bout
+    // du temps, il tourne déjà.
+    if (avecBols || voixEnCrise()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (avecBols) sons.bolsFin();
     if (courant.current.lecture) dire(FIN, avecBols ? VOIX_APRES_BOLS_FIN_MS : 0); else couperVoix();
     noter(n === etapes.length - 1);
     fermeture.current = setTimeout(fermer, FERMETURE_MS);
@@ -314,13 +391,14 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     souffle.current = { origine: t, programme: t, cle: souffle.current.cle + 1 };
     courant.current.etat = 'en-cours';
     setEtat('en-cours');
-    if (courant.current.son !== 'aucun') preparerSon({ session: sessionAudio(courant.current.silencieux) });
+    if (sonAPreparer()) preparerSon({ session: sessionAudio(courant.current.silencieux) });
     if (courant.current.lecture) dire(etapes[courant.current.place].texte);
     garderEcran().then(tenir);
   };
+  // En crise, un réglage changé ne vaut que pour cette fois : rien n'est écrit.
   const changerVoix = (v) => {
     setVoixVoulue(v);
-    ecrireLocal(CLE_VOIX, v || null);
+    if (!crise) ecrireLocal(CLE_VOIX, v || null);
     if (!v) { couperVoix(); return; }
     // Allumée d'un toucher (avant de commencer, ou en pause) : la voix est débloquée pour la suite.
     if (voix) amorcerVoix();
@@ -328,12 +406,24 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
   const changerSon = (v) => {
     setSon(v);
     courant.current.son = v;
-    ecrireLocal(CLE_SON, v === SON_DEFAUT ? null : v);
+    if (!crise) ecrireLocal(CLE_SON, v === SON_DEFAUT ? null : v);
     if (v === 'aucun') sons.couper();
   };
   const changerSilencieux = (v) => {
     setSilencieux(v);
     ecrireLocal(CLE_SILENCIEUX, v || null);
+  };
+  // Une durée touchée : écrite seulement si elle change.
+  const choisirDuree = (d) => {
+    if (d === duree) return;
+    setDuree(d);
+    ecrireLocal(cleDuree(exercice.id), d);
+  };
+  // Une étiquette du noting : elle brille, et rien n'est écrit.
+  const briller = (x) => {
+    setBrille(x);
+    clearTimeout(finBrille.current);
+    finBrille.current = setTimeout(() => setBrille(null), BRILLE_MS);
   };
 
   // La minuterie : l'anneau et le disque redessinés à chaque tic ; l'étape écoulée passe à la suivante, la dernière finit.
@@ -354,8 +444,32 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     return () => clearInterval(m);
   }, [etat, place]);
 
-  // Lancée d'un toucher ailleurs : elle démarre aussitôt.
-  useEffect(() => { if (auto) commencer(false); }, []);
+  // En crise, les réglages de la méta. Le toucher a préparé le son sans le savoir : si ni le signal ni la voix n'en veulent,
+  // il se rendort. S'ils en veulent, il reste éveillé : une respiration en cours, quittée par ce toucher, a demandé sa veille
+  // en se démontant, et plus aucun geste ne pourrait le relancer sur l'iPhone. Déjà quitté à cette lecture, le lecteur a tout
+  // rendu : plus rien à faire.
+  useEffect(() => {
+    if (!crise) return;
+    repo.meta.lire('respiration').catch(() => null).then((v) => {
+      if (courant.current.etat === 'sortie') return;
+      const r = normaliserRespiration(v);
+      const signal = r.son && !seance.nuit;
+      setSon(signal ? 'reperes' : 'aucun');
+      setVoixVoulue(r.voix);
+      setPret(true);
+      if (auto) { if (signal || r.voix) preparerSon({ session: 'ambient' }); else suspendreSon(); }
+    });
+  }, []);
+  // Lancée d'un toucher ailleurs : elle démarre aussitôt, les réglages lus. Jamais seule dans une page cachée, ce qui se juge à cet
+  // instant (l'iPhone verrouillé pendant l'écriture ou la lecture des réglages) : aucun événement ne la mettrait plus en pause,
+  // l'exercice jouerait sans être vu et son temps courrait. Le lecteur attend alors « Commencer », et le son préparé se rendort.
+  useEffect(() => {
+    if (!auto || !pret) return;
+    if (document.visibilityState === 'hidden') { setAuto(false); suspendreSon(); } else commencer(false);
+  }, [pret]);
+  // Préparée dans le toucher, mais trop tard pour démarrer seule : rien ne joue avant « Commencer », qui relance le son dans son
+  // propre toucher. Jusque-là, le contexte dort et la session est rendue à iOS.
+  useEffect(() => { if (lancee && lancee.prepare && lancee.attend) suspendreSon(); }, []);
   // Page cachée (écran verrouillé, autre app) ou quittée : pause.
   useEffect(() => {
     const cachee = () => { if (document.visibilityState === 'hidden') pause(); };
@@ -370,6 +484,7 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
     if (e === 'en-cours' || e === 'pause') { arreterTemps(); noter(false); }
     courant.current.etat = 'sortie';
     clearTimeout(fermeture.current);
+    clearTimeout(finBrille.current);
     rendreVerrou();
     couperVoix();
     sons.couper();
@@ -378,13 +493,25 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
 
   // Les réglages du lecteur, avant de commencer et en pause : la voix (si l'iPhone a une voix française), le son, le mode
   // silencieux. En pause, ils viennent après l'écran de lecture, qui garde toute la hauteur : rien ne bouge sous le pouce.
-  const reglages = html`<ul class="liste carte carte-groupe reglages-lecteur" aria-label="Réglages du lecteur">
-    ${voix && html`<li>
+  // En crise : le signal sonore (sauf la nuit, où il ne sonne jamais) et la voix, pour cette fois ; rien s'il n'y a ni l'un
+  // ni l'autre.
+  const ligneVoix = (etiquette) => voix && html`<li>
+    <div class="ligne-interrupteur">
+      <span class="ligne-libelle" aria-hidden="true">${etiquette}</span>
+      <${Interrupteur} etiquette=${etiquette} actif=${voixVoulue} surChanger=${changerVoix} />
+    </div>
+  </li>`;
+  const reglages = crise ? (voix || !seance.nuit) && html`<ul class="liste carte carte-groupe reglages-lecteur" aria-label="Réglages du lecteur">
+    ${!seance.nuit && html`<li>
       <div class="ligne-interrupteur">
-        <span class="ligne-libelle" aria-hidden="true">Lecture à voix haute</span>
-        <${Interrupteur} etiquette="Lecture à voix haute" actif=${voixVoulue} surChanger=${changerVoix} />
+        <span class="ligne-libelle" aria-hidden="true">Signal sonore</span>
+        <${Interrupteur} etiquette="Signal sonore" actif=${son !== 'aucun'} surChanger=${(v) => changerSon(v ? 'reperes' : 'aucun')} />
       </div>
     </li>`}
+    ${ligneVoix('Lire les consignes à voix haute')}
+  </ul>
+  <p class="note-carte-interne marge-interne">Pour cette fois seulement.</p>` : html`<ul class="liste carte carte-groupe reglages-lecteur" aria-label="Réglages du lecteur">
+    ${ligneVoix('Lecture à voix haute')}
     <li class="ligne-interrupteur reglage-son">
       <span class="ligne-libelle" aria-hidden="true">Son</span>
       <${PuceReglage} etiquette="Son" valeur=${son} options=${SONS.map((x) => [x.valeur, x.libelle])} surChoix=${changerSon} />
@@ -409,23 +536,32 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
       : etat === 'pause'
         ? html`<button type="button" class="bouton-lecture" aria-label="Reprendre" onClick=${reprendre}>${Icones.lecture()}</button>`
         : null;
+  // En crise, pas d'anneau : la place reste, pour le disque et le bouton.
   const anneau = html`<div class="lecteur-anneau">
-    <svg class="anneau-temps" viewBox="0 0 120 120" aria-hidden="true">
+    ${!crise && html`<svg class="anneau-temps" viewBox="0 0 120 120" aria-hidden="true">
       <circle class="anneau-piste" cx="60" cy="60" r=${RAYON} />
       ${progres > 0 && html`<circle class="anneau-plein" cx="60" cy="60" r=${RAYON} transform="rotate(-90 60 60)"
         stroke-dasharray=${CIRCONFERENCE.toFixed(2)} stroke-dashoffset=${(CIRCONFERENCE * (1 - progres)).toFixed(2)} />`}
-    </svg>
+    </svg>`}
     ${phase && html`<span key=${souffle.current.cle} aria-hidden="true"
-      class=${`disque-souffle phase-${phase.phase} duree-souffle-${Math.round(phase.dureeMs / 1000)}${etat === 'pause' ? ' en-pause' : ''}`}></span>`}
+      class=${`disque-souffle phase-${phase.phase}${phase.phase === 'inspire' && etape.souffle.inspi2 > 0 ? ' avant-encore' : ''} duree-souffle-${Math.round(phase.dureeMs / 1000)}${etat === 'pause' ? ' en-pause' : ''}`}></span>`}
     ${centre}
   </div>`;
 
-  let corps;
+  // Rien tant que la lecture n'a pas démarré, si elle va démarrer seule, ou que les réglages de crise ne sont pas lus : ni
+  // « Commencer » qui clignote, ni réglage qui change sous le doigt.
+  const attente = etat === 'avant' && (auto || !pret);
+  let corps = null;
   let pied = null;
   if (etat === 'avant') {
-    corps = html`<div class="lecteur lecteur-avant">
-      <p class="lecteur-duree">${dureeEtPosture(seance)}</p>
+    if (!attente) corps = html`<div class="lecteur lecteur-avant">
+      <div class="lecteur-ligne">
+        <p class="lecteur-duree">${dureeEtPosture(seance)}</p>
+        ${!crise && html`<${Epingle} id=${seance.id} titre=${seance.titre} />`}
+      </div>
       <p class="lecteur-description">${pourAffichage(seance.description)}</p>
+      ${avecDuree && html`<${Segmente} etiquette="Durée" classe="large" options=${OPTIONS_DUREE} valeur=${duree} surChoix=${choisirDuree} sansVide=${true} />`}
+      ${reglagesAvant}
       <div class="lecteur-centre">${anneau}</div>
       ${reglages}
     </div>`;
@@ -438,19 +574,23 @@ export function Lecteur({ seance, origine = '#/bien-etre', programme = null }) {
       <section class="lecteur-etape" aria-live="polite" aria-atomic="true">
         <p class="lecteur-consigne">${pourAffichage(etape.texte)}</p>
       </section>
+      ${etape.etiquettes && html`<div class="etiquettes-noting" role="group" aria-label="Ce qui passe">
+        ${etape.etiquettes.map((x) => html`<button type="button" class=${`etiquette-noting${brille === x ? ' brille' : ''}`} onClick=${() => briller(x)}>${x}</button>`)}
+      </div>`}
       <div class="lecteur-centre">
         ${phase && html`<p class="mot-souffle" aria-live="polite">${motPhase(phase.phase)}</p>`}
         ${anneau}
-        <p class="lecteur-reste">${etat === 'pause' ? 'En pause · ' : ''}il reste ${minuteur(resteMs())}</p>
+        <p class="lecteur-reste">${crise ? (etat === 'pause' ? 'En pause' : '') : `${etat === 'pause' ? 'En pause · ' : ''}il reste ${minuteur(resteMs())}`}</p>
       </div>
     </div>
-    ${etat === 'pause' && html`<div class="lecteur reglages-pause">${reglages}</div>`}`;
+    ${etat === 'pause' && reglages && html`<div class="lecteur reglages-pause">${reglages}</div>`}`;
     pied = html`<div class="actions-lecteur">
       ${etapes.length > 1 && html`<button type="button" class="btn" disabled=${place === 0} onClick=${() => aller(place - 1)}>${Icones.retour({ trait: 2 })}Précédent</button>
         <button type="button" class="btn" disabled=${derniere} onClick=${() => aller(place + 1)}>Suivant${Icones.chevron({ trait: 2 })}</button>`}
       <button type="button" class="lien-discret terminer-lecteur" onClick=${finir}>Terminer</button>
     </div>`;
   }
-  return html`<${CadreParcours} titre=${seance.titre} teinte="bien-etre" icone=${etat === 'avant' ? 'bienEtre' : undefined}
-    surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
+  const iconeAvant = crise ? 'respiration' : 'bienEtre';
+  return html`<${CadreParcours} titre=${seance.titre} teinte=${crise ? 'difficile' : 'bien-etre'} noir=${seance.nuit === true}
+    icone=${etat === 'avant' && !attente ? iconeAvant : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
 }

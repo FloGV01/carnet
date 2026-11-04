@@ -105,9 +105,10 @@ test('règle allumée : seul un mot d\'énergie basse l\'affiche ; un mot d\'én
   await expect(carte(vue)).toBeVisible();
 });
 
-test('règle éteinte, par défaut : une énergie basse ne change rien, l\'écran 3 n\'a que « Ce que je faisais »', async ({ page }) => {
+test('règle éteinte, par défaut : une énergie basse ne change rien, l\'écran 3 n\'a que « Ce que je faisais » et, depuis la v10, « Pour ce moment : »', async ({ page }) => {
   await ecrirePlan(page);
   const vue = await noterBasse(page);
+  await expect(vue.getByRole('heading', { level: 2 })).toHaveText(['Ce que je faisais', /^Pour ce moment\s:$/]);
   await sansCarte(page, vue);
   await expect.poll(releves(page)).toMatchObject([{ emotion: 'roue:tristesse:vide', energie: 'energie:basse' }]);
   // Rien n'est écrit tant que rien n'est réglé.

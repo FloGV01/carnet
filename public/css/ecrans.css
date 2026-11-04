@@ -241,13 +241,15 @@
 /* Tes zones (v9) : les quatre bulles, puis la barre par semaine dans la même carte (son cadre de graphique s'y fond). */
 .tes-zones { display: flex; flex-direction: column; gap: 14px; }
 .tes-zones .carte-entete { margin: 0; }
-.tes-zones .graphe { padding: 0; background: none; border-radius: 0; }
+/* Sa marge compense 4 de retrait : la queue d'un « j » en début de ligne et l'anneau du focus ne sont pas coupés (.graphe défile de côté). */
+.tes-zones .graphe { padding: 4px; margin: -4px; background: none; border-radius: 0; }
 .barres-familles { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .barres-familles li { display: grid; grid-template-columns: minmax(0, 5.6em) minmax(0, 1fr) 2.2em; align-items: center; gap: 10px; font-size: var(--t-sous); }
 .nom-famille { color: var(--text); overflow-wrap: anywhere; }
 .barre-famille { width: 100%; height: 10px; display: block; }
 .compte-famille { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Tous les chiffres : deux colonnes ; à 40 px et plus, une seule, « mouvement » ne tenant plus dans une demi-largeur. */
+.tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.9em), 1fr)); gap: 8px; }
 .tuile { background: var(--surface); --fond-choix: var(--surface-2); border: 0; border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
 .tuile-titre { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
 .tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--c-text); }
@@ -255,9 +257,10 @@
 .vide-chiffre { color: var(--text-2) !important; }
 .point-rubrique { width: 10px; height: 10px; border-radius: 5px; background: var(--c); flex: none; }
 .point-rubrique.petit { width: 8px; height: 8px; border-radius: 4px; }
-.graphe { margin: 0; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+/* En très grand texte, un tableau plus large que sa carte y défile, plutôt que de faire défiler la page de côté. */
+.graphe { margin: 0; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
 .graphe figcaption { display: flex; flex-direction: column; gap: 2px; }
-.graphe-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.graphe-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .graphe-titre { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--t-bloc); }
 .graphe-droite { font-size: var(--t-note); color: var(--text-2); }
 .graphe-resume { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); }
@@ -307,6 +310,10 @@
 .classements .ligne-classement { padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
 .nom-classement { font-size: var(--t-note); color: var(--text-2); }
 .analyse .selon-periode > .repli { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+/* En très grand texte, « Tes points positifs » passe à la ligne : sa flèche reste dans l'écran ; le tableau de « Tous les chiffres »,
+   à 53 px, défile dans son repli plutôt que de faire défiler la page de côté. */
+.analyse .repli-titre { flex: 0 1 auto; min-width: 0; }
+.analyse .repli-corps:has(> .chiffres-base) { overflow-x: auto; }
 .chiffres-base { margin-top: 4px; }
 .apercu-export { max-height: 330px; overflow: auto; -webkit-overflow-scrolling: touch; white-space: pre-wrap; word-break: break-word; margin: 0;
   font: 0.706rem/1.55 var(--police-mono); color: var(--text); background: var(--surface); border: 0;
@@ -707,14 +714,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .quatre-bulles:not(.petites):not(.comptes) .bulle-zone:focus-visible { z-index: 1; outline-offset: 16px; }
 .ecran-carte .verre { background: rgba(32, 32, 32, .85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 
-/* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en New York grasse), les quatre bulles (haut à 306), puis
+/* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en police système grasse), les quatre bulles (haut à 306), puis
    « Maintenant ▾ ». Il défile en hauteur s'il manque de place (grand texte) ; l'espace au-dessus des bulles cède d'abord. */
 .ecran-bulles {
   position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
   display: flex; flex-direction: column; align-items: center;
   padding: calc(var(--zone-haut) + 74px) calc(16px + var(--zone-droite)) calc(24px + var(--zone-bas)) calc(16px + var(--zone-gauche));
 }
-.titre-bulles { flex: none; max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police-serif); letter-spacing: -0.01em; text-wrap: balance; }
+.titre-bulles { flex: none; max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; text-wrap: balance; }
 .espace-bulles { flex: 0 1 121px; min-height: 28px; }
 /* Les bulles : une grille 2 × 2 de disques de 145, 21,5 d'écart. Dans une bulle, trois halos de la couleur médiane à 80 %,
    sous la face ; une bulle se dessine au-dessus des précédentes (rouge, jaune, bleu, vert : l'ordre du code). */
@@ -751,21 +758,22 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .bulle-vert .halo:nth-child(2) { --dx: 5.1px; --dy: -11.2px; animation-delay: -1.73s; }
 .bulle-vert .halo:nth-child(3) { --dx: -6.2px; --dy: 5.7px; animation-delay: -4.58s; }
 /* La face : un dégradé vertical à trois arrêts (visuel §1.6) ; sa couleur médiane en fond, sous le dégradé. Le libellé
-   noir sur deux lignes, 16,5/19 en New York grasse. How We Feel y garde 110 pt utiles ; « Énergie haute » en demande
-   120 : 126 (87 % du disque, encore loin de son bord à cette hauteur). En très grand texte, une ligne passe à la ligne
-   et un mot trop long réduit son corps (ui/mesures.js). */
+   noir sur deux lignes, 16,5/19 en police système grasse. How We Feel y garde 110 pt utiles ; « Énergie basse », la plus
+   longue, en demande 109 : 126 (87 % du disque, encore loin de son bord à cette hauteur) la laissent sans réduction au
+   texte par défaut, et sur une ligne jusqu'à la taille suivante (19). En très grand texte, chaque ligne du libellé reste une
+   ligne : son corps est réduit pour tenir (ui/mesures.js), et l'interligne, relatif, le suit. */
 .bulle-zone .face {
   position: absolute; inset: 0; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background-color: var(--mediane); background-image: linear-gradient(180deg, var(--haut) 0%, var(--mediane) 50%, var(--bas) 100%);
 }
-.etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.118rem var(--police-serif); letter-spacing: -0.01em; overflow-wrap: normal; }
-.ligne-bulle { display: block; }
+.etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.151 var(--police); letter-spacing: -0.01em; overflow-wrap: normal; }
+.ligne-bulle { display: block; white-space: nowrap; }
 /* En petit (v9, spec §4.5 : la couleur d'un mot à soi) : 104 de diamètre, sans halo, le libellé à 12 (le corps des bulles
    de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond, noir
    ou carte), de blanc sur le noir (--anneau, posé par .moment-plein), du texte ailleurs (Réglages). */
 .quatre-bulles.petites { grid-template-columns: repeat(2, 104px); gap: 12px; align-self: center; }
 .quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
-.quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 0.812rem; }
+.quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 1.15; }
 .quatre-bulles.petites .bulle-zone[aria-pressed="true"] { outline: 2.5px solid var(--anneau, var(--text)); outline-offset: 3px; }
 /* Avec leurs comptes (v9, spec §13.2 : Tes zones, dans l'Analyse) : une liste de 2 × 2 disques de 120 (7,06 rem : ils
    grandissent avec le texte, jusqu'à la moitié de la carte), sans halo, qui ne se touchent pas ; sous le libellé,
@@ -773,7 +781,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .quatre-bulles.comptes { margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, min(7.06rem, calc((100% - 12px) / 2))); gap: 12px; justify-content: center; }
 .quatre-bulles.comptes .bulle-zone { width: 100%; height: auto; aspect-ratio: 1; transition: none; }
 .quatre-bulles.comptes .bulle-zone:active { transform: none; }
-.quatre-bulles.comptes .etiquette-bulle { width: 87%; font-size: 0.706rem; line-height: 0.812rem; }
+.quatre-bulles.comptes .etiquette-bulle { width: 87%; font-size: 0.706rem; line-height: 1.15; }
 .compte-bulle { margin-top: 5px; font: 600 1.1em/1.2 var(--police); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 /* « Maintenant ▾ » sous les bulles, en petit, et les heures de « C'était vers… » dessous (à la couleur Humeur, v6). */
 .moment-plein .puce-quand { flex: none; margin-top: 30px; padding: 0; }
@@ -790,7 +798,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .carte-defile::-webkit-scrollbar { display: none; }
 .carte-plan { position: relative; }
 /* Une bulle : 96 pt, faite de deux moitiés à la couleur de sa case (--c). Choisie, chaque moitié devient une capsule de
-   78 × 156 (rayon 24, × 1,625), la « double capsule » de How We Feel, encoche noire en haut et en bas (visuel §2.4).
+   78 × 156 (rayon 24, × 1,625), la « double capsule » de How We Feel, encoche noire en haut et en bas (visuel §2.4) ; elle
+   garde sa forme quand la lentille suit le glissement ailleurs, à l'échelle que celle-ci lui donne (spec v10 §4.1).
    Place et taille par transform (carte-emotions.js) ; le libellé dans la moitié gauche, que la droite ne couvre pas. */
 .bulle-mot {
   position: absolute; left: 0; top: 0; width: 96px; height: 96px; padding: 0; border: 0; border-radius: 50%; background: none; color: #000;
@@ -802,11 +811,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .bulle-mot .demi.gauche { left: 0; border-radius: 48px 0 0 48px / 48px 0 0 48px; }
 .bulle-mot .demi.droite { right: 0; border-radius: 0 48px 48px 0 / 0 48px 48px 0; }
 .bulle-mot.choisi .demi { border-radius: 24px; }
-/* Le libellé : 12 pt (le diamètre / 8, visuel §2.6) en New York grasse, noir, 78 pt utiles (80 %) ; un mot trop long
+/* Le libellé : 12 pt (le diamètre / 8, visuel §2.6) en police système grasse, noir, 78 pt utiles (80 %) ; un mot trop long
    réduit son corps (ui/mesures.js), plusieurs mots passent à la ligne. Choisi, il passe à 18 pt (× 1,625 × 0,923). */
 .etiquette-mot {
   position: absolute; left: 48px; top: 48px; width: 78px; transform: translate(-50%, -50%); text-align: center; pointer-events: none;
-  font: 700 0.706rem/1.12 var(--police-serif); letter-spacing: -0.01em; overflow-wrap: normal; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+  font: 700 0.706rem/1.12 var(--police); letter-spacing: -0.01em; overflow-wrap: normal; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
 }
 .bulle-mot.choisi .etiquette-mot { transform: translate(-50%, -50%) scale(.923); }
 /* Le voile noir du haut (visuel §2.7) : 0,6 sous la barre d'état, puis plus rien à 84 pt sous elle. */
@@ -840,8 +849,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Écran 3, « Ce que je faisais » (spec §4.3 et §13.1 ; visuel §5, le style des autres écrans de How We Feel) : ✕ en
    haut ; le corps, qui défile en hauteur sous lui ; « Terminer » en bas, une capsule blanche au texte noir, sous la
    flèche de l'écran 2 (la garde de 350 ms l'y protège d'un second toucher). Tout est centré, comme l'écran 1 : le mot en
-   rappel, en New York grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie comme dans la carte du
-   bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone ; « Aucun mot » en gris ; « Ce que je faisais » en titre serif, ses pastilles sur
+   rappel, en police système grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie comme dans la carte du
+   bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone ; « Aucun mot » en gris ; « Ce que je faisais » en titre gras, ses pastilles sur
    #2c2c2e (la surface de la carte du bas), un choix fait à la couleur de la case du mot (--c-fill, posé aussi par
    moment.js : la même que le mot en rappel), sinon de sa zone (.zone-* : -fill), le texte en -on de la zone (les mêmes
    dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090. */
@@ -857,7 +866,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 .rappel-faisais { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .mot-rappel {
-  max-width: 358px; color: var(--c-mot); font: 700 2rem/2.353rem var(--police-serif); letter-spacing: -0.01em;
+  max-width: 358px; color: var(--c-mot); font: 700 2rem/2.353rem var(--police); letter-spacing: -0.01em;
   overflow-wrap: anywhere; text-wrap: balance;
 }
 .mot-rappel.sans-mot { color: #909090; }
@@ -866,20 +875,33 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .faisais { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .titre-faisais {
   display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 358px; text-align: center;
-  color: #fff; font: 700 1.294rem/1.647rem var(--police-serif); letter-spacing: -0.01em;
+  color: #fff; font: 700 1.294rem/1.647rem var(--police); letter-spacing: -0.01em;
 }
 .titre-faisais svg { flex: none; width: 20px; height: 20px; color: #909090; }
 .choix-faisais { width: 100%; max-width: 358px; }
 .choix-faisais .pastilles { justify-content: center; }
+/* « Pour ce moment : » (v10, spec §8), après « Ce que je faisais », dans le corps qui défile : une ligne en gris, puis deux ou
+   trois boutons d'exercice, au corps et à la couleur de texte des activités, avec un contour et sans fond (rien n'invite, rien
+   n'insiste), les mêmes dans les deux thèmes. En très grand texte, ils passent à la ligne, et leur texte aussi. */
+.pour-ce-moment { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.titre-pour-ce-moment { max-width: 358px; text-align: center; color: #909090; font: 400 var(--t-sous)/1.35 var(--police); }
+.propositions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; max-width: 358px; }
+.proposition {
+  max-width: 100%; min-height: var(--cible); padding: 4px 14px; border: 1px solid #6e6e73; border-radius: 22px;
+  background: none; color: var(--text); font: 400 var(--t-sous)/1.25 var(--police); overflow-wrap: anywhere;
+}
 .supprimer-releve { align-self: center; }
-.pied-faisais { flex: none; padding: 12px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
+/* Le haut du pied est à la hauteur du haut de la flèche de l'écran 2 pour une carte de hauteur minimale : rien du corps, même en
+   défilant, ne passe alors sous elle. Une carte qui grandit (une longue définition, le très grand texte) fait monter la flèche :
+   le corps passe sous elle, et c'est la garde de 350 ms qui protège d'un second toucher. */
+.pied-faisais { flex: none; padding: 28px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
 .terminer-releve {
   display: block; width: 100%; max-width: 358px; min-height: 56px; margin: 0 auto; padding: 8px 20px; border: 0; border-radius: 28px;
   background: #fff; color: #000; font: 600 1.059rem/1.25 var(--police);
 }
-.terminer-releve:focus-visible, .changer-mot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.terminer-releve:focus-visible, .changer-mot:focus-visible, .proposition:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 /* La loupe (v9, spec §4.4) : ← en verre et, à sa droite, le champ, une capsule de verre de 44 de haut ; dessous, les mots
-   trouvés, chacun à la couleur de sa zone (-fill, la même dans les deux thèmes, AA sur le noir) en New York grasse, et le
+   trouvés, chacun à la couleur de sa zone (-fill, la même dans les deux thèmes, AA sur le noir) en police système grasse, et le
    début de sa définition en gris ; puis « Ajouter mon mot « … » », derrière un rond blanc au « + » noir. */
 .ecran-loupe { position: absolute; inset: 0; display: flex; flex-direction: column; animation: apparition-carte var(--duree-anim) ease-out; }
 .champ-loupe {
@@ -904,7 +926,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
   padding: 10px 4px; border: 0; border-bottom: 1px solid #1f1f1f; background: none; text-align: left;
 }
-.mot-resultat { color: var(--c-fill); font: 700 1.118rem/1.25 var(--police-serif); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.mot-resultat { color: var(--c-fill); font: 700 1.118rem/1.25 var(--police); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .extrait-resultat { color: #909090; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
 .sans-resultat { padding: 14px 4px 0; color: #909090; font-size: var(--t-sous); line-height: 1.35; }
 .sans-resultat:empty { padding: 0; }
@@ -919,7 +941,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .amorce-clavier { position: fixed; top: 0; left: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; font-size: 16px; pointer-events: none; }
 
 /* Le mot à soi (v9, spec §4.5) : comme l'écran 3, ← en haut, le corps qui défile, et en bas, une fois le mot créé, le
-   rond blanc à la flèche de la carte du bas. Le titre en New York grasse ; les champs sur #2c2c2e ; une famille choisie à
+   rond blanc à la flèche de la carte du bas. Le titre en police système grasse ; les champs sur #2c2c2e ; une famille choisie à
    la couleur de la zone du mot (.zone-*, -fill et -on), à la couleur action avant. */
 .ecran-mot { position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; animation: apparition-carte var(--duree-anim) ease-out; }
 .corps-mot {
@@ -928,7 +950,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   padding: 12px calc(16px + var(--zone-droite)) 24px calc(16px + var(--zone-gauche));
   display: flex; flex-direction: column; align-items: center; gap: 22px;
 }
-.titre-mot { max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police-serif); letter-spacing: -0.01em; }
+.titre-mot { max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; }
 .pied-mot { flex: none; display: flex; justify-content: flex-end; padding: 8px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) 16px; }
 .ecran-mot .etiquette { color: #909090; }
 /* Le formulaire du mot à soi, à la création comme dans Réglages › Émotions › « Mes mots » (ui/composants/mot-perso.js). */
@@ -948,8 +970,16 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    l'app, utile au guidage). En 4-6 le pic est à 40 % du cycle. Mouvement réduit : base.css coupe
    l'animation, et le cercle change de teinte d'un coup à chaque phase (pleine à l'inspiration, claire
    à l'expiration), en plus des mots. */
-/* En 2b (v7) : trois cartes à la couleur du parcours (bleu brume), serrées pour tenir sur l'écran. */
+/* En 2b (v7) : trois cartes à la couleur du parcours (bleu brume), serrées. */
 .moment-difficile { gap: 10px; padding-top: 8px; }
+/* Les quatre exercices courts (v10) : 2 × 2, de même taille, à la couleur du parcours (-fill / -on), en tête de l'écran. En très
+   grand texte, ils passent l'un sous l'autre quand « Panique », le mot le plus long d'un seul tenant, ne tient plus dans sa
+   colonne : aucun mot n'est coupé, sauf « Trop-plein » à son trait d'union. */
+.exercices-courts { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.6rem), 1fr)); grid-auto-rows: 1fr; gap: 10px; }
+.exercice-court {
+  min-width: 0; min-height: 64px; padding: 8px 10px; border: 0; border-radius: var(--r-carte); background: var(--c-fill); color: var(--c-on);
+  font: 600 1.059rem/1.25 var(--police); text-wrap: balance;
+}
 .respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
 .cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
 .cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--action); transform: scale(.55); }
@@ -967,16 +997,19 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 /* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
    « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours.
-   Les puces servent aussi à la carte de la cohérence cardiaque de Bien-être (v8). */
+   Les puces servent aussi à l'écran « avant » de la cohérence cardiaque de Bien-être (v10). */
 .moment-difficile .respiration { gap: 12px; }
 .moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
-.moment-difficile .respiration .btn { min-height: 54px; padding: 0 30px; font-size: 1.059rem; margin-top: 4px; }
+/* « Commencer » : 30 de marge à côté du mot en texte normal ; elle fond avec le très grand texte. Le mot se borne à 44 px :
+   « Recommencer », le même bouton une fois la respiration finie, ne dépasse ainsi de la carte à aucune taille. */
+.moment-difficile .respiration .btn { min-height: 54px; padding: 0 max(6px, calc(47px - 1rem)); font-size: min(1.059rem, 44px); margin-top: 4px; }
 .puces-respiration { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.puce-reglage { position: relative; display: inline-flex; align-items: center; }
+/* La puce se borne à sa rangée : en très grand texte, sa valeur se coupe avant le chevron, qui reste dans la carte. */
+.puce-reglage { position: relative; display: inline-flex; align-items: center; min-width: 0; max-width: 100%; }
 .puce-reglage select {
-  -webkit-appearance: none; appearance: none; min-height: var(--cible); padding: 0 36px 0 16px; margin: 0;
+  -webkit-appearance: none; appearance: none; min-height: var(--cible); max-width: 100%; padding: 0 36px 0 16px; margin: 0;
   border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text);
-  font-size: max(16px, var(--t-corps)); font-weight: 500; font-variant-numeric: tabular-nums;
+  font-size: max(16px, var(--t-corps)); font-weight: 500; font-variant-numeric: tabular-nums; text-overflow: ellipsis;
 }
 .puce-reglage svg { position: absolute; right: 12px; width: 16px; height: 16px; color: var(--text-2); pointer-events: none; }
 .puce-reglage select:disabled { opacity: 1; color: var(--text-2); }
@@ -1003,23 +1036,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; font-weight: 600; }
-/* Bien-être (v7 ; v8 : le Programme et la cohérence cardiaque, chacun dans sa carte), la ligne fixe en bas. Aucun
-   compteur. */
+/* Bien-être (v7 ; v10 : « Reprendre », les favoris, les quatre entrées), la ligne fixe en bas. Aucun compteur. */
 .bien-etre { gap: 12px; }
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
+/* Les quatre entrées : des rangées de 60, le carré à la couleur de Bien-être, le libellé 17/600, le chevron. */
+.entrees .ligne-carte { min-height: 60px; padding-block: 8px; font-weight: 600; }
+.entrees .ligne-libelle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
-/* La carte de la cohérence cardiaque (v8), compacte, à la couleur de Bien-être : en tête, un carré de 28 avec l'icône et
-   le titre (17/600) ; dessous, la durée et le rythme en puces ; à droite, le bouton lecture rond, qui la lance. */
-.carte-coherence {
-  display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; row-gap: 12px;
-  padding: 14px 14px 16px 16px;
-}
-.carte-coherence > .bouton-lecture { grid-column: 2; grid-row: 1 / span 2; }
-.carte-coherence .puces-respiration { justify-content: flex-start; }
-.titre-coherence { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 var(--t-bloc)/var(--l-bloc) var(--police); color: var(--text); }
-.carre-carte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
-.carre-carte svg { width: 17px; height: 17px; }
 /* Dans une carte (Moment difficile), la respiration prend la couleur du parcours, comme dans le rendu 2b :
    un cercle de 152 en -tint-2, cerclé de 2 px à la couleur, et dedans le disque qui respire, en -tint ; « Commencer » en
    -fill / -on. Sans mouvement, le disque reste figé et, à l'inspiration, se remplit de la couleur. */
@@ -1029,23 +1053,36 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 @media (prefers-reduced-motion: reduce) {
   .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c); }
 }
-/* La carte Programme (v8), comme celle de la cohérence cardiaque : à gauche, un lien vers l'écran Programme (le carré et
-   le titre 17/600 suivis d'un chevron ; dessous, alignée sur le titre, la séance qui vient en 16/600 et sa durée en 14
-   --text-2) ; à droite, le bouton lecture rond, qui la lance. */
-.carte-programme { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; padding: 0 14px 0 0; }
-.lien-programme {
-  display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: var(--cible); padding: 14px 0 16px 16px;
-  color: var(--text); text-decoration: none;
+/* La carte « Reprendre » (v10) : à gauche, un lien vers l'écran de départ (le titre de la carte en 17/600, puis celui de l'élément
+   en 16) ; à droite, le bouton lecture rond, qui le relance. En très grand texte, le bouton passe sous le lien. */
+.carte-reprendre { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; column-gap: 12px; padding: 0 14px 0 0; }
+.lien-reprendre {
+  flex: 1 1 11rem; display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: var(--cible); padding: 14px 0 14px 16px;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
 }
-.titre-programme > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); margin-left: -6px; }
-.seance-qui-vient { display: flex; flex-direction: column; gap: 2px; padding-left: 40px; }
+.lien-reprendre .exercice-titre { font-weight: 400; }
+.carte-reprendre > .bouton-lecture { margin-block: 10px; }
+/* Une ligne d'un élément de Bien-être (v10) : le titre et sa ligne de description, l'épingle, et le bouton lecture de 48 (toutes
+   deux des cibles de 44 au moins). En très grand texte, le titre prend la ligne et les boutons passent dessous, à droite. */
+.ligne-element { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; padding-right: 10px; }
+.ligne-element-corps {
+  flex: 1 1 11rem; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 62px; justify-content: center; padding: 9px 0 9px 16px;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
+}
+.ligne-element-actions { flex: none; display: flex; align-items: center; gap: 8px; padding-block: 7px; }
+.bouton-lecture.petit { width: 48px; height: 48px; }
+.bouton-lecture.petit svg { width: 22px; height: 22px; }
 /* L'écran Programme (v8) : la présentation en 15 --text-2, une carte par étape (son titre 17/600 en tête, puis ses
    séances en rangées de liste 2b, chevron), la ligne fixe en bas. Une séance faite : une coche à la couleur de Bien-être
-   (accent, 3:1) et « Faite le 12/10 » en 14 --text-2, sous sa durée ; pas faite : rien. */
+   (accent, 3:1) et « Faite le 12/10 » en 14 --text-2, sous sa durée ; pas faite : rien. L'épingle (v10) à côté du lien, le
+   dessin à la marge du titre ; en très grand texte, le lien prend la ligne et l'épingle passe dessous, à droite. */
 .programme { gap: 12px; }
 .presentation-programme { display: flex; flex-direction: column; gap: 6px; font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-wrap: pretty; }
 .titre-etape { padding: 12px 16px 10px; }
 .etape-programme .ligne-exercice { min-height: 62px; }
+.rangee-seance { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; padding-right: 5px; }
+.rangee-seance > .ligne-seance { flex: 1 1 11rem; min-width: 0; overflow-wrap: anywhere; }
+.rangee-seance > .epingle { margin-block: 4px; }
 .seance-faite { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); }
 .seance-faite svg { flex: none; width: 14px; height: 14px; color: var(--c); }
 .ligne-exercice { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 9px 12px 9px 16px; color: var(--text); text-decoration: none; }
@@ -1071,13 +1108,36 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    les atteint en défilant), et « Reprendre » est à la place exacte de « Pause ». */
 .lecteur { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--marge) 16px; }
 .lecteur-plein { min-height: 100%; padding-top: 6px; }
-.lecteur-duree { margin-top: -6px; font-size: var(--t-sous); color: var(--text-2); }
+/* La durée et la posture, et l'épingle à droite (v10, spec §14.4) : une cible de 44 ; épinglé, le dessin se remplit sur un fond
+   teinté, pour ne pas se confondre avec le bouton lecture voisin dans une liste. */
+.lecteur-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -14px; min-height: var(--cible); }
+.lecteur-duree { min-width: 0; font-size: var(--t-sous); color: var(--text-2); }
+.epingle { flex: none; width: var(--cible); height: var(--cible); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); display: grid; place-items: center; }
+.epingle svg { width: 22px; height: 22px; }
+.epingle[aria-pressed="true"] { background: var(--c-tint); color: var(--c-text); }
+.epingle[aria-pressed="true"] svg { fill: currentColor; }
+.epingle[disabled] { opacity: .45; cursor: default; }
 .lecteur-description { font-size: var(--t-corps); line-height: 1.4; color: var(--text); text-wrap: pretty; }
 .lecteur-consigne { font: 600 clamp(1.6rem, 7.4vw, 2.2rem)/1.3 var(--police); color: var(--text); overflow-wrap: anywhere; text-wrap: pretty; }
 .lecteur-centre { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 10px 0; }
 .lecteur-avant .lecteur-centre { padding: 14px 0 18px; }
-.mot-souffle { font: 600 1.35rem/1.3 var(--police); color: var(--text); text-align: center; }
-.lecteur-reste { font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
+/* Le mot de phase se borne à 54 : « Encore un peu » reste sur une ligne en très grand texte, comme « Inspire » et « Expire », et
+   le disque ne bouge pas d'une phase à l'autre. Rien ne change jusqu'à 40 px. */
+.mot-souffle { font: 600 min(1.35rem, 54px)/1.3 var(--police); color: var(--text); text-align: center; }
+.lecteur-reste { min-height: 1.4em; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
+/* Le noting (v10, spec §6) : quatre étiquettes de 60 au moins, en 2 × 2 ; quand la moitié de la largeur fait moins de 4,2 rem
+   (très grand texte, plus de 40 px), l'une sous l'autre, le mot entier. Touchée, l'une brille 600 ms : son fond change et, sauf
+   avec « Réduire les animations », un halo s'étend et s'efface. Rien d'autre ne bouge. */
+.etiquettes-noting { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.2rem), 1fr)); gap: 10px; }
+.etiquette-noting {
+  min-width: 0; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-moyen); background: var(--fond-choix);
+  color: var(--text); font: 600 var(--t-corps)/1.25 var(--police); overflow-wrap: anywhere;
+}
+.etiquette-noting.brille { background: var(--c-tint-2); }
+@media (prefers-reduced-motion: no-preference) {
+  .etiquette-noting.brille { animation: etiquette-brille 600ms ease-out; }
+}
+@keyframes etiquette-brille { from { box-shadow: 0 0 0 0 var(--c); } to { box-shadow: 0 0 0 10px transparent; } }
 /* L'anneau : la piste en --line (un filet), le temps passé à la couleur (accent, 3:1 sur le fond) ; dedans, le disque du souffle
    (-tint-2, cerclé de 2 px à la couleur, comme le cercle de la respiration en 2b) et le bouton. */
 .lecteur-anneau { position: relative; width: min(232px, 60vw); aspect-ratio: 1; display: grid; place-items: center; }
@@ -1096,8 +1156,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .disque-souffle.phase-inspire { transform: scale(1); animation-name: souffle-inspire; }
 .disque-souffle.phase-retiens-plein { transform: scale(1); }
 .disque-souffle.phase-expire { transform: scale(.55); animation-name: souffle-expire; }
+/* Le soupir (v10) : l'inspiration s'arrête avant le plein, la petite inspiration en plus l'achève. */
+.disque-souffle.avant-encore { transform: scale(.85); animation-name: souffle-avant-encore; }
+.disque-souffle.phase-inspire-encore { transform: scale(1); animation-name: souffle-encore; }
 .disque-souffle.en-pause { animation-play-state: paused; }
 @keyframes souffle-inspire { from { transform: scale(.55); } to { transform: scale(1); } }
+@keyframes souffle-avant-encore { from { transform: scale(.55); } to { transform: scale(.85); } }
+@keyframes souffle-encore { from { transform: scale(.85); } to { transform: scale(1); } }
 @keyframes souffle-expire { from { transform: scale(1); } to { transform: scale(.55); } }
 .duree-souffle-1 { animation-duration: 1s; } .duree-souffle-2 { animation-duration: 2s; } .duree-souffle-3 { animation-duration: 3s; }
 .duree-souffle-4 { animation-duration: 4s; } .duree-souffle-5 { animation-duration: 5s; } .duree-souffle-6 { animation-duration: 6s; }
@@ -1105,16 +1170,32 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .duree-souffle-10 { animation-duration: 10s; } .duree-souffle-11 { animation-duration: 11s; } .duree-souffle-12 { animation-duration: 12s; }
 @media (prefers-reduced-motion: reduce) {
   .disque-souffle[class] { transform: scale(.8); }
-  .disque-souffle.phase-inspire, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c); }
+  .disque-souffle.phase-inspire, .disque-souffle.phase-inspire-encore, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c); }
+}
+/* « Réveil la nuit » (v10, spec §5.2) : le fond noir des écrans de l'émotion (.ecran-noir, tokens.css), dans les deux thèmes,
+   mais rien n'y éclaire la chambre : texte gris (4,5:1 au moins), teinte éteinte. */
+.parcours.ecran-noir {
+  color: var(--text);
+  --text: #8e8f92; --text-2: #87888b; --action: #8e8f92; --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d;
+  --c: #5c5e62; --c-fill: #303235; --c-on: #c4c5c8; --c-tint: #0e0f10; --c-tint-2: #16171a; --c-text: #8e8f92;
 }
 .reglages-lecteur { margin-top: 4px; }
-/* Un interrupteur fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans sa rangée de 52. */
-.reglages-lecteur .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 /* « Son » : sa puce à droite (« Repères + souffle ▾ »), un menu de l'iPhone comme la durée et le rythme. */
-.reglage-son { padding-top: 6px; padding-bottom: 6px; }
-.actions-lecteur { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 4px 0; }
-.actions-lecteur .btn { min-height: 56px; font-size: 1.059rem; }
+.reglage-son { padding-top: 6px; padding-bottom: 6px; flex-wrap: wrap; }
+/* « Précédent » et « Suivant » à parts égales (la moitié, moins l'écart) : 5rem gardent le plus long mot entier, le chevron
+   cédant la place s'il le faut. Quand la moitié fait moins de 5rem (très grand texte), l'un sous l'autre. */
+.actions-lecteur { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(5rem, calc(50% - 5px)), 1fr)); gap: 10px; padding: 4px 4px 0; }
+.actions-lecteur .btn { min-height: 56px; padding: 0 8px; font-size: 1.059rem; }
 .terminer-lecteur { grid-column: 1 / -1; justify-self: center; padding: 0 16px; }
+/* Sons de fond et minuteurs (v10, spec §9) : des écrans du lecteur. Les quatre sons en 2 × 2 (l'un sous l'autre en très grand
+   texte), le volume avec sa cible de 44, le temps restant de la concentration en grand, « Arrêter » de toute la largeur. */
+.segmente.choix-son { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.reglage-volume { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: var(--t-sous); color: var(--text-2); }
+.reglage-volume input { flex: 1 1 10rem; min-width: 0; min-height: var(--cible); margin: 0; background: none; -webkit-appearance: none; appearance: none; }
+.reglage-volume input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--text-2); }
+.reglage-volume input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0; background: var(--c-fill); box-shadow: 0 0 0 1.5px var(--c); }
+.temps-restant { font: 600 min(20vw, 4.5rem)/1.1 var(--police); color: var(--text); font-variant-numeric: tabular-nums; text-align: center; }
+.parcours-pied .bouton-arreter { flex: 1; margin: 4px 6px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
    de l'Humeur du moment. */
 .ressourcer-liste { display: flex; flex-direction: column; gap: 14px; }

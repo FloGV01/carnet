@@ -18,7 +18,7 @@ const AVEC_HEURE = new Set(['episodes', 'humeurs', 'notes', 'seances']);
 const ERREURS_CONNEXION = new Set(['InvalidStateError', 'UnknownError', 'TransactionInactiveError']);
 const PARENTS_AUDIO = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv'];
 // Méta qui ne comptent pas comme une saisie (pas de mise à jour de derniereEcriture).
-const META_SANS_MARQUE = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde', 'constatsAffiches', 'signalMasque', 'explosionsDepuis']);
+const META_SANS_MARQUE = new Set(['schema', 'installation', 'derniereEcriture', 'derniereSauvegarde', 'constatsAffiches', 'signalMasque', 'explosionsDepuis', 'favorisBienEtre']);
 const nonNuls = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined));
 
 export function creerRepository({

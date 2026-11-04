@@ -54,6 +54,7 @@ export const environ = (dureeS, attendu) => { expect(dureeS).toBeGreaterThanOrEq
 export const bols = (page) => page.evaluate(() => {
   const groupes = new Map();
   for (const o of window.__audio.oscillateurs) {
+    if (o.f < 20) continue; // une houle lente, pas une note
     const cle = o.t.toFixed(3);
     groupes.set(cle, Math.min(groupes.get(cle) ?? Infinity, o.f));
   }

@@ -359,7 +359,7 @@ const ouvrirDifficile = async (page) => {
 };
 const puce = (vue, nom) => vue.getByRole('combobox', { name: nom, exact: true });
 
-test('Moment difficile 2b : la respiration en tête dans une carte (cercle bleu brume, « Commencer » en -fill / -on, AA), « Une chose à la fois › », Mon plan ; tout tient sans défiler', async ({ page }) => {
+test('Moment difficile 2b : les exercices courts en tête (v10), la respiration dans une carte (cercle bleu brume, « Commencer » en -fill / -on, AA), « Une chose à la fois › », Mon plan ; le corps défile, le pied reste', async ({ page }) => {
   await ecrireMeta(page, 'monPlan', PLAN);
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
@@ -371,10 +371,10 @@ test('Moment difficile 2b : la respiration en tête dans une carte (cercle bleu 
     // (sans cela, le test lisait parfois l'écran avant, et ne trouvait que deux cartes).
     await expect(vue.locator('.une-chose-acces')).toBeVisible();
     await expect(vue.getByRole('link', { name: 'Modifier mon plan' })).toBeVisible();
-    // L'ordre de la v6.1, la respiration en tête.
-    const ordre = await vue.evaluate((v) => [...v.querySelectorAll('.parcours-corps .carte')].map((c) => (c.querySelector('.respiration') ? 'respiration'
-      : c.classList.contains('une-chose-acces') ? 'une-chose' : c.classList.contains('plan-moment') ? 'plan' : '?')));
-    expect(ordre, schema).toEqual(['respiration', 'une-chose', 'plan']);
+    // L'ordre de la v6.1, sous les quatre exercices courts (v10).
+    const ordre = await vue.evaluate((v) => [...v.querySelectorAll('.parcours-corps .exercices-courts, .parcours-corps .carte')].map((c) => (c.classList.contains('exercices-courts') ? 'courts'
+      : c.querySelector('.respiration') ? 'respiration' : c.classList.contains('une-chose-acces') ? 'une-chose' : c.classList.contains('plan-moment') ? 'plan' : '?')));
+    expect(ordre, schema).toEqual(['courts', 'respiration', 'une-chose', 'plan']);
     const s = await vue.evaluate((v) => {
       const st = (e) => getComputedStyle(e);
       const cercle = v.querySelector('.cercle-respiration');
@@ -385,8 +385,8 @@ test('Moment difficile 2b : la respiration en tête dans une carte (cercle bleu 
         cartes: cartes.map((c) => [st(c).backgroundColor, st(c).borderTopLeftRadius]),
         cercle: { taille: cercle.getBoundingClientRect().width, fond: st(cercle).backgroundColor, bord: st(cercle).borderTopWidth, couleurBord: st(cercle).borderTopColor, disque: st(disque).backgroundColor },
         commencer: { fond: st(commencer).backgroundColor, texte: st(commencer).color, graisse: st(commencer).fontWeight, hauteur: commencer.getBoundingClientRect().height },
-        bas: Math.max(...cartes.map((c) => c.getBoundingClientRect().bottom)),
         pied: v.querySelector('.parcours-pied').getBoundingClientRect().top,
+        hautCorps: v.querySelector('.parcours-corps').getBoundingClientRect().top,
         nom: [v.querySelector('.parcours-tete .nom').textContent, st(v.querySelector('.point-teinte')).backgroundColor],
       };
     });
@@ -399,8 +399,19 @@ test('Moment difficile 2b : la respiration en tête dans une carte (cercle bleu 
     expect(s.commencer.hauteur).toBeLessThanOrEqual(56);
     expect(contraste(s.commencer.fond, s.commencer.texte), `${schema} · Commencer`).toBeGreaterThanOrEqual(4.5);
     expect(s.nom, schema).toEqual(['Moment difficile', rgb(t['c-difficile'])]);
-    // Les trois cartes tiennent à l'écran, au-dessus de « Noter un épisode ».
-    expect(s.bas).toBeLessThanOrEqual(s.pied);
+    // v10 : à l'ouverture, les exercices courts et « Commencer » sont à l'écran, au-dessus de « Noter un épisode », qui reste à
+    // sa place ; la suite vient en défilant, et le bas de Mon plan s'arrête au-dessus du pied, rien n'est caché.
+    await expect(vue.getByRole('button', { name: 'Commencer' })).toBeInViewport({ ratio: 1 });
+    expect((await vue.getByRole('button', { name: 'Commencer' }).boundingBox()).y + s.commencer.hauteur).toBeLessThanOrEqual(s.pied);
+    await expect(vue.getByRole('link', { name: 'Noter un épisode' })).toBeInViewport({ ratio: 1 });
+    const fin = await vue.locator('.parcours-corps').evaluate((c) => {
+      c.scrollTop = c.scrollHeight;
+      const plan = c.querySelector('.plan-moment').getBoundingClientRect();
+      return { defile: c.scrollHeight > c.clientHeight, basPlan: plan.bottom, hautPlan: plan.top };
+    });
+    expect(fin.defile, schema).toBe(true);
+    expect(fin.basPlan, schema).toBeLessThanOrEqual(s.pied);
+    expect(fin.hautPlan, schema).toBeGreaterThanOrEqual(s.hautCorps);
     await expect(vue.getByRole('link', { name: 'Noter un épisode' })).toBeInViewport({ ratio: 1 });
     // « Cohérence cardiaque », puis les puces « 5 minutes ▾ » et « 5 s · 5 s ▾ ».
     await expect(vue.locator('.phase-respiration')).toHaveText('Cohérence cardiaque');
@@ -424,9 +435,9 @@ test('Moment difficile : les puces règlent la durée et le rythme d\'un toucher
   await ecrireMeta(page, 'respiration', { duree: 5, rythme: '5-5', son: true });
   const vue = await ouvrirDifficile(page);
   await puce(vue, 'Durée').selectOption('2');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '5-5', son: true });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '5-5', son: true, voix: false });
   await puce(vue, 'Rythme').selectOption('4-6');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '4-6', son: true });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 2, rythme: '4-6', son: true, voix: false });
   await expect(puce(vue, 'Rythme')).toHaveValue('4-6');
   expect(await puce(vue, 'Rythme').evaluate((x) => x.selectedOptions[0].textContent)).toBe('4 s · 6 s');
   // Réglages › Moment difficile montre le même réglage.
@@ -437,6 +448,8 @@ test('Moment difficile : les puces règlent la durée et le rythme d\'un toucher
   // Pendant la respiration : rien ne saute, les puces sont inactives ; la respiration suit le réglage (2 min).
   await ecrireMeta(page, 'respiration', { duree: 2, rythme: '5-5', son: false });
   const v = await ouvrirDifficile(page);
+  // Les puces arrivent une fois les réglages lus, ce qui agrandit la carte : on mesure après, sinon l'écart vient de là.
+  await expect(puce(v, 'Durée')).toBeEnabled();
   const avant = await v.locator('.respiration').boundingBox();
   await v.getByRole('button', { name: 'Commencer' }).click();
   await expect(v.locator('.phase-respiration')).toHaveText('Inspire');
@@ -463,14 +476,14 @@ test('Moment difficile : une puce réglée une fois la respiration finie ne chan
   await expect.poll(seances).toEqual([120]);
   // 10 minutes sur la puce : le réglage change, le texte de fin dit toujours la séance faite.
   await puce(vue, 'Durée').selectOption('10');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '5-5', son: false });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '5-5', son: false, voix: false });
   await expect(puce(vue, 'Durée')).toHaveValue('10');
   await expect(phase).toHaveText('2 minutes de respiration.');
   await expect(vue.getByText('10 minutes de respiration.')).toHaveCount(0);
   expect(await seances()).toEqual([120]);
   // Le rythme aussi, sans rien changer au texte.
   await puce(vue, 'Rythme').selectOption('4-6');
-  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '4-6', son: false });
+  await expect.poll(() => lireMeta(page, 'respiration')).toEqual({ duree: 10, rythme: '4-6', son: false, voix: false });
   await expect(phase).toHaveText('2 minutes de respiration.');
   // « Recommencer » : 10 minutes, cette fois. Passé 2 minutes, la respiration continue ; arrêtée, c'est une autre séance.
   await vue.getByRole('button', { name: 'Recommencer' }).click();

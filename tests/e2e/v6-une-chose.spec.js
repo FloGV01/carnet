@@ -60,14 +60,14 @@ const espionnerVerrou = (page) => page.evaluate(() => {
 });
 const verrou = (page) => page.evaluate(() => window.__verrou);
 
-test('l\'ordre de l\'écran : respiration, « Une chose à la fois », Mon plan tel qu\'écrit, Noter un épisode', async ({ page }) => {
+test('l\'ordre de l\'écran : les quatre exercices courts (v10), respiration, « Une chose à la fois », Mon plan tel qu\'écrit, Noter un épisode', async ({ page }) => {
   await ecrirePlan(page);
   const vue = await ouvrir(page);
   await expect(vue.getByRole('button', { name: 'Une chose à la fois', exact: true })).toBeVisible();
   // v6.1 (P14) : plus de « Me ressourcer » entre les deux.
   await expect(vue.getByRole('link', { name: 'Me ressourcer' })).toHaveCount(0);
   await expect(vue.getByRole('button', { name: 'Me ressourcer' })).toHaveCount(0);
-  const blocs = ['respiration', 'une-chose-acces', 'plan-moment', 'parcours-pied'];
+  const blocs = ['exercices-courts', 'respiration', 'une-chose-acces', 'plan-moment', 'parcours-pied'];
   const ordre = await vue.evaluate((d, noms) => [...d.querySelectorAll(noms.map((n) => `.${n}`).join(', '))].map((e) => noms.find((n) => e.classList.contains(n))), blocs);
   expect(ordre).toEqual(blocs);
   // Mon plan reste affiché en entier, « Mes premiers signes » comprise (seules les cartes la laissent de côté par défaut).

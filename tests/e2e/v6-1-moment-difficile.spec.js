@@ -42,7 +42,7 @@ test('plus de « Me ressourcer » sur Moment difficile, avec ou sans plan', asyn
   }
 });
 
-test('« Modifier mon plan » à droite du titre, sur sa ligne, en 44 pt, visible sans défiler', async ({ page }) => {
+test('« Modifier mon plan » à droite du titre, sur sa ligne, en 44 pt, entier à l\'écran en défilant s\'il le faut (v10 : les quatre exercices courts sont au-dessus), jamais sous le pied', async ({ page }) => {
   await ecrirePlan(page);
   const vue = await ouvrir(page);
   const plan = vue.getByRole('region', { name: 'Mon plan' });
@@ -52,6 +52,7 @@ test('« Modifier mon plan » à droite du titre, sur sa ligne, en 44 pt, visibl
   const ordre = await plan.evaluate((s) => [...s.querySelectorAll('h2, a[href="#/mon-plan"], .contenu-plan')].map((e) => e.tagName === 'H2' ? 'titre' : e.tagName === 'A' ? 'modifier' : 'contenu'));
   expect(ordre).toEqual(['titre', 'modifier', 'contenu']);
 
+  await modifier(vue).scrollIntoViewIfNeeded();
   const [t, m] = await Promise.all([titre, modifier(vue)].map((l) => l.boundingBox()));
   // Sur la ligne du titre : les deux boîtes se chevauchent en hauteur, le lien est à droite, calé sur le bord intérieur de
   // la carte du plan (2b, v7). Il montre « Modifier », et se nomme « Modifier mon plan ».
@@ -64,7 +65,7 @@ test('« Modifier mon plan » à droite du titre, sur sa ligne, en 44 pt, visibl
   // Une cible de 44 pt au moins dans les deux sens.
   expect(m.height).toBeGreaterThanOrEqual(44);
   expect(m.width).toBeGreaterThanOrEqual(44);
-  // Visible à l'ouverture, sans défiler, et pas sous le pied « Noter un épisode ».
+  // Atteint en défilant : entier à l'écran, et pas sous le pied « Noter un épisode ».
   await expect(modifier(vue)).toBeInViewport({ ratio: 1 });
   const pied = await vue.locator('.parcours-pied').boundingBox();
   expect(m.y + m.height).toBeLessThanOrEqual(pied.y);

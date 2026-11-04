@@ -97,6 +97,8 @@
 }
 .interrupteur[aria-checked="true"] { background: var(--action); border-color: var(--action); }
 .interrupteur[aria-checked="true"] .interrupteur-bouton { left: 22px; background: var(--action-on); }
+/* Il fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans ses rangées de 52 (.ligne-interrupteur, .ligne-champ-reglage). */
+.interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 
 /* ---------- Barre d'onglets (2b) ---------- */
 /* Neutre : fond --bg et filet en haut ; icônes de 22. L'onglet actif a une pilule de 56 × 30 en --surface-2
@@ -417,7 +419,7 @@ button.effacer svg { width: 18px; height: 18px; }
    à la couleur du parcours. */
 .titre-parcours {
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
-  font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty;
+  font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty; overflow-wrap: anywhere;
 }
 .carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c); color: var(--c-on); display: grid; place-items: center; }
 .carre-titre svg { width: 20px; height: 20px; }

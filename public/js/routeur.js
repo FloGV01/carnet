@@ -5,6 +5,8 @@ const ID = '([A-Za-z0-9_-]+)';
 const DATE = '(\\d{4}-\\d{2}-\\d{2})';
 // Les onglets de l'écran Comprendre (v6, spec §2.1).
 export const ONGLETS_COMPRENDRE = ['explosions', 'energie', 'rythmes'];
+// Les entrées de Bien-être qui ont leur liste (v10, spec §7 ; domain/entrees-bien-etre.js).
+export const ENTREES_BIEN_ETRE = ['calmer', 'dormir', 'concentrer'];
 export const ROUTES = [
   { nom: 'aujourdhui', motif: '/aujourdhui' },
   { nom: 'jour', motif: `/jour/${DATE}`, params: ['date'] },
@@ -12,6 +14,8 @@ export const ROUTES = [
   // Un relevé de l'Émotion du moment rouvert depuis Ma journée (v9, spec §13.1) : l'écran 3, « Ce que je faisais ».
   { nom: 'moment-releve', motif: `/moment/${ID}`, params: ['id'] },
   { nom: 'moment-difficile', motif: '/moment-difficile' },
+  // v10 (spec §5 et §14.5) : un exercice court de Moment difficile, dans le lecteur en mode crise.
+  { nom: 'crise', motif: `/crise/${ID}`, params: ['id'] },
   { nom: 'mon-plan', motif: '/mon-plan' },
   { nom: 'apres-coup-liste', motif: '/apres-coup' },
   { nom: 'apres-coup', motif: `/apres-coup/${ID}`, params: ['id'] },
@@ -42,11 +46,19 @@ export const ROUTES = [
   { nom: 'export-psy', motif: '/export-psy' },
   { nom: 'soignants', motif: '/soignants' },
   // Bien-être (v7, spec §6) : l'onglet. v8 : la cohérence cardiaque de l'onglet dans le lecteur, le Programme (spec §6),
-  // et une séance du Programme dans le lecteur (domain/programme.js) ; les exercices ne se font plus que là.
+  // et une séance du Programme dans le lecteur (domain/programme.js).
   { nom: 'bien-etre', motif: '/bien-etre' },
   { nom: 'coherence', motif: '/bien-etre/coherence' },
   { nom: 'programme', motif: '/bien-etre/programme' },
   { nom: 'seance-programme', motif: `/bien-etre/programme/${ID}`, params: ['id'] },
+  // v10 (spec §7) : la liste d'une entrée de Bien-être.
+  { nom: 'entree-bien-etre', motif: `/bien-etre/(${ENTREES_BIEN_ETRE.join('|')})`, params: ['entree'] },
+  // v10 (spec §7.4) : un exercice seul dans le lecteur, hors du Programme.
+  { nom: 'exercice', motif: `/exercice/${ID}`, params: ['id'] },
+  // v10 (spec §9) : le minuteur silencieux, le minuteur de concentration et les sons de fond, des écrans pleins.
+  { nom: 'minuteur', motif: '/minuteur' },
+  { nom: 'concentration', motif: '/concentration' },
+  { nom: 'sons', motif: '/sons' },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
 
 export function lireRoute(hash) {
@@ -73,9 +85,9 @@ export function versHash(nom, params = {}) {
 // Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins. v7 : l'Historique sort de la
 // barre et s'ouvre par sa porte en haut de l'Analyse ; lui et un jour ouvert depuis lui allument l'onglet Analyse.
 export function ongletDe(nom) {
-  if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
+  if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'crise', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
-  if (['bien-etre', 'coherence', 'programme', 'seance-programme'].includes(nom)) return 'bien-etre';
+  if (['bien-etre', 'entree-bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

@@ -80,6 +80,9 @@ test('chaque icône du module sert dans l\'app, sauf celles qui attendent leur �
   assert.ok(employees.has('bienEtre'), 'bienEtre');
   // v9 (5/8) : « Ce que je faisais » est revenu, en titre de l'écran 3 de l'Émotion du moment.
   assert.ok(employees.has('ceQueJeFaisais'), 'ceQueJeFaisais');
+  // v10 (4/9) : l'épingle d'un favori, hors du lot, dans la même famille (au trait, un seul tracé).
+  assert.ok(employees.has('epingle'), 'epingle');
+  assert.ok(TRACES.epingle, 'epingle : pas dans le module');
 });
 
 test('toute icône nommée dans l\'app existe dans le module', () => {

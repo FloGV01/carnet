@@ -1,5 +1,6 @@
-// La carte des émotions en nombres (v9, spec §4.2 et §5 ; visuel-hwf.md §2.2 à §2.5) : la couleur de chaque case, et la
-// place de chaque bulle, mot choisi ou non. Pur : ni DOM ni date. ui/composants/carte-emotions.js n'a plus qu'à les poser.
+// La carte des émotions en nombres (v9, spec §4.2 et §5 ; visuel-hwf.md §2.2 à §2.5) : la couleur de chaque case, la
+// place de chaque bulle autour du centre de la lentille, et le mot du milieu (v10, spec §4.1). Pur : ni DOM ni date.
+// ui/composants/carte-emotions.js n'a plus qu'à les poser.
 // Repère : le centre des bulles, en pt (1 px CSS = 1 pt sur l'iPhone) ; la colonne la plus à gauche (col 1, ou celle du
 // premier mot à soi rouge ou bleu) et le rang 12 (l'énergie la plus haute) sont en 0. x va vers la droite, y vers le bas.
 import { zoneDeCase } from '../domain/carte-roue.js';
@@ -89,10 +90,11 @@ const premiereColonne = (mots) => mots.reduce((c, m) => Math.min(c, m.col), 1);
 // La place régulière d'une case (sans mot choisi).
 const placeReguliere = (col, rang, cmin) => ({ x: (col - cmin) * PAS, y: (COTE - rang) * PAS });
 
-// La place de chaque mot : Map id → { x, y, echelle }. Sans mot choisi (ou un id absent), le pas régulier, échelle 1.
-// Avec un mot choisi, la lentille de How We Feel : il garde sa place régulière, ses voisines de la fenêtre visible
-// prennent les places mesurées (LENTILLE), et les autres suivent au pas lointain. Les bulles ne se chevauchent jamais ;
-// les rangées paraissent courbes autour du mot choisi, et les colonnes s'y resserrent, comme sur la capture.
+// La place de chaque mot : Map id → { x, y, echelle }. Sans centre (ou un id absent), le pas régulier, échelle 1. Avec un
+// centre (le mot choisi, ou le mot du milieu pendant le glissement, v10), la lentille de How We Feel : il garde sa place
+// régulière, ses voisines de la fenêtre visible prennent les places mesurées (LENTILLE), et les autres suivent au pas
+// lointain. Les bulles ne se chevauchent jamais ; les rangées paraissent courbes autour du centre, et les colonnes s'y
+// resserrent, comme sur la capture.
 export function disposition(mots, choisi = null) {
   const cmin = premiereColonne(mots);
   const sel = choisi ? mots.find((m) => m.id === choisi) : null;
@@ -121,6 +123,26 @@ export function etendue(mots) {
   const regulier = bords(disposition(mots).values());
   const toutes = bords([null, ...mots.map((m) => m.id)].flatMap((choisi) => [...disposition(mots, choisi).values()]));
   return { ...toutes, regulier };
+}
+
+// Le mot du milieu (v10, spec §4.1) : celui dont la place régulière est la plus proche de `point` (les places affichées
+// bougent avec la lentille : le mot trouvé la ferait bouger à son tour). `precedent` reste tant qu'aucune autre place
+// n'est plus proche d'au moins `seuil` pas : la carte ne sautille pas entre deux mots. À égalité, le plus haut (le rang le
+// plus grand), puis le plus à gauche : au milieu de quatre mots, le résultat est stable.
+const EGALITE = 1e-6;
+export function motDuMilieu(mots, point, precedent = null, seuil = 0.15) {
+  const cmin = premiereColonne(mots);
+  const distance = (m) => { const p = placeReguliere(m.col, m.rang, cmin); return Math.hypot(p.x - point.x, p.y - point.y); };
+  let proche = null;
+  let dmin = Infinity;
+  for (const m of mots) {
+    const d = distance(m);
+    const avant = d < dmin - EGALITE || (d <= dmin + EGALITE && (m.rang > proche.rang || (m.rang === proche.rang && m.col < proche.col)));
+    if (avant) { proche = m; dmin = d; }
+  }
+  if (!proche) return null;
+  const garde = precedent ? mots.find((m) => m.id === precedent) : null;
+  return garde && distance(garde) - dmin < seuil * PAS ? garde.id : proche.id;
 }
 
 // Le point où centrer la carte : la place régulière d'un mot (le mot choisi la garde), ou le milieu d'une zone de 6 × 6
