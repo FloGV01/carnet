@@ -30,7 +30,7 @@ const FLOTTANT = 'roue:perso:u-0a1b2c3d';
 const MOTS = { [FLOTTANT]: { libelle: 'Flottant', zone: 'bleu', famille: 'tristesse', definition: 'Un peu ailleurs.', archive: false, createdAt: '2026-10-27T08:00:00.000Z' } };
 const ICI = { 'roue:perso:u-11111111': { libelle: 'Écrit ici', zone: 'vert', famille: null, definition: null, archive: false, createdAt: '2026-10-28T08:00:00.000Z' } };
 
-test('format 7 : les mots à soi vont dans la sauvegarde, l\'aperçu dit qu\'ils seront remplacés, l\'import les remet avec leurs relevés', async ({ page }) => {
+test('depuis le format 7 : les mots à soi vont dans la sauvegarde, l\'aperçu dit qu\'ils seront remplacés, l\'import les remet avec leurs relevés', async ({ page }) => {
   const releve = await page.evaluate(async ({ mots, id }) => {
     const r = window.__carnet.repo;
     await r.meta.ecrire('motsPerso', mots);
@@ -38,7 +38,7 @@ test('format 7 : les mots à soi vont dans la sauvegarde, l\'aperçu dit qu\'ils
   }, { mots: MOTS, id: FLOTTANT });
   const f = await exporterVers(page);
   const contenu = JSON.parse(Buffer.from(f.octets).toString('utf8'));
-  expect(contenu).toMatchObject({ formatVersion: 7, schemaVersion: 6, counts: { humeurs: 1 } });
+  expect(contenu).toMatchObject({ formatVersion: 8, schemaVersion: 6, counts: { humeurs: 1 } });
   expect(contenu.data.meta.find((m) => m.cle === 'motsPerso')).toEqual({ cle: 'motsPerso', valeur: MOTS });
   expect(contenu.data.humeurs[0]).toMatchObject({ emotion: FLOTTANT, energie: 'energie:basse' });
 

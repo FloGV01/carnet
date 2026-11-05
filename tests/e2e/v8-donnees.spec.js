@@ -46,7 +46,7 @@ test('Réglages › Listes : les sept sujets d\'un rendez-vous, en tête de Soin
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('sauvegarde (format 6 en v8, 7 depuis la v9) : durée de la nuit, séance « Faite » et définitions corrigées vont dans le fichier, et l\'aperçu annonce les définitions remplacées', async ({ page }) => {
+test('sauvegarde (format 6 en v8, 7 depuis la v9, 8 depuis la v11) : durée de la nuit, séance « Faite » et définitions corrigées vont dans le fichier, et l\'aperçu annonce les définitions remplacées', async ({ page }) => {
   const definitions = { 'roue:colere:irrite': 'Agacé par un bruit qui revient.' };
   await page.evaluate(async (d) => {
     const r = window.__carnet.repo;
@@ -56,7 +56,7 @@ test('sauvegarde (format 6 en v8, 7 depuis la v9) : durée de la nuit, séance �
   }, definitions);
   const f = await exporterVers(page);
   const contenu = JSON.parse(Buffer.from(f.octets).toString('utf8'));
-  expect(contenu).toMatchObject({ formatVersion: 7, schemaVersion: 6, counts: { journal: 1, seances: 1 } });
+  expect(contenu).toMatchObject({ formatVersion: 8, schemaVersion: 6, counts: { journal: 1, seances: 1 } });
   expect(contenu.data.journal[0]).toMatchObject({ date: '2026-10-25', sommeilRessenti: 'sommeil:moyen', heuresSommeil: 6 });
   expect(contenu.data.seances[0]).toMatchObject({ fin: true, programme: 'respiration-abdominale' });
   expect(contenu.data.meta.find((m) => m.cle === 'definitionsRoue')).toEqual({ cle: 'definitionsRoue', valeur: definitions });

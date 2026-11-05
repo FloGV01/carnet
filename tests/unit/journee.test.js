@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche, repliNuitAffiche, nuitRenseignee, MASQUE_NUIT,
 } from '../../public/js/domain/journee.js';
-import { texteHeuresSommeil } from '../../public/js/domain/champs.js';
+import { texteHeuresSommeil, VALEURS_HEURES_SOMMEIL } from '../../public/js/domain/champs.js';
 
 test('le masque peseRecharge survit à normaliserJournee, hors de l\'ordre des champs', () => {
   const j = normaliserJournee({ ordre: ['humeur', 'lieu'], masques: ['explosions', 'peseRecharge'], heuresMoment: [] });
@@ -107,5 +107,11 @@ test('v8 : la durée de la nuit tient la carte Sommeil affichée, même masquée
 
 test('v8 : les libellés de la durée, de « 4 h ou moins » à « 10 h ou plus », rien hors bornes', () => {
   assert.deepEqual([4, 5, 6, 7, 8, 9, 10].map(texteHeuresSommeil), ['4 h ou moins', '5 h', '6 h', '7 h', '8 h', '9 h', '10 h ou plus']);
-  for (const h of [3, 11, 6.5, '6', null, undefined]) assert.equal(texteHeuresSommeil(h), null, String(h));
+  for (const h of [3, 11, 6.25, '6', null, undefined]) assert.equal(texteHeuresSommeil(h), null, String(h));
+});
+
+test('v11 : les demi-heures disent « 7 h 30 », jamais « 7,5 » ; rien hors de la liste', () => {
+  assert.deepEqual([4, 4.5, 5, 7.5, 9.5, 10].map(texteHeuresSommeil), ['4 h ou moins', '4 h 30', '5 h', '7 h 30', '9 h 30', '10 h ou plus']);
+  for (const h of VALEURS_HEURES_SOMMEIL) assert.doesNotMatch(texteHeuresSommeil(h), /[,.]/, String(h));
+  for (const h of [3.5, 10.5, 7.25, '7.5', true, NaN, Infinity]) assert.equal(texteHeuresSommeil(h), null, String(h));
 });

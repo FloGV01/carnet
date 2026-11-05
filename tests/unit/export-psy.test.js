@@ -316,4 +316,15 @@ test('v8 : la nuit dit sa qualité et ses heures, « nuit Mal · 6 h » ; une nu
   assert.equal(ligne({ reveilsNocturnes: 5 }), 'dim 27/09 · nuit · (5 réveils ou plus)');
   // Une valeur hors bornes (fichier abîmé) ne s'écrit pas.
   assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 12 }), 'dim 27/09 · nuit Mal');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 7.25 }), 'dim 27/09 · nuit Mal');
+});
+
+// v11 (spec §5.5 et §12) : la nuit à la demi-heure s'écrit « 7 h 30 », jamais « 7,5 » ; le reste de l'Export PSY ne change pas.
+test('v11 : la demi-heure dit « nuit 7 h 30 » dans l\'Export PSY', () => {
+  const ligne = (o) => exportPsy({ journal: [J('2026-09-27', o)], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte }).split('\n')[3];
+  assert.equal(ligne({ heuresSommeil: 7.5 }), 'dim 27/09 · nuit 7 h 30');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 4.5 }), 'dim 27/09 · nuit Mal · 4 h 30');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:bien', heuresSommeil: 9.5 }), 'dim 27/09 · nuit Bien · 9 h 30');
+  const t = exportPsy({ journal: [J('2026-09-27', { heuresSommeil: 7.5 })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
+  assert.doesNotMatch(t, /7,5|7\.5/);
 });

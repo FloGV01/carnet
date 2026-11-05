@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normaliser, valider, estVide, referencesDe, basculerMultiple, ErreurValidation } from '../../public/js/domain/champs.js';
+import {
+  normaliser, valider, estVide, referencesDe, basculerMultiple, ErreurValidation, VALEURS_HEURES_SOMMEIL, estHeuresSommeil, APRES_COUP,
+} from '../../public/js/domain/champs.js';
 
 test('vide devient null, 0 et false sont conservés', () => {
   const { valeur, erreurs } = normaliser('journal', { date: '2026-09-30', notes: '   ', explosions: 0, contactHumain: false, pointsPositifs: undefined });
@@ -267,14 +269,14 @@ test('v7 : une séance a pour clés id, date, heure et exercice ; durée en seco
 
 // ---- v8 ----
 
-test('v8 : heuresSommeil, un entier de 4 (« 4 h ou moins ») à 10 (« 10 h ou plus »), facultatif', () => {
+test('v8 : heuresSommeil, de 4 (« 4 h ou moins ») à 10 (« 10 h ou plus »), facultatif', () => {
   const nuit = (heuresSommeil) => normaliser('journal', { date: '2026-10-24', heuresSommeil });
   for (const h of [4, 5, 6, 7, 8, 9, 10]) {
     assert.deepEqual(nuit(h).erreurs, [], String(h));
     assert.equal(nuit(h).valeur.heuresSommeil, h);
   }
-  for (const h of [3, 11, 0, -1, 6.5, '6', true, [6], { h: 6 }]) {
-    assert.ok(nuit(h).erreurs.some((e) => /^heuresSommeil : entier de 4 à 10 attendu$/.test(e)), JSON.stringify(h));
+  for (const h of [3, 11, 0, -1, 6.25, '6', true, [6], { h: 6 }]) {
+    assert.ok(nuit(h).erreurs.some((e) => /^heuresSommeil : de 4 à 10 par demi-heure attendu$/.test(e)), JSON.stringify(h));
   }
   assert.throws(() => valider('journal', { date: '2026-10-24', heuresSommeil: 12 }), ErreurValidation);
   assert.equal(nuit(null).valeur.heuresSommeil, null, 'un second toucher l\'efface');
@@ -345,4 +347,52 @@ test('v9 : emotion accepte un mot à soi connu de perso, et seulement lui ; Fati
   const long = 'x'.repeat(30000);
   assert.ok(normaliser('journal', { date: '2026-11-02', notes: long }, { origine: 'import', perso }).erreurs.length > 0);
   assert.deepEqual(normaliser('journal', { date: '2026-11-02', notes: long }, { origine: 'sauvegarde', perso }).erreurs, []);
+});
+
+// ---- v11 ----
+
+test('v11 : heuresSommeil à la demi-heure, 13 valeurs de 4 à 10 ; un autre nombre, un texte ou un booléen sont refusés', () => {
+  assert.deepEqual(VALEURS_HEURES_SOMMEIL, [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]);
+  assert.ok(Object.isFrozen(VALEURS_HEURES_SOMMEIL));
+  const nuit = (heuresSommeil) => normaliser('journal', { date: '2026-11-05', heuresSommeil });
+  for (const h of [4, 4.5, 7.5, 9.5, 10, ...VALEURS_HEURES_SOMMEIL]) {
+    assert.equal(estHeuresSommeil(h), true, String(h));
+    assert.deepEqual(nuit(h).erreurs, [], String(h));
+    assert.equal(nuit(h).valeur.heuresSommeil, h);
+  }
+  for (const h of [3.5, 10.5, 7.25, '7', true, NaN, Infinity, -Infinity, 3, 11]) {
+    assert.equal(estHeuresSommeil(h), false, String(h));
+    assert.deepEqual(nuit(h).erreurs, ['heuresSommeil : de 4 à 10 par demi-heure attendu'], String(h));
+    assert.equal(nuit(h).valeur.heuresSommeil, null);
+    assert.throws(() => valider('journal', { date: '2026-11-05', heuresSommeil: h }), ErreurValidation, String(h));
+  }
+  assert.equal(estHeuresSommeil(null), false);
+  assert.equal(estHeuresSommeil(undefined), false);
+  assert.equal(nuit(null).valeur.heuresSommeil, null, 'vide : rien de noté');
+});
+
+test('v11 : gratitudes (journal) et ceQueJeRetiens (épisode), deux textes facultatifs ; seuls, ils gardent leur fiche', () => {
+  const soir = normaliser('journal', { date: '2026-11-05', gratitudes: '  Le café partagé avec la voisine.\nMerci au collègue.  ' });
+  assert.deepEqual(soir.erreurs, []);
+  assert.deepEqual(soir.avertissements, []);
+  assert.equal(soir.valeur.gratitudes, 'Le café partagé avec la voisine.\nMerci au collègue.');
+  assert.equal(estVide('journal', soir.valeur), false, 'une journée qui n\'a que des gratitudes existe');
+  assert.equal(normaliser('journal', { date: '2026-11-05', gratitudes: '   ' }).valeur.gratitudes, null, 'un champ vide est valide');
+  assert.equal(normaliser('journal', { date: '2026-11-05' }).valeur.gratitudes, null, 'une journée d\'avant la v11 se lit vide');
+  assert.deepEqual(normaliser('journal', { date: '2026-11-05', gratitudes: 12 }).erreurs, ['gratitudes : texte attendu']);
+
+  const ep = { id: 'ep_1', date: '2026-11-05', heure: '18:00' };
+  const retenu = normaliser('episodes', { ...ep, ceQueJeRetiens: ' Partir avant que ça monte. ' });
+  assert.deepEqual(retenu.erreurs, []);
+  assert.deepEqual(retenu.avertissements, []);
+  assert.equal(retenu.valeur.ceQueJeRetiens, 'Partir avant que ça monte.');
+  assert.equal(retenu.valeur.apresCoup, null, 'à part de l\'Après coup');
+  assert.equal(estVide('episodes', retenu.valeur), false);
+  assert.equal(normaliser('episodes', ep).valeur.ceQueJeRetiens, null);
+  assert.deepEqual(normaliser('episodes', { ...ep, ceQueJeRetiens: ['x'] }).erreurs, ['ceQueJeRetiens : texte attendu']);
+  // Il ne fait pas partie des étapes de l'Après coup : écrit dans apresCoup, il est un champ inconnu.
+  assert.ok(!('ceQueJeRetiens' in APRES_COUP));
+  const dedans = normaliser('episodes', { ...ep, apresCoup: { pensees: 'x', ceQueJeRetiens: 'y' } });
+  assert.deepEqual(dedans.avertissements, ['apresCoup.ceQueJeRetiens : champ inconnu ignoré']);
+  assert.equal(dedans.valeur.ceQueJeRetiens, null);
 });
