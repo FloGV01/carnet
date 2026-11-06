@@ -1031,9 +1031,9 @@ test('v11 : des refuges abîmés ou écrits à la main sont remis en forme à l\
     playlists: [
       { nom: '<img src=x onerror=alert(1)>', lien: null, source: null },
       { nom: 'Sans chiffrement', lien: null, source: null },
-      { nom: 'Ailleurs', lien: null, source: 'spotify' },
+      { nom: 'Ailleurs', lien: null, source: null },
     ],
-  }, 'trois au plus, sans lien d\'un autre schéma ni d\'un autre hôte ; une ligne sans nom ni lien lisible disparaît ; un nom reste du texte');
+  }, 'trois au plus, sans lien d\'un autre schéma ni d\'un autre hôte, et sans « Spotify » quand son lien est refusé ; une ligne sans nom ni lien lisible disparaît ; un nom reste du texte');
   assert.equal(a.resume.journees, 1, 'le reste du fichier est lu');
 
   // Cinq playlists : les trois premières lisibles ; un lien de partage perd son « ?si= » ; une autre source vaut null.

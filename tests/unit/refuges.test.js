@@ -74,12 +74,13 @@ test('normaliserRefuges : mauvais type, lien piégé, playlist en trop, nom en H
       { nom: 'Cinquième', lien: 'https://open.spotify.com/playlist/c' },
     ],
   });
+  // Un lien refusé fait aussi perdre la source : « Spotify » ne va qu'à ce qui vient de lui (spec §8.3). Le nom reste.
   assert.deepEqual(r, {
     titres: null,
     playlists: [
       { nom: '<b onclick="x()">Gras</b>', lien: null, source: null },
-      { nom: 'Spotify ailleurs', lien: null, source: 'spotify' },
-      { nom: 'Compte', lien: null, source: 'spotify' },
+      { nom: 'Spotify ailleurs', lien: null, source: null },
+      { nom: 'Compte', lien: null, source: null },
     ],
   });
   // Un lien de son lecteur public, mais sans source Spotify : accepté comme un lien collé.
@@ -89,6 +90,45 @@ test('normaliserRefuges : mauvais type, lien piégé, playlist en trop, nom en H
   const long = normaliserRefuges({ jeton: 'secret', playlists: [{ nom: 'x'.repeat(5000), lien: null, jeton: 'secret' }] });
   assert.equal(long.playlists[0].nom.length, NOM_MAX);
   assert.ok(!JSON.stringify(long).includes('secret'));
+});
+
+// Relecture de la tâche 1 : la coupe compte en signes, jamais en demi-emoji.
+test('normaliserRefuges : un nom coupé à NOM_MAX signes, un emoji compté pour un, sans en garder la moitié', () => {
+  const [p] = normaliserRefuges({ playlists: [{ nom: `${'x'.repeat(199)}😀yy` }] }).playlists;
+  assert.equal(p.nom, `${'x'.repeat(199)}😀`);
+  assert.equal([...p.nom].length, NOM_MAX);
+  assert.equal(p.nom.isWellFormed(), true, 'aucune paire de substitution coupée en deux');
+  // Rien que des emoji : 200 entiers, pas 100.
+  const [q] = normaliserRefuges({ playlists: [{ nom: '🎵'.repeat(300) }] }).playlists;
+  assert.equal(q.nom, '🎵'.repeat(NOM_MAX));
+  assert.equal(q.nom.isWellFormed(), true);
+  // Déjà coupé, il ne change plus.
+  const une = normaliserRefuges({ playlists: [p, q] });
+  assert.deepEqual(normaliserRefuges(une), une);
+});
+
+// Relecture de la tâche 1 : l'app n'écrit jamais une ligne Spotify sans lien, la relecture non plus.
+test('normaliserRefuges : avec la source Spotify, un lien refusé fait perdre la source ; jamais de ligne Spotify sans lien', () => {
+  assert.deepEqual(normaliserRefuges({ playlists: [
+    { nom: 'Lien collé', lien: 'spotify:playlist:abc', source: 'spotify' },
+    { nom: 'Sans lien', source: 'spotify' },
+    { lien: 'https://open.spotify.com.autre.test/p', source: 'spotify' },
+    { nom: 'Bonne', lien: 'https://open.spotify.com/playlist/b', source: 'spotify' },
+  ] }).playlists, [
+    { nom: 'Lien collé', lien: null, source: null },
+    { nom: 'Sans lien', lien: null, source: null },
+    { nom: 'Bonne', lien: 'https://open.spotify.com/playlist/b', source: 'spotify' },
+  ], 'le nom reste, une ligne sans nom ni lien disparaît');
+  // L'invariant, sur toutes les lignes possibles : source Spotify ⇒ un lien de son lecteur public.
+  const liens = [undefined, null, '', 'javascript:alert(1)', 'spotify:playlist:abc', 'https://autre.test/p', 'https://open.spotify.com/playlist/b?si=1'];
+  for (const lien of liens) {
+    for (const source of [undefined, null, 'spotify', 'deezer']) {
+      for (const p of normaliserRefuges({ playlists: [{ nom: 'N', lien, source }] }).playlists) {
+        if (p.source === 'spotify') assert.equal(p.lien, lienDeSpotify(p.lien), JSON.stringify({ lien, source }));
+        assert.ok(p.source !== 'spotify' || p.lien, JSON.stringify({ lien, source }));
+      }
+    }
+  }
 });
 
 test('refugesVides, playlistsAOuvrir et nomPlaylist', () => {

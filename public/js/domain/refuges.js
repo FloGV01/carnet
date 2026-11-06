@@ -7,7 +7,7 @@
 
 // Trois playlists au plus (appel du concepteur, spec §8.1).
 export const MAX_PLAYLISTS = 3;
-// Le nom d'une playlist, coupé à cette longueur.
+// Le nom d'une playlist, coupé à ce nombre de signes (points de code : un emoji compte pour un, et n'est jamais coupé en deux).
 export const NOM_MAX = 200;
 
 // Les seuls schémas acceptés, à la saisie comme à la lecture d'une sauvegarde (spec §8.2) : le web chiffré, l'app Spotify
@@ -48,13 +48,15 @@ export function lienDeSpotify(texte) {
   return lienAccepte(url.href);
 }
 
-// Une playlist relue : nom en texte (coupé à NOM_MAX), lien vérifié selon sa source ; null si elle n'a ni nom ni lien.
+// Une playlist relue : nom en texte (coupé à NOM_MAX signes), lien vérifié selon sa source ; null si elle n'a ni nom ni
+// lien. Avec la source Spotify, un lien refusé fait aussi perdre la source : l'app n'écrit jamais une ligne Spotify sans
+// lien, et « Spotify » n'est nommé qu'à côté de ce qui vient de lui (spec §8.3). Le nom reste.
 function normaliserPlaylist(p) {
   if (!estObjet(p)) return null;
-  const source = p.source === 'spotify' ? 'spotify' : null;
   const nom = textePropre(p.nom);
-  const coupe = nom && (nom.slice(0, NOM_MAX).trim() || null);
-  const lien = source === 'spotify' ? lienDeSpotify(p.lien) : lienAccepte(p.lien);
+  const coupe = nom && (Array.from(nom).slice(0, NOM_MAX).join('').trim() || null);
+  const lien = p.source === 'spotify' ? lienDeSpotify(p.lien) : lienAccepte(p.lien);
+  const source = p.source === 'spotify' && lien ? 'spotify' : null;
   if (!coupe && !lien) return null;
   return { nom: coupe, lien, source };
 }
