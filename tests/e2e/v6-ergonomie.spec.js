@@ -97,6 +97,7 @@ test('toutes les zones de texte grandissent jusqu\'à 7 lignes : soir, épisode,
   await page.getByRole('button', { name: /^Notes libres/ }).click();
   expect(await zonesDe(page)).toEqual([
     { id: 'points-positifs', auto: 'content', min: 2, max: 7 },
+    { id: 'gratitudes', auto: 'content', min: 2, max: 7 },
     { id: 'notes', auto: 'content', min: 3, max: 7 },
   ]);
   const id = await creerEpisode(page, COLERE);

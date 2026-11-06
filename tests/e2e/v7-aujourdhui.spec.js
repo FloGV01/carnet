@@ -59,8 +59,9 @@ test('le soir avec les zones sûres de l\'iPhone, en clair et en sombre : six ru
     expect(Math.abs(bande.y + bande.height - onglets.y)).toBeLessThanOrEqual(0.5);
     expect(Math.round(bande.height)).toBe(64);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // La page défilée : la carte des points positifs et « J'ai fini pour ce soir » au-dessus de la bande.
-    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton']), schema);
+    // La page défilée : les cartes des points positifs et des gratitudes (v11, la dernière) et « J'ai fini pour ce soir »
+    // au-dessus de la bande.
+    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
     // Chaque rubrique : une carte --surface de rayon 14, un carré de 28 (rayon 7) à sa couleur, l'icône en -on, le titre en 600.
     for (const [nom, couleur, libelle] of [['Lieu', 'lieu', 'Lieu'], ['Sommeil', 'sommeil', 'Sommeil'], ['Contact humain', 'contact', 'Contact humain'],
@@ -138,7 +139,7 @@ test('P2 · avec un épisode récent, la ligne Après coup s\'atteint en défila
     await page.reload();
     await toucher(page, 'Lieu', 'Bureau');
     await expect(page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ })).toBeVisible();
-    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton', '.ligne-apres-coup-jour']), schema);
+    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton', '.ligne-apres-coup-jour']), schema);
     // Sous « J'ai fini pour ce soir ».
     const [fini, ligne] = await Promise.all([boite(page, '.fini-bouton'), boite(page, '.ligne-apres-coup-jour')]);
     expect(ligne.y, schema).toBeGreaterThanOrEqual(fini.y + fini.height);
@@ -154,7 +155,7 @@ test('P3 · « J\'ai fini pour ce soir » s\'atteint en défilant, au-dessus de 
       await viderBase(page);
       await toucher(page, 'Lieu', 'Bureau');
       await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
-      atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton']), `${schema} · ${heure.getHours()} h`);
+      atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), `${schema} · ${heure.getHours()} h`);
     }
   }
 });
@@ -178,7 +179,7 @@ test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résu
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
     await expect(veille).toBeVisible();
-    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton']), schema);
+    atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
   }
 });
@@ -207,7 +208,7 @@ test('bandeau « Nouvelle version prête » : « J\'ai fini pour ce soir », la 
   await bandeau(page);
   await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
   await expect(page.locator('.ligne-apres-coup-jour')).toBeVisible();
-  atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton', '.ligne-apres-coup-jour']), 'bandeau');
+  atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton', '.ligne-apres-coup-jour']), 'bandeau');
 });
 
 // ---------- Grand texte ----------

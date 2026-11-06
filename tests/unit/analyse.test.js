@@ -222,3 +222,30 @@ test('v7 · « Pourquoi ? » de Ta journée : la règle couvre ses deux rangées
   assert.ok(ligne, 'règle emotionsJournee introuvable');
   assert.doesNotMatch(ligne.replace(/\$\{[^}]*\}/g, ''), /\d/);
 });
+
+// v11 (spec §6) : « Tes gratitudes », comme « Tes points positifs » : les 2 plus récentes des 7 derniers jours, avec leur
+// jour, coupées à 120 signes ; jamais leur nombre.
+test('v11 : Ma semaine relit les 2 gratitudes les plus récentes des 7 derniers jours, coupées à 120 signes, comme les points positifs', () => {
+  const long = 'Merci à la voisine pour le colis gardé toute la journée, et pour la soupe déposée devant la porte quand je rentrais tard du travail.';
+  assert.ok(long.length > 120);
+  const journal = [
+    { date: '2026-10-07', gratitudes: 'merci au collègue, la semaine d\'avant', pointsPositifs: 'trop ancien' },
+    { date: '2026-10-08', gratitudes: 'merci au facteur', pointsPositifs: 'une marche' },
+    { date: '2026-10-10', gratitudes: long },
+    { date: '2026-10-12', pointsPositifs: 'un bon repas' },
+    { date: '2026-10-13', gratitudes: 'merci au collègue pour le café', pointsPositifs: 'j\'ai tenu' },
+    { date: '2026-10-16', gratitudes: 'après aujourd\'hui : jamais' },
+  ];
+  const r = analyze({ journal, ...vide }, { aujourdhui: '2026-10-14', items });
+  assert.deepEqual(r.semaine.gratitudes, [
+    { date: '2026-10-13', texte: 'merci au collègue pour le café' },
+    { date: '2026-10-10', texte: `${long.slice(0, 119)}…` },
+  ]);
+  assert.equal(r.semaine.gratitudes[1].texte.length, 120);
+  // Les points positifs ne changent pas, et ne se mêlent pas aux gratitudes.
+  assert.deepEqual(r.semaine.positifs, [{ date: '2026-10-13', texte: 'j\'ai tenu' }, { date: '2026-10-12', texte: 'un bon repas' }]);
+  // Sans gratitude dans la semaine : une liste vide, sans nombre.
+  const sans = analyze({ journal: journal.filter((j) => j.date < '2026-10-08'), ...vide }, { aujourdhui: '2026-10-14', items });
+  assert.deepEqual(sans.semaine.gratitudes, []);
+  assert.deepEqual(Object.keys(r.semaine).sort(), ['au', 'du', 'emotions', 'gratitudes', 'positifs']);
+});

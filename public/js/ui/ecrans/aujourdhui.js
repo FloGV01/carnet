@@ -256,11 +256,22 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
   };
   const ecrireTexte = (champ) => (valeur) => ecrireAvecEssais(() => repo.journal.patch(date, { [champ]: valeur }), signaler)
     .then((r) => { setEntree((e) => ({ ...e, [champ]: valeur })); return r; });
+  // Effacer, puis « Annuler » : les zones de texte, non contrôlées, renaissent à la génération suivante avec l'entrée du
+  // moment. Elle est donc posée avec la génération (v11) : vide après l'effacement, relue après la restauration. Sinon,
+  // l'ancienne entrée, encore là le temps de la relecture, revenait dans les zones, puis s'effaçait à son arrivée, et la
+  // zone vidée enregistrait ce vide en partant : « Annuler » perdait les points positifs, les gratitudes et les notes.
+  // Un autre jour ouvert entre-temps garde son entrée.
+  const poserEntree = (e) => setEntree((actuelle) => (actuelle && actuelle.date === date ? e || { date } : actuelle));
   const effacerJournee = async () => {
     setConfirmerEffacer(false);
     const sauve = await repo.journal.supprimer(date);
+    poserEntree(null);
     setGeneration((g) => g + 1);
-    afficherToast('Journée effacée', { libelle: 'Annuler', faire: async () => { await repo.journal.restaurer(sauve); setGeneration((g) => g + 1); } });
+    afficherToast('Journée effacée', { libelle: 'Annuler', faire: async () => {
+      await repo.journal.restaurer(sauve);
+      poserEntree(await repo.journal.lire(date));
+      setGeneration((g) => g + 1);
+    } });
   };
   const vide = Object.entries(entree).every(([k, v]) => ['date', 'createdAt', 'updatedAt'].includes(k) || v == null);
   const enVeille = date === aujourdhui && estAvantBascule(maintenant);
@@ -326,6 +337,13 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
       html`<${ChampTexte} key=${`${date}-pp-${generation}`} id="points-positifs" etiquette=${null} ariaLabel="Mes points positifs" valeur=${entree.pointsPositifs}
         placeholder="Même petit. « J'ai tenu » compte aussi." lignes=${2}
         cleBrouillon=${`carnet:brouillon:${date}:pointsPositifs`} surEnregistrer=${ecrireTexte('pointsPositifs')} />`),
+    // Mes gratitudes (v11, spec §6) : de même forme que les points positifs, juste dessous par défaut. Ni nombre, ni « Dit »,
+    // ni partage. Comme toute zone de texte, elle n'est pas contrôlée : la clé porte la date (rien ne passe d'un jour à
+    // l'autre) et la génération (le texte revient après « Annuler » d'une journée effacée).
+    gratitudes: () => carteChamp('gratitudes', 'pos', html`<${TeteRubrique} icone="positifs" libelle="Mes gratitudes" />`,
+      html`<${ChampTexte} key=${`${date}-gr-${generation}`} id="gratitudes" etiquette=${null} ariaLabel="Mes gratitudes" valeur=${entree.gratitudes}
+        placeholder="Ce pour quoi je suis reconnaissant. À qui je dis merci." lignes=${2}
+        cleBrouillon=${`carnet:brouillon:${date}:gratitudes`} surEnregistrer=${ecrireTexte('gratitudes')} />`),
   };
   // Le détail du Sport et du Contact (v8, Q5) : une carte en pleine largeur, sous la paire (ou sous sa carte), ouverte par
   // le lien « Détail › » de sa carte. Leurs replis ont quitté la liste.
@@ -404,6 +422,7 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
     ${replie && html`<section class="carte fini-soir" aria-label="Ta soirée">
       <p class="phrase-recap">${phrase.map((s) => (s.valeur ? html`<span class="valeur">${s.texte}</span>` : s.texte))}</p>
       ${entree.pointsPositifs && html`<p class="fini-positifs">« ${entree.pointsPositifs} »</p>`}
+      ${entree.gratitudes && html`<p class="fini-positifs">« ${entree.gratitudes} »</p>`}
       <button type="button" class="btn-lien action" onClick=${() => terminer(false)}>Rouvrir la saisie</button>
     </section>`}
     ${!replie && html`${rendreChamps()}

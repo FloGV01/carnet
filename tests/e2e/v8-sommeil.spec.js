@@ -89,7 +89,7 @@ const vigilance3 = async (page, quoi) => {
   await expect(duree(page).locator('[aria-pressed="true"]'), quoi).toHaveCount(0);
   const [sommeil, traitement] = await Promise.all([boite(carteDe(page, 'Sommeil')), boite(carteDe(page, 'Traitement pris'))]);
   expect(sommeil.h - traitement.h, `${quoi} : la roue ajoute 60 px au plus à la carte Sommeil`).toBeLessThanOrEqual(60);
-  atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton']), quoi);
+  atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), quoi);
 };
 
 test('vigilance 3 · le soir, avec la roue de la carte Sommeil, se défile jusqu\'à sa dernière carte au-dessus de la bande avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h', async ({ page }) => {

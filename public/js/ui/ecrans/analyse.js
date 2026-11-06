@@ -82,12 +82,13 @@ function TuileEmotions({ compte }) {
 
 // Ma semaine (v5 ; v7 en tuiles 2b) : les 7 derniers jours, quelle que soit la période choisie. Jamais de comparaison
 // avec la semaine d'avant ; « nuits Mal » seules (Mal + Moyen + Bien donnerait le nombre de nuits notées). Les points
-// positifs restent dans un repli fermé.
+// positifs restent dans un repli fermé, et les gratitudes (v11) dans le leur, chacun avec son jour, sans aucun nombre.
+const LignesSemaine = ({ textes }) => html`<ul class="lignes-semaine">${textes.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>`;
 function MaSemaine({ f, frise7, semaine, carte }) {
   const lib = (id) => carte.get(id) || id;
   const nEmotions = nombreDeReleves(semaine.emotions);
   const joursExpl = frise7.colonnes.filter((c) => c.explosions > 0).map((c) => JOURS[jourSemaine(c.cle)]);
-  if (!nEmotions && !f.nuits.n && !f.explosions.n && !f.episodes.nombre && !semaine.positifs.length) return null;
+  if (!nEmotions && !f.nuits.n && !f.explosions.n && !f.episodes.nombre && !semaine.positifs.length && !semaine.gratitudes.length) return null;
   return html`<section class="carte ma-semaine" aria-label="Ma semaine">
     <div class="carte-entete"><h2 class="titre-carte">Ma semaine</h2><span class="note-carte-interne">${formaterPlage(semaine.du, semaine.au)}</span></div>
     <div class="tuiles-semaine">
@@ -98,7 +99,10 @@ function MaSemaine({ f, frise7, semaine, carte }) {
       <${Tuile} rubrique="ep" titre="épisodes" valeur=${String(f.episodes.nombre)} />
     </div>
     ${semaine.positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" icone="positifs" teinte="pos" memoriser=${false}>
-      <ul class="lignes-semaine">${semaine.positifs.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>
+      <${LignesSemaine} textes=${semaine.positifs} />
+    </${Repli}>`}
+    ${semaine.gratitudes.length > 0 && html`<${Repli} cle="gratitudes-semaine" titre="Tes gratitudes" icone="positifs" teinte="pos" memoriser=${false}>
+      <${LignesSemaine} textes=${semaine.gratitudes} />
     </${Repli}>`}
   </section>`;
 }

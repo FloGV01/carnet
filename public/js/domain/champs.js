@@ -296,6 +296,11 @@ export function estVide(store, valeur) {
   return Object.keys(SCHEMAS[store].saisis).every((k) => contexte.includes(k) || valeur[k] === null || valeur[k] === undefined);
 }
 
+// L'Export PSY et la vue soignants (v11, spec §6) : une journée qui n'a que des gratitudes n'y existe pas, ni sa ligne, ni
+// sa date, ni son « 0 explosion » (elle compterait comme notée le soir). Les autres journées restent telles quelles : les
+// gratitudes n'y sont jamais lues.
+export const sansGratitudesSeules = (journal) => journal.filter((j) => j.gratitudes == null || !estVide('journal', { ...j, gratitudes: null }));
+
 export function referencesDe(store, valeur) {
   return Object.entries(SCHEMAS[store].saisis).flatMap(([nom, def]) => refsDuChamp(def, valeur[nom]));
 }

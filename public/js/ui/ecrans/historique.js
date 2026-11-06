@@ -144,7 +144,8 @@ export function Historique() {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
             if (t) note.push(t);
           }
-          if (j.pointsPositifs) note.push(`« ${debutTexte(j.pointsPositifs, 34)} »`);
+          // Les points positifs, puis les gratitudes (v11), chacun en début de texte.
+          for (const t of [j.pointsPositifs, j.gratitudes]) if (t) note.push(`« ${debutTexte(t, 34)} »`);
           return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>

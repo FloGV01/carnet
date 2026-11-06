@@ -1,10 +1,14 @@
 // Réglages de la saisie du soir (v4) : ordre des champs, champs masqués, heures de l'humeur du
 // moment. Pur ; stocké dans meta.journee. Un champ masqué compte comme « non renseigné ».
-export const CHAMPS_JOURNEE = ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'];
+// v11 : « Mes gratitudes », affichée par défaut (spec §6).
+export const CHAMPS_JOURNEE = ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs', 'gratitudes'];
 export const NOMS_CHAMPS = {
   lieu: 'Lieu', sommeil: 'Sommeil', humeur: 'Humeur', contact: 'Contact humain', sport: 'Sport / mouvement',
-  explosions: 'Explosions (compteur du soir)', traitement: 'Traitement pris', positifs: 'Mes points positifs',
+  explosions: 'Explosions (compteur du soir)', traitement: 'Traitement pris', positifs: 'Mes points positifs', gratitudes: 'Mes gratitudes',
 };
+// Un champ nouveau arrive en fin d'ordre, sauf celui qui a sa place après un autre : v11, les gratitudes juste après les
+// points positifs, où qu'ils soient (une app déjà installée a un ordre réglé sans elles, spec §6).
+const PLACE_APRES = { gratitudes: 'positifs' };
 // Heures proposées pour l'humeur du moment (Réglages › Rappels depuis la v6.1) : de 6 h à 23 h.
 export const HEURE_MIN = 6;
 export const HEURE_MAX = 23;
@@ -27,7 +31,12 @@ export function normaliserJournee(brut) {
   const b = brut && typeof brut === 'object' ? brut : {};
   const connus = new Set(CHAMPS_JOURNEE);
   const ordre = [...new Set((Array.isArray(b.ordre) ? b.ordre : []).filter((c) => connus.has(c)))];
-  for (const c of CHAMPS_JOURNEE) if (!ordre.includes(c)) ordre.push(c);
+  for (const c of CHAMPS_JOURNEE) {
+    if (ordre.includes(c)) continue;
+    const apres = PLACE_APRES[c] ? ordre.indexOf(PLACE_APRES[c]) : -1;
+    if (apres >= 0) ordre.splice(apres + 1, 0, c);
+    else ordre.push(c);
+  }
   const masques = Array.isArray(b.masques) ? [...new Set(b.masques.filter((c) => MASQUABLES.has(c)))] : [...JOURNEE_DEFAUT.masques];
   const heuresMoment = [...new Set((Array.isArray(b.heuresMoment) ? b.heuresMoment : []).filter((h) => Number.isInteger(h) && h >= HEURE_MIN && h <= HEURE_MAX))].sort((a, b2) => a - b2);
   return { ordre, masques, heuresMoment };
@@ -40,6 +49,7 @@ export const champsVisibles = (j) => j.ordre.filter((c) => !j.masques.includes(c
 const DONNEES_CHAMP = {
   lieu: ['lieu'], sommeil: ['sommeilRessenti', 'heuresSommeil'], humeur: ['humeur'], contact: ['contactHumain', 'contacts'],
   sport: ['sportMouvement', 'activites'], explosions: ['explosions'], traitement: ['traitementPris'], positifs: ['pointsPositifs'],
+  gratitudes: ['gratitudes'],
 };
 export const champRenseigne = (champ, entree) => Boolean(entree) && DONNEES_CHAMP[champ].some((k) => entree[k] != null);
 

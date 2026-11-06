@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche, repliNuitAffiche, nuitRenseignee, MASQUE_NUIT,
-  changerPremiereLigne,
+  changerPremiereLigne, NOMS_CHAMPS, champRenseigne, deplacerChamp,
 } from '../../public/js/domain/journee.js';
 import { texteHeuresSommeil, VALEURS_HEURES_SOMMEIL } from '../../public/js/domain/champs.js';
 
@@ -148,4 +148,58 @@ test('v11 : changerPremiereLigne sur rien de noté crée la première ligne ; ef
   assert.equal(changerPremiereLigne([{ avec: [], effet: 'contactEffet:neutre' }], 'effet', null), null);
   assert.equal(changerPremiereLigne([{ avec: null, effet: 'contactEffet:neutre' }], 'effet', null), null);
   assert.deepEqual(changerPremiereLigne([{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], 'effet', null), [{ avec: ['contactAvec:famille'], effet: null }]);
+});
+
+// ---------- v11 : Mes gratitudes, juste après les points positifs (spec §6) ----------
+
+test('v11 : « Mes gratitudes » est un champ du soir, le dernier par défaut, affiché, et porte le seul champ gratitudes', () => {
+  assert.equal(CHAMPS_JOURNEE.at(-1), 'gratitudes');
+  assert.equal(NOMS_CHAMPS.gratitudes, 'Mes gratitudes');
+  assert.deepEqual(JOURNEE_DEFAUT.masques, ['explosions', 'humeur', 'nuit'], 'affichée par défaut');
+  const defaut = normaliserJournee(null);
+  assert.deepEqual(defaut.ordre.slice(-2), ['positifs', 'gratitudes']);
+  assert.ok(champsVisibles(defaut).includes('gratitudes'));
+  assert.equal(champRenseigne('gratitudes', { gratitudes: 'merci au collègue' }), true);
+  assert.equal(champRenseigne('gratitudes', { gratitudes: null, pointsPositifs: 'une marche' }), false);
+  assert.equal(champRenseigne('positifs', { gratitudes: 'merci au collègue' }), false, 'les points positifs ne la portent pas');
+});
+
+test('v11 : un ordre réglé sans les gratitudes les reçoit juste après les points positifs, où qu\'ils soient', () => {
+  // L'ordre par défaut de la v10, enregistré par une app déjà installée.
+  const v10 = ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'];
+  assert.deepEqual(normaliserJournee({ ordre: v10, masques: [] }).ordre, [...v10, 'gratitudes']);
+  // Les points positifs montés en 2ᵉ : les gratitudes en 3ᵉ, pas à la fin.
+  const monte = normaliserJournee({ ordre: ['lieu', 'positifs', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement'], masques: [] });
+  assert.equal(monte.ordre.indexOf('gratitudes'), 2);
+  assert.deepEqual(monte.ordre.slice(0, 4), ['lieu', 'positifs', 'gratitudes', 'sommeil']);
+  // En tête aussi.
+  assert.deepEqual(normaliserJournee({ ordre: ['positifs', 'lieu'] }).ordre.slice(0, 3), ['positifs', 'gratitudes', 'lieu']);
+  // Un ordre incomplet sans points positifs : ils arrivent en fin d'ordre, les gratitudes juste après.
+  assert.deepEqual(normaliserJournee({ ordre: ['humeur', 'lieu'] }).ordre.slice(-2), ['positifs', 'gratitudes']);
+  for (const o of [v10, ['positifs', 'lieu'], ['humeur', 'lieu'], []]) {
+    assert.deepEqual([...normaliserJournee({ ordre: o }).ordre].sort(), [...CHAMPS_JOURNEE].sort(), String(o));
+  }
+});
+
+test('v11 : déplacées, les gratitudes gardent leur place à la relecture ; deplacerChamp les déplace', () => {
+  const depart = normaliserJournee(null);
+  const montee = deplacerChamp(depart, 'gratitudes', -1);
+  assert.deepEqual(montee.ordre.slice(-2), ['gratitudes', 'positifs']);
+  assert.deepEqual(normaliserJournee(montee).ordre, montee.ordre, 'relue, elle reste avant les points positifs');
+  let haut = depart;
+  for (let i = 0; i < CHAMPS_JOURNEE.length; i++) haut = deplacerChamp(haut, 'gratitudes', -1);
+  assert.equal(haut.ordre[0], 'gratitudes');
+  assert.deepEqual(normaliserJournee(haut).ordre, haut.ordre);
+  assert.deepEqual(deplacerChamp(depart, 'gratitudes', 1), depart, 'la dernière ne descend pas plus bas');
+});
+
+test('v11 : les points positifs masqués, les gratitudes restent visibles ; masquées, elles restent affichées un jour qui en a', () => {
+  const sansPositifs = normaliserJournee({ masques: ['explosions', 'humeur', 'nuit', 'positifs'] });
+  assert.ok(!champsVisibles(sansPositifs).includes('positifs'));
+  assert.ok(champsVisibles(sansPositifs).includes('gratitudes'));
+  assert.ok(champsAffiches(sansPositifs, {}).includes('gratitudes'));
+  const masquees = normaliserJournee({ masques: ['gratitudes'] });
+  assert.deepEqual(masquees.masques, ['gratitudes']);
+  assert.ok(!champsAffiches(masquees, { pointsPositifs: 'une marche' }).includes('gratitudes'));
+  assert.ok(champsAffiches(masquees, { gratitudes: 'merci à la voisine' }).includes('gratitudes'));
 });

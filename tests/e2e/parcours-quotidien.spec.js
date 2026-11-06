@@ -4,8 +4,8 @@ import { toucher, groupe, entreeDuJour, viderBase } from '../aides/saisie.js';
 test.beforeEach(async ({ page }) => { await page.goto('/'); await viderBase(page); });
 
 // La bande flottante au-dessus des onglets, sur une ligne ; les champs passent au-dessus d'elle, la page défilée jusqu'en
-// bas (v11, spec §13 : le soir ne tient plus sans défiler).
-async function atteignable(page, dernier = '#points-positifs') {
+// bas (v11, spec §13 : le soir ne tient plus sans défiler), jusqu'à la dernière carte, « Mes gratitudes » (v11).
+async function atteignable(page, dernier = '#gratitudes') {
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const zone = await page.locator(dernier).boundingBox();
   const flottants = await page.locator('.actions-flottantes').boundingBox();
@@ -25,7 +25,7 @@ async function atteignable(page, dernier = '#points-positifs') {
   }
 }
 
-test('les 5 champs du soir en 5 touchers, sans frappe, sans bouton Enregistrer ; la page défile jusqu\'aux points positifs', async ({ page }) => {
+test('les 5 champs du soir en 5 touchers, sans frappe, sans bouton Enregistrer ; la page défile jusqu\'aux points positifs et aux gratitudes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   await toucher(page, 'Lieu', 'Bureau');
   await toucher(page, 'Sommeil', 'Moyen');
@@ -77,6 +77,7 @@ test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne
       expect(await auDessus(`[role="group"][aria-label="${nom}"]`), nom).toBe(true);
     }
     expect(await auDessus('#points-positifs')).toBe(true);
+    expect(await auDessus('#gratitudes')).toBe(true);
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }

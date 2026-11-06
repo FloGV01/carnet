@@ -43,7 +43,7 @@ const PLAN = {
 
 // Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
 // deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
-// texte d'aide est mesuré. Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
+// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »). Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
 // la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
 // une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
 // bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
@@ -59,6 +59,7 @@ async function verser(page) {
         heuresSommeil: i % 4 === 3 ? null : 4 + (i % 7),
         contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
         pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
+        gratitudes: i % 3 ? null : 'Merci au collègue.',
       });
     }
     await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
@@ -726,6 +727,8 @@ test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neu
     const soir = await carres(page, '.ma-journee .avec-carres');
     const couleurs = { Lieu: 'lieu', Sommeil: 'sommeil', Humeur: 'humeur', 'Contact humain': 'contact', 'Sport / mouvement': 'sport',
       'Explosions (compteur du soir)': 'explosions', 'Traitement pris': 'traitement', 'Mes points positifs': 'positifs',
+      // v11 : Mes gratitudes, juste après, à la couleur des points positifs.
+      'Mes gratitudes': 'positifs',
       // v8 : « Nuit en détail », masqué par défaut, avec ce qu'il contient en secondaire.
       'Nuit en détailcoucher, lever, réveils': 'sommeil', 'Ce qui a pesé · ce qui a rechargé': 'energie' };
     expect(soir.map((x) => x.texte)).toEqual(Object.keys(couleurs));
@@ -762,9 +765,9 @@ test('Réglages et Le soir : au texte par défaut et en grand texte (23 px), le 
       await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
       await stabiliser(page);
       const rangees = await margesTexte(page);
-      // Réglages : Sauvegarde (2), Ma saisie (4, Émotions en v8), Moment difficile (4) ; Le soir : 8 champs, « Nuit en
-      // détail » (v8) et pesé · rechargé.
-      expect(rangees.length, route).toBe(10);
+      // Réglages : Sauvegarde (2), Ma saisie (4, Émotions en v8), Moment difficile (4) ; Le soir : 9 champs (v11 : Mes
+      // gratitudes), « Nuit en détail » (v8) et pesé · rechargé.
+      expect(rangees.length, route).toBe(route === '#/reglages' ? 10 : 11);
       for (const x of rangees) {
         const ou = `${route} ${taille ? `${taille} px` : 'défaut'} : ${x.texte}`;
         expect(x.haut, ou).toBeGreaterThanOrEqual(8);

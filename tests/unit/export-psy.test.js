@@ -328,3 +328,33 @@ test('v11 : la demi-heure dit « nuit 7 h 30 » dans l\'Export PSY', () => {
   const t = exportPsy({ journal: [J('2026-09-27', { heuresSommeil: 7.5 })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
   assert.doesNotMatch(t, /7,5|7\.5/);
 });
+
+// v11 · vigilance 3 (spec §6) : les gratitudes ne partent jamais dans l'Export PSY. Une journée qui n'a qu'elles n'y existe
+// pas : ni texte, ni ligne de date, ni JOURS, ni « explosions 0 » dans les COMPTEURS (zeroDepuis posé, elle compterait comme
+// notée le soir). Une journée qui n'a que le traitement pris garde sa ligne : hors des demi-heures, rien ne change (§12).
+test('v11 · vigilance 3 : les gratitudes ne changent rien à l\'Export PSY, pas même une journée qui n\'a qu\'elles', () => {
+  const MERCI = { gratitudes: 'merci à la voisine' };
+  const exp = (j, autres = { episodes: [], symptomes: [], humeurs: [] }) => exportPsy({ journal: j, ...autres }, { aujourdhui: '2026-09-27', carte, zeroDepuis: '2026-01-01' });
+  const textes = [];
+  const pareil = (avec, sans, quoi) => { textes.push(avec); assert.equal(avec, sans, quoi); };
+  // Seule, dans un Carnet vide : rien que l'en-tête et la demande.
+  const seule = J('2026-09-26', MERCI);
+  const vide = exp([]);
+  pareil(exp([seule]), vide, 'seule');
+  assert.doesNotMatch(vide, /JOURS|COMPTEURS|explosions|sam 26\/09/);
+  // Parmi les données de l'exemple : à la place de la journée du samedi 26 (ses relevés gardent sa ligne de date), puis un
+  // jeudi 24 qui n'a rien d'autre.
+  const exemple = { episodes, symptomes, humeurs };
+  const sans26 = journal.filter((j) => j.date !== '2026-09-26');
+  pareil(exp([...sans26, seule], exemple), exp(sans26, exemple), 'à la place du 26');
+  pareil(exp([...journal, J('2026-09-24', MERCI)], exemple), exp(journal, exemple), 'un 24 qui n\'a qu\'elles');
+  // Sur une journée pleine, puis sur toutes.
+  pareil(exp(journal.map((j) => (j.date === '2026-09-26' ? { ...j, ...MERCI } : j)), exemple), exp(journal, exemple), 'sur le 26 plein');
+  pareil(exp(journal.map((j) => ({ ...j, ...MERCI })), exemple), exp(journal, exemple), 'sur toutes');
+  // Une journée qui n'a que le traitement pris garde sa ligne de date, avec ou sans gratitudes.
+  const traitement = J('2026-09-24', { traitementPris: 'traitementPris:oui' });
+  const avecTraitement = exp([traitement]);
+  assert.match(avecTraitement, /\nJOURS\njeu 24\/09\n/);
+  pareil(exp([{ ...traitement, ...MERCI }]), avecTraitement, 'traitement pris et gratitudes');
+  for (const t of textes) assert.doesNotMatch(t, /voisine|merci/i);
+});

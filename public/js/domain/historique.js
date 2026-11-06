@@ -73,8 +73,9 @@ export function extrait(texte, requete, avant = 40, apres = avant) {
   return { avant: `${debut > 0 ? '…' : ''}${texte.slice(debut, i)}`, trouve: texte.slice(i, i + q.length), apres: `${texte.slice(i + q.length, fin)}${fin < texte.length ? '…' : ''}` };
 }
 
+// v11 : les gratitudes du soir, après les points positifs.
 export const CHAMPS_TEXTE = {
-  journal: ['pointsPositifs', 'notes'], episodes: ['situation', 'ceQuiAAide'], symptomes: ['contexte', 'note'],
+  journal: ['pointsPositifs', 'gratitudes', 'notes'], episodes: ['situation', 'ceQuiAAide'], symptomes: ['contexte', 'note'],
 };
 
 export function chercher(element, store, requete, avant, apres) {

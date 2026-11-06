@@ -1,5 +1,6 @@
 // Modèle de la vue soignants (une page A4, voix neutre). Exclut : situations, notes, points
 // positifs, « ce qui a aidé », détail jour par jour, signal, mémos, Bien-être. Pur.
+// v11 : les gratitudes aussi ; une journée qui n'a qu'elles n'existe pas ici (sansGratitudesSeules).
 // v7 : les émotions du moment (roue), en nombre de relevés par famille, dans l'ordre de la roue ; les anciennes notes de
 // 1 à 10 gardent leur ligne « Humeur (notes) » tant qu'une colonne en a, et leur rangée sur la frise quand sa période en a.
 // v8 (Q15) : « Nuit par nuit », les nuits notées des 4 dernières semaines (2 si la page ne tient pas, page-a4.js).
@@ -18,6 +19,7 @@ import { avecHumeurDuJour } from '../analyse/humeur-jour.js';
 import { reperesTraitement } from '../analyse/reperes.js';
 import { relevesAEmotion, parFamille, parZone, texteFamilles, texteZones } from '../analyse/emotions.js';
 import { FAMILLES, estEmotion } from '../domain/roue.js';
+import { sansGratitudesSeules } from '../domain/champs.js';
 
 const NOMS = { declencheur: 'Déclencheurs', dessous: 'En dessous', emotion: 'Émotions (épisodes)', reaction: 'Réactions', symptome: 'Symptômes', effetSecondaire: 'Effets secondaires' };
 const couper = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -64,7 +66,8 @@ function lignesIndicateurs(colonnes, lib) {
   return [emotions, zones, ...defs.map(([nom, fn]) => ({ nom, valeurs: colonnes.map((c) => v(c.f, fn)) }))];
 }
 
-export function modeleSoignants(data, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
+export function modeleSoignants(saisi, { aujourdhui, carte, analyse, professionnel, prenom, rdvs = [], traitements = [], traitementActuel = null, zeroDepuis = null }) {
+  let data = { ...saisi, journal: sansGratitudesSeules(saisi.journal) };
   const lib = (id) => (carte && carte.get(id)) || id;
   // Nuit par nuit (v8, Q15) : les nuits notées de chaque fenêtre, si l'une au moins a sa durée (sinon, pas de section).
   // Chaque nuit porte son jour (« lun 12/10 », celui qui suit la nuit), ses heures, sa qualité (1 à 3) et son texte.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, extrait, chercher } from '../../public/js/domain/historique.js';
+import { grouperParSemaine, filtrerJours, filtrerEpisodes, filtrerSymptomes, debutTexte, extrait, chercher, CHAMPS_TEXTE } from '../../public/js/domain/historique.js';
 
 const jours = [
   { date: '2026-09-21', humeur: 4, lieu: 'lieu:bureau', explosions: 1, notes: null },
@@ -57,4 +57,17 @@ test('extrait court et début de texte coupé au mot', () => {
   assert.equal(ex.apres, ' qui a débordé sur la soirée…');
   assert.equal(debutTexte('déjeuner au calme', 34), 'déjeuner au calme');
   assert.equal(debutTexte('marche de vingt minutes au soleil après le travail', 34), 'marche de vingt minutes au soleil…');
+});
+
+test('v11 : la recherche fouille aussi les gratitudes, après les points positifs et avant les notes', () => {
+  assert.deepEqual(CHAMPS_TEXTE.journal, ['pointsPositifs', 'gratitudes', 'notes']);
+  const j = { date: '2026-11-05', pointsPositifs: 'une marche au parc', gratitudes: 'Merci à la voisine pour le colis', notes: 'une voisine bruyante' };
+  const ex = chercher(j, 'journal', 'voisine');
+  assert.equal(ex.champ, 'gratitudes', 'les gratitudes passent avant les notes');
+  assert.equal(ex.trouve, 'voisine');
+  assert.equal(chercher({ ...j, gratitudes: null }, 'journal', 'voisine').champ, 'notes');
+  assert.equal(chercher({ date: '2026-11-05', gratitudes: 'merci au collègue' }, 'journal', 'COLLEGUE').champ, 'gratitudes');
+  assert.equal(chercher(j, 'journal', 'parc').champ, 'pointsPositifs');
+  // Le filtre « Avec notes » ne change pas : des gratitudes ne sont pas des notes.
+  assert.deepEqual(filtrerJours([{ date: '2026-11-05', gratitudes: 'merci au collègue', notes: null }], { avecNotes: true }), []);
 });

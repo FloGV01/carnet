@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normaliser, valider, estVide, referencesDe, basculerMultiple, ErreurValidation, VALEURS_HEURES_SOMMEIL, estHeuresSommeil, APRES_COUP,
+  sansGratitudesSeules,
 } from '../../public/js/domain/champs.js';
 
 test('vide devient null, 0 et false sont conservés', () => {
@@ -395,4 +396,25 @@ test('v11 : gratitudes (journal) et ceQueJeRetiens (épisode), deux textes facul
   const dedans = normaliser('episodes', { ...ep, apresCoup: { pensees: 'x', ceQueJeRetiens: 'y' } });
   assert.deepEqual(dedans.avertissements, ['apresCoup.ceQueJeRetiens : champ inconnu ignoré']);
   assert.equal(dedans.valeur.ceQueJeRetiens, null);
+});
+
+// v11, vigilance 3 : pour l'Export PSY et la vue soignants, une journée qui n'a que des gratitudes n'existe pas.
+test('v11 : sansGratitudesSeules retire une journée qui n\'a que des gratitudes, et elle seule', () => {
+  const seule = { date: '2026-09-26', gratitudes: 'merci à la voisine' };
+  const avecLieu = { date: '2026-09-27', gratitudes: 'merci à la voisine', lieu: 'lieu:bureau' };
+  const traitementSeul = { date: '2026-09-28', traitementPris: 'traitementPris:oui' };
+  const traitementEtGratitudes = { ...traitementSeul, date: '2026-09-29', gratitudes: 'merci au collègue' };
+  const sansRien = { date: '2026-09-30', lieu: null };
+  // Telle qu'en base : tous les champs du schéma, nuls sauf les gratitudes, et ses champs techniques.
+  const enBase = { ...valider('journal', { date: '2026-10-01', gratitudes: 'merci au collègue' }), createdAt: '2026-10-01T20:00:00.000Z', updatedAt: '2026-10-01T20:00:00.000Z' };
+  const entree = [seule, avecLieu, traitementSeul, traitementEtGratitudes, sansRien, enBase];
+  const res = sansGratitudesSeules(entree);
+  assert.deepEqual(res, [avecLieu, traitementSeul, traitementEtGratitudes, sansRien]);
+  assert.equal(res[0], avecLieu, 'une journée gardée l\'est telle quelle');
+  assert.equal(entree.length, 6, 'pur : le journal reçu ne change pas');
+  // Une autre saisie, quelle qu'elle soit, garde la journée : 0 et false comptent.
+  for (const autre of [{ explosions: 0 }, { contactHumain: false }, { pointsPositifs: 'une marche' }, { notes: 'une note' }, { heuresSommeil: 7.5 }, { pese: ['pese:bruit'] }]) {
+    assert.equal(sansGratitudesSeules([{ ...seule, ...autre }]).length, 1, JSON.stringify(autre));
+  }
+  assert.deepEqual(sansGratitudesSeules([]), []);
 });
