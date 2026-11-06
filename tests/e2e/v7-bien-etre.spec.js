@@ -48,7 +48,7 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path')).toHaveCount(1);
 
   await nav(page).getByRole('link', { name: 'Analyse' }).click();
-  await page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
   await expect(page).toHaveURL(/#\/historique$/);
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();
   await expect(nav(page).getByRole('link', { name: 'Analyse' })).toHaveAttribute('aria-current', 'page');

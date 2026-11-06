@@ -4,6 +4,7 @@ import { exportPsy } from '../../public/js/export/psy.js';
 import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
+import { nouveauRepo } from '../aides/repo.js';
 
 const carte = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V2_AJOUTS }, 'x'));
 const J = (date, o) => ({ date, lieu: null, sommeilRessenti: null, humeur: null, contactHumain: null, sportMouvement: null, explosions: null,
@@ -357,4 +358,47 @@ test('v11 · vigilance 3 : les gratitudes ne changent rien à l\'Export PSY, pas
   assert.match(avecTraitement, /\nJOURS\njeu 24\/09\n/);
   pareil(exp([{ ...traitement, ...MERCI }]), avecTraitement, 'traitement pris et gratitudes');
   for (const t of textes) assert.doesNotMatch(t, /voisine|merci/i);
+});
+
+// v11 (5/11, spec §7) · La preuve PSY : « Ce que j'en retiens » est rangé à part d'apresCoup. Écrit sur un épisode de plus de
+// 7 jours dont l'Après coup est ancien, il ne touche pas à apresCoup.jour : l'Export PSY reste le même à l'octet, sans bloc
+// « APRÈS COUP (épisodes plus anciens) ». Écrit sur un épisode de la semaine, il n'y apparaît pas non plus. Lu par le dépôt,
+// comme l'écran Export PSY.
+test('v11 : « Ce que j\'en retiens » ne refait pas partir un vieil épisode vers PSY, et n\'apparaît jamais dans l\'Export PSY', async () => {
+  const { repo } = nouveauRepo({ date: new Date(2026, 9, 15, 21, 0) });
+  const aujourdhui = repo.aujourdhui();
+  assert.equal(aujourdhui, '2026-10-15');
+  const vieux = await repo.episodes.creer({ date: '2026-09-20', heure: '18:00', emotion: 'emotion:colere', intensite: 7, declencheur: 'declencheur:conflit',
+    situation: 'Réunion déplacée au dernier moment', apresCoup: { types: ['typeExplosion:colere'], siJe: 'je sens la chaleur monter', alorsJe: 'je sors', jour: '2026-09-21' } });
+  const semaine = await repo.episodes.creer({ date: '2026-10-13', heure: '19:10', emotion: 'emotion:surcharge', intensite: 6, declencheur: 'declencheur:trop_sollicitations',
+    apresCoup: { repereA: 5, jour: '2026-10-14' } });
+  await repo.journal.patch('2026-10-13', { lieu: 'lieu:bureau', explosions: 1, pointsPositifs: 'une marche au parc' });
+  const exporter = async () => {
+    const [items, journal, episodes, symptomes, humeurs] = await Promise.all([repo.listes.items(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous()]);
+    return exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui, carte: carteLibelles(items), zeroDepuis: '2026-01-01' });
+  };
+  const avant = await exporter();
+  assert.match(avant, /\nÉPISODES \(1\)\nmar 13\/10 19:10 · Surcharge 6\/10/);
+  assert.doesNotMatch(avant, /APRÈS COUP \(épisodes plus anciens\)|dim 20\/09/);
+  // Le témoin : si son jour bougeait (ce que fait une écriture dans l'Après coup), le vieil épisode repartirait vers PSY.
+  const temoin = exportPsy({ journal: await repo.journal.tous(), episodes: [{ ...vieux, apresCoup: { ...vieux.apresCoup, jour: aujourdhui } }, semaine], symptomes: [], humeurs: [] },
+    { aujourdhui, carte: carteLibelles(await repo.listes.items()), zeroDepuis: '2026-01-01' });
+  assert.match(temoin, /\nAPRÈS COUP \(épisodes plus anciens\)\ndim 20\/09 18:00 · Colère 7\/10/);
+
+  const retenu = await repo.episodes.modifier(vieux.id, { ceQueJeRetiens: 'Demander l\'ordre du jour la veille.' });
+  assert.equal(retenu.ceQueJeRetiens, 'Demander l\'ordre du jour la veille.');
+  assert.equal(retenu.apresCoup.jour, '2026-09-21');
+  assert.deepEqual(retenu.apresCoup, vieux.apresCoup);
+  const apres = await exporter();
+  assert.equal(apres, avant);
+  assert.equal(Buffer.compare(Buffer.from(apres), Buffer.from(avant)), 0);
+  assert.doesNotMatch(apres, /APRÈS COUP \(épisodes plus anciens\)/);
+
+  // Sur l'épisode de la semaine : son Après coup part comme avant, ce qu'on en retient jamais.
+  await repo.episodes.modifier(semaine.id, { ceQueJeRetiens: 'Partir avant que ça monte, le dire au collègue.' });
+  assert.equal((await repo.episodes.lire(semaine.id)).apresCoup.jour, '2026-10-14');
+  const avecSemaine = await exporter();
+  assert.equal(avecSemaine, avant);
+  assert.match(avecSemaine, /remarqué à 5\/10/);
+  assert.doesNotMatch(avecSemaine, /retiens|ordre du jour|Partir avant|collègue/);
 });

@@ -588,3 +588,18 @@ test('v11 · vigilance 3 : les gratitudes ne changent rien à la vue soignants, 
   assert.match(reference.entete, /données depuis le 03\/04\/2026/);
   for (const m of modeles) assert.doesNotMatch(JSON.stringify(m), /voisine|merci/i);
 });
+
+// v11 (5/11, spec §7) : « Ce que j'en retiens » reste dans l'app. Sur tous les épisodes, dont un de la semaine, il ne change
+// rien à la vue soignants, et son texte n'y paraît nulle part.
+test('v11 : « Ce que j\'en retiens » ne change rien à la vue soignants, et n\'y paraît jamais', () => {
+  const { data, aujourdhui, rdvs, traitements, traitementActuel } = donnees();
+  const RETENU = 'Partir avant que ça monte, le dire au collègue.';
+  const vue = (d) => modeleSoignants(d, { aujourdhui, carte, analyse: analyze(d, { aujourdhui, items }), professionnel: 'professionnel:psychiatre', prenom: '', rdvs, traitements, traitementActuel });
+  const semaine = { id: 'e-semaine', date: aujourdhui, heure: '18:40', emotion: 'emotion:sentiment_injustice', declencheur: 'declencheur:surcharge_sensorielle', intensite: 7,
+    apresCoup: { types: ['typeExplosion:colere'], repereA: 6, jour: aujourdhui } };
+  const sans = { ...data, episodes: [...data.episodes, semaine] };
+  const avec = { ...sans, episodes: sans.episodes.map((e) => ({ ...e, ceQueJeRetiens: RETENU })) };
+  const [m, reference] = [vue(avec), vue(sans)];
+  assert.deepEqual(m, reference);
+  assert.doesNotMatch(JSON.stringify(m), /retiens|Partir avant|collègue/);
+});

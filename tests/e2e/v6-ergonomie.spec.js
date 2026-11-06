@@ -106,6 +106,7 @@ test('toutes les zones de texte grandissent jusqu\'à 7 lignes : soir, épisode,
   expect(await zonesDe(page)).toEqual([
     { id: 'episodes-situation', auto: 'content', min: 2, max: 7 },
     { id: 'episodes-ceQuiAAide', auto: 'content', min: 2, max: 7 },
+    { id: 'episodes-ceQueJeRetiens', auto: 'content', min: 2, max: 7 },
   ]);
   await aller(page, `#/apres-coup/${id}`);
   const vue = page.getByRole('dialog', { name: 'Après coup' });

@@ -1,7 +1,8 @@
-// Écran Analyse (v5 ; v7 en 2b) : en haut, la porte « Historique › » et les trois portes de Comprendre ; Ma semaine en
-// tuiles (dont « Tes émotions ») ; puis, selon la période : Tes zones (v9), Mes jours, ta journée heure par heure, contacts
-// et mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les chiffres. v7 : plus aucune
-// phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de ressemblance).
+// Écran Analyse (v5 ; v7 en 2b) : en haut, les portes « Historique › » et « Épisodes › » (v11), puis les trois de
+// Comprendre ; Ma semaine en tuiles (dont « Tes émotions ») ; puis, selon la période : Tes zones (v9), Mes jours, ta journée
+// heure par heure, contacts et mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les
+// chiffres. v7 : plus aucune phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de
+// ressemblance).
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache jusqu'à la prochaine écriture, et la
 // base n'est pas relue avant (v8).
 import { html, useEffect, useState } from '../lib.js';
@@ -21,6 +22,7 @@ import { JOURS, jourSemaine, formaterPlage } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres, ZonesParSemaine } from '../graphes/graphes.js';
 import { QuatreBulles } from '../composants/quatre-bulles.js';
 import { ONGLETS as PORTES_COMPRENDRE } from './comprendre.js';
+import { allerAuxEpisodes } from './historique.js';
 import { versHash } from '../../routeur.js';
 import { pourAffichage } from '../../domain/typographie.js';
 import { lireSiChange, lireBase } from '../lecture.js';
@@ -40,11 +42,18 @@ export const calculerAnalyse = () => lireSiChange('analyse', async () => {
 
 // En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
 // avec le carré de sa couleur (deux touchers pour chaque onglet, v6.1). Elles passent à la ligne en grand texte.
+// v11 (spec §7) : « Épisodes », à côté d'« Historique », ouvre l'Historique sur ce segment, quel que soit le dernier retenu ;
+// un épisode s'ouvre ainsi en 3 touchers depuis l'onglet. Les deux passent l'un sous l'autre en grand texte.
 const COULEURS_PORTES = { explosions: ['explosions', 'expl'], energie: ['energie', 'energie'], rythmes: ['rythmes', 'sommeil'] };
-const Portes = () => html`<nav class="portes-analyse" aria-label="Historique et Comprendre">
-  <a class="porte-historique" href="#/historique">
-    <span class="carre-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
-  </a>
+const Portes = () => html`<nav class="portes-analyse" aria-label="Historique, épisodes et Comprendre">
+  <div class="portes-historique">
+    <a class="porte-historique" href="#/historique">
+      <span class="carre-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
+    </a>
+    <a class="porte-historique teinte-ep" href="#/historique" onClick=${allerAuxEpisodes}>
+      <span class="carre-porte" aria-hidden="true">${Icones.note()}</span><span class="porte-titre">Épisodes</span>${Icones.chevron({ trait: 2 })}
+    </a>
+  </div>
   <div class="portes" role="group" aria-label="Comprendre">${PORTES_COMPRENDRE.map((o) => {
     const [icone, teinte] = COULEURS_PORTES[o.valeur];
     return html`<a class=${`porte teinte-${teinte}`} href=${versHash('comprendre', { onglet: o.valeur })}>

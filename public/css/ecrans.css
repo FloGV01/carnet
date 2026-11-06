@@ -202,14 +202,18 @@
 .bloc-consultation { display: flex; flex-direction: column; gap: 6px; }
 .bloc-consultation .titre-carte { font-size: 1.412rem; }
 
-/* Analyse (v7 en 2b) : les portes en haut (Historique, puis les trois de Comprendre), Ma semaine en tuiles, le sélecteur
-   de période qui ne colle que sur les sections qu'il règle (son bloc, .selon-periode). */
+/* Analyse (v7 en 2b) : les portes en haut (Historique et Épisodes, puis les trois de Comprendre), Ma semaine en tuiles, le
+   sélecteur de période qui ne colle que sur les sections qu'il règle (son bloc, .selon-periode). */
 .analyse { gap: 12px; padding-bottom: calc(100px + var(--zone-bas)); }
 .analyse > .entete-onglet { margin-bottom: 2px; }
 .portes-analyse { display: flex; flex-direction: column; gap: 8px; }
 .carre-porte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .carre-porte svg { width: 17px; height: 17px; }
+/* v11 : « Historique » et « Épisodes » côte à côte, de même largeur ; en grand texte, quand l'un des deux ne tient plus sur
+   sa moitié, ils passent l'un sous l'autre, chacun sur toute la largeur. */
+.portes-historique { display: flex; flex-wrap: wrap; gap: 8px; }
 .porte-historique {
+  flex: 1 1 8em;
   display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: var(--r-carte);
   background: var(--surface); color: var(--text); text-decoration: none; font-size: var(--t-corps); font-weight: 600;
 }
