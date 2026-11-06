@@ -297,6 +297,43 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 button.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
 button.effacer svg { width: 18px; height: 18px; }
 
+/* La roue (v11, spec §5, composants/roue-choix.js ; maquette « règle » du 05/11) : une bande de 44 sur --fond-choix, qui
+   défile de côté sans barre, ses bords en fondu. Au milieu, une fenêtre à la largeur d'une valeur, fixe sous la bande
+   (::before) : --surface, neutre, quand rien n'est noté ; la teinte de la carte (--c-tint) quand une valeur l'est, en 700
+   et --c-text. Toutes les valeurs ont la largeur de la plus longue (--l-valeur, mesurée par le composant, qui la pose par
+   CSSOM ; 4em avant la mesure), jamais plus que la bande, et 44 au moins : la plus longue passe alors à la ligne. Des
+   espaceurs (flex), et non des marges intérieures, laissent centrer la première et la dernière : le padding de fin d'une
+   zone qui défile n'est pas fiable. Le fondu (masque) ne touche que les valeurs, jamais la valeur du milieu ; la bande
+   garde son fond. */
+.roue-choix {
+  --l-valeur: 4em; --l-roue: min(var(--l-valeur), 100%);
+  position: relative; min-width: 0; border-radius: var(--r-moyen); background: var(--fond-choix);
+  font-size: var(--t-corps); line-height: 1.15;
+}
+.roue-choix::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--l-roue); transform: translateX(-50%);
+  border-radius: var(--r-petit); background: var(--surface);
+}
+.roue-choix.notee::before { background: var(--c-tint, var(--surface-2)); }
+.roue-defile {
+  --plein: min(25%, calc(50% - var(--l-roue) / 2));
+  position: relative; display: flex; overflow-x: auto; overflow-y: hidden; border-radius: inherit;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--plein), #000 calc(100% - var(--plein)), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--plein), #000 calc(100% - var(--plein)), transparent);
+}
+.roue-defile::-webkit-scrollbar { display: none; }
+.roue-espace { flex: 0 0 auto; width: calc((100% - var(--l-roue)) / 2); }
+.roue-valeur {
+  flex: 0 0 auto; width: var(--l-roue); min-width: var(--cible); min-height: var(--cible); padding: 4px 8px;
+  display: flex; align-items: center; justify-content: center; text-align: center; scroll-snap-align: center;
+  border: 0; border-radius: var(--r-petit); background: none; color: var(--text);
+}
+.roue-valeur[aria-pressed="true"] { font-weight: 700; color: var(--c-text, var(--text)); }
+.roue-valeur:focus-visible { outline-offset: -2px; }
+/* La mesure de la largeur commune (un instant, sans rendu) : chaque valeur à sa largeur naturelle, en 700. */
+.roue-mesure .roue-valeur { width: auto; min-width: 0; white-space: nowrap; font-weight: 700; }
+
 /* Replis */
 /* Un filet plein au-dessus (2b : pas de tirets). */
 .repli { border-top: 1px solid var(--line); scroll-margin-top: calc(8px + var(--zone-haut)); }

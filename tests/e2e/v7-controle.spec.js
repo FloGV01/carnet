@@ -16,7 +16,8 @@ import { trouverInterdits } from '../aides/mots-interdits.js';
 //   élément visible ne sort de l'écran.
 // - Pas de tirets (2b) : aucun filet ni cadre en pointillés sur ces écrans ; tout choix fait a sa coche.
 // - Réglages et Le soir en listes groupées 2b, carrés d'icônes ; l'Historique et ses puces 2b.
-// v8 (9/9) : le parcours passe aussi par les écrans de la v8 : la Durée et le détail du Sport dans leurs cartes, la
+// v8 (9/9) : le parcours passe aussi par les écrans de la v8 : le détail du Sport dans sa carte (v11 : la Durée sur sa roue,
+// toujours visible), la
 // carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur (avant, étape rythmée, pause,
 // fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), « Émotions selon ce que je faisais »
 // (graphique et tableau), Réglages › Émotions (un sens corrigé). v9 (4/8) : les écrans noirs de l'émotion (les quatre
@@ -194,7 +195,8 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 // choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau autour du disque (blanc sur le noir du relevé,
 // couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
 // d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
-// L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`.
+// L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`. La valeur
+// notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près) et sa graisse de 700.
 const sansCoche = (page) => page.evaluate(() => {
   const rgba = (c) => {
     const m = /rgba?\(([^)]+)\)/.exec(c || '');
@@ -224,6 +226,10 @@ const sansCoche = (page) => page.evaluate(() => {
     if (b.getBoundingClientRect().width < 1 || b.closest('.visuellement-cache') || b.classList.contains('question-case')) return false;
     if (b.classList.contains('bulle-mot') || (b.matches('.quatre-bulles.petites .bulle-zone') && anneauVu(b))) return false;
     if (b.classList.contains('epingle') && getComputedStyle(b.querySelector('svg')).fill !== 'none') return false;
+    if (b.classList.contains('roue-valeur')) {
+      const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
+      if (Math.abs(r.left + r.width / 2 - (d.left + d.width / 2)) <= 1 && Number(getComputedStyle(b).fontWeight) >= 700) return false;
+    }
     const svg = b.querySelector(':scope > .coche svg');
     return !svg || svg.getBoundingClientRect().width < 10;
   }).map((b) => b.textContent.trim().slice(0, 30));
@@ -323,11 +329,18 @@ const ECRANS_V10 = [
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
-  // v8 (9/9) : la Durée de la nuit (« Durée › ») et le détail du Sport (« Détail › ») ouverts dans leurs cartes.
-  ['Aujourd\'hui, Durée et Sport en détail', async (p) => {
-    await p.getByRole('button', { name: 'Durée de la nuit', exact: true }).click();
+  // v8 (9/9) : le détail du Sport (« Détail › ») ouvert dans sa carte ; v11 : la Durée de la nuit sur sa roue, toujours là,
+  // une nuit notée (la valeur au milieu, en 700, sans coche).
+  ['Aujourd\'hui, Sport en détail', async (p) => {
     await p.getByRole('button', { name: 'Sport en détail', exact: true }).click();
-  }, '.aujourdhui .heures-sommeil'],
+    const notee = p.getByRole('group', { name: 'Durée de la nuit', exact: true }).getByRole('button', { name: '7 h 30', exact: true });
+    await notee.click();
+    await expect(notee).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => notee.evaluate((b) => {
+      const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
+      return Math.abs(r.left + r.width / 2 - (d.left + d.width / 2));
+    })).toBeLessThanOrEqual(1);
+  }, '.aujourdhui .roue-choix.notee'],
   // v9 (4/8) : les écrans noirs de l'émotion, comme How We Feel : les quatre bulles et « C'était vers… » ouvert, puis la
   // carte ouverte par une bulle, puis un mot au sens corrigé, choisi : la double capsule et sa carte du bas.
   ['Émotion du moment', async (p) => {

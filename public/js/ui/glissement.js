@@ -17,9 +17,10 @@ export function sensGlissement(dx, dy, duree) {
 }
 
 // Un geste qui part d'un champ de texte (son bouton « Dicter » compris), d'une feuille, d'une boîte de dialogue ou d'un
-// parcours ouvert, ou d'un élément qui défile de côté, ne change pas de jour.
+// parcours ouvert, ou d'un élément qui défile de côté, ne change pas de jour. La roue (v11) défile de côté : elle est
+// nommée aussi, bords compris, sans dépendre de la mesure de son débord.
 const IGNORES = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), .champ-avec-dicter, .feuille, .voile, .parcours, '
-  + '[role="dialog"], [role="alertdialog"]';
+  + '.roue-choix, [role="dialog"], [role="alertdialog"]';
 export function departIgnore(cible) {
   if (!cible || typeof cible.closest !== 'function') return true;
   if (cible.closest(IGNORES)) return true;
@@ -27,4 +28,16 @@ export function departIgnore(cible) {
     if (el.scrollWidth > el.clientWidth + 1 && /^(auto|scroll)$/.test(getComputedStyle(el).overflowX)) return true;
   }
   return false;
+}
+
+// La roue (v11, composants/roue-choix.js) : l'indice de la valeur la plus proche du milieu de la bande, d'après le centre
+// de chaque valeur (en px, dans le repère de la bande). À égalité, le plus petit indice ; -1 sans valeur.
+export function indiceAuCentre(centres, milieu) {
+  let indice = -1;
+  let ecart = Infinity;
+  centres.forEach((c, i) => {
+    const d = Math.abs(c - milieu);
+    if (d < ecart) { ecart = d; indice = i; }
+  });
+  return indice;
 }

@@ -51,9 +51,9 @@ test('ordre : les champs, « Mémo vocal » et « J\'ai fini » sur une ligne, A
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
 });
 
-// Au-dessus de la bande du bas, sans défiler, avec les zones sûres de l'iPhone : P3 dans tests/e2e/v7-aujourdhui.spec.js
-// (v8, relecture de la tâche 8 : décision ouverte, docs/decisions.md). Ici, aux tailles de la v6 sans zones sûres, il ne
-// reste que sa présence et sa place.
+// Au-dessus de la bande du bas, avec les zones sûres de l'iPhone : P3 dans tests/e2e/v7-aujourdhui.spec.js (v11 : la page
+// défilée, le soir ne tenant plus sans défiler). Ici, aux tailles de la v6 sans zones sûres, il ne reste que sa présence et
+// sa place.
 test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis présent, en clair et en sombre', async ({ page }) => {
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
   for (const schema of ['light', 'dark']) {

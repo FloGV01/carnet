@@ -39,3 +39,39 @@ export async function simulerZonesSures(page, { haut = 47, bas = 34 } = {}) {
   await page.addInitScript(poser, { haut, bas });
   await page.evaluate(poser, { haut, bas });
 }
+
+// Un glissement au doigt (v7, B4 ; tests/e2e/v7-aujourdhui.spec.js jusqu'à la v10) : posé au centre de l'élément visé,
+// déplacé de (dx, dy), levé après `duree` ms d'horloge (0 : levé aussitôt, sans attendre).
+export async function glisser(page, selecteur, dx, dy = 0, duree = 300) {
+  const depart = await page.locator(selecteur).first().evaluate((el, d) => {
+    const r = el.getBoundingClientRect();
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    el.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true }));
+    if (!d.duree) el.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x + d.dx, clientY: y + d.dy, bubbles: true }));
+    return [x, y];
+  }, { dx, dy, duree });
+  if (!duree) return;
+  await page.clock.runFor(duree);
+  await page.locator(selecteur).first().evaluate((el, [x, y, ddx, ddy]) => {
+    el.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x + ddx, clientY: y + ddy, bubbles: true }));
+  }, [...depart, dx, dy]);
+}
+
+// La roue (v11, ui/composants/roue-choix.js) au doigt : le doigt posé sur la bande (touchstart), la bande amenée sur chaque
+// libellé tour à tour (scrollLeft, en attendant son `scroll`), puis le doigt levé (touchend). `roue` : le groupe (un
+// locator). La fin du glissement vient 150 ms après le dernier `scroll` ou le touchend, à l'horloge de l'app.
+export async function glisserRoue(roue, ...libelles) {
+  await roue.evaluate(async (g, noms) => {
+    const bande = g.querySelector('.roue-defile') || g;
+    bande.dispatchEvent(new Event('touchstart', { bubbles: true }));
+    for (const nom of noms) {
+      const b = [...bande.querySelectorAll('button')].find((x) => x.textContent.trim() === nom);
+      if (!b) throw new Error(`roue : « ${nom} » introuvable`);
+      const [r, q] = [bande.getBoundingClientRect(), b.getBoundingClientRect()];
+      const cible = bande.scrollLeft + (q.left + q.width / 2) - (r.left + r.width / 2);
+      if (Math.abs(cible - bande.scrollLeft) < 0.5) continue;
+      await new Promise((ok) => { bande.addEventListener('scroll', ok, { once: true }); bande.scrollLeft = cible; });
+    }
+    bande.dispatchEvent(new Event('touchend', { bubbles: true }));
+  }, libelles);
+}

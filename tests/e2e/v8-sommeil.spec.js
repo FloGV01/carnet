@@ -3,11 +3,12 @@ import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 
-// v8 (5/9) · Le sommeil en heures et en qualité (spec §7 bis), les détails dans leur carte (Q5) : la carte Sommeil et son lien
-// « Durée › » (la rangée Durée ne tient pas avec le soir sans défiler : docs/decisions.md), « Nuit en détail » masqué par
-// défaut et réaffichable, « Détail › » du Sport et du Contact, le point de vigilance 3 (le soir sans défiler avec les zones
-// sûres de l'iPhone, en clair et en sombre, entre 0 h et 4 h, avec le bandeau), les lectures (résumé du jour, Analyse).
-// Données inventées.
+// v8 (5/9) · Le sommeil en heures et en qualité (spec §7 bis), les détails dans leur carte (Q5) : la carte Sommeil,
+// « Nuit en détail » masqué par défaut et réaffichable, « Détail › » du Sport et du Contact, le point de vigilance 3 (le
+// soir avec les zones sûres de l'iPhone, en clair et en sombre, entre 0 h et 4 h, avec le bandeau), les lectures (résumé
+// du jour, Analyse). v11 (2/11) : la durée se note sur la roue de la carte Sommeil, toujours visible (spec §5 ; le détail de
+// la roue dans v11-roue.spec.js), à la place du lien « Durée › » et de sa rangée ; le soir ne tient plus sans défiler (spec
+// §13) : tout ce qu'il faut toucher passe au-dessus de la bande, la page défilée. Données inventées.
 // Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844, sauf mention).
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -20,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-const lienDuree = (page) => page.getByRole('button', { name: /^Durée de la nuit/ });
+const duree = (page) => groupe(page, 'Durée de la nuit');
 const lienDetail = (page, nom) => page.getByRole('button', { name: `${nom} en détail`, exact: true });
 const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, nom) });
 const boite = (loc) => loc.evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, l: r.width, h: r.height, bas: r.bottom, droite: r.right }; });
@@ -56,13 +57,14 @@ const pointsPrisParUnLien = (loc) => loc.evaluate((e) => {
   return n;
 });
 
-// La marge de chaque élément au-dessus de la bande du bas (positive : il est au-dessus), et le défilement de la page.
-const margesSurLaBande = (page, selecteurs) => page.evaluate((liste) => {
+// v11 (spec §13) : la page défilée jusqu'en bas, la marge de chaque élément au-dessus de la bande du bas (positive : il est
+// au-dessus), et le défilement de côté.
+const margesAFondDePage = (page, selecteurs) => page.evaluate((liste) => {
+  window.scrollTo(0, document.documentElement.scrollHeight);
   const bande = document.querySelector('.actions-flottantes').getBoundingClientRect().top;
-  return { scrollY: window.scrollY, large: document.documentElement.scrollWidth > window.innerWidth, marges: liste.map((x) => [x, bande - document.querySelector(x).getBoundingClientRect().bottom]) };
+  return { large: document.documentElement.scrollWidth > window.innerWidth, marges: liste.map((x) => [x, bande - document.querySelector(x).getBoundingClientRect().bottom]) };
 }, selecteurs);
-const toutAuDessus = (m, quoi) => {
-  expect(m.scrollY, quoi).toBe(0);
+const atteignable = (m, quoi) => {
   expect(m.large, `${quoi} : pas de défilement de côté`).toBe(false);
   for (const [x, marge] of m.marges) expect(marge, `${quoi} · ${x}`).toBeGreaterThanOrEqual(0);
 };
@@ -78,18 +80,19 @@ const soir = async (page) => {
 // ---------- Point de vigilance 3 ----------
 
 // v8 (8/9, Q27) : avec les zones sûres de l'iPhone (390 × 844, 47 px en haut et 34 en bas, spec §12.7), à 21 h et entre 0 h
-// et 4 h, puis avec le bandeau (relecture : il restait à 390 × 797 sans zones sûres, 34 px de plus que l'iPhone).
+// et 4 h, puis avec le bandeau (relecture : il restait à 390 × 797 sans zones sûres, 34 px de plus que l'iPhone). v11 : la
+// roue de la carte Sommeil (environ 54 px de plus, spec §13) fait défiler le soir ; la dernière carte passe au-dessus de
+// la bande, la page défilée.
 const vigilance3 = async (page, quoi) => {
   await soir(page);
-  // La Durée est fermée au départ : la carte Sommeil n'a que la qualité, et le lien ne lui prend aucune hauteur.
-  await expect(lienDuree(page), quoi).toHaveAttribute('aria-expanded', 'false');
-  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
+  await expect(duree(page), quoi).toBeVisible();
+  await expect(duree(page).locator('[aria-pressed="true"]'), quoi).toHaveCount(0);
   const [sommeil, traitement] = await Promise.all([boite(carteDe(page, 'Sommeil')), boite(carteDe(page, 'Traitement pris'))]);
-  expect(Math.abs(sommeil.h - traitement.h), `${quoi} : Sommeil aussi haute que Traitement pris`).toBeLessThanOrEqual(0.5);
-  toutAuDessus(await margesSurLaBande(page, ['.carte-champ:has(#points-positifs)']), quoi);
+  expect(sommeil.h - traitement.h, `${quoi} : la roue ajoute 60 px au plus à la carte Sommeil`).toBeLessThanOrEqual(60);
+  atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.fini-bouton']), quoi);
 };
 
-test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › », tient sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h', async ({ page }) => {
+test('vigilance 3 · le soir, avec la roue de la carte Sommeil, se défile jusqu\'à sa dernière carte au-dessus de la bande avec les zones sûres de l\'iPhone, en clair et en sombre, à 21 h et entre 0 h et 4 h', async ({ page }) => {
   await simulerZonesSures(page);
   for (const [nom, heure] of [['21 h', new Date(2026, 9, 15, 21, 0)], ['01:30', new Date(2026, 9, 16, 1, 30)]]) {
     for (const [schema] of THEMES) {
@@ -102,11 +105,9 @@ test('vigilance 3 · le soir, avec la carte Sommeil et son lien « Durée › »
   }
 });
 
-// Avec le bandeau, le soir passe 28,4 px sous la bande : une décision ouverte de l'utilisateur (docs/decisions.md, v8,
-// « Fiabilité (tâche 8) »), à trancher sur l'iPhone. Un test.fail() qui passe fait échouer la suite : une fois la mise en
-// page corrigée, on retire la marque.
-test('vigilance 3 · avec le bandeau « Nouvelle version prête », le soir tient encore sans défiler avec les zones sûres de l\'iPhone, en clair et en sombre', async ({ page }) => {
-  test.fail(true, 'décision ouverte (docs/decisions.md, v8, tâche 8) : avec le bandeau, le soir est 28,4 px sous la bande');
+// Avec le bandeau, le soir passait 28,4 px sous la bande (v8, test.fail(), décision ouverte) : v11, le soir défile (spec §13),
+// et sa dernière carte passe au-dessus de la bande, bandeau compris.
+test('vigilance 3 · avec le bandeau « Nouvelle version prête », le soir se défile encore jusqu\'à sa dernière carte au-dessus de la bande, avec les zones sûres de l\'iPhone, en clair et en sombre', async ({ page }) => {
   await simulerZonesSures(page);
   for (const [schema] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
@@ -118,175 +119,136 @@ test('vigilance 3 · avec le bandeau « Nouvelle version prête », le soir tien
 });
 
 // ---------- La Durée ----------
+// v11 (2/11) : la roue de la carte Sommeil, toujours visible (spec §5), remplace « Durée › » et sa rangée de 7 pastilles.
 
-test('« Durée › » ouvre la durée sous Mal · Moyen · Bien : un toucher enregistre, un second efface ; le lien dit la durée notée', async ({ page }) => {
-  const lien = lienDuree(page);
-  await expect(lien).toHaveText('Durée');
-  await expect(lien).toHaveAccessibleName('Durée de la nuit');
-  await lien.click();
-  await expect(lien).toHaveAttribute('aria-expanded', 'true');
-  await expect(lien).toHaveAttribute('aria-controls', 'detail-duree');
-  const duree = groupe(page, 'Durée de la nuit');
-  expect(await duree.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label') || b.textContent.trim())))
-    .toEqual(['4 h ou moins', '5 h', '6 h', '7 h', '8 h', '9 h', '10 h ou plus']);
-  // Dans la carte Sommeil, sous la qualité : 4 puis 3 choix, chaque rangée sur toute la largeur, des cibles de 44.
-  const g = await page.locator('#detail-duree').evaluate((zone) => {
-    const carte = zone.closest('.carte-champ').getBoundingClientRect();
-    const qualite = zone.closest('.carte-champ').querySelector('.segmente').getBoundingClientRect();
-    const bs = [...zone.querySelectorAll('button')].map((b) => b.getBoundingClientRect());
-    return { carte: [carte.left, carte.right], sousQualite: bs.every((b) => b.top >= qualite.bottom), rangees: [...new Set(bs.map((b) => Math.round(b.top)))].length,
-      premiers: bs.slice(0, 4).every((b) => Math.abs(b.top - bs[0].top) < 1), gauche: [bs[0].left, bs[4].left], droite: [bs[3].right, bs[6].right], tailles: bs.map((b) => [b.width, b.height]) };
+test('la Durée, sur la roue sous Mal · Moyen · Bien : un toucher enregistre la nuit qui précède le jour, le résumé du jour la dit ; un second toucher l\'efface', async ({ page }) => {
+  const d = duree(page);
+  await expect(d.getByRole('button')).toHaveCount(13);
+  // Dans la carte Sommeil, sous la qualité, de toute sa largeur, une cible de 44 de haut.
+  const g = await d.evaluate((r) => {
+    const carte = r.closest('.carte-champ');
+    const [q, b] = [carte.querySelector('.segmente').getBoundingClientRect(), r.getBoundingClientRect()];
+    return { sommeil: carte.classList.contains('teinte-sommeil'), sous: b.top >= q.bottom, bords: [Math.abs(b.left - q.left), Math.abs(b.right - q.right)], h: b.height };
   });
-  expect(g.sousQualite).toBe(true);
-  expect(g.rangees).toBe(2);
-  expect(g.premiers).toBe(true);
-  expect(Math.abs(g.gauche[0] - g.gauche[1])).toBeLessThanOrEqual(0.5);
-  expect(Math.abs(g.droite[0] - g.droite[1])).toBeLessThanOrEqual(0.5);
-  expect(g.droite[0]).toBeLessThanOrEqual(g.carte[1]);
-  for (const [l, h] of g.tailles) { expect(l).toBeGreaterThanOrEqual(44); expect(h).toBeGreaterThanOrEqual(44); }
+  expect(g.sommeil).toBe(true);
+  expect(g.sous).toBe(true);
+  for (const e of g.bords) expect(e).toBeLessThanOrEqual(0.5);
+  expect(g.h).toBeGreaterThanOrEqual(44);
 
-  // Un toucher enregistre (la nuit qui précède le jour), le lien et le résumé du jour le disent ; un second efface.
-  await duree.getByRole('button', { name: '6 h', exact: true }).click();
+  await d.getByRole('button', { name: '6 h', exact: true }).click();
   await expect.poll(async () => (await entreeDuJour(page))?.heuresSommeil).toBe(6);
-  await expect(duree.getByRole('button', { name: '6 h', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(lien).toHaveText('6 h');
-  await expect(lien).toHaveAccessibleName('Durée de la nuit : 6 h');
+  await expect(d.getByRole('button', { name: '6 h', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.resume-jour')).toHaveText('nuit 6 h');
   await toucher(page, 'Sommeil', 'Mal');
   await expect(page.locator('.resume-jour')).toHaveText('nuit mal · 6 h');
-  // La rangée reste ouverte après un choix : une erreur se corrige tout de suite.
-  await duree.getByRole('button', { name: '6 h', exact: true }).click();
+  // Une erreur se corrige tout de suite : un second toucher efface, un autre note.
+  await d.getByRole('button', { name: '6 h', exact: true }).click();
   await expect.poll(async () => (await entreeDuJour(page))?.heuresSommeil ?? null).toBeNull();
-  await expect(lien).toHaveText('Durée');
-  await duree.getByRole('button', { name: '4 h ou moins' }).click();
+  await expect(page.locator('.resume-jour')).toHaveText('nuit mal');
+  await d.getByRole('button', { name: '4 h ou moins' }).click();
   await expect.poll(async () => (await entreeDuJour(page))?.heuresSommeil).toBe(4);
-  await expect(lien).toHaveText('4 h ou moins');
-  await lien.click();
-  await expect(lien).toHaveAttribute('aria-expanded', 'false');
-  await expect(duree).toHaveCount(0);
-  await expect(lien).not.toHaveAttribute('aria-controls');
+  await expect(page.locator('.resume-jour')).toHaveText('nuit mal · 4 h ou moins');
+  await expect(d.locator('[aria-pressed="true"]')).toHaveText(['4 h ou moins']);
 });
 
-test('la Durée est fermée à chaque ouverture et à chaque changement de jour, même notée ; elle ne s\'ouvre jamais seule', async ({ page }) => {
+test('la roue montre la nuit notée de chaque jour, jamais celle d\'un autre, à chaque ouverture et à chaque changement de jour', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', { sommeilRessenti: 'sommeil:bien', heuresSommeil: 9 }));
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-14', { heuresSommeil: 10 }));
   await page.reload();
-  await expect(lienDuree(page)).toHaveText('9 h');
-  await expect(lienDuree(page)).toHaveAttribute('aria-expanded', 'false');
-  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
-  await lienDuree(page).click();
-  await expect(groupe(page, 'Durée de la nuit').getByRole('button', { name: '9 h', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // La veille : fermée, avec sa propre durée.
+  const notee = () => duree(page).locator('[aria-pressed="true"]');
+  await expect(notee()).toHaveText(['9 h']);
+  // La veille : sa propre nuit ; l'avant-veille, rien.
   await page.getByRole('button', { name: 'Jour précédent' }).click();
   await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
-  await expect(lienDuree(page)).toHaveText('10 h ou plus');
-  await expect(lienDuree(page)).toHaveAttribute('aria-expanded', 'false');
-  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
-  // Retour à aujourd'hui, puis une nouvelle ouverture de l'app : fermée.
+  await expect(notee()).toHaveText(['10 h ou plus']);
+  await page.getByRole('button', { name: 'Jour précédent' }).click();
+  await expect(page).toHaveURL(/#\/jour\/2026-10-13$/);
+  await expect(duree(page)).toBeVisible();
+  await expect(notee()).toHaveCount(0);
+  // Retour à aujourd'hui, puis une nouvelle ouverture de l'app.
   await page.getByRole('link', { name: 'Revenir à aujourd\'hui' }).click();
-  await expect(lienDuree(page)).toHaveAttribute('aria-expanded', 'false');
-  await lienDuree(page).click();
+  await expect(notee()).toHaveText(['9 h']);
   await page.reload();
-  await expect(lienDuree(page)).toHaveAttribute('aria-expanded', 'false');
-  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
+  await expect(notee()).toHaveText(['9 h']);
 });
 
-// La mise en page de la carte Sommeil, Durée ouverte : chaque choix, la carte et sa tête, en coordonnées de la page.
-const planSommeil = (page) => page.locator('#detail-duree').evaluate((zone) => {
-  const carte = zone.closest('.carte-champ');
+// La mise en page de la carte Sommeil : la carte, sa tête, la roue, et la largeur et la hauteur de chaque valeur (leur place
+// suit le défilement de la bande), en coordonnées de la page.
+const planSommeil = (page) => duree(page).evaluate((roue) => {
+  const carte = roue.closest('.carte-champ');
   const r = (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top + window.scrollY, b.width, b.height].map((v) => Math.round(v * 10) / 10); };
-  return { carte: r(carte), tete: r(carte.querySelector('.tete-rubrique')), choix: [...zone.querySelectorAll('button')].map(r) };
+  return { carte: r(carte), tete: r(carte.querySelector('.tete-rubrique')), roue: r(roue),
+    valeurs: [...roue.querySelectorAll('.roue-valeur')].map((b) => r(b).slice(2)) };
 });
 
-test('Durée : un choix ne change pas la mise en page (choix, tête, carte), « 4 h ou moins » puis « 10 h ou plus », en clair et en sombre, à 390 et 375, au texte par défaut et en grand texte', async ({ page }) => {
-  const lien = lienDuree(page);
-  const duree = groupe(page, 'Durée de la nuit');
-  await lien.click();
-  // « ou moins » et « ou plus » : en petit, en gris secondaire et en 400, à la couleur du choix une fois choisi ; la coche
-  // devant le nombre seul, qui passe en 600.
-  const precision = (nom) => duree.getByRole('button', { name: nom, exact: true }).evaluate((b) => {
-    const [petit, nombre, coche] = [b.querySelector('small'), b.querySelector('.libelle-choix'), b.querySelector('.coche')];
-    const [c, n] = [coche.getBoundingClientRect(), nombre.getBoundingClientRect()];
-    return { couleur: getComputedStyle(petit).color, graisse: getComputedStyle(petit).fontWeight, nombre: getComputedStyle(nombre).fontWeight,
-      coche: c.width > 0 ? Math.abs((c.top + c.bottom) / 2 - (n.top + n.bottom) / 2) < 3 && c.right <= n.left : null };
-  });
+test('Durée : un choix ne change pas la mise en page (valeurs, roue, tête, carte), « 4 h ou moins » puis « 10 h ou plus », en clair et en sombre, à 390 et 375, au texte par défaut et en grand texte', async ({ page }) => {
+  const d = duree(page);
+  // Notée : en 700, à la couleur du texte de la rubrique ; non notée : en 400, à la couleur du texte.
+  const style = (nom) => d.getByRole('button', { name: nom, exact: true }).evaluate((b) => [getComputedStyle(b).fontWeight, getComputedStyle(b).color]);
   for (const [schema, largeur, px] of [['light', 390, null], ['dark', 390, null], ['light', 375, null], ['dark', 375, null], ['light', 390, 21], ['light', 390, 23], ['light', 375, 21], ['light', 375, 23]]) {
     await page.emulateMedia({ colorScheme: schema });
     await page.setViewportSize({ width: largeur, height: 844 });
     await taillePolice(page, px);
     const quoi = `${schema} · ${largeur} · ${px ? `${px} px` : 'texte par défaut'}`;
     const t = schema === 'light' ? clair : sombre;
-    await expect(lien).toHaveText('Durée');
+    await expect(d.locator('[aria-pressed="true"]')).toHaveCount(0);
     const avant = await planSommeil(page);
+    // Toutes les valeurs de la même largeur, la plus longue en 700 comprise.
+    for (const [l] of avant.valeurs) expect(Math.abs(l - avant.valeurs[0][0]), quoi).toBeLessThanOrEqual(0.5);
     for (const nom of ['4 h ou moins', '10 h ou plus']) {
-      // (la couleur d'un choix suit une transition : on attend sa fin)
-      if (!px) await expect.poll(() => precision(nom), `${quoi} · ${nom}`).toEqual({ couleur: rgb(t['text-2']), graisse: '400', nombre: '400', coche: null });
-      await duree.getByRole('button', { name: nom, exact: true }).click();
-      await expect(lien).toHaveText(nom);
+      expect(await style(nom), `${quoi} · ${nom}`).toEqual(['400', rgb(t.text)]);
+      await d.getByRole('button', { name: nom, exact: true }).click();
+      await expect(d.getByRole('button', { name: nom, exact: true })).toHaveAttribute('aria-pressed', 'true');
       expect(await planSommeil(page), `${quoi} · ${nom} choisi`).toEqual(avant);
-      if (!px) await expect.poll(() => precision(nom), `${quoi} · ${nom} choisi`).toEqual({ couleur: rgb(t['c-sommeil-on']), graisse: '400', nombre: '600', coche: true });
+      expect(await style(nom), `${quoi} · ${nom} choisi`).toEqual(['700', rgb(t['c-sommeil-text'])]);
     }
-    await duree.getByRole('button', { name: '10 h ou plus', exact: true }).click();
-    await expect(lien).toHaveText('Durée');
+    await d.getByRole('button', { name: '10 h ou plus', exact: true }).click();
+    await expect(d.locator('[aria-pressed="true"]')).toHaveCount(0);
     expect(await planSommeil(page), `${quoi} · effacé`).toEqual(avant);
   }
 });
 
-test('Durée en grand texte (21 à 28 px, 390 et 375), ouverte et notée : rien ne déborde, chaque choix d\'une rangée a la même largeur, les colonnes s\'alignent ; en très grand texte, deux colonnes égales ; les liens gardent toute leur cible', async ({ page }) => {
+test('Durée en grand texte (21 à 28 px, 390 et 375), notée : rien ne déborde, la roue reste dans sa carte, ses valeurs gardent une même largeur et leur texte entier ; les liens gardent toute leur cible', async ({ page }) => {
   await toucher(page, 'Sommeil', 'Moyen');
-  await lienDuree(page).click();
-  // Le choix le plus large pour sa place, fait : sa coche compte.
-  await groupe(page, 'Durée de la nuit').getByRole('button', { name: '4 h ou moins' }).click();
-  await expect(lienDuree(page)).toHaveText('4 h ou moins');
+  // La valeur la plus longue, notée : en 700.
+  await duree(page).getByRole('button', { name: '4 h ou moins' }).click();
+  await expect(duree(page).locator('[aria-pressed="true"]')).toHaveText(['4 h ou moins']);
   for (const largeur of [390, 375]) {
     await page.setViewportSize({ width: largeur, height: 844 });
     for (const px of [21, 23, 24, 26, 28]) {
       await taillePolice(page, px);
       const quoi = `${largeur} · ${px} px`;
-      const g = await page.locator('#detail-duree').evaluate((zone) => {
-        const carte = zone.closest('.carte-champ').getBoundingClientRect();
+      const g = await duree(page).evaluate((roue) => {
+        const carte = roue.closest('.carte-champ').getBoundingClientRect();
+        const r = roue.getBoundingClientRect();
         const debords = [];
-        const rangees = [];
-        for (const b of zone.querySelectorAll('button')) {
-          const r = b.getBoundingClientRect();
-          const nom = b.getAttribute('aria-label');
-          if (b.scrollWidth > b.clientWidth || b.scrollHeight > b.clientHeight) debords.push(nom);
-          if (r.left < carte.left - 0.5 || r.right > carte.right + 0.5) debords.push(`${nom} hors de la carte`);
-          for (const k of b.querySelectorAll('.coche, .libelle-choix, small')) {
-            const q = k.getBoundingClientRect();
-            if (q.width > 0 && (q.left < r.left || q.right > r.right || q.top < r.top || q.bottom > r.bottom)) debords.push(`${nom} : ${k.textContent || 'coche'} hors du choix`);
-          }
-          const rangee = rangees.find((x) => Math.abs(x.haut - r.top) < 1);
-          if (rangee) rangee.choix.push([r.left, r.right]); else rangees.push({ haut: r.top, choix: [[r.left, r.right]] });
+        if (r.left < carte.left - 0.5 || r.right > carte.right + 0.5) debords.push('roue hors de la carte');
+        const largeurs = [];
+        for (const b of roue.querySelectorAll('.roue-valeur')) {
+          if (b.scrollWidth > b.clientWidth || b.scrollHeight > b.clientHeight) debords.push(`${b.textContent} coupé`);
+          largeurs.push(b.getBoundingClientRect().width);
         }
-        return { debords, rangees: rangees.map((x) => x.choix) };
+        return { debords, largeurs, bande: r.width };
       });
       expect(g.debords, quoi).toEqual([]);
-      const proches = (valeurs, q) => { for (const v of valeurs) expect(Math.abs(v - valeurs[0]), q).toBeLessThanOrEqual(0.5); };
-      const tailles = g.rangees.map((x) => x.length);
-      if (px === 21) expect(tailles, `${quoi} : 4 puis 3`).toEqual([4, 3]);
-      if (px === 28) expect(tailles, `${quoi} : deux colonnes`).toEqual([2, 2, 2, 1]);
-      expect([[4, 3], [2, 2, 2, 1]], quoi).toContainEqual(tailles);
-      for (const rangee of g.rangees) proches(rangee.map(([l, d]) => d - l), `${quoi} : même largeur dans une rangée`);
-      proches(g.rangees.map((x) => x[0][0]), `${quoi} : bords gauches alignés`);
-      proches(g.rangees.filter((x) => x.length === tailles[0]).map((x) => x.at(-1)[1]), `${quoi} : bords droits alignés`);
-      if (tailles.length === 4) {
-        proches(g.rangees.flat().map(([l, d]) => d - l), `${quoi} : deux colonnes égales`);
-        proches(g.rangees.map((x) => x[0][1]), `${quoi} : première colonne alignée`);
+      for (const l of g.largeurs) {
+        expect(Math.abs(l - g.largeurs[0]), `${quoi} : même largeur`).toBeLessThanOrEqual(0.5);
+        expect(l, `${quoi} : pas plus large que la bande`).toBeLessThanOrEqual(g.bande + 0.5);
       }
-      for (const lien of [lienDuree(page), lienDetail(page, 'Contact'), lienDetail(page, 'Sport')]) await cibleEntiere(lien, `${quoi} · ${await lien.getAttribute('aria-label')}`);
+      for (const lien of [lienDetail(page, 'Contact'), lienDetail(page, 'Sport')]) await cibleEntiere(lien, `${quoi} · ${await lien.getAttribute('aria-label')}`);
     }
   }
 });
 
 // ---------- Les liens des cartes : 2b, AA, cibles ----------
 
-test('« Durée › » et « Détail › » : sur la première ligne du titre, en couleur action 13/600, AA, des cibles de 44 qu\'on touche en entier, sans hauteur pour la carte ni surface prise aux choix', async ({ page }) => {
+// v11 : le contrôle reste sur Contact et Sport ; le Sommeil n'a plus de lien, sa roue garde sa surface comme les choix.
+test('« Détail › » : sur la première ligne du titre, en couleur action 13/600, AA, des cibles de 44 qu\'on touche en entier, sans hauteur pour la carte ni surface prise aux choix', async ({ page }) => {
   await soir(page);
   await toucher(page, 'Sommeil', 'Bien');
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    for (const [lien, carte, titre] of [[lienDuree(page), 'Sommeil', 'Sommeil'], [lienDetail(page, 'Contact'), 'Contact humain', 'Contact humain'], [lienDetail(page, 'Sport'), 'Sport / mouvement', 'Sport / mouvement']]) {
+    for (const [lien, carte, titre] of [[lienDetail(page, 'Contact'), 'Contact humain', 'Contact humain'], [lienDetail(page, 'Sport'), 'Sport / mouvement', 'Sport / mouvement']]) {
       const quoi = `${schema} · ${titre}`;
       const m = await lien.evaluate((b) => {
         const c = b.closest('.carte-champ');
@@ -309,15 +271,13 @@ test('« Durée › » et « Détail › » : sur la première ligne du titre, e
       await expect(carteDe(page, carte).locator('.titre-rubrique')).toHaveText(titre);
     }
   }
-  // « Sommeil : Bien » (choisi), Mal et Moyen, et les Oui / Non de Contact et Sport gardent toute leur surface.
-  const choixSousLesLiens = () => [...['Mal', 'Moyen', 'Bien'].map((n) => groupe(page, 'Sommeil').getByRole('button', { name: n })),
+  // « Sommeil : Bien » (choisi), Mal et Moyen, les valeurs de la roue, et les Oui / Non de Contact et Sport gardent toute
+  // leur surface ; la carte Sommeil n'a aucun lien.
+  await expect(carteDe(page, 'Sommeil').locator('.lien-rubrique')).toHaveCount(0);
+  const choixSousLesLiens = [...['Mal', 'Moyen', 'Bien'].map((n) => groupe(page, 'Sommeil').getByRole('button', { name: n })),
+    ...await duree(page).getByRole('button').all(),
     ...['Contact humain', 'Sport / mouvement'].flatMap((g) => ['Oui', 'Non'].map((n) => groupe(page, g).getByRole('button', { name: n })))];
-  for (const choix of choixSousLesLiens()) expect(await pointsPrisParUnLien(choix), await choix.getAttribute('aria-label') || await choix.textContent()).toBe(0);
-  // La Durée ouverte (le lien garde alors la largeur de « 4 h ou moins ») : pareil, et la rangée des durées aussi.
-  await lienDuree(page).click();
-  await cibleEntiere(lienDuree(page), 'Durée ouverte');
-  for (const choix of [...choixSousLesLiens(), ...await groupe(page, 'Durée de la nuit').getByRole('button').all()]) expect(await pointsPrisParUnLien(choix)).toBe(0);
-  await lienDuree(page).click();
+  for (const choix of choixSousLesLiens) expect(await pointsPrisParUnLien(choix), await choix.getAttribute('aria-label') || await choix.textContent()).toBe(0);
   // Contact et Sport restent côte à côte, de même hauteur, aussi hautes qu'en v7 (titre sur deux lignes).
   const [contact, sport] = await Promise.all([boite(carteDe(page, 'Contact humain')), boite(carteDe(page, 'Sport / mouvement'))]);
   expect(Math.abs(contact.y - sport.y)).toBeLessThanOrEqual(0.5);
@@ -394,7 +354,8 @@ test('« Nuit en détail » est masqué par défaut ; une nuit déjà notée s\'
   await expect(nuit.locator('.repli-resume')).toHaveText('23:20 → 07:10 · 1 réveil');
   await nuit.click();
   await expect(page.locator('#coucher')).toHaveValue('23:20');
-  await expect(lienDuree(page)).toHaveText('Durée');
+  await expect(duree(page)).toBeVisible();
+  await expect(duree(page).locator('[aria-pressed="true"]')).toHaveCount(0);
 
   // Réglages › Le soir : la ligne « Nuit en détail », éteinte au départ ; allumée, le repli revient sur le soir.
   await aller(page, '#/reglages/journee');

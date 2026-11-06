@@ -11,7 +11,9 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('le soir sans champ Humeur : 5 touchers, sans défilement à 390 × 797, en mode sombre', async ({ page }) => {
+// v11 (2/11, spec §13) : le soir ne tient plus sans défiler ; les points positifs passent au-dessus de la bande, la page
+// défilée.
+test('le soir sans champ Humeur : 5 touchers, à 390 × 797, en mode sombre, sans débord de côté', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.setViewportSize({ width: 390, height: 797 });
   await page.reload();
@@ -23,11 +25,11 @@ test('le soir sans champ Humeur : 5 touchers, sans défilement à 390 × 797, en
   await toucher(page, 'Sport / mouvement', 'Non');
   await toucher(page, 'Traitement pris', 'Oui');
   await expect.poll(async () => (await entreeDuJour(page))?.traitementPris).toBe('traitementPris:oui');
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const positifs = await page.locator('#points-positifs').boundingBox();
   const flottants = await page.locator('.actions-flottantes').boundingBox();
   expect(positifs.y + positifs.height).toBeLessThanOrEqual(flottants.y);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await entreeDuJour(page)).toMatchObject({ humeur: null });
 });
 
