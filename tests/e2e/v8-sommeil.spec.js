@@ -272,11 +272,13 @@ test('« Détail › » : sur la première ligne du titre, en couleur action 13/
     }
   }
   // « Sommeil : Bien » (choisi), Mal et Moyen, les valeurs de la roue, et les Oui / Non de Contact et Sport gardent toute
-  // leur surface ; la carte Sommeil n'a aucun lien.
+  // leur surface ; la carte Sommeil n'a aucun lien. v11 (3/11) : les valeurs des roues de Contact et de Sport, sous leurs
+  // Oui / Non, aussi.
   await expect(carteDe(page, 'Sommeil').locator('.lien-rubrique')).toHaveCount(0);
   const choixSousLesLiens = [...['Mal', 'Moyen', 'Bien'].map((n) => groupe(page, 'Sommeil').getByRole('button', { name: n })),
     ...await duree(page).getByRole('button').all(),
-    ...['Contact humain', 'Sport / mouvement'].flatMap((g) => ['Oui', 'Non'].map((n) => groupe(page, g).getByRole('button', { name: n })))];
+    ...['Contact humain', 'Sport / mouvement'].flatMap((g) => ['Oui', 'Non'].map((n) => groupe(page, g).getByRole('button', { name: n }))),
+    ...await groupe(page, 'Comment c\'était').getByRole('button').all(), ...await groupe(page, 'Durée du sport').getByRole('button').all()];
   for (const choix of choixSousLesLiens) expect(await pointsPrisParUnLien(choix), await choix.getAttribute('aria-label') || await choix.textContent()).toBe(0);
   // Contact et Sport restent côte à côte, de même hauteur, aussi hautes qu'en v7 (titre sur deux lignes).
   const [contact, sport] = await Promise.all([boite(carteDe(page, 'Contact humain')), boite(carteDe(page, 'Sport / mouvement'))]);

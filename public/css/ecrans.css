@@ -449,8 +449,22 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 .aujourdhui .segmente button { min-width: 0; }
 
-/* La durée de la nuit (v11, spec §5) : la roue, sous Mal · Moyen · Bien, toujours visible (composants.css). */
+/* La durée de la nuit (v11, spec §5) : la roue, sous Mal · Moyen · Bien, toujours visible (composants.css) ; l'effet du
+   contact et la durée du sport, sous Oui / Non (spec §5.4). */
 .carte-champ > .roue-choix { margin-top: 2px; }
+/* Contact et Sport côte à côte (spec §5.4) : la carte est étroite, on y voit surtout la valeur du milieu. Les voisines n'y
+   montreraient qu'une tranche, parfois une lettre coupée (le « t » de « Ressourçant » autour de « Neutre ») : la valeur du
+   milieu prend la bande, moins 8 px de chaque côté, la marge intérieure des voisines, où il n'y a jamais de texte. La
+   bande reste visible autour de la fenêtre, et rien ne change dans le détail ni dans une carte seule, en pleine largeur.
+   Côte à côte (la paire a la place de deux demi-cartes de 8,4 em et de leur écart), les deux roues ont deux lignes de haut
+   (l'interligne de 1,15 de la roue, et ses marges de 4 px) : « Moins de 15 min » passe à la ligne dès 18 px de texte, et
+   une roue plus haute que sa voisine décalerait les Oui / Non, alignés depuis la v7. Au texte par défaut, cela fait
+   44,8 px au lieu de 44. L'une sous l'autre, chacune garde sa hauteur. */
+.aujourdhui .deux-colonnes { container: paire / inline-size; }
+.deux-colonnes .roue-choix { --l-roue: min(max(var(--l-valeur), calc(100% - 16px)), 100%); }
+@container paire (min-width: calc(16.8em + 8px)) {
+  .deux-colonnes .roue-valeur { min-height: max(var(--cible), calc(2 * 1.15em + 8px)); }
+}
 /* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. */
 .carte-detail { gap: 6px; padding-bottom: 12px; }
 

@@ -20,7 +20,7 @@ import { TeteRubrique } from '../composants/rubrique.js';
 import { sensGlissement, departIgnore } from '../glissement.js';
 import { phraseResume, minusculeInitiale } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
-import { normaliserJournee, champsAffiches, repliAffiche, repliNuitAffiche, NOM_PESE_RECHARGE, NOM_NUIT } from '../../domain/journee.js';
+import { normaliserJournee, champsAffiches, repliAffiche, repliNuitAffiche, changerPremiereLigne, NOM_PESE_RECHARGE, NOM_NUIT } from '../../domain/journee.js';
 import { VALEURS_HEURES_SOMMEIL, texteHeuresSommeil } from '../../domain/champs.js';
 import { estExplosion } from '../../domain/explosions.js';
 import { zoneDe } from '../../domain/carte-roue.js';
@@ -47,7 +47,9 @@ export function options(items, liste, actuel) {
     .map((i) => ({ valeur: i.id, libelle: i.libelle }));
 }
 
-// Plusieurs contacts (v5) : une ligne par contact (avec qui, comment c'était), comme les activités.
+// Plusieurs contacts (v5) : une ligne par contact (avec qui, comment c'était), comme les activités. v11 (spec §5.4) :
+// « comment c'était » se règle sur la roue, la même que dans la carte, sur les mêmes données (la carte montre la première
+// ligne).
 function DetailContact({ entree, items, surChanger }) {
   const [enPlus, setEnPlus] = useState(false);
   const lignes = entree.contacts || [];
@@ -64,14 +66,15 @@ function DetailContact({ entree, items, surChanger }) {
           onClick=${() => { const n = lignes.filter((_, k) => k !== i); surChanger(n.length ? n : null); }}>${Icones.fermer()}</button>`}</div>
       <${PastillesMultiples} etiquette=${`Contact ${i + 1} : avec qui`} options=${options(items, 'contactAvec', l.avec)} valeurs=${l.avec}
         exclusifs=${new Set()} surChoix=${changer(i, 'avec')} teinte="contact" />
-      <${Segmente} etiquette=${`Contact ${i + 1} : comment c'était`} options=${options(items, 'contactEffet', l.effet)} valeur=${l.effet ?? null}
-        surChoix=${changer(i, 'effet')} teinte="contact" classe="large" />
+      <${RoueChoix} etiquette=${`Contact ${i + 1} : comment c'était`} options=${options(items, 'contactEffet', l.effet)} valeur=${l.effet ?? null}
+        surChoix=${changer(i, 'effet')} />
     </div>`)}
     ${lignes.length > 0 && !enPlus && html`<button type="button" class="btn-lien action" onClick=${() => setEnPlus(true)}>${Icones.plus({ trait: 2 })}Un autre contact</button>`}
   </div>`;
 }
 
-// Plusieurs activités : une ligne par activité (type, durée), une ligne vide en attente d'un choix.
+// Plusieurs activités : une ligne par activité (type, durée), une ligne vide en attente d'un choix. v11 (spec §5.4) : la
+// durée se règle sur la roue, la même que dans la carte, sur les mêmes données (la carte montre la première ligne).
 function DetailSport({ entree, items, surChanger }) {
   const [enPlus, setEnPlus] = useState(false);
   const lignes = entree.activites || [];
@@ -87,7 +90,7 @@ function DetailSport({ entree, items, surChanger }) {
         ${(l.type || l.duree) && html`<button type="button" class="effacer" aria-label=${`Retirer l'activité ${i + 1}`}
           onClick=${() => { const n = lignes.filter((_, k) => k !== i); surChanger(n.length ? n : null); }}>${Icones.fermer()}</button>`}</div>
       <${Pastilles} etiquette=${`Activité ${i + 1} : type`} options=${options(items, 'typeSport', l.type)} valeur=${l.type ?? null} surChoix=${changer(i, 'type')} classe="souples" teinte="sport" />
-      <${Pastilles} etiquette=${`Activité ${i + 1} : durée`} options=${options(items, 'dureeSport', l.duree)} valeur=${l.duree ?? null} surChoix=${changer(i, 'duree')} classe="souples" teinte="sport" />
+      <${RoueChoix} etiquette=${`Activité ${i + 1} : durée`} options=${options(items, 'dureeSport', l.duree)} valeur=${l.duree ?? null} surChoix=${changer(i, 'duree')} />
     </div>`)}
     ${lignes.length > 0 && !enPlus && html`<button type="button" class="btn-lien action" onClick=${() => setEnPlus(true)}>${Icones.plus({ trait: 2 })}Une autre activité</button>`}
   </div>`;
@@ -304,10 +307,17 @@ export function Aujourdhui({ date: dateRoute, depuisHistorique = false }) {
         surChoix=${ecrire('heuresSommeil')} />`),
     humeur: () => carteChamp('humeur', 'humeur', html`<${TeteRubrique} icone="humeur" libelle="Humeur" />`,
       html`<${Pastilles} etiquette="Humeur" ariaPrefixe="Humeur" options=${HUMEURS} valeur=${entree.humeur} surChoix=${ecrire('humeur')} colonnes=${5} classe="chiffres" teinte="humeur" />`),
+    // Contact et Sport (v11, spec §5.4) : sous Oui / Non, la roue de l'effet du premier contact, celle de la durée de la
+    // première activité, toujours visibles, avec les règles de celle du Sommeil. Une valeur notée sur rien de noté met Oui
+    // (ecrireContacts, ecrireActivites) ; un Non reste un Non, et l'effacer laisse le Oui. Le reste est au détail.
     contact: () => carteChamp('contact', 'contact', html`<${TeteRubrique} icone="contact" libelle="Contact humain" lien=${lien('contact', 'Contact en détail', 'Détail')} />`,
-      html`<${OuiNon} etiquette="Contact humain" valeur=${entree.contactHumain} surChoix=${ecrire('contactHumain')} teinte="contact" />`),
+      html`<${OuiNon} etiquette="Contact humain" valeur=${entree.contactHumain} surChoix=${ecrire('contactHumain')} teinte="contact" />`,
+      html`<${RoueChoix} key=${`effet-${date}`} etiquette="Comment c'était" options=${options(items, 'contactEffet', entree.contacts?.[0]?.effet)}
+        valeur=${entree.contacts?.[0]?.effet ?? null} surChoix=${(v) => ecrireContacts(changerPremiereLigne(entree.contacts, 'effet', v))} />`),
     sport: () => carteChamp('sport', 'sport', html`<${TeteRubrique} icone="sport" libelle="Sport / mouvement" lien=${lien('sport', 'Sport en détail', 'Détail')} />`,
-      html`<${OuiNon} etiquette="Sport / mouvement" valeur=${entree.sportMouvement} surChoix=${ecrire('sportMouvement')} teinte="sport" />`),
+      html`<${OuiNon} etiquette="Sport / mouvement" valeur=${entree.sportMouvement} surChoix=${ecrire('sportMouvement')} teinte="sport" />`,
+      html`<${RoueChoix} key=${`duree-sport-${date}`} etiquette="Durée du sport" options=${options(items, 'dureeSport', entree.activites?.[0]?.duree)}
+        valeur=${entree.activites?.[0]?.duree ?? null} surChoix=${(v) => ecrireActivites(changerPremiereLigne(entree.activites, 'duree', v))} />`),
     explosions: () => carteChamp('explosions', 'expl', html`<${TeteRubrique} icone="explosions" libelle="Explosions" />`,
       html`<${Pastilles} etiquette="Explosions" ariaPrefixe="Explosions" options=${EXPLOSIONS} valeur=${entree.explosions} surChoix=${ecrire('explosions')} colonnes=${6} classe="chiffres" teinte="expl" />`),
     traitement: () => carteChamp('traitement', 'trt', html`<${TeteRubrique} icone="traitement" libelle="Traitement pris" />`,

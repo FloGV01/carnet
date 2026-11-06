@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche, repliNuitAffiche, nuitRenseignee, MASQUE_NUIT,
+  changerPremiereLigne,
 } from '../../public/js/domain/journee.js';
 import { texteHeuresSommeil, VALEURS_HEURES_SOMMEIL } from '../../public/js/domain/champs.js';
 
@@ -114,4 +115,37 @@ test('v11 : les demi-heures disent « 7 h 30 », jamais « 7,5 » ; rien hors de
   assert.deepEqual([4, 4.5, 5, 7.5, 9.5, 10].map(texteHeuresSommeil), ['4 h ou moins', '4 h 30', '5 h', '7 h 30', '9 h 30', '10 h ou plus']);
   for (const h of VALEURS_HEURES_SOMMEIL) assert.doesNotMatch(texteHeuresSommeil(h), /[,.]/, String(h));
   for (const h of [3.5, 10.5, 7.25, '7.5', true, NaN, Infinity]) assert.equal(texteHeuresSommeil(h), null, String(h));
+});
+
+// v11 (3/11, spec §5.4) : la roue d'une carte Sport ou Contact écrit la durée ou l'effet de la première ligne seulement.
+test('v11 : changerPremiereLigne change la première ligne seule, sans toucher à l\'entrée reçue', () => {
+  const marche = { type: 'typeSport:marche', duree: null };
+  const lignes = [marche];
+  assert.deepEqual(changerPremiereLigne(lignes, 'duree', 'dureeSport:de_30_a_60'), [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }]);
+  assert.deepEqual(lignes, [{ type: 'typeSport:marche', duree: null }], 'pur : l\'entrée reste telle quelle');
+  // Deux lignes : la seconde intacte, la même.
+  const velo = { type: 'typeSport:velo', duree: 'dureeSport:moins_15' };
+  const deux = changerPremiereLigne([marche, velo], 'duree', 'dureeSport:plus_60');
+  assert.deepEqual(deux, [{ type: 'typeSport:marche', duree: 'dureeSport:plus_60' }, velo]);
+  assert.equal(deux[1], velo);
+  // Un contact : l'effet, « avec qui » gardé.
+  assert.deepEqual(changerPremiereLigne([{ avec: ['contactAvec:amis'], effet: 'contactEffet:neutre' }], 'effet', 'contactEffet:couteux'),
+    [{ avec: ['contactAvec:amis'], effet: 'contactEffet:couteux' }]);
+});
+
+test('v11 : changerPremiereLigne sur rien de noté crée la première ligne ; effacer la seule valeur d\'une ligne la retire, et plus aucune ligne donne null', () => {
+  for (const vide of [null, undefined, []]) {
+    assert.deepEqual(changerPremiereLigne(vide, 'duree', 'dureeSport:de_15_a_30'), [{ duree: 'dureeSport:de_15_a_30' }], String(vide));
+    assert.equal(changerPremiereLigne(vide, 'effet', null), null, String(vide));
+  }
+  // Une ligne vidée sort ; la suivante devient la première.
+  assert.equal(changerPremiereLigne([{ type: null, duree: 'dureeSport:moins_15' }], 'duree', null), null);
+  const velo = { type: 'typeSport:velo', duree: null };
+  assert.deepEqual(changerPremiereLigne([{ type: null, duree: 'dureeSport:moins_15' }, velo], 'duree', null), [velo]);
+  // Effacer la durée garde le type : la ligne reste.
+  assert.deepEqual(changerPremiereLigne([{ type: 'typeSport:marche', duree: 'dureeSport:moins_15' }], 'duree', null), [{ type: 'typeSport:marche', duree: null }]);
+  // « avec qui » vide compte comme vide, comme en base.
+  assert.equal(changerPremiereLigne([{ avec: [], effet: 'contactEffet:neutre' }], 'effet', null), null);
+  assert.equal(changerPremiereLigne([{ avec: null, effet: 'contactEffet:neutre' }], 'effet', null), null);
+  assert.deepEqual(changerPremiereLigne([{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], 'effet', null), [{ avec: ['contactAvec:famille'], effet: null }]);
 });

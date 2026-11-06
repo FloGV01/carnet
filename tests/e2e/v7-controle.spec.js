@@ -331,16 +331,24 @@ const ECRANS_V10 = [
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
   // v8 (9/9) : le détail du Sport (« Détail › ») ouvert dans sa carte ; v11 : la Durée de la nuit sur sa roue, toujours là,
-  // une nuit notée (la valeur au milieu, en 700, sans coche).
+  // une nuit notée (la valeur au milieu, en 700, sans coche). v11 (3/11) : la durée du sport notée sur la roue de sa carte,
+  // étroite, et celle du détail, qui la suit.
   ['Aujourd\'hui, Sport en détail', async (p) => {
+    const sport = p.getByRole('group', { name: 'Durée du sport', exact: true }).getByRole('button', { name: '30 à 60 min', exact: true });
+    await sport.click();
+    await expect(sport).toHaveAttribute('aria-pressed', 'true');
     await p.getByRole('button', { name: 'Sport en détail', exact: true }).click();
     const notee = p.getByRole('group', { name: 'Durée de la nuit', exact: true }).getByRole('button', { name: '7 h 30', exact: true });
     await notee.click();
     await expect(notee).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(() => notee.evaluate((b) => {
-      const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
-      return Math.abs(r.left + r.width / 2 - (d.left + d.width / 2));
-    })).toBeLessThanOrEqual(1);
+    const detail = p.getByRole('group', { name: 'Activité 1 : durée', exact: true }).getByRole('button', { name: '30 à 60 min', exact: true });
+    await expect(detail).toHaveAttribute('aria-pressed', 'true');
+    for (const b of [sport, notee, detail]) {
+      await expect.poll(() => b.evaluate((x) => {
+        const [d, r] = [x.closest('.roue-defile').getBoundingClientRect(), x.getBoundingClientRect()];
+        return Math.abs(r.left + r.width / 2 - (d.left + d.width / 2));
+      })).toBeLessThanOrEqual(1);
+    }
   }, '.aujourdhui .roue-choix.notee'],
   // v9 (4/8) : les écrans noirs de l'émotion, comme How We Feel : les quatre bulles et « C'était vers… » ouvert, puis la
   // carte ouverte par une bulle, puis un mot au sens corrigé, choisi : la double capsule et sa carte du bas.

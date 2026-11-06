@@ -64,3 +64,15 @@ export function deplacerChamp(j, champ, sens) {
   [ordre[i], ordre[k]] = [ordre[k], ordre[i]];
   return { ...j, ordre };
 }
+
+// La roue d'une carte Sport ou Contact (v11, spec §5.4) écrit la durée (ou l'effet) de la première ligne : seule celle-ci
+// change, les autres restent les mêmes. Sans ligne, elle crée la première. Devenue vide (rien que des null ou des listes
+// vides, comme « avec qui » sans personne), elle sort, comme en base ; plus aucune ligne donne null.
+const ligneVide = (l) => Object.values(l).every((v) => v == null || (Array.isArray(v) && v.length === 0));
+export function changerPremiereLigne(lignes, champ, valeur) {
+  const avant = Array.isArray(lignes) ? lignes : [];
+  const [premiere = {}, ...autres] = avant;
+  const nouvelle = { ...premiere, [champ]: valeur };
+  const res = ligneVide(nouvelle) ? autres : [nouvelle, ...autres];
+  return res.length ? res : null;
+}

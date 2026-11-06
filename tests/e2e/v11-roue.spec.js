@@ -415,3 +415,220 @@ test('de 17 à 53 px de texte (390 et 375) : la bande reste dans sa carte, aucun
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
+
+// ---------- v11 (3/11) · Les roues Sport et Contact humain (spec §5.4) ----------
+// Sous Oui / Non, la roue de la durée de la première activité et celle de l'effet du premier contact, toujours visibles,
+// avec les règles de celle du Sommeil. Une valeur notée sur rien de noté met Oui, un Non reste un Non, l'effacer laisse le
+// Oui. Le détail règle la durée et l'effet sur la même roue, sur les mêmes données ; la carte montre la première ligne.
+
+const SPORT = ['Moins de 15 min', '15 à 30 min', '30 à 60 min', 'Plus d\'1 h'];
+const EFFETS = ['Ressourçant', 'Neutre', 'Coûteux'];
+// Chaque carte : son Oui / Non, sa roue, ses valeurs, la valeur glissée, la première et la dernière, avec leur identifiant,
+// le champ du Oui, celui des lignes et celui de la ligne.
+const CARTES = [
+  { ouiNon: 'Sport / mouvement', nom: 'Durée du sport', valeurs: SPORT, champOui: 'sportMouvement', lignes: 'activites', champ: 'duree',
+    glissee: ['30 à 60 min', 'dureeSport:de_30_a_60'], premiere: ['Moins de 15 min', 'dureeSport:moins_15'], derniere: ['Plus d\'1 h', 'dureeSport:plus_60'] },
+  { ouiNon: 'Contact humain', nom: 'Comment c\'était', valeurs: EFFETS, champOui: 'contactHumain', lignes: 'contacts', champ: 'effet',
+    glissee: ['Coûteux', 'contactEffet:couteux'], premiere: ['Ressourçant', 'contactEffet:ressourcant'], derniere: ['Coûteux', 'contactEffet:couteux'] },
+];
+const dans = (g, nom) => g.getByRole('button', { name: nom, exact: true });
+const ecartDans = (g, nom) => dans(g, nom).evaluate((b) => {
+  const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
+  return Math.abs(r.left + r.width / 2 - (d.left + d.width / 2));
+});
+const centreeDans = (g, nom) => expect.poll(() => ecartDans(g, nom), `${nom} au milieu`).toBeLessThanOrEqual(1);
+const oui = (page, nom) => groupe(page, nom).getByRole('button', { name: 'Oui' });
+const non = (page, nom) => groupe(page, nom).getByRole('button', { name: 'Non' });
+
+test('Sport et Contact : sous Oui / Non, vides, rien de marqué et la valeur du milieu au centre ; glisser note la première ligne et met Oui ; retoucher efface sans toucher au Oui ; sur un Non, le Non reste', async ({ page }) => {
+  for (const c of CARTES) {
+    const g = groupe(page, c.nom);
+    const premiereValeur = async () => (await lue(page))?.[c.lignes]?.[0]?.[c.champ] ?? null;
+    await viderBase(page);
+    // Vide : les valeurs de la liste, dans l'ordre, rien de marqué, celle du milieu au centre (15 à 30 min, Neutre).
+    await expect(g.getByRole('button'), c.nom).toHaveText(c.valeurs);
+    await expect(g.locator('[aria-pressed="true"]'), c.nom).toHaveCount(0);
+    await centreeDans(g, c.valeurs[Math.floor((c.valeurs.length - 1) / 2)]);
+    const place = await g.evaluate((r) => {
+      const carte = r.closest('.carte-champ');
+      return { paire: Boolean(carte.closest('.deux-colonnes')), sous: r.getBoundingClientRect().top >= carte.querySelector('.segmente').getBoundingClientRect().bottom };
+    });
+    expect(place, c.nom).toEqual({ paire: true, sous: true });
+    await page.clock.runFor(1000);
+    expect(await lue(page), c.nom).toBeNull();
+    // Glissée sur rien de noté : la première ligne, et Oui.
+    await glisserRoue(g, c.glissee[0]);
+    await page.clock.runFor(300);
+    await expect.poll(() => lue(page), c.nom).toMatchObject({ [c.champOui]: true, [c.lignes]: [{ [c.champ]: c.glissee[1] }] });
+    await expect(dans(g, c.glissee[0])).toHaveAttribute('aria-pressed', 'true');
+    await expect(oui(page, c.ouiNon)).toHaveAttribute('aria-pressed', 'true');
+    await centreeDans(g, c.glissee[0]);
+    // Retouchée : effacée, la ligne vide sort ; le Oui reste.
+    await dans(g, c.glissee[0]).click();
+    await expect.poll(() => lue(page), c.nom).toMatchObject({ [c.champOui]: true, [c.lignes]: null });
+    await expect(g.locator('[aria-pressed="true"]'), c.nom).toHaveCount(0);
+    await expect(oui(page, c.ouiNon)).toHaveAttribute('aria-pressed', 'true');
+    // Un Non : une valeur touchée, puis une valeur glissée, ne le changent pas.
+    await non(page, c.ouiNon).click();
+    await expect.poll(async () => (await lue(page))?.[c.champOui], c.nom).toBe(false);
+    await dans(g, c.premiere[0]).click();
+    await expect.poll(premiereValeur, c.nom).toBe(c.premiere[1]);
+    await expect(non(page, c.ouiNon)).toHaveAttribute('aria-pressed', 'true');
+    expect((await lue(page))[c.champOui], c.nom).toBe(false);
+    await glisserRoue(g, c.derniere[0]);
+    await page.clock.runFor(300);
+    await expect.poll(premiereValeur, c.nom).toBe(c.derniere[1]);
+    await expect(non(page, c.ouiNon)).toHaveAttribute('aria-pressed', 'true');
+    expect((await lue(page))[c.champOui], c.nom).toBe(false);
+  }
+});
+
+test('deux lignes : la carte montre et change la première, le détail ouvert suit ; une valeur changée dans le détail recentre la carte, sans écriture de plus', async ({ page }) => {
+  await repo(page, (d) => window.__carnet.repo.journal.patch(d, {
+    sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:moins_15' }, { type: 'typeSport:velo', duree: 'dureeSport:plus_60' }],
+    contactHumain: true, contacts: [{ avec: ['contactAvec:amis'], effet: 'contactEffet:neutre' }, { avec: ['contactAvec:famille'], effet: 'contactEffet:couteux' }],
+  }), AUJ);
+  await page.reload();
+  const [sport, effet] = [groupe(page, 'Durée du sport'), groupe(page, 'Comment c\'était')];
+  await expect(sport.locator('[aria-pressed="true"]')).toHaveText(['Moins de 15 min']);
+  await expect(effet.locator('[aria-pressed="true"]')).toHaveText(['Neutre']);
+  await centreeDans(sport, 'Moins de 15 min');
+  await centreeDans(effet, 'Neutre');
+  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+  await page.getByRole('button', { name: 'Contact en détail', exact: true }).click();
+  const [duree1, duree2, effet1, effet2] = ['Activité 1 : durée', 'Activité 2 : durée', 'Contact 1 : comment c\'était', 'Contact 2 : comment c\'était'].map((n) => groupe(page, n));
+  await expect(duree1.locator('[aria-pressed="true"]')).toHaveText(['Moins de 15 min']);
+  await expect(effet2.locator('[aria-pressed="true"]')).toHaveText(['Coûteux']);
+  // La carte change la première ligne ; la seconde reste ; le détail ouvert suit, au milieu.
+  await glisserRoue(sport, '30 à 60 min');
+  await page.clock.runFor(300);
+  await expect.poll(async () => (await lue(page))?.activites).toEqual([{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }, { type: 'typeSport:velo', duree: 'dureeSport:plus_60' }]);
+  await expect(duree1.locator('[aria-pressed="true"]')).toHaveText(['30 à 60 min']);
+  await expect(duree2.locator('[aria-pressed="true"]')).toHaveText(['Plus d\'1 h']);
+  await centreeDans(duree1, '30 à 60 min');
+  await dans(effet, 'Ressourçant').click();
+  await expect.poll(async () => (await lue(page))?.contacts).toEqual([{ avec: ['contactAvec:amis'], effet: 'contactEffet:ressourcant' }, { avec: ['contactAvec:famille'], effet: 'contactEffet:couteux' }]);
+  await expect(effet1.locator('[aria-pressed="true"]')).toHaveText(['Ressourçant']);
+  await centreeDans(effet1, 'Ressourçant');
+  // Le détail change la première ligne : la carte la montre, au milieu, et n'écrit rien de plus.
+  for (const [detail, carte, nom, champ, attendu] of [[duree1, sport, '15 à 30 min', 'activites', 'dureeSport:de_15_a_30'], [effet1, effet, 'Coûteux', 'contacts', 'contactEffet:couteux']]) {
+    await dans(detail, nom).click();
+    await expect.poll(async () => (await lue(page))?.[champ]?.[0]).toMatchObject({ [champ === 'activites' ? 'duree' : 'effet']: attendu });
+    await expect(carte.locator('[aria-pressed="true"]')).toHaveText([nom]);
+    await centreeDans(carte, nom);
+    const avant = await lue(page);
+    await page.clock.runFor(1000);
+    expect(await lue(page), nom).toEqual(avant);
+  }
+  expect((await lue(page)).activites[1]).toEqual({ type: 'typeSport:velo', duree: 'dureeSport:plus_60' });
+  expect((await lue(page)).contacts[1]).toEqual({ avec: ['contactAvec:famille'], effet: 'contactEffet:couteux' });
+});
+
+// Les fautes de mise en page des cartes Sport et Contact et de leurs détails : une carte hors de l'écran, ce qu'elle contient
+// hors d'elle (les valeurs d'une roue mises à part : elles défilent dans la bande), la bande hors de sa carte, une valeur
+// coupée, plus large que la bande, sous 44 × 44, ou son texte hors du bouton. Le reste n'est pas mesuré ici : en très grand
+// texte, « nuit dernière », « Télétravail » et, dans le détail, le type « Renforcement » sortent déjà de l'écran (écrans
+// hérités, v10, hors de la v11) ; les pastilles du détail (type, « avec qui ») ne changent pas.
+const fautesDesRoues = (page) => page.evaluate(() => {
+  const fautes = [];
+  for (const c of document.querySelectorAll('.deux-colonnes > .carte-champ, .carte-detail')) {
+    const carte = c.getBoundingClientRect();
+    const nom = c.querySelector('.titre-rubrique').textContent;
+    if (carte.left < -0.5 || carte.right > innerWidth + 0.5) fautes.push(`${nom} : carte hors de l'écran`);
+    for (const e of c.querySelectorAll('*')) {
+      if (e.closest('.roue-defile, .carte-detail .pastilles')) continue;
+      const q = e.getBoundingClientRect();
+      if (q.width > 0 && (q.left < carte.left - 0.5 || q.right > carte.right + 0.5)) fautes.push(`${nom} : ${e.tagName.toLowerCase()} « ${(e.textContent || '').trim().slice(0, 20)} » hors de la carte`);
+    }
+  }
+  const plage = document.createRange();
+  for (const g of document.querySelectorAll('.deux-colonnes .roue-choix, .carte-detail .roue-choix')) {
+    const nom = g.getAttribute('aria-label');
+    const carte = g.closest('.carte-champ').getBoundingClientRect();
+    const r = g.getBoundingClientRect();
+    if (r.left < carte.left - 0.5 || r.right > carte.right + 0.5) fautes.push(`${nom} : bande hors de sa carte`);
+    const d = g.querySelector('.roue-defile');
+    if (d.scrollHeight > d.clientHeight + 0.5) fautes.push(`${nom} : la bande défile en hauteur`);
+    for (const b of g.querySelectorAll('.roue-valeur')) {
+      const q = b.getBoundingClientRect();
+      if (b.scrollWidth > b.clientWidth + 0.5 || b.scrollHeight > b.clientHeight + 0.5) fautes.push(`${nom} : ${b.textContent} coupé`);
+      if (q.width > r.width + 0.5) fautes.push(`${nom} : ${b.textContent} plus large que la bande`);
+      if (q.width < 44 || q.height < 44) fautes.push(`${nom} : ${b.textContent} : ${q.width} × ${q.height}`);
+      plage.selectNodeContents(b);
+      for (const t of plage.getClientRects()) if (t.width > 0 && (t.left < q.left - 0.5 || t.right > q.right + 0.5 || t.top < q.top - 0.5 || t.bottom > q.bottom + 0.5)) fautes.push(`${nom} : texte de ${b.textContent} hors du bouton`);
+    }
+  }
+  return fautes;
+});
+
+test('la rangée Contact et Sport n\'a que 60 px de plus avec ses roues ; aucune lettre d\'une voisine ne se voit dans ces cartes étroites ; de 17 à 53 px de texte (390 et 375), cartes et détails ouverts ou non, rien n\'en sort de côté ni n\'est coupé', async ({ page }) => {
+  // Les deux roues, toujours visibles, ajoutent 60 px au plus à la rangée (environ 54, spec §13).
+  const hauteurs = await page.locator('.deux-colonnes').evaluate((p) => {
+    const avec = p.getBoundingClientRect().height;
+    const roues = [...p.querySelectorAll('.roue-choix')];
+    for (const r of roues) r.style.setProperty('display', 'none');
+    const sans = p.getBoundingClientRect().height;
+    for (const r of roues) r.style.removeProperty('display');
+    return { roues: roues.length, ajout: avec - sans };
+  });
+  expect(hauteurs.roues).toBe(2);
+  expect(hauteurs.ajout).toBeGreaterThan(0);
+  expect(hauteurs.ajout).toBeLessThanOrEqual(60);
+  // Cartes étroites : la valeur du milieu prend la bande (moins 8 px de chaque côté) ; aucun texte d'une voisine n'y entre,
+  // à 390 et à 375, vides (Neutre, 15 à 30 min au milieu) ou une valeur notée.
+  const voisinesVues = () => page.evaluate(() => {
+    const vues = [];
+    const plage = document.createRange();
+    for (const g of document.querySelectorAll('.deux-colonnes .roue-choix')) {
+      const d = g.querySelector('.roue-defile').getBoundingClientRect();
+      for (const b of g.querySelectorAll('.roue-valeur')) {
+        const q = b.getBoundingClientRect();
+        if (Math.abs(q.left + q.width / 2 - (d.left + d.width / 2)) <= 1) continue;
+        plage.selectNodeContents(b);
+        if ([...plage.getClientRects()].some((t) => t.width > 0 && t.right > d.left + 0.5 && t.left < d.right - 0.5)) vues.push(b.textContent);
+      }
+    }
+    return vues;
+  });
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    await centreeDans(groupe(page, 'Comment c\'était'), 'Neutre');
+    expect(await voisinesVues(), `${largeur} · vides`).toEqual([]);
+  }
+  await dans(groupe(page, 'Durée du sport'), 'Moins de 15 min').click();
+  await dans(groupe(page, 'Comment c\'était'), 'Ressourçant').click();
+  await expect.poll(() => lue(page)).toMatchObject({ activites: [{ duree: 'dureeSport:moins_15' }], contacts: [{ effet: 'contactEffet:ressourcant' }] });
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    await centreeDans(groupe(page, 'Comment c\'était'), 'Ressourçant');
+    await centreeDans(groupe(page, 'Durée du sport'), 'Moins de 15 min');
+    expect(await voisinesVues(), `${largeur} · notées`).toEqual([]);
+  }
+  // Les plus longues notées (Moins de 15 min, Ressourçant), détails fermés puis ouverts.
+  for (const ouverts of [false, true]) {
+    if (ouverts) {
+      await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+      await page.getByRole('button', { name: 'Contact en détail', exact: true }).click();
+      await expect(page.locator('.carte-detail .roue-choix')).toHaveCount(2);
+    }
+    for (const largeur of [390, 375]) {
+      await page.setViewportSize({ width: largeur, height: 844 });
+      for (const px of [17, 18, 19, 20, 21, 28, 33, 40, 47, 53]) {
+        await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; document.body.style.fontSize = ''; }, px);
+        const quoi = `${ouverts ? 'détails ouverts' : 'cartes'} · ${largeur} · ${px} px`;
+        expect(await fautesDesRoues(page), quoi).toEqual([]);
+        // Côte à côte, les Oui / Non restent alignés (v7), « Moins de 15 min » passé à la ligne ou non : les deux roues ont
+        // la même hauteur.
+        const paire = await page.evaluate(() => {
+          const [contact, sport] = [...document.querySelectorAll('.deux-colonnes > .carte-champ')];
+          const haut = (c, x) => c.querySelector(x).getBoundingClientRect();
+          return { cote: Math.abs(contact.getBoundingClientRect().top - sport.getBoundingClientRect().top) < 1,
+            ouiNon: Math.abs(haut(contact, '.segmente').top - haut(sport, '.segmente').top), roues: Math.abs(haut(contact, '.roue-choix').height - haut(sport, '.roue-choix').height) };
+        });
+        if (px <= 21 && largeur === 390) expect(paire.cote, `${quoi} : côte à côte`).toBe(true);
+        if (paire.cote) expect([paire.ouiNon, paire.roues], `${quoi} : Oui / Non alignés, roues de même hauteur`).toEqual([0, 0]);
+      }
+      await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    }
+  }
+});
