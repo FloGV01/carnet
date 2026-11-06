@@ -53,11 +53,12 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans bouton Enregistrer ;
 });
 
 // Exigence v4 (docs/v4-specification.md) : ce pire cas tenait sans défiler à 390 et 375 × 797. En v7, chaque rubrique est
-// une carte 2b : même resserrées (choix de 44, marges de 8), les 8 rubriques dépassent d'environ 270 px, et aucune mise en
-// page en cartes ne les fait tenir avec des cibles de 44. Cette exigence est EN ATTENTE de l'arbitrage de l'utilisateur
-// (docs/decisions.md, « v7 : en attente de l'utilisateur ») ; en attendant, la page défile et chaque champ peut passer
-// au-dessus de la bande du bas.
-test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
+// une carte 2b : même resserrées (choix de 44, marges de 8), les 8 rubriques (9 depuis les gratitudes de la v11)
+// dépassent d'environ 270 px, et aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Cette exigence est
+// EN ATTENTE de l'arbitrage de l'utilisateur (docs/decisions.md, « v7 : en attente de l'utilisateur ») ; en attendant, la
+// page défile et chaque champ peut passer au-dessus de la bande du bas. L'ordre écrit ci-dessous n'a que 8 champs :
+// normaliserJournee y ajoute « Mes gratitudes » juste après les points positifs.
+test('pire cas : 9 champs (v11 : Mes gratitudes, ajoutée par normaliserJournee), Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', {
     ordre: ['lieu', 'contact', 'sommeil', 'humeur', 'sport', 'explosions', 'traitement', 'positifs'], masques: [],
   }));

@@ -43,7 +43,8 @@ const PLAN = {
 
 // Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
 // deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
-// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »). Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
+// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »).
+// Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
 // la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
 // une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
 // bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
