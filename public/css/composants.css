@@ -303,8 +303,11 @@ button.effacer svg { width: 18px; height: 18px; }
    et --c-text. Toutes les valeurs ont la largeur de la plus longue (--l-valeur, mesurée par le composant, qui la pose par
    CSSOM ; 4em avant la mesure), jamais plus que la bande, et 44 au moins : la plus longue passe alors à la ligne. Des
    espaceurs (flex), et non des marges intérieures, laissent centrer la première et la dernière : le padding de fin d'une
-   zone qui défile n'est pas fiable. Le fondu (masque) ne touche que les valeurs, jamais la valeur du milieu ; la bande
-   garde son fond. */
+   zone qui défile n'est pas fiable. Le fondu (masque) ne touche ni la valeur du milieu ni ses deux voisines, cibles
+   visibles d'un toucher, qui gardent leurs 4,5:1 (comme la maquette, où seules les secondes voisines s'effaçaient) : il
+   finit au bord extérieur des voisines (50 % moins une valeur et demie), sur 25 % de la bande au plus. Avec des valeurs
+   larges (119 px à 390 et à 375), il n'y en a pas ; en paysage, il n'efface que les valeurs lointaines. La bande garde
+   son fond. */
 .roue-choix {
   --l-valeur: 4em; --l-roue: min(var(--l-valeur), 100%);
   position: relative; min-width: 0; border-radius: var(--r-moyen); background: var(--fond-choix);
@@ -316,7 +319,7 @@ button.effacer svg { width: 18px; height: 18px; }
 }
 .roue-choix.notee::before { background: var(--c-tint, var(--surface-2)); }
 .roue-defile {
-  --plein: min(25%, calc(50% - var(--l-roue) / 2));
+  --plein: min(25%, max(0px, calc(50% - 1.5 * var(--l-roue))));
   position: relative; display: flex; overflow-x: auto; overflow-y: hidden; border-radius: inherit;
   scroll-snap-type: x mandatory; scrollbar-width: none;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--plein), #000 calc(100% - var(--plein)), transparent);

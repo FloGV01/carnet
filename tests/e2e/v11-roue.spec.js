@@ -7,8 +7,9 @@ import { cacher, montrer } from '../aides/lecteur.js';
 // v11 (2/11) · La roue et le Sommeil (spec §5) : la durée de la nuit sur une roue couchée, toujours visible, sous
 // Mal · Moyen · Bien, par demi-heure. Vide : rien de marqué, centrée sur 7 h, jamais la nuit de la veille. Glisser note la
 // valeur au centre à l'arrêt ; toucher note et centre ; retoucher efface. Le point de vigilance 1 : ce qui n'est pas un
-// glissement n'écrit rien, un glissement n'efface jamais, une valeur en attente s'écrit sur son jour. Accessibilité : de
-// vrais boutons, de 17 à 53 px de texte. Données inventées.
+// glissement n'écrit rien, un glissement n'efface jamais, un toucher éteint le geste en cours, une valeur en attente
+// s'écrit sur son jour. Accessibilité : de vrais boutons, 4,5:1 sous le fondu des bords, de 17 à 53 px de texte. Données
+// inventées.
 // Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const AUJ = '2026-10-15';
 const VEILLE = '2026-10-14';
@@ -225,7 +226,7 @@ test('vigilance 1 · une valeur au centre égale à la valeur notée n\'écrit r
   await expect(valeur(page, '7 h')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('vigilance 1 · un toucher sur une valeur éteint le glissement en cours', async ({ page }) => {
+test('vigilance 1 · un toucher pendant un glissement en attente : la valeur touchée l\'emporte', async ({ page }) => {
   await expect(roue(page)).toBeVisible();
   await figer(page);
   await glisserRoue(roue(page), '9 h');
@@ -237,6 +238,23 @@ test('vigilance 1 · un toucher sur une valeur éteint le glissement en cours', 
   await centree(page, '6 h');
   await page.clock.runFor(500);
   expect(await heures(page)).toBe(6);
+});
+
+// Le test d'avant passerait aussi sans l'extinction du geste : la bande, centrée sur 6 h, le montre déjà quand le geste
+// finit. Celui-ci l'exige (relecture de la tâche 2) : sans elle, la fin du geste réécrit la valeur que l'on vient
+// d'effacer (7,5 au lieu de rien).
+test('vigilance 1 · un toucher éteint le glissement en cours : la valeur notée, effacée d\'un toucher pendant un glissement en attente, n\'est pas réécrite', async ({ page }) => {
+  await noter(page, [[AUJ, 7.5]]);
+  await expect(valeur(page, '7 h 30')).toHaveAttribute('aria-pressed', 'true');
+  await figer(page);
+  await glisserRoue(roue(page), '9 h');
+  await valeur(page, '7 h 30').click();
+  await page.clock.runFor(1000);
+  await page.clock.resume();
+  await centree(page, '7 h');
+  await page.clock.runFor(1000);
+  await expect.poll(() => heures(page)).toBeNull();
+  await expect(presses(page)).toHaveCount(0);
 });
 
 test('vigilance 1 · une valeur en attente s\'écrit aussitôt, sur son jour : au changement de jour, la page cachée, à pagehide', async ({ page }) => {
@@ -290,6 +308,79 @@ test('accessibilité : un vrai bouton par valeur, 44 × 44 au moins, sans curseu
   const [sommeil, traitement] = await Promise.all(['Sommeil', 'Traitement pris'].map((n) => page.locator('.carte-champ', { has: groupe(page, n) }).evaluate((c) => c.getBoundingClientRect().height)));
   expect(sommeil - traitement).toBeGreaterThan(0);
   expect(sommeil - traitement).toBeLessThanOrEqual(60);
+});
+
+// Le contraste effectif des valeurs qui se voient dans la bande, le fondu des bords compris (relecture de la tâche 2 : la
+// couleur calculée ignore le masque). Le masque est lu sur une capture : la bande peinte en blanc sur un groupe noir, le
+// texte transparent, chaque colonne de la ligne du milieu donne son alpha (le blanc mêlé au noir). Pour chaque valeur dont
+// le texte se voit, l'alpha le plus bas sur l'étendue visible de ce texte mêle sa couleur à son fond (la fenêtre du
+// milieu, sinon le fond de la bande) : le contraste de ce mélange sur ce fond. Rend [{ nom, alpha, contraste }].
+async function sousLeMasque(page) {
+  const PEINTS = [['background', '#000'], ['--surface', '#000'], ['--c-tint', '#000'], ['--text', 'transparent'], ['--c-text', 'transparent']];
+  const vues = await roue(page).evaluate((g, peints) => {
+    document.activeElement?.blur();
+    const d = g.querySelector('.roue-defile');
+    const rb = d.getBoundingClientRect();
+    const [fenetre, fond] = [getComputedStyle(g, '::before').backgroundColor, getComputedStyle(g).backgroundColor];
+    const res = [];
+    for (const b of g.querySelectorAll('.roue-valeur')) {
+      const plage = document.createRange();
+      plage.selectNodeContents(b);
+      const rr = [...plage.getClientRects()].filter((r) => r.width > 0);
+      const [de, a] = [Math.max(Math.min(...rr.map((r) => r.left)), rb.left), Math.min(Math.max(...rr.map((r) => r.right)), rb.right)];
+      if (a - de < 1) continue;
+      const q = b.getBoundingClientRect();
+      const auMilieu = Math.abs(q.left + q.width / 2 - (rb.left + rb.width / 2)) <= 1;
+      res.push({ nom: b.textContent, de: de - rb.left, a: a - rb.left, couleur: getComputedStyle(b).color, fond: auMilieu ? fenetre : fond });
+    }
+    for (const [p, v] of peints) g.style.setProperty(p, v);
+    d.style.setProperty('background', '#fff');
+    return res;
+  }, PEINTS);
+  const png = await bande(page).screenshot({ scale: 'css', caret: 'initial' });
+  const alphas = await roue(page).evaluate(async (g, [b64, peints]) => {
+    for (const [p] of peints) g.style.removeProperty(p);
+    g.querySelector('.roue-defile').style.removeProperty('background');
+    const image = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/png' }));
+    const toile = document.createElement('canvas');
+    [toile.width, toile.height] = [image.width, image.height];
+    const k = toile.getContext('2d');
+    k.drawImage(image, 0, 0);
+    const ligne = k.getImageData(0, Math.floor(image.height / 2), image.width, 1).data;
+    return Array.from({ length: image.width }, (_, x) => ligne[4 * x] / 255);
+  }, [png.toString('base64'), PEINTS]);
+  return vues.map((v) => {
+    const alpha = Math.min(...alphas.slice(Math.round(v.de), Math.round(v.a)));
+    const [t, f] = [canaux(v.couleur), canaux(v.fond)];
+    return { nom: v.nom, alpha, contraste: contraste(`rgb(${t.map((c, i) => alpha * c + (1 - alpha) * f[i]).join(', ')})`, v.fond) };
+  });
+}
+
+// La capture de Playwright glisse une feuille de style dans la page (WebKit, pour synchroniser les animations) : la CSP
+// la refuse, et les gardes y verraient une erreur. Ce test seul passe outre la CSP ; il ne lit que le rendu.
+test.describe('sous le fondu des bords', () => {
+  test.use({ bypassCSP: true });
+  test('accessibilité : le fondu des bords n\'éteint aucune valeur qui se voit, 4,5:1 au moins sous le masque (390 et 375, clair et sombre, vide et une nuit notée)', async ({ page }) => {
+    await expect(roue(page)).toBeVisible();
+    for (const notee of [null, '7 h 30']) {
+      if (notee) {
+        await valeur(page, notee).click();
+        await expect.poll(() => heures(page)).toBe(7.5);
+      }
+      for (const largeur of [390, 375]) {
+        await page.setViewportSize({ width: largeur, height: 844 });
+        await centree(page, notee || '7 h');
+        for (const [schema] of THEMES) {
+          await page.emulateMedia({ colorScheme: schema });
+          const quoi = `${notee || 'vide'} · ${largeur} · ${schema}`;
+          const vues = await sousLeMasque(page);
+          // La valeur du milieu et ses deux voisines au moins : les cibles visibles d'un toucher.
+          expect(vues.length, quoi).toBeGreaterThanOrEqual(3);
+          expect(vues.filter((v) => v.contraste < 4.5).map((v) => `${v.nom} : alpha ${v.alpha.toFixed(2)}, ${v.contraste.toFixed(2)}:1`), quoi).toEqual([]);
+        }
+      }
+    }
+  });
 });
 
 test('de 17 à 53 px de texte (390 et 375) : la bande reste dans sa carte, aucune valeur ne sort de côté, aucun libellé n\'est coupé, la plus longue notée comprise', async ({ page }) => {

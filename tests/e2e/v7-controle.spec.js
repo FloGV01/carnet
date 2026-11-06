@@ -16,20 +16,21 @@ import { trouverInterdits } from '../aides/mots-interdits.js';
 //   élément visible ne sort de l'écran.
 // - Pas de tirets (2b) : aucun filet ni cadre en pointillés sur ces écrans ; tout choix fait a sa coche.
 // - Réglages et Le soir en listes groupées 2b, carrés d'icônes ; l'Historique et ses puces 2b.
-// v8 (9/9) : le parcours passe aussi par les écrans de la v8 : le détail du Sport dans sa carte (v11 : la Durée sur sa roue,
-// toujours visible), la
-// carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur (avant, étape rythmée, pause,
-// fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau), « Émotions selon ce que je faisais »
-// (graphique et tableau), Réglages › Émotions (un sens corrigé). v9 (4/8) : les écrans noirs de l'émotion (les quatre
-// bulles, la carte, un mot choisi et sa carte du bas) remplacent ceux de la v8 ; v9 (5/8) : l'écran 3 (« Ce que je
-// faisais », une activité choisie) et un relevé rouvert depuis Ma journée. v9 (8/8) : la loupe (un mot trouvé, à la
-// couleur de sa zone), l'écran du mot à soi (une couleur choisie : le mot naît), puis ce mot sur la carte, hors du carré de
-// sa zone ; « Tes zones » en tableau ; Réglages › Émotions › « Mes mots », un mot ouvert. Les relevés versés citent un mot
-// à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout le parcours. v10 (7/9) : l'accueil de Bien-être
-// plein (« Reprendre », « Favoris ») et l'épingle allumée, sur le fond de sa teinte puis sur le noir de « Réveil la nuit » : son
-// dessin, qui n'est pas un texte, a au moins 3:1 sur son fond. v10 (9/9) : les écrans nouveaux (ECRANS_V10 : les exercices de
-// crise, les listes des entrées, le soupir, le noting, les sons de fond, les deux minuteurs, « Pour ce moment : », et Réglages ›
-// Moment difficile, où la voix s'ajoute), dans ce parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de téléchargé, mouvement réduit.
+// v8 (9/9) : le parcours passe aussi par les écrans de la v8 : le détail du Sport dans sa carte (v11 : la Durée sur sa
+// roue, toujours visible), la carte de l'Émotion (une zone, toute la carte, un sens montré), le Programme, le lecteur
+// (avant, étape rythmée, pause, fin) et la cohérence cardiaque de l'onglet, Mes nuits (graphique et tableau),
+// « Émotions selon ce que je faisais » (graphique et tableau), Réglages › Émotions (un sens corrigé). v9 (4/8) : les
+// écrans noirs de l'émotion (les quatre bulles, la carte, un mot choisi et sa carte du bas) remplacent ceux de la v8 ;
+// v9 (5/8) : l'écran 3 (« Ce que je faisais », une activité choisie) et un relevé rouvert depuis Ma journée. v9 (8/8) :
+// la loupe (un mot trouvé, à la couleur de sa zone), l'écran du mot à soi (une couleur choisie : le mot naît), puis ce
+// mot sur la carte, hors du carré de sa zone ; « Tes zones » en tableau ; Réglages › Émotions › « Mes mots », un mot
+// ouvert. Les relevés versés citent un mot à soi et un mot sans famille (Fatigué). Aucune violation de la CSP sur tout
+// le parcours. v10 (7/9) : l'accueil de Bien-être plein (« Reprendre », « Favoris ») et l'épingle allumée, sur le fond
+// de sa teinte puis sur le noir de « Réveil la nuit » : son dessin, qui n'est pas un texte, a au moins 3:1 sur son
+// fond. v10 (9/9) : les écrans nouveaux (ECRANS_V10 : les exercices de crise, les listes des entrées, le soupir, le
+// noting, les sons de fond, les deux minuteurs, « Pour ce moment : », et Réglages › Moment difficile, où la voix
+// s'ajoute), dans ce parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de
+// téléchargé, mouvement réduit.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
