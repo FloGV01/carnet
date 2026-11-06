@@ -574,8 +574,8 @@ test('la rangée Contact et Sport n\'a que 60 px de plus avec ses roues ; aucune
   expect(hauteurs.roues).toBe(2);
   expect(hauteurs.ajout).toBeGreaterThan(0);
   expect(hauteurs.ajout).toBeLessThanOrEqual(60);
-  // Cartes étroites : la valeur du milieu prend la bande (moins 8 px de chaque côté) ; aucun texte d'une voisine n'y entre,
-  // à 390 et à 375, vides (Neutre, 15 à 30 min au milieu) ou une valeur notée.
+  // Cartes étroites : la valeur du milieu prend toute la bande (sa fenêtre peinte, la bande moins 8 px de chaque côté) ;
+  // aucun texte d'une voisine n'y entre, à 390 et à 375, vides (Neutre, 15 à 30 min au milieu) ou une valeur notée.
   const voisinesVues = () => page.evaluate(() => {
     const vues = [];
     const plage = document.createRange();
@@ -630,5 +630,57 @@ test('la rangée Contact et Sport n\'a que 60 px de plus avec ses roues ; aucune
       }
       await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
     }
+  }
+});
+
+// Relecture de la tâche 3 : côte à côte, la fenêtre peinte laisse voir la bande grise sur quelques px de chaque côté (8
+// dans la carte Contact). Toute la bande est pourtant à la valeur du milieu : un toucher sur cette marge, où l'on ne voit
+// que le gris, note ou efface la valeur qui se voit au milieu, jamais une voisine invisible (Coûteux, et le Oui du contact
+// avec). À 2 px de chaque bord de la bande, à mi-hauteur, à 390 et à 375 : vides, notées au milieu de la liste, puis aux
+// deux bouts.
+const sousLesBords = (page) => page.evaluate(() => [...document.querySelectorAll('.deux-colonnes .roue-choix')].map((g) => {
+  const d = g.querySelector('.roue-defile').getBoundingClientRect();
+  const sous = (x) => document.elementFromPoint(x, d.top + d.height / 2)?.closest('.roue-valeur')?.textContent ?? null;
+  const marge = (d.width - Number.parseFloat(getComputedStyle(g, '::before').width)) / 2;
+  return { roue: g.getAttribute('aria-label'), sous: [sous(d.left + 2), sous(d.left + d.width / 2), sous(d.right - 2)], marge };
+}));
+const auBord = async (page, nom, cote) => {
+  const d = await groupe(page, nom).locator('.roue-defile').boundingBox();
+  return [cote === 'gauche' ? d.x + 2 : d.x + d.width - 2, d.y + d.height / 2];
+};
+
+test('côte à côte, un toucher sur la marge grise autour de la fenêtre vise la valeur du milieu, jamais une voisine invisible (390 et 375, vides, notées au milieu et aux deux bouts)', async ({ page }) => {
+  const auMilieu = async (contact, sport) => {
+    for (const largeur of [390, 375]) {
+      const quoi = `${largeur} · ${contact}, ${sport}`;
+      await page.setViewportSize({ width: largeur, height: 844 });
+      await page.locator('.deux-colonnes').scrollIntoViewIfNeeded();
+      await centreeDans(groupe(page, 'Comment c\'était'), contact);
+      await centreeDans(groupe(page, 'Durée du sport'), sport);
+      const vu = await sousLesBords(page);
+      expect(vu.map((r) => [r.roue, ...r.sous]), quoi).toEqual([['Comment c\'était', contact, contact, contact], ['Durée du sport', sport, sport, sport]]);
+      // Le dessin ne change pas : dans la carte Contact, la bande grise se voit toujours sur 8 px de chaque côté de la
+      // fenêtre.
+      expect(vu[0].marge, quoi).toBeCloseTo(8, 0);
+    }
+  };
+  await auMilieu('Neutre', '15 à 30 min');
+  // Vides, à 375 : un toucher sur la marge de droite du contact note Neutre (et Oui), sur celle de gauche du sport 15 à
+  // 30 min.
+  await page.touchscreen.tap(...await auBord(page, 'Comment c\'était', 'droite'));
+  await expect.poll(() => lue(page)).toMatchObject({ contactHumain: true, contacts: [{ effet: 'contactEffet:neutre' }] });
+  await page.touchscreen.tap(...await auBord(page, 'Durée du sport', 'gauche'));
+  await expect.poll(() => lue(page)).toMatchObject({ sportMouvement: true, activites: [{ duree: 'dureeSport:de_15_a_30' }] });
+  await auMilieu('Neutre', '15 à 30 min');
+  // Notées : un toucher sur la marge efface la valeur du milieu, celle qui se voit ; le Oui reste.
+  await page.touchscreen.tap(...await auBord(page, 'Comment c\'était', 'gauche'));
+  await page.touchscreen.tap(...await auBord(page, 'Durée du sport', 'droite'));
+  await expect.poll(() => lue(page)).toMatchObject({ contactHumain: true, contacts: null, sportMouvement: true, activites: null });
+  // Aux deux bouts de la liste : d'un côté la place d'une voisine, de l'autre celle d'un espaceur, à 0.
+  for (const [contact, sport] of [['Ressourçant', 'Moins de 15 min'], ['Coûteux', 'Plus d\'1 h']]) {
+    await dans(groupe(page, 'Comment c\'était'), contact).click();
+    await dans(groupe(page, 'Durée du sport'), sport).click();
+    await expect(page.locator('.deux-colonnes [aria-pressed="true"]')).toHaveText(['Oui', contact, 'Oui', sport]);
+    await auMilieu(contact, sport);
   }
 });

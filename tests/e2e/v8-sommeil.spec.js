@@ -280,7 +280,8 @@ test('« Détail › » : sur la première ligne du titre, en couleur action 13/
     ...['Contact humain', 'Sport / mouvement'].flatMap((g) => ['Oui', 'Non'].map((n) => groupe(page, g).getByRole('button', { name: n }))),
     ...await groupe(page, 'Comment c\'était').getByRole('button').all(), ...await groupe(page, 'Durée du sport').getByRole('button').all()];
   for (const choix of choixSousLesLiens) expect(await pointsPrisParUnLien(choix), await choix.getAttribute('aria-label') || await choix.textContent()).toBe(0);
-  // Contact et Sport restent côte à côte, de même hauteur, aussi hautes qu'en v7 (titre sur deux lignes).
+  // Contact et Sport restent côte à côte et de même hauteur (titre sur deux lignes ; v11 : leurs roues, de même hauteur,
+  // sous Oui / Non).
   const [contact, sport] = await Promise.all([boite(carteDe(page, 'Contact humain')), boite(carteDe(page, 'Sport / mouvement'))]);
   expect(Math.abs(contact.y - sport.y)).toBeLessThanOrEqual(0.5);
   expect(Math.abs(contact.h - sport.h)).toBeLessThanOrEqual(0.5);

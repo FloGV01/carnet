@@ -4,8 +4,9 @@ import { vidanges } from '../../store.js';
 
 // La roue (v11, spec §5) : une bande couchée, toujours visible, qui glisse de côté sous les choix d'une carte (la durée de
 // la nuit sous Mal · Moyen · Bien ; la durée du sport et l'effet du contact sous Oui / Non, et dans leur détail, spec §5.4).
-// « Roue » seul désigne la roue des émotions (domain/roue.js) : celle-ci est la roue de choix. Chaque valeur est un vrai bouton, avec son texte et aria-pressed : VoiceOver les parcourt et les active un par un
-// (pas de curseur ARIA fait main, auquel il répond mal sur iPhone).
+// « Roue » seul désigne la roue des émotions (domain/roue.js) : celle-ci est la roue de choix. Chaque valeur est un vrai
+// bouton, avec son texte et aria-pressed : VoiceOver les parcourt et les active un par un (pas de curseur ARIA fait main,
+// auquel il répond mal sur iPhone).
 // - Vide : rien n'est marqué, la bande est centrée sur `centre` (par défaut l'option du milieu), sur un fond neutre, et
 //   cela ne note rien. La valeur notée est au milieu, sur la teinte de la carte (--c-tint), en 700 et en --c-text.
 // - Toucher une valeur la note et la centre ; retoucher la valeur notée l'efface, et la bande revient sur `centre`.
