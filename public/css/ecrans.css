@@ -790,9 +790,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .etiquette-bulle { width: 126px; text-align: center; font: 700 0.971rem/1.151 var(--police); letter-spacing: -0.01em; overflow-wrap: normal; }
 .ligne-bulle { display: block; white-space: nowrap; }
 /* En petit (v9, spec §4.5 : la couleur d'un mot à soi) : 104 de diamètre, sans halo, le libellé à 12 (le corps des bulles
-   de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond, noir
-   ou carte), à la couleur du focus de l'émotion (--anneau, posé par .moment-plein : foncé en clair, blanc sur le noir), du
-   texte ailleurs (Réglages). */
+   de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond de
+   l'écran ou de la carte), à la couleur du focus de l'émotion (--anneau, posé par .moment-plein : foncé en clair, blanc
+   sur le noir), du texte ailleurs (Réglages). */
 .quatre-bulles.petites { grid-template-columns: repeat(2, 104px); gap: 12px; align-self: center; }
 .quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
 .quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 1.15; }
@@ -820,9 +820,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .carte-defile::-webkit-scrollbar { display: none; }
 .carte-plan { position: relative; }
 /* Une bulle : 96 pt, faite de deux moitiés à la couleur de sa case (--c). Choisie, chaque moitié devient une capsule de
-   78 × 156 (rayon 24, × 1,625), la « double capsule » de How We Feel, encoche noire en haut et en bas (visuel §2.4) ; elle
-   garde sa forme quand la lentille suit le glissement ailleurs, à l'échelle que celle-ci lui donne (spec v10 §4.1).
-   Place et taille par transform (carte-emotions.js) ; le libellé dans la moitié gauche, que la droite ne couvre pas. */
+   78 × 156 (rayon 24, × 1,625), la « double capsule » de How We Feel, encoche en haut et en bas à la couleur du fond, noire
+   en sombre, gris clair en clair (visuel §2.4) ; elle garde sa forme quand la lentille suit le glissement ailleurs, à
+   l'échelle que celle-ci lui donne (spec v10 §4.1). Place et taille par transform (carte-emotions.js) ; le libellé dans la
+   moitié gauche, que la droite ne couvre pas. */
 .bulle-mot {
   position: absolute; left: 0; top: 0; width: 96px; height: 96px; padding: 0; border: 0; border-radius: 50%; background: none; color: #000;
   transform-origin: 48px 48px; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
