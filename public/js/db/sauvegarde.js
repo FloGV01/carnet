@@ -1,7 +1,7 @@
 // Sauvegarde et restauration. Export : une photographie cohérente (une seule transaction),
 // en .json s'il n'y a aucun mémo, sinon en .zip (sauvegarde.json + audios/<id>.m4a),
 // découpé en parties au-delà de 150 Mo. Import : remplacement uniquement, jamais de fusion,
-// précédé d'une copie de secours et appliqué en une seule transaction.
+// précédé d'une copie de secours (sauf sur un Carnet vide, v11) et appliqué en une seule transaction.
 import { req } from './idb.js';
 import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
@@ -327,14 +327,32 @@ async function prendreCopie(t, type, horodatage, donnees) {
 }
 
 const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'audios'];
+const STORES_FICHES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'audios'];
 
-// Remplacement complet, en une seule transaction (copie de secours comprise).
+// Les listes par défaut telles que l'app les verse (migrations, « Tout effacer ») : libellé, place et état.
+const VERSEES = new Map([SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS].flatMap((seed) => seedItems(seed, '')).map((it) => [it.id, it]));
+const listeTouchee = (it) => {
+  const d = VERSEES.get(it.id);
+  return it.origine !== 'defaut' || !d || it.libelle !== d.libelle || Boolean(it.archive) !== d.archive || it.ordre !== d.ordre;
+};
+
+// v11 : un Carnet vide n'a rien à garder (spec §10) : l'import n'y prend pas de copie, et « Revenir à l'état d'avant
+// l'import » n'apparaît pas après le passage à une nouvelle icône. Vide : aucune fiche, aucune méta de l'utilisateur
+// (même vidée), et des listes telles que l'app les a versées : aucune créée par lui ou recréée par un import, aucune
+// liste par défaut renommée, rangée ou déplacée. Dans le doute, la copie est prise. Pur.
+export function estBaseVide(donnees) {
+  if (STORES_FICHES.some((s) => (donnees[s] || []).length)) return false;
+  if ((donnees.meta || []).some((m) => estMetaUtilisateur(m.cle))) return false;
+  return !(donnees.listes || []).some(listeTouchee);
+}
+
+// Remplacement complet, en une seule transaction (copie de secours comprise, sauf sur un Carnet vide).
 export async function remplacer(repo, analyse, { panne } = {}) {
   const h = repo.maintenant().toISOString();
   const actuel = await lireTout(repo);
   const v = analyse.valides;
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
-    await prendreCopie(t, 'avant-import', h, actuel);
+    if (!estBaseVide(actuel)) await prendreCopie(t, 'avant-import', h, actuel);
     for (const s of STORES_REMPLACES) t.objectStore(s).clear();
     const meta = t.objectStore('meta');
     remplacerMeta(meta, actuel.meta, v.meta);

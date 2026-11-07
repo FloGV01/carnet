@@ -398,6 +398,8 @@ test('vigilance 2 · le geste horizontal reste à la page : touch-action « pan-
   await ouvrir(page, '#/comprendre/energie');
   await expect(titre(page, 'Comprendre')).toBeVisible();
   const graphes = page.locator('figure.graphe');
+  // Les graphes se dessinent après la lecture de la base, le titre déjà là : on les attend avant de les compter.
+  await expect(graphes.first()).toBeVisible();
   expect(await graphes.count()).toBeGreaterThan(0);
   expect(new Set(await graphes.evaluateAll((fs) => fs.map((f) => getComputedStyle(f).touchAction)))).toEqual(new Set(['pan-y pinch-zoom']));
   expect(await effectif('figure.graphe .graphe-titre')).toBe('pan-y pinch-zoom');
@@ -426,6 +428,7 @@ test('vigilance 2 · le geste horizontal reste à la page : touch-action « pan-
     for (const s of ['main.ecran', 'nav.onglets .onglet-icone']) expect(await effectif(s), `${hash} ${s}`).toBe('auto');
   }
   // L'Analyse, encore ouverte : ses graphes gardent auto.
+  await expect(graphes.first()).toBeVisible();
   expect(await graphes.count()).toBeGreaterThan(0);
   expect(await effectif('figure.graphe')).toBe('auto');
 

@@ -2,18 +2,18 @@
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '846dfe225926';
+const VERSION = 'd6cdd1eee529';
 const FICHIERS = [
   "./",
   "./css/base.css",
   "./css/composants.css",
   "./css/ecrans.css",
   "./css/tokens.css",
-  "./icons/apple-touch-icon.png",
-  "./icons/icone-192.png",
-  "./icons/icone-512.png",
-  "./icons/icone-maskable-512.png",
   "./icons/icone.svg",
+  "./icons/v11-apple-touch-icon.png",
+  "./icons/v11-icone-192.png",
+  "./icons/v11-icone-512.png",
+  "./icons/v11-icone-maskable-512.png",
   "./index.html",
   "./js/analyse/avant-explosions.js",
   "./js/analyse/classements.js",

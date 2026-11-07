@@ -4,9 +4,9 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES, MISES_A_NIVEAU,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES, MISES_A_NIVEAU, estBaseVide,
 } from '../../public/js/db/sauvegarde.js';
-import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
 import {
@@ -1084,4 +1084,50 @@ test('v11 : aperçu de l\'import, les refuges ont leurs mots ; vidés (null), ri
   assert.equal(phraseMeta(['monPlan', 'refuges']), 'Mon plan et les refuges seront remplacés par ce que contient le fichier.');
   assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: null }], []), []);
   assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: { titres: 'Une chanson', playlists: [] } }], []), ['refuges']);
+});
+
+// v11 (10/11) : un Carnet vide n'a rien à garder (spec §10). L'import n'y prend pas de copie, et « Revenir à l'état d'avant
+// l'import » n'apparaît donc pas après le passage à la nouvelle icône. Tout ce qui vient de l'utilisateur garde la copie :
+// une fiche, une méta à lui (Mon plan seul suffit), une liste qu'il a créée ou une liste par défaut qu'il a touchée.
+test('v11 : un import sur un Carnet vide ne prend pas de copie ; une journée, Mon plan seul, une liste à soi, renommée ou rangée en prennent une', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const [f] = await exporter(a.repo, { versionApp: '11.0.0' });
+  const analyse = () => analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+
+  const vide = nouveauRepo();
+  assert.equal(estBaseVide(await lireTout(vide.repo)), true, 'Carnet tout neuf');
+  await remplacer(vide.repo, analyse());
+  assert.equal(await copieAvantImport(vide.repo), null);
+  assert.equal((await vide.repo.journal.lire('2026-09-30')).humeur, 6, 'l\'import est fait');
+  await assert.rejects(revenirAvantImport(vide.repo), (e) => e.code === 'INTROUVABLE');
+
+  // « Tout effacer » redonne un Carnet vide : les listes par défaut recréées et les clés techniques ne comptent pas.
+  await toutEffacer(a.repo);
+  assert.equal(estBaseVide(await lireTout(a.repo)), true, 'après Tout effacer');
+
+  const CAS = {
+    'une journée': (r) => r.journal.patch('2026-09-28', { humeur: 5 }),
+    'Mon plan seul': (r) => r.meta.ecrire('monPlan', { quandCaMonte: 'je sors' }),
+    'une liste à soi': (r) => r.listes.creer('lieu', 'Chez la voisine'),
+    'une liste renommée': (r) => r.listes.renommer('lieu:bureau', 'Au bureau'),
+    'une liste rangée': (r) => r.listes.archiver('lieu:bureau'),
+  };
+  for (const [quoi, faire] of Object.entries(CAS)) {
+    const b = nouveauRepo();
+    await faire(b.repo);
+    assert.equal(estBaseVide(await lireTout(b.repo)), false, quoi);
+    await remplacer(b.repo, analyse());
+    assert.ok(await copieAvantImport(b.repo), quoi);
+  }
+
+  // Pur : un seul mémo, une seule humeur du moment, une liste recréée par un import suffisent ; les clés techniques, non.
+  const techniques = ['schema', 'installation', 'explosionsDepuis', 'derniereEcriture', 'derniereSauvegarde'].map((cle) => ({ cle, valeur: 'x' }));
+  const bureau = seedItems(SEED_V1, 'h').find((i) => i.id === 'lieu:bureau');
+  assert.equal(estBaseVide({ meta: techniques, listes: [bureau] }), true);
+  assert.equal(estBaseVide({ listes: [{ ...bureau, ordre: bureau.ordre + 10 }] }), false, 'une liste par défaut déplacée');
+  assert.equal(estBaseVide({ audios: [{ id: 'au_1' }] }), false);
+  assert.equal(estBaseVide({ humeurs: [{ id: 'hu_1' }] }), false);
+  assert.equal(estBaseVide({ listes: [{ ...bureau, id: 'lieu:u-x', origine: 'import' }] }), false, 'une liste recréée par un import');
+  assert.equal(estBaseVide({ meta: [{ cle: 'favorisBienEtre', valeur: [] }] }), false, 'une méta à lui, même vidée');
 });

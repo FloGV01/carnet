@@ -60,6 +60,20 @@ const RUBRIQUES = [
     ],
     note: 'Par défaut, le minuteur ne coupe ni la Concentration ni les sons : ils restent allumés jusqu\'à ce que tu les éteignes, depuis le Centre de contrôle. À la fin, c\'est le minuteur de l\'iPhone qui sonne. Carnet n\'envoie rien.',
   },
+  // v11 (spec §10) : une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et la supprimer efface ses
+  // données. Les étapes de la spec, mot pour mot : rien n'est supprimé avant la dernière, une fois la copie vérifiée.
+  // La note dit ce que la copie ne garde pas (ce qui vit hors de la base, dans le stockage local de la page).
+  {
+    titre: 'Changer d\'icône sans rien perdre',
+    etapes: [
+      'Redémarrer l\'iPhone : l\'icône a peut-être changé. Si oui, c\'est fini.',
+      'Dans l\'ancien Carnet : Réglages › Exporter, enregistrer dans Fichiers.',
+      'Dans Safari : ouvrir l\'adresse de Carnet, Partager › Sur l\'écran d\'accueil. Vérifier l\'aperçu : s\'il montre la nouvelle icône, Ajouter. Sinon, annuler, fermer l\'onglet, rouvrir l\'adresse et recommencer.',
+      'Ouvrir le nouveau Carnet, qui doit être vide : Réglages › Importer. Vérifier quelques jours dans l\'Historique.',
+      'Ranger l\'ancien dans un dossier, et ne plus y écrire. Le supprimer plus tard, ou jamais.',
+    ],
+    note: 'La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser.',
+  },
 ];
 
 export function AideIphone() {

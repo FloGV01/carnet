@@ -34,6 +34,10 @@ test('exporter puis restaurer sur une base vidée redonne les mêmes données', 
   await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
   expect(await page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-30'))).toMatchObject({ sommeilRessenti: 'sommeil:moyen', lieu: 'lieu:bureau' });
   expect((await page.evaluate(() => window.__carnet.repo.episodes.tous())).length).toBe(1);
+  // v11 (10/11) : un import sur un Carnet vide ne prend pas de copie (spec §10) : la ligne « Revenir » n'apparaît pas, une
+  // fois la carte Sauvegarde chargée (sa taille affichée).
+  await expect(page.getByText(/^Taille :/)).toBeVisible();
+  await expect(page.getByRole('button', { name: "Revenir à l'état d'avant l'import" })).toHaveCount(0);
 });
 
 test('perte chiffrée, refus d\'un fichier illisible, revenir à l\'état d\'avant l\'import', async ({ page }) => {
@@ -49,7 +53,25 @@ test('perte chiffrée, refus d\'un fichier illisible, revenir à l\'état d\'ava
   await page.getByRole('button', { name: 'Importer', exact: true }).click();
   await expect(page.getByText('Import terminé.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toBeNull();
-  await page.getByRole('button', { name: "Revenir à l'état d'avant l'import" }).click();
+  // v11 (10/11) : « Revenir » remplace tout, juste sous « Importer » : il demande confirmation et dit ce qui sera remplacé.
+  // Un toucher ouvre la boîte sans rien changer, « Annuler » ne change rien, « Revenir » restaure.
+  const ligne = page.getByRole('button', { name: "Revenir à l'état d'avant l'import" });
+  const boite = page.getByRole('alertdialog', { name: "Revenir à l'état d'avant l'import ?" });
+  await ligne.click();
+  await expect(boite).toBeVisible();
+  await expect(boite.locator('.boite-texte')).toHaveText("Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du 30 septembre 2026. Les mémos vocaux d'avant l'import ne reviennent pas.");
+  await expect(boite.getByRole('button')).toHaveText(['Annuler', 'Revenir']);
+  await expect(boite.getByRole('button', { name: 'Annuler' })).toBeFocused();
+  expect(await page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toBeNull();
+  await boite.getByRole('button', { name: 'Annuler' }).click();
+  await expect(boite).toHaveCount(0);
+  await expect(ligne).toBeVisible();
+  expect(await page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toBeNull();
+  expect(await page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-30'))).toMatchObject({ lieu: 'lieu:bureau' });
+  await ligne.click();
+  await boite.getByRole('button', { name: 'Revenir', exact: true }).click();
+  await expect(boite).toHaveCount(0);
+  await expect(page.getByText("État d'avant l'import rétabli.")).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toMatchObject({ humeur: 3 });
 });
 

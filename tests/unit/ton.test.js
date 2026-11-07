@@ -60,8 +60,9 @@ test('la page d\'aide iPhone décrit les réglages, sans recommander de stratég
   const texte = chainesJs(lire(page));
   assert.deepEqual(trouverInterdits(texte), []);
   assert.deepEqual(trouverConseils(texte), []);
-  // Les six rubriques de la spec, dans l'ordre.
-  const rubriques = ["Sons d'arrière-plan", 'Bruit sombre', 'Concentration', 'Moment difficile', 'Réduire le point blanc', 'Parole en direct', 'Toucher le dos', 'Sieste'];
+  // Les six rubriques de la spec, dans l'ordre ; v11 (10/11) : la septième, le changement d'icône (spec v11 §10).
+  const rubriques = ["Sons d'arrière-plan", 'Bruit sombre', 'Concentration', 'Moment difficile', 'Réduire le point blanc', 'Parole en direct', 'Toucher le dos', 'Sieste',
+    "Changer d'icône sans rien perdre"];
   const n = normaliser(texte);
   const places = rubriques.map((r) => n.indexOf(normaliser(r)));
   assert.ok(places.every((p) => p >= 0), `rubrique absente : ${rubriques.filter((_, i) => places[i] < 0)}`);
