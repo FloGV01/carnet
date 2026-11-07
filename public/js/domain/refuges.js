@@ -121,3 +121,39 @@ export function formesDuLien(lien) {
   if (app) formes.push(directe(app));
   return formes;
 }
+
+// ---------- Choisir dans son compte Spotify (v11, tâche 7, spec §8.3) ----------
+// Une page de la réponse de Spotify (GET /v1/me/playlists) : le nom et le lien de chaque playlist, pas ses chansons. Un
+// élément `null` ou d'une autre forme, et un lien hors du lecteur public (lienDeSpotify), sont écartés. Le nom est lu comme
+// texte seulement (coupé à NOM_MAX signes), jamais comme du HTML ; sans nom, l'écran dit « Playlist 2 ». Une réponse d'une
+// autre forme ne donne rien.
+export function listePlaylists(json) {
+  const items = estObjet(json) && Array.isArray(json.items) ? json.items : [];
+  return items.map((item) => {
+    if (!estObjet(item)) return null;
+    const lien = lienDeSpotify(estObjet(item.external_urls) ? item.external_urls.spotify : null);
+    if (!lien) return null;
+    const nom = textePropre(item.name);
+    return { nom: nom && (Array.from(nom).slice(0, NOM_MAX).join('').trim() || null), lien };
+  }).filter(Boolean);
+}
+
+// Choisie dans le compte : une ligne de source Spotify a ce lien.
+export const choisieDeSpotify = (r, lien) => normaliserRefuges(r).playlists.some((p) => p.source === 'spotify' && p.lien === lien);
+
+// Un toucher sur une playlist de son compte : ajoutée à la fin avec la source Spotify, ou retirée si elle y est déjà. Avec
+// trois playlists notées, rien ne s'ajoute. Une ligne collée à la main, même avec ce lien, n'est jamais touchée.
+export function basculerSpotify(r, playlist) {
+  const n = normaliserRefuges(r);
+  const lien = lienDeSpotify(estObjet(playlist) ? playlist.lien : null);
+  if (!lien) return n;
+  if (choisieDeSpotify(n, lien)) return { ...n, playlists: n.playlists.filter((p) => !(p.source === 'spotify' && p.lien === lien)) };
+  if (n.playlists.length >= MAX_PLAYLISTS) return n;
+  return normaliserRefuges({ ...n, playlists: [...n.playlists, { nom: playlist.nom, lien, source: 'spotify' }] });
+}
+
+// « Retirer ces playlists » : les lignes venues de Spotify partent ; les lignes collées à la main et les titres restent.
+export function sansSpotify(r) {
+  const n = normaliserRefuges(r);
+  return { ...n, playlists: n.playlists.filter((p) => p.source !== 'spotify') };
+}

@@ -670,6 +670,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .saisie-playlist .etiquette { margin-bottom: 4px; }
 /* Sans dictée, le texte prend toute la largeur : un lien collé tient sur moins de lignes. */
 .saisie-playlist .champ-avec-dicter .champ-texte { padding-right: 14px; }
+/* La connexion à Spotify (v11, tâche 7) : dans une carte, sous les lignes qui s'écoutent, le bouton et son texte, le code à
+   coller, la liste de ses playlists à cocher (une colonne : un nom peut être long), puis « Retirer ces playlists ». */
+.compte-spotify { display: flex; flex-direction: column; gap: 10px; }
+.code-compte, .liste-compte { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pastilles.liste-spotify { grid-template-columns: 1fr; gap: 8px; }
+.liste-spotify .pastille { overflow-wrap: anywhere; }
+.liste-spotify .pastille[aria-disabled="true"] { color: var(--text-2); }
+/* La page du code (Safari) : le code entier, sur plusieurs lignes, sélectionné d'un toucher si la copie ne marche pas. */
+.valeur-code { font-family: var(--police-mono); font-size: var(--t-sous); line-height: 1.4; overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
 .ligne-plan { padding: 0 var(--marge); flex: none; display: flex; align-items: center; gap: 8px; }
 /* Enfants directs seulement : la feuille « En parler » s'ouvre dans la ligne et doit garder son aspect (v6.1). */
 .ligne-plan > .btn-lien { font-size: var(--t-sous); }

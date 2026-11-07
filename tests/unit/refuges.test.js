@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_PLAYLISTS, NOM_MAX, lienAccepte, lienDeSpotify, normaliserRefuges, refugesVides, playlistsAOuvrir, nomPlaylist,
-  avecPlaylist, formesDuLien,
+  avecPlaylist, formesDuLien, listePlaylists, choisieDeSpotify, basculerSpotify, sansSpotify,
 } from '../../public/js/domain/refuges.js';
 
 test('lienAccepte : https, spotify et music seulement, sans espaces autour, sans le paramètre de partage « si »', () => {
@@ -227,4 +227,73 @@ test('formesDuLien : lien web, lien web dans une nouvelle fenêtre, et lien dire
   for (const x of ['javascript:alert(1)', 'http://open.spotify.com/playlist/abc', 'data:text/html,x', '', null, 12]) assert.deepEqual(formesDuLien(x), [], String(x));
   // Chaque forme rendue est un lien que l'app accepte.
   for (const f of formesDuLien('https://open.spotify.com/playlist/abc')) assert.equal(lienAccepte(f.href), f.href);
+});
+
+// ---------- Choisir dans son compte Spotify (v11, tâche 7, spec §8.3) ----------
+
+// Une page de réponse de Spotify, abîmée exprès : élément null, lien d'un autre hôte, nom piégé (point de vigilance 5).
+test('listePlaylists : le nom (en texte) et le lien du lecteur public ; un élément null, sans lien ou d\'un autre hôte est écarté', () => {
+  const json = {
+    items: [
+      { name: '  Pour souffler ', external_urls: { spotify: 'https://open.spotify.com/playlist/a1?si=x' }, id: 'a1', tracks: { total: 12 } },
+      null,
+      { name: 'Ailleurs', external_urls: { spotify: 'https://autre.test/playlist/b' } },
+      { name: 'Piège', external_urls: { spotify: 'javascript:alert(1)' } },
+      { name: 'Sans lien' },
+      { name: 'Lien qui n\'est pas un texte', external_urls: { spotify: 12 } },
+      { name: '<img src=x onerror=alert(1)>', external_urls: { spotify: 'https://open.spotify.com/playlist/c3' } },
+      { name: 42, external_urls: { spotify: 'https://open.spotify.com/playlist/d4' } },
+      { name: 'x'.repeat(NOM_MAX + 20), external_urls: { spotify: 'https://open.spotify.com/playlist/e5' } },
+      'texte', 12, ['https://open.spotify.com/playlist/f6'],
+    ],
+  };
+  assert.deepEqual(listePlaylists(json), [
+    { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/a1' },
+    { nom: '<img src=x onerror=alert(1)>', lien: 'https://open.spotify.com/playlist/c3' },
+    { nom: null, lien: 'https://open.spotify.com/playlist/d4' },
+    { nom: 'x'.repeat(NOM_MAX), lien: 'https://open.spotify.com/playlist/e5' },
+  ]);
+  for (const x of [null, undefined, 12, 'texte', [], {}, { items: null }, { items: 'x' }, { items: {} }]) assert.deepEqual(listePlaylists(x), [], JSON.stringify(x));
+});
+
+const DE_SPOTIFY = (n) => ({ nom: `Compte ${n}`, lien: `https://open.spotify.com/playlist/s${n}` });
+
+test('basculerSpotify : ajoute à la fin avec la source Spotify, retire au second toucher ; avec trois playlists, rien ne s\'ajoute', () => {
+  const collee = { nom: 'Collée', lien: 'spotify:playlist:m', source: null };
+  let r = basculerSpotify({ titres: 'Un titre', playlists: [collee] }, DE_SPOTIFY(1));
+  assert.deepEqual(r, { titres: 'Un titre', playlists: [collee, { ...DE_SPOTIFY(1), source: 'spotify' }] });
+  assert.equal(choisieDeSpotify(r, DE_SPOTIFY(1).lien), true);
+  r = basculerSpotify(r, DE_SPOTIFY(2));
+  assert.equal(r.playlists.length, MAX_PLAYLISTS);
+  // Plein : la quatrième ne s'ajoute pas, et rien d'autre ne bouge.
+  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(3)), r);
+  // Le second toucher la retire ; la place libérée reprend une autre playlist.
+  r = basculerSpotify(r, DE_SPOTIFY(1));
+  assert.deepEqual(r.playlists.map((p) => p.nom), ['Collée', 'Compte 2']);
+  assert.equal(choisieDeSpotify(r, DE_SPOTIFY(1).lien), false);
+  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(3)).playlists.map((p) => p.nom), ['Collée', 'Compte 2', 'Compte 3']);
+  // Sans nom : la ligne garde son lien, l'écran dit « Playlist 3 ».
+  assert.deepEqual(basculerSpotify({}, { nom: null, lien: 'https://open.spotify.com/playlist/z' }).playlists, [{ nom: null, lien: 'https://open.spotify.com/playlist/z', source: 'spotify' }]);
+});
+
+test('basculerSpotify : une ligne collée à la main n\'est jamais retirée, même avec le même lien ; un lien hors du lecteur public ne s\'ajoute pas', () => {
+  const collee = { nom: 'Collée', lien: 'https://open.spotify.com/playlist/s1', source: null };
+  const r = basculerSpotify({ playlists: [collee] }, DE_SPOTIFY(1));
+  assert.deepEqual(r.playlists, [collee, { ...DE_SPOTIFY(1), source: 'spotify' }]);
+  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(1)).playlists, [collee]);
+  for (const lien of ['spotify:playlist:s1', 'https://autre.test/playlist/s1', 'javascript:alert(1)', null, 12]) {
+    assert.deepEqual(basculerSpotify({ playlists: [collee] }, { nom: 'X', lien }), normaliserRefuges({ playlists: [collee] }), String(lien));
+  }
+  for (const x of [null, undefined, 'texte', 12]) assert.deepEqual(basculerSpotify({ playlists: [collee] }, x), normaliserRefuges({ playlists: [collee] }));
+});
+
+test('sansSpotify : les lignes venues de Spotify partent ; les lignes collées à la main et les titres restent', () => {
+  const r = {
+    titres: 'Pluie lente',
+    playlists: [{ ...DE_SPOTIFY(1), source: 'spotify' }, { nom: 'Collée', lien: 'https://open.spotify.com/playlist/m', source: null }, { ...DE_SPOTIFY(2), source: 'spotify' }],
+  };
+  assert.deepEqual(sansSpotify(r), { titres: 'Pluie lente', playlists: [{ nom: 'Collée', lien: 'https://open.spotify.com/playlist/m', source: null }] });
+  assert.deepEqual(sansSpotify({ playlists: [{ ...DE_SPOTIFY(1), source: 'spotify' }] }), { titres: null, playlists: [] });
+  assert.equal(refugesVides(sansSpotify({ playlists: [{ ...DE_SPOTIFY(1), source: 'spotify' }] })), true);
+  assert.deepEqual(sansSpotify(null), { titres: null, playlists: [] });
 });

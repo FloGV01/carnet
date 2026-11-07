@@ -207,9 +207,10 @@ test('ouvert depuis Bien-être : une ligne par playlist qui a un lien, son `href
   ]);
   await expect(lignes(ecran(page)).nth(0).locator('.ligne-sous')).toHaveText('Spotify');
   await expect(lignes(ecran(page)).nth(1).locator('.ligne-sous')).toHaveCount(0);
-  // Les lignes d'écoute sont en tête des playlists, avant les champs.
+  // Les lignes d'écoute sont en tête des playlists, avant les champs ; v11 (7/11) : entre les deux, « Choisir dans mon compte »
+  // (tests/e2e/v11-spotify.spec.js).
   const ordre = await ecran(page).locator('.playlists-refuges').evaluate((s) => [...s.children].map((e) => e.className));
-  expect(ordre).toEqual(['etiquette', 'lignes-playlists', 'carte saisie-playlist', 'carte saisie-playlist', 'carte saisie-playlist']);
+  expect(ordre).toEqual(['etiquette', 'lignes-playlists', 'carte compte-spotify', 'carte saisie-playlist', 'carte saisie-playlist', 'carte saisie-playlist']);
   // Sans lien, aucune ligne, et aucune trace d'elles.
   await ecrireMeta(page, 'refuges', { titres: 'Une chanson', playlists: [{ nom: 'Sans lien' }] });
   await ouvrirRefuges(page);
