@@ -38,3 +38,7 @@
 - [ ] Bien-être : « Reprendre » revient après une relance de l'app. Une épingle survit à une sauvegarde restaurée.
 - [ ] Minuteur silencieux : l'écran reste allumé, le bol sonne au début et à la fin ; verrouiller l'iPhone le met en pause.
 - [ ] Minuteur de concentration : lancer 15 min, passer à une autre app au-delà de la durée, revenir. L'écran dit « Le temps est passé. », sans bol. Si iOS a rechargé la page (retour sur Aujourd'hui, sans ce texte), en faire un correctif : retenir l'heure de fin, comme pour le repli du §14.2 de la spec v10.
+
+## v11
+
+- [ ] **Le geste de retour, au doigt** (point de vigilance 2 du plan v11) : sur un écran à « Retour », le doigt qui glisse vers la droite fait comme « Retour ». L'essayer en partant du titre, d'un graphe de Comprendre, de l'aperçu de l'Export PSY et de la barre d'onglets. Sur un épisode rouvert, il fait comme « Fermer ». Faire défiler un écran ne fait jamais revenir en arrière. Si rien ne se passe depuis l'un de ces départs, iOS a pris le geste pour lui : en faire un correctif. Un graphe montré « en tableau » garde son défilement de côté : depuis lui, le geste peut ne rien faire.

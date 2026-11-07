@@ -88,6 +88,22 @@ test('le doigt vers la droite fait comme « Retour » : Historique et Comprendre
   await expect.poll(() => adresse(page)).toBe('#/reglages');
 });
 
+test('partout sur l\'écran : parti d\'un graphe de Comprendre, de l\'aperçu de l\'Export PSY ou de la barre d\'onglets, le geste revient aussi', async ({ page }) => {
+  await ouvrir(page, '#/comprendre/energie');
+  await expect(titre(page, 'Comprendre')).toBeVisible();
+  await glisser(page, 'figure.graphe', 120, 8);
+  await expect.poll(() => adresse(page)).toBe('#/analyse');
+  await ouvrir(page, '#/export-psy', '#/soins');
+  await expect(page.locator('pre.apercu-export')).toBeVisible();
+  await glisser(page, 'pre.apercu-export', 120, 8);
+  await expect.poll(() => adresse(page)).toBe('#/soins');
+  // La barre d'onglets, hors de main : le doigt qui glisse ne touche pas l'onglet, il revient en arrière.
+  await ouvrir(page, '#/historique');
+  await expect(titre(page, 'Historique')).toBeVisible();
+  await glisser(page, 'nav.onglets .onglet[href="#/reglages"]', 120, 8);
+  await expect.poll(() => adresse(page)).toBe('#/analyse');
+});
+
 test('vers la gauche, un geste lent de 59 px ou un geste trop vertical : rien ; un geste rapide de 40 px : retour', async ({ page }) => {
   await ouvrir(page, '#/historique');
   await expect(titre(page, 'Historique')).toBeVisible();
@@ -344,19 +360,74 @@ test('les écrans de l\'émotion : l\'écran 1, la carte, et la carte d\'un rele
 // ---------- Point de vigilance 2 ----------
 
 // Dans WebKit, une zone qui défile repart de touch-action: auto : sans pan-y pinch-zoom sur elle, iOS prend le geste horizontal
-// pour lui (pointercancel), alors que les événements simulés passent. La valeur calculée le prouve, écran par écran.
+// pour lui (pointercancel), alors que les événements simulés passent. La valeur calculée le prouve, écran par écran. La valeur
+// effective se lit comme WebKit la calcule : les valeurs de l'élément touché et de ses parents, jusqu'à la première zone qui
+// défile (overflow auto ou scroll), elle comprise ; ici, « pan-y pinch-zoom » dès que l'une le porte.
 test('vigilance 2 · le geste horizontal reste à la page : touch-action « pan-y pinch-zoom » sur les écrans à « Retour » et là où l\'on relit, corps qui défilent compris', async ({ page }) => {
   const touchAction = (selecteur) => page.locator(selecteur).first().evaluate((e) => getComputedStyle(e).touchAction);
-  for (const [hash, nom] of POUSSES.concat([['#/mon-plan', 'Mon plan']])) {
+  // Une zone qui défile : overflow auto ou scroll, sur l'un des deux axes. `effectif` s'arrête à la première, elle comprise.
+  const effectif = (selecteur) => page.locator(selecteur).first().evaluate((e) => {
+    const valeurs = new Set();
+    for (let el = e; el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if (s.touchAction !== 'auto') valeurs.add(s.touchAction);
+      if (/^(auto|scroll)$/.test(s.overflowX) || /^(auto|scroll)$/.test(s.overflowY)) break;
+    }
+    return [...valeurs].join(' ∩ ') || 'auto';
+  });
+  // Les zones de l'écran qui défilent et gardent auto, hors des champs de texte et de la roue, dont departIgnore écarte le geste.
+  const zonesEnAuto = () => page.evaluate(() => [...document.querySelectorAll('.app *')].filter((e) => {
+    const s = getComputedStyle(e);
+    return (/^(auto|scroll)$/.test(s.overflowX) || /^(auto|scroll)$/.test(s.overflowY)) && s.touchAction === 'auto'
+      && !e.closest('input, textarea, select, .roue-choix');
+  }).map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].join('.')}`));
+  // Une nuit notée : Mes nuits (Comprendre › Rythmes) se dessine, avec « Voir en tableau ».
+  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { sommeilRessenti: 'sommeil:bien', heuresSommeil: 8 }));
+  const ECRANS = POUSSES.concat([['#/mon-plan', 'Mon plan'], ['#/comprendre/rythmes', 'Comprendre'], ['#/export-psy', 'Export PSY']]);
+  for (const [hash, nom] of ECRANS) {
     await ouvrir(page, hash);
     await expect(titre(page, nom)).toBeVisible();
-    expect(await page.locator('main.ecran:has(> .entete-pousse)').count(), hash).toBe(1);
-    expect(await touchAction('main.ecran'), hash).toBe('pan-y pinch-zoom');
+    // La règle est sur .app : main, la barre d'onglets (hors de main) et chacun de ses onglets l'ont.
+    expect(await page.locator('.app:has(> main.ecran > .entete-pousse)').count(), hash).toBe(1);
+    expect(await touchAction('.app'), hash).toBe('pan-y pinch-zoom');
+    for (const s of ['main.ecran', 'h1.titre-ecran', 'nav.onglets', 'nav.onglets .onglet-icone']) expect(await effectif(s), `${hash} ${s}`).toBe('pan-y pinch-zoom');
+    expect(await zonesEnAuto(), hash).toEqual([]);
   }
-  // Un onglet n'en a pas besoin : le défilement d'iOS reste entier.
-  await ouvrir(page, '#/reglages');
-  await expect(titre(page, 'Réglages')).toBeVisible();
-  expect(await touchAction('main.ecran')).toBe('auto');
+  // Comprendre : chaque graphe est une zone qui défile (overflow-x, pour un tableau trop large en très grand texte). Il garde le
+  // geste tant qu'il montre son graphique ; montré en tableau, il garde auto, pour que le tableau défile de côté.
+  await ouvrir(page, '#/comprendre/energie');
+  await expect(titre(page, 'Comprendre')).toBeVisible();
+  const graphes = page.locator('figure.graphe');
+  expect(await graphes.count()).toBeGreaterThan(0);
+  expect(new Set(await graphes.evaluateAll((fs) => fs.map((f) => getComputedStyle(f).touchAction)))).toEqual(new Set(['pan-y pinch-zoom']));
+  expect(await effectif('figure.graphe .graphe-titre')).toBe('pan-y pinch-zoom');
+  await ouvrir(page, '#/comprendre/rythmes');
+  const nuits = page.locator('figure.graphe', { has: page.getByText('Mes nuits', { exact: true }) });
+  await expect(nuits.getByRole('img', { name: /^Mes nuits, / })).toBeVisible();
+  expect(await nuits.evaluate((f) => getComputedStyle(f).touchAction)).toBe('pan-y pinch-zoom');
+  await nuits.getByRole('button', { name: 'Voir en tableau' }).click();
+  await expect(nuits.locator('table')).toBeVisible();
+  expect(await nuits.evaluate((f) => getComputedStyle(f).touchAction)).toBe('auto');
+  expect(await effectif('figure.graphe:has(table) td')).toBe('auto');
+  await nuits.getByRole('button', { name: 'Voir le graphe' }).click();
+  await expect(nuits.locator('table')).toHaveCount(0);
+  expect(await nuits.evaluate((f) => getComputedStyle(f).touchAction)).toBe('pan-y pinch-zoom');
+  // L'Export PSY : son aperçu défile en hauteur, jamais de côté (pre-wrap) : il garde le geste.
+  await ouvrir(page, '#/export-psy', '#/soins');
+  await expect(page.locator('pre.apercu-export')).toBeVisible();
+  expect(await touchAction('pre.apercu-export')).toBe('pan-y pinch-zoom');
+  expect(await effectif('pre.apercu-export')).toBe('pan-y pinch-zoom');
+
+  // Un onglet n'en a pas besoin : le défilement d'iOS reste entier, barre d'onglets et graphes de l'Analyse compris.
+  for (const [hash, nom] of [['#/reglages', 'Réglages'], ['#/analyse', 'Analyse']]) {
+    await ouvrir(page, hash);
+    await expect(titre(page, nom)).toBeVisible();
+    expect(await touchAction('.app'), hash).toBe('auto');
+    for (const s of ['main.ecran', 'nav.onglets .onglet-icone']) expect(await effectif(s), `${hash} ${s}`).toBe('auto');
+  }
+  // L'Analyse, encore ouverte : ses graphes gardent auto.
+  expect(await graphes.count()).toBeGreaterThan(0);
+  expect(await effectif('figure.graphe')).toBe('auto');
 
   await ouvrir(page, '#/episode/ep-rouvert', '#/historique');
   await expect(vue(page, 'Épisode').getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();

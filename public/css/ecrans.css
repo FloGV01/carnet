@@ -357,8 +357,14 @@
    parcours ou un relevé rouvert, .relecture), le geste horizontal reste à la page, comme sur Aujourd'hui, le vertical à iOS.
    Dans WebKit, une zone qui défile (overflow) repart de touch-action: auto pour ce qui est dessous : sans la règle sur le
    corps du parcours et sur celui de l'écran 3, iOS prendrait le geste pour lui (pointercancel) et le retour n'arriverait
-   jamais, alors que les événements simulés des tests passent (point de vigilance 2 du plan). */
-main.ecran:has(> .entete-pousse), .parcours.relecture, .parcours.relecture .parcours-corps,
+   jamais, alors que les événements simulés des tests passent (point de vigilance 2 du plan). Sur un écran à « Retour », la
+   règle se pose sur .app, pour que la barre d'onglets, le message et le bandeau, hors de main, l'aient aussi. Elle se pose
+   aussi sur les zones de l'écran qui défilent : les graphes de Comprendre et l'aperçu de l'Export PSY, qui ne défile qu'en
+   hauteur. Un graphe montré en tableau garde auto : en très grand texte, son tableau défile de côté, et departIgnore écarte
+   alors le geste qui part de lui. */
+.app:has(> main.ecran > .entete-pousse),
+.app:has(> main.ecran > .entete-pousse) :is(.apercu-export, .graphe:not(:has(table))),
+.parcours.relecture, .parcours.relecture .parcours-corps,
 .moment-plein.relecture, .moment-plein.relecture .corps-faisais { touch-action: pan-y pinch-zoom; }
 
 /* Aujourd'hui (2b, v7) : en-tête, rubriques du soir en cartes, ligne Mémo vocal / J'ai fini, replis en liste groupée,
