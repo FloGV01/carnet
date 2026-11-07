@@ -1,6 +1,7 @@
 import { html, useEffect } from '../lib.js';
 import { Icones } from '../icones.js';
 import { etatApp } from '../../store.js';
+import { useGesteRetour } from './geste-retour.js';
 
 // Un écran plein (un parcours, ou les écrans de l'émotion, v9) : tant qu'il est ouvert, la barre d'onglets et le
 // bandeau sont masqués (app.js), et le retour sur Aujourd'hui après 30 min ne s'applique pas.
@@ -21,11 +22,15 @@ export function usePleinEcran() {
 // la puce de droite et le panneau des réponses collé en bas, a ses propres écrans pleins (ui/ecrans/moment.js).
 // `noir` (v10, « Réveil la nuit ») : fond noir dans les deux thèmes (.ecran-noir), pour ne pas éclairer la chambre ; il le
 // reste en v11, quand les écrans de l'émotion, noirs comme lui jusque-là, suivent le thème.
-export function CadreParcours({ titre, teinte, etape, nbEtapes = 0, surFermer, sousTitre, pied, sansPoint = false, icone, noir = false, children }) {
+// `relecture` (v11, spec §11) : un écran où l'on relit (le récapitulatif d'un épisode ou d'un symptôme rouvert, celui de
+// l'Après coup). Le doigt qui glisse vers la droite y fait comme « Fermer » (geste-retour.js), et la classe .relecture le
+// laisse passer (glissement.js, ecrans.css). Partout ailleurs (une saisie, un exercice, un minuteur), aucun geste.
+export function CadreParcours({ titre, teinte, etape, nbEtapes = 0, surFermer, sousTitre, pied, sansPoint = false, icone, noir = false, relecture = false, children }) {
   usePleinEcran();
+  useGesteRetour(relecture ? surFermer : null);
   const recap = etape === 'recap';
   const etatRepere = (i) => (recap || i < etape ? 'fait' : i === etape ? 'en-cours' : null);
-  return html`<div class=${`parcours teinte-${teinte || 'jour'}${noir ? ' ecran-noir' : ''}`} role="dialog" aria-modal="true" aria-label=${titre}>
+  return html`<div class=${`parcours teinte-${teinte || 'jour'}${noir ? ' ecran-noir' : ''}${relecture ? ' relecture' : ''}`} role="dialog" aria-modal="true" aria-label=${titre}>
     <header class="parcours-tete">
       <button type="button" class="fermer" onClick=${surFermer}>${Icones.fermer({ trait: 2 })}Fermer</button>
       ${!icone && html`<span class="nom" aria-hidden="true">${!sansPoint && html`<span class="point-teinte"></span>`}${titre}</span>`}

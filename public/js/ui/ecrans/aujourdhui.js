@@ -17,7 +17,7 @@ import { MemoVocal } from '../composants/memo-vocal.js';
 import { afficherToast } from '../composants/toast.js';
 import { Confirmation } from '../composants/confirmation.js';
 import { TeteRubrique } from '../composants/rubrique.js';
-import { sensGlissement, departIgnore } from '../glissement.js';
+import { ecouterGlissement, departIgnore } from '../glissement.js';
 import { phraseResume, minusculeInitiale } from '../../domain/phrase.js';
 import { avecHumeurDuJour } from '../../analyse/humeur-jour.js';
 import { normaliserJournee, champsAffiches, repliAffiche, repliNuitAffiche, changerPremiereLigne, NOM_PESE_RECHARGE, NOM_NUIT } from '../../domain/journee.js';
@@ -117,33 +117,14 @@ const cleHeure = (x) => `${x.date} ${x.heure}`;
 
 // Changer de jour en glissant (B4, ui/glissement.js) : un doigt posé sur la page du jour, puis levé. Les écouteurs sont
 // passifs et rien n'est empêché : le défilement vertical reste celui d'iOS (touch-action: pan-y sur la page, qui ne
-// garde pour elle que les gestes horizontaux). L'heure vient de performance.now(), comme celle d'un événement.
+// garde pour elle que les gestes horizontaux).
 function useGlissementJour(surGlisser) {
   const rappel = useRef(surGlisser);
   rappel.current = surGlisser;
-  useEffect(() => {
-    let depart = null;
-    const poser = (e) => {
-      depart = null;
-      if (e.pointerType !== 'touch' || !e.isPrimary || !e.target.closest || !e.target.closest('main.aujourdhui') || departIgnore(e.target)) return;
-      depart = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
-    };
-    const lever = (e) => {
-      if (!depart || e.pointerId !== depart.id) return;
-      const sens = sensGlissement(e.clientX - depart.x, e.clientY - depart.y, performance.now() - depart.t);
-      depart = null;
-      if (sens) rappel.current(sens);
-    };
-    const annuler = () => { depart = null; };
-    document.addEventListener('pointerdown', poser, { passive: true });
-    document.addEventListener('pointerup', lever, { passive: true });
-    document.addEventListener('pointercancel', annuler, { passive: true });
-    return () => {
-      document.removeEventListener('pointerdown', poser);
-      document.removeEventListener('pointerup', lever);
-      document.removeEventListener('pointercancel', annuler);
-    };
-  }, []);
+  useEffect(() => ecouterGlissement({
+    accepter: (e) => Boolean(e.target.closest && e.target.closest('main.aujourdhui')) && !departIgnore(e.target),
+    surSens: (sens) => rappel.current(sens),
+  }), []);
 }
 // Le dernier jour atteint en glissant, et de quel côté : sa page entre de ce côté (un petit déplacement de 200 ms au
 // plus, supprimé avec « Réduire les animations »), le temps de l'animation.

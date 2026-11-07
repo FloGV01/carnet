@@ -217,8 +217,10 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
+    // Le récapitulatif d'une fiche rouverte se relit (v11, spec §11) : le doigt vers la droite y fait comme « Fermer ». Celui
+    // d'une fiche neuve, menée jusque-là, finit une saisie : aucun geste, comme à ses étapes.
     return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
-      pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+      relecture=${rouvert} pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
       <h2 class="titre-question">Récapitulatif</h2>
       <ul class="liste recap">${lignes}</ul>

@@ -353,6 +353,14 @@
   body, html { background: #FFFFFF; }
 }
 
+/* Le geste de retour (v11, spec §11, ui/composants/geste-retour.js) : sur un écran à « Retour » et là où l'on relit (un
+   parcours ou un relevé rouvert, .relecture), le geste horizontal reste à la page, comme sur Aujourd'hui, le vertical à iOS.
+   Dans WebKit, une zone qui défile (overflow) repart de touch-action: auto pour ce qui est dessous : sans la règle sur le
+   corps du parcours et sur celui de l'écran 3, iOS prendrait le geste pour lui (pointercancel) et le retour n'arriverait
+   jamais, alors que les événements simulés des tests passent (point de vigilance 2 du plan). */
+main.ecran:has(> .entete-pousse), .parcours.relecture, .parcours.relecture .parcours-corps,
+.moment-plein.relecture, .moment-plein.relecture .corps-faisais { touch-action: pan-y pinch-zoom; }
+
 /* Aujourd'hui (2b, v7) : en-tête, rubriques du soir en cartes, ligne Mémo vocal / J'ai fini, replis en liste groupée,
    Ma journée, bande du bas. La saisie du soir tient sans défilement à 390 × 797 (6 rubriques par défaut), et à
    390 × 844 « J'ai fini pour ce soir » (P3) et la ligne Après coup (P2) restent au-dessus de la bande : cartes de 8 px

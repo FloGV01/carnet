@@ -45,6 +45,9 @@
 //   entre aussitôt dans le relevé, comme un mot touché sur la carte ; une autre couleur change la sienne, et l'énergie du
 //   relevé avec. Sa famille et sa définition le complètent ensuite, au toucher. La flèche ouvre la carte, centrée sur lui,
 //   hors du carré de sa zone ; ← ramène à la loupe.
+// - Le geste de retour (v11, spec §11) : sur l'écran 3 d'un relevé rouvert, où l'on relit, le doigt qui glisse vers la droite
+//   fait comme ✕, garde comprise (.relecture, geste-retour.js). Ailleurs (l'écran 1, la carte, où le doigt la fait déjà
+//   glisser, la loupe, Mon mot, un relevé neuf, « Changer le mot »), aucun geste.
 import { html, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { etatApp } from '../../store.js';
@@ -65,6 +68,7 @@ import { pourAffichage } from '../../domain/typographie.js';
 import { versHash } from '../../routeur.js';
 import { couleurLisible } from '../carte-geometrie.js';
 import { usePleinEcran } from '../composants/parcours.js';
+import { useGesteRetour } from '../composants/geste-retour.js';
 import { QuatreBulles } from '../composants/quatre-bulles.js';
 import { CarteEmotions, motsColores } from '../composants/carte-emotions.js';
 import { CarteDuBas, FLECHE } from '../composants/carte-du-bas.js';
@@ -454,5 +458,7 @@ export function Moment({ id = null }) {
         surAnnuler=${() => setConfirmer(false)} surConfirmer=${supprimer} />`}
     </div>`;
   }
-  return html`<div class="moment-plein" role="dialog" aria-modal="true" aria-label="Émotion du moment">${ecran}</div>`;
+  const relecture = rouvert && vue.nom === 'faisais';
+  useGesteRetour(relecture ? gardee(terminer) : null);
+  return html`<div class=${`moment-plein${relecture ? ' relecture' : ''}`} role="dialog" aria-modal="true" aria-label="Émotion du moment">${ecran}</div>`;
 }
