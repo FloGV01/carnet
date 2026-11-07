@@ -24,7 +24,7 @@ import { couleurCase, disposition, etendue, motDuMilieu, pointDe, DIAMETRE } fro
 import { ajusterEtiquettes, zonesSures } from '../mesures.js';
 
 const RAYON = DIAMETRE / 2;
-// La hauteur du voile noir du haut sous la zone sûre (.carte-fondu, visuel §2.7), qui couvre aussi les boutons.
+// La hauteur du voile du haut sous la zone sûre (.carte-fondu, visuel §2.7), qui couvre aussi les boutons.
 const VOILE_PX = 84;
 // Le plus petit corps d'un libellé de bulle (12 pt au texte par défaut ; visuel §2.6), et la marge gardée au bord du disque.
 const PLANCHER_PX = 9;

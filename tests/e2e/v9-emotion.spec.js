@@ -153,7 +153,8 @@ test('la flèche, puis « Terminer » touché deux fois pendant l\'écriture : l
   expect(await releves(page)()).toMatchObject([{ emotion: 'roue:serenite:serein', energie: 'energie:basse' }]);
 });
 
-test('plein écran, fond noir en clair comme en sombre, des bulles à l\'écran 3 : ni barre d\'onglets ni en-tête de Carnet ; la carte défile dans son cadre, la page jamais de côté ; aucune violation de CSP', async ({ page }) => {
+// v11 (8/11) : le fond suit le thème (spec §9) : noir en sombre, comme avant ; le gris clair d'Aujourd'hui en clair.
+test('plein écran, fond noir en sombre et gris clair en clair, des bulles à l\'écran 3 : ni barre d\'onglets ni en-tête de Carnet ; la carte défile dans son cadre, la page jamais de côté ; aucune violation de CSP', async ({ page }) => {
   await page.addInitScript(() => {
     window.__csp = [];
     document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile || ''}`));
@@ -167,9 +168,10 @@ test('plein écran, fond noir en clair comme en sombre, des bulles à l\'écran 
       entete: document.querySelectorAll('.parcours, .parcours-tete').length, couvre: [r.top, r.left, r.width, r.height],
       deCote: document.documentElement.scrollWidth > innerWidth || scrollX !== 0 };
   });
-  const attendu = { fond: 'rgb(0, 0, 0)', onglets: 0, entete: 0, couvre: [0, 0, 390, 844], deCote: false };
+  const FONDS = { dark: 'rgb(0, 0, 0)', light: 'rgb(231, 234, 238)' };
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
+    const attendu = { fond: FONDS[schema], onglets: 0, entete: 0, couvre: [0, 0, 390, 844], deCote: false };
     const vue = await ouvrir(page);
     expect(await etat(), `${schema}, écran 1`).toEqual(attendu);
     await bulle(vue, 'vert').click();
@@ -196,8 +198,10 @@ test('plein écran, fond noir en clair comme en sombre, des bulles à l\'écran 
   expect(await page.evaluate(() => window.__csp)).toEqual([]);
 });
 
+// v11 (8/11) : mesuré en sombre, comme avant ; en clair, le verre blanc translucide et le titre foncé (spec §9).
 test('l\'écran 1 aux mesures de How We Feel (visuel §1) : ✕ en verre de 48 × 44, le titre, quatre bulles de 145 en grille 2 × 2 sur leurs halos, « Maintenant ▾ » dessous', async ({ page }) => {
   await simulerZonesSures(page);
+  await page.emulateMedia({ colorScheme: 'dark' });
   const vue = await ouvrir(page);
   await page.evaluate(() => document.fonts.ready);
   const m = await vue.evaluate((v) => {
@@ -229,6 +233,16 @@ test('l\'écran 1 aux mesures de How We Feel (visuel §1) : ✕ en verre de 48 �
   // « Maintenant ▾ » sous les bulles.
   expect(m.puce[1]).toBeGreaterThan(m.faces[3][1] + 145);
   await expect(vue.locator('.puce-quand')).toHaveText('Maintenant');
+  // En clair, écran ouvert : les mêmes places et les mêmes bulles ; le verre et le titre suivent le thème.
+  await page.emulateMedia({ colorScheme: 'light' });
+  const clair = await vue.evaluate((v) => {
+    const verre = v.querySelector('.verre');
+    const titre = v.querySelector('h1');
+    return { fondFermer: getComputedStyle(verre).backgroundColor, police: [getComputedStyle(titre).fontWeight, getComputedStyle(titre).color],
+      fermer: [verre.getBoundingClientRect().left, verre.getBoundingClientRect().top].map((x) => Math.round(x * 10) / 10), titre: Math.round(titre.getBoundingClientRect().top),
+      faceFond: [...v.querySelectorAll('.bulle-zone .face')].map((f) => getComputedStyle(f).backgroundColor) };
+  });
+  expect(clair).toEqual({ fondFermer: 'rgba(255, 255, 255, 0.78)', police: ['700', 'rgb(24, 27, 31)'], fermer: [16, 47.3], titre: 121, faceFond: m.faceFond });
 });
 
 test('la carte s\'ouvre sur le milieu de la zone touchée, ses 144 mots, et le focus sur cette zone ; elle défile dans les deux sens', async ({ page }) => {
@@ -354,19 +368,32 @@ test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\
       expect(m.autre, m.nom).toBe(m.fond);
       expect(contraste(m.texte, m.fond), `${schema} ${m.nom}`).toBeGreaterThanOrEqual(4.5);
     }
-    // Les cases les plus profondes de chaque zone, et une claire : le mot, éclairci si besoin, et la définition, blanche.
+    // Les cases les plus profondes de chaque zone, et une claire : en sombre, le mot, éclairci si besoin, et la définition,
+    // blanche, sur #2c2c2e ; en clair (v11), le mot en noir sur sa capsule (la couleur de sa case) et la définition foncée,
+    // sur une carte blanche.
     for (const n of ['Enragé', 'Sans valeur', 'Extasié', 'Serein', 'Calme']) {
       await toucherMot(vue, n);
       await expect(carteDuBas(vue).locator('.mot-carte-du-bas')).toHaveText(n);
-      const [fond, motCouleur, def] = await carteDuBas(vue).evaluate((e) => [e, e.querySelector('.mot-carte-du-bas'), e.querySelector('.definition-carte-du-bas')]
-        .map((x) => getComputedStyle(x)[x === e ? 'backgroundColor' : 'color']));
-      expect(fond).toBe('rgb(44, 44, 46)');
-      expect(contraste(motCouleur, fond), `${schema} ${n}`).toBeGreaterThanOrEqual(4.5);
-      expect(def).toBe('rgb(255, 255, 255)');
+      const [fond, motCouleur, motFond, def] = await carteDuBas(vue).evaluate((e) => {
+        const [m, d] = [e.querySelector('.mot-carte-du-bas'), e.querySelector('.definition-carte-du-bas')];
+        return [getComputedStyle(e).backgroundColor, getComputedStyle(m).color, getComputedStyle(m).backgroundColor, getComputedStyle(d).color];
+      });
+      if (schema === 'dark') {
+        expect(fond).toBe('rgb(44, 44, 46)');
+        expect(motFond).toBe('rgba(0, 0, 0, 0)');
+        expect(contraste(motCouleur, fond), `${schema} ${n}`).toBeGreaterThanOrEqual(4.5);
+        expect(def).toBe('rgb(255, 255, 255)');
+      } else {
+        expect(fond).toBe('rgb(255, 255, 255)');
+        expect([motCouleur, motFond], n).toEqual(['rgb(0, 0, 0)', rgbCase(n)]);
+        expect(contraste(motCouleur, motFond), `${schema} ${n}`).toBeGreaterThanOrEqual(4.5);
+        expect(def).toBe('rgb(24, 27, 31)');
+      }
+      expect(contraste(def, fond), `${schema} ${n} : définition`).toBeGreaterThanOrEqual(4.5);
     }
     // L'écran 3 : le mot en rappel (Calme, une case claire), le titre, une activité choisie (à la couleur de la case du
-    // mot, relecture finale), une autre non, « Terminer » ; chacun sur son fond rendu, le noir de l'écran pour les textes
-    // posés dessus.
+    // mot, relecture finale), une autre non, « Terminer » ; chacun sur son fond rendu : le premier ancêtre opaque (le
+    // fond de l'écran, noir en sombre et gris clair en clair, pour les textes posés dessus ; la capsule du mot en clair).
     await continuer(vue).click();
     await activite(vue, 'Repos').click();
     await expect(activite(vue, 'Repos')).toHaveAttribute('aria-pressed', 'true');
@@ -374,16 +401,24 @@ test('AA : le texte noir de chaque bulle sur sa couleur rendue (les quatre de l\
     await expect(activite(vue, 'Repos')).toHaveCSS('background-color', rgbCase('Calme'));
     await finMouvements(page);
     const textes = await page.evaluate(() => {
-      const de = (sel, fond) => { const e = document.querySelector(sel); return [getComputedStyle(e).color, fond ? getComputedStyle(fond(e)).backgroundColor : 'rgb(0, 0, 0)']; };
+      const opaque = (e) => {
+        for (let x = e; x; x = x.parentElement) { const c = getComputedStyle(x).backgroundColor; if (!/^rgba\(.*, 0\)$|transparent/.test(c)) return c; }
+        return 'rgb(255, 255, 255)';
+      };
+      const de = (sel, fond) => { const e = document.querySelector(sel); return [getComputedStyle(e).color, getComputedStyle(fond(e)).backgroundColor]; };
       const soi = (e) => e;
       const pastille = (n) => [...document.querySelectorAll('.choix-faisais .pastille')].find((b) => b.textContent.includes(n));
       return {
-        mot: de('.mot-rappel'), titre: de('.titre-faisais'),
+        mot: [getComputedStyle(document.querySelector('.mot-rappel')).color, opaque(document.querySelector('.mot-rappel'))],
+        titre: [getComputedStyle(document.querySelector('.titre-faisais')).color, opaque(document.querySelector('.titre-faisais'))],
         choisie: [getComputedStyle(pastille('Repos')).color, getComputedStyle(pastille('Repos')).backgroundColor],
         autre: [getComputedStyle(pastille('Travail')).color, getComputedStyle(pastille('Travail')).backgroundColor],
         terminer: de('.terminer-releve', soi),
       };
     });
+    // Le fond de chaque texte posé sur l'écran : son noir en sombre, comme avant ; le gris clair en clair ; le mot, sur sa
+    // capsule en clair.
+    expect([textes.titre[1], textes.mot[1]], schema).toEqual(schema === 'dark' ? ['rgb(0, 0, 0)', 'rgb(0, 0, 0)'] : ['rgb(231, 234, 238)', rgbCase('Calme')]);
     for (const [nom, [texte, fond]] of Object.entries(textes)) expect(contraste(texte, fond), `${schema} écran 3, ${nom}`).toBeGreaterThanOrEqual(4.5);
     await terminer(vue).click();
   }
@@ -993,20 +1028,30 @@ test('un id inconnu (#/moment/ID) renvoie sur Aujourd\'hui, comme #/moment/ seul
 
 // La carte du bas (visuel §2.8, dont les valeurs font foi) : le mot et sa définition au même corps, 17 pt, sur un pas de
 // 18,3, sans écart entre eux. Le mot et trois lignes tiennent dans la capsule de 100 pt : au texte par défaut, une seule
-// définition des 144, au plus, la fait grandir (mesurées sur une copie cachée de la carte du bas).
+// définition des 144, au plus, la fait grandir (mesurées sur une copie cachée de la carte du bas). v11 (8/11) : en sombre,
+// comme avant ; en clair, le mot en 600 sur sa capsule (1 pt au-dessus et au-dessous, 4 pt avant la définition), et le mot et
+// trois lignes tiennent encore dans les 100 pt.
 test('relecture finale : la carte du bas, le mot et sa définition à 17 sur 18,3 ; trois lignes tiennent dans les 100 pt', async ({ page }) => {
+  for (const [schema, graisse, ecart] of [['dark', '400', '0px'], ['light', '600', '4px']]) {
+    await page.emulateMedia({ colorScheme: schema });
+    await mesurerCarteDuBas(page, schema, graisse, ecart);
+  }
+});
+async function mesurerCarteDuBas(page, schema, graisse, ecart) {
   const vue = await ouvrir(page);
   await noter(vue, 'rouge', 'Enragé');
   const bas = carteDuBas(vue);
   await expect(bas.locator('.mot-carte-du-bas')).toHaveText('Enragé');
   const m = await bas.evaluate((e) => {
     const corps = (x) => { const s = getComputedStyle(x); return [s.fontSize, Math.round(parseFloat(s.lineHeight) * 10) / 10, s.fontWeight, s.marginTop]; };
-    return { mot: corps(e.querySelector('.mot-carte-du-bas')), def: corps(e.querySelector('.definition-carte-du-bas')), h: e.getBoundingClientRect().height };
+    const motBas = e.querySelector('.mot-carte-du-bas');
+    return { mot: corps(motBas), def: corps(e.querySelector('.definition-carte-du-bas')), ecart: getComputedStyle(motBas).marginBottom, h: e.getBoundingClientRect().height };
   });
-  expect(m.mot).toEqual(['17px', 18.3, '400', '0px']);
-  expect(m.def).toEqual(m.mot);
+  expect(m.mot, schema).toEqual(['17px', 18.3, graisse, '0px']);
+  expect(m.def, schema).toEqual(['17px', 18.3, '400', '0px']);
+  expect(m.ecart, schema).toBe(ecart);
   // Enragé : le mot et trois lignes, dans la capsule de 100.
-  expect(m.h).toBeCloseTo(100, 0);
+  expect(m.h, schema).toBeCloseTo(100, 0);
   const textes = MOTS_CARTE.map((x) => [x.libelle, DEFINITIONS[x.id]]);
   const grandes = await bas.evaluate((e, liste) => {
     const copie = e.cloneNode(true);
@@ -1022,12 +1067,14 @@ test('relecture finale : la carte du bas, le mot et sa définition à 17 sur 18,
     copie.remove();
     return trop;
   }, textes);
-  expect(grandes.length, grandes.join(', ')).toBeLessThanOrEqual(1);
-});
+  expect(grandes.length, `${schema} : ${grandes.join(', ')}`).toBeLessThanOrEqual(1);
+  await aller(page, '#/aujourdhui');
+}
 
 // Au clavier (Option+Tab dans Safari), le contour de la bulle qui a le focus passe au-delà de ses halos (16 pt) et
-// au-dessus des bulles voisines (z-index), blanc sur le noir.
+// au-dessus des bulles voisines (z-index), blanc sur le noir ; v11 (8/11) : foncé sur le clair.
 test('relecture finale : au clavier, le contour d\'une bulle de l\'écran 1 passe au-delà des halos, au-dessus des voisines', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
   const vue = await ouvrir(page);
   await finGarde(bulles(vue));
   for (let i = 0; i < 8; i++) {
@@ -1040,6 +1087,12 @@ test('relecture finale : au clavier, le contour d\'une bulle de l\'écran 1 pass
     return [b.matches(':focus-visible'), s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset, s.zIndex];
   });
   expect(f).toEqual([true, 'solid', '2px', 'rgb(255, 255, 255)', '16px', '1']);
+  // En clair, focus gardé : le même contour, foncé.
+  await page.emulateMedia({ colorScheme: 'light' });
+  expect(await bulle(vue, 'jaune').evaluate((b) => {
+    const s = getComputedStyle(b);
+    return [b.matches(':focus-visible'), s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset, s.zIndex];
+  })).toEqual([true, 'solid', '2px', 'rgb(24, 27, 31)', '16px', '1']);
   // Les halos tournent sur une orbite de 12 pt (le décalage de leur centre, lu sur leur transform) et débordent la face de
   // 0,4 : le contour, à 16, est au-delà.
   const ecart = await bulle(vue, 'jaune').evaluate((b) => Math.max(...[...b.querySelectorAll('.halo')].map((h) => {
@@ -1088,8 +1141,10 @@ test('relecture finale : ouverte sur le rouge ou le jaune, les mots du rang 12 r
 });
 
 // À l'écran 3, le mot en rappel et une activité choisie ont la même couleur : celle de la case du mot (Vide, l'azur de
-// sa case, et non le pervenche de la zone bleue), éclaircie pour le mot ; le texte de l'activité reste lisible.
+// sa case, et non le pervenche de la zone bleue), éclaircie pour le mot ; le texte de l'activité reste lisible. v11 (8/11) :
+// en clair, la couleur même de la case, celle de l'activité, est le fond de la capsule du mot, écrit en noir.
 test('relecture finale : à l\'écran 3, une activité choisie a la couleur de la case du mot, comme le mot en rappel', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
   const vue = await ouvrir(page);
   await noter(vue, 'bleu', 'Vide');
   await continuer(vue).click();
@@ -1099,6 +1154,10 @@ test('relecture finale : à l\'écran 3, une activité choisie a la couleur de l
   expect(rgbCase('Vide')).not.toBe('rgb(120, 159, 255)');
   const [texte, fond] = await activite(vue, 'Travail').evaluate((b) => [getComputedStyle(b).color, getComputedStyle(b).backgroundColor]);
   expect(contraste(texte, fond)).toBeGreaterThanOrEqual(4.5);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(activite(vue, 'Travail')).toHaveCSS('background-color', rgbCase('Vide'));
+  await expect(vue.getByRole('heading', { name: 'Vide', level: 1 })).toHaveCSS('background-color', rgbCase('Vide'));
+  await expect(vue.getByRole('heading', { name: 'Vide', level: 1 })).toHaveCSS('color', 'rgb(0, 0, 0)');
 });
 
 // L'écran de l'émotion laissé ouvert après un mot (l'iPhone verrouillé le soir, rouvert le matin) : après plus de 30 min

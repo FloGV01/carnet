@@ -1,6 +1,8 @@
 // Émotion du moment (v9, spec §4, §7 et §13 ; v8 : la carte dans un panneau, v7 : la roue en familles, « Humeur du
-// moment » de la v4 à la v6.1) : comme How We Feel, en plein écran, sur fond noir dans les deux thèmes, sans barre
-// d'onglets ni en-tête de Carnet.
+// moment » de la v4 à la v6.1) : comme How We Feel, en plein écran, sans barre d'onglets ni en-tête de Carnet. Sur fond
+// noir dans les deux thèmes jusqu'à la v10 ; depuis la v11 (spec §9), l'écran suit le thème du système, par le CSS seul
+// (ecrans.css, jetons --moment-*) : en sombre, le noir de How We Feel ; en clair, le fond d'Aujourd'hui, et le mot choisi
+// en noir sur une capsule de la couleur de sa case.
 // - Écran 1 : ✕, le titre, les quatre bulles (ui/composants/quatre-bulles.js) et, dessous, « Maintenant ▾ », qui ouvre
 //   les heures de « C'était vers… » (heuresVers). Toucher une bulle n'écrit rien : il ouvre la carte, sur sa zone.
 // - Écran 2 : la carte (ui/composants/carte-emotions.js), ← vers l'écran 1. Toucher un mot écrit le relevé tout de suite
@@ -354,7 +356,7 @@ export function Moment({ id = null }) {
     onClick=${gardee(() => { amorcerClavier(); changerDeVue({ nom: 'loupe', retour: vue }); })}>${LOUPE}</button>`;
   let ecran = null;
   if (!releve) {
-    // Le relevé rouvert se lit : l'écran reste noir.
+    // Le relevé rouvert se lit : l'écran reste vide, sur son fond.
   } else if (vue.nom === 'bulles') {
     const heures = heuresVers(repo.maintenant());
     ecran = html`<div class="ecran-bulles" key="bulles">
@@ -408,10 +410,11 @@ export function Moment({ id = null }) {
       </div>`}
     </div>`;
   } else {
-    // L'écran 3. Le mot dans la couleur de sa case (éclaircie, comme dans la carte du bas), et une activité choisie dans
-    // celle de la case même (relecture finale : un seul bleu pour Vide, pas l'azur de sa case et le pervenche de sa
-    // zone) ; le texte d'une activité choisie reste le -on de la zone, à 4,5:1 sur toutes ses cases. Un mot à soi mis de
-    // côté, qui a quitté la carte, prend la couleur de sa zone (-fill) ; un mot à soi sans zone, le blanc.
+    // L'écran 3. Le mot dans la couleur de sa case (éclaircie, comme dans la carte du bas ; en clair, en noir sur une capsule
+    // de la couleur même, --c-fill, ecrans.css), et une activité choisie dans celle de la case même (relecture finale : un
+    // seul bleu pour Vide, pas l'azur de sa case et le pervenche de sa zone) ; le texte d'une activité choisie reste le -on
+    // de la zone, à 4,5:1 sur toutes ses cases. Un mot à soi mis de côté, qui a quitté la carte, prend la couleur de sa zone
+    // (-fill) ; un mot à soi sans zone, la couleur du texte de l'écran (blanc en sombre, noir sans capsule en clair).
     const libelle = IDS_FAMILLES.has(releve.emotion) ? null : libelleEmotion(releve.emotion, perso);
     const surCarte = libelle && mots.find((m) => m.id === releve.emotion);
     const zone = libelle ? zoneDe(releve.emotion, perso) : null;
@@ -451,5 +454,5 @@ export function Moment({ id = null }) {
         surAnnuler=${() => setConfirmer(false)} surConfirmer=${supprimer} />`}
     </div>`;
   }
-  return html`<div class="moment-plein ecran-noir" role="dialog" aria-modal="true" aria-label="Émotion du moment">${ecran}</div>`;
+  return html`<div class="moment-plein" role="dialog" aria-modal="true" aria-label="Émotion du moment">${ecran}</div>`;
 }

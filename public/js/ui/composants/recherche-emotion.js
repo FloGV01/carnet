@@ -1,6 +1,6 @@
-// La loupe de l'émotion du moment (v9, spec §4.4) : plein écran noir, ← en verre et le champ à sa droite, actif tout de
-// suite, puis les mots de la carte qui contiennent le texte, dans leur nom ou dans leur définition, sans accents ni casse
-// (domain/mots-perso.js, chercher). Chaque mot est à la couleur de sa zone, avec le début de sa définition ; le toucher
+// La loupe de l'émotion du moment (v9, spec §4.4) : plein écran (noir, et clair en thème clair depuis la v11), ← en verre
+// et le champ à sa droite, actif tout de suite, puis les mots de la carte qui contiennent le texte, dans leur nom ou dans
+// leur définition, sans accents ni casse (domain/mots-perso.js, chercher). Chaque mot est à la couleur de sa zone, avec le début de sa définition ; le toucher
 // fait comme sur la carte (`surMot`). En bas des résultats, ou seul sans résultat : « Ajouter mon mot « … » »
 // (`surAjouter`), sauf si un mot de la carte porte déjà ce nom (nomPropose). Le texte cherché reste d'une ouverture à
 // l'autre du même relevé (l'écran le garde). Pendant la garde (`enGarde`), la liste ignore les touchers.

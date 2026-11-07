@@ -30,7 +30,10 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // fond. v10 (9/9) : les écrans nouveaux (ECRANS_V10 : les exercices de crise, les listes des entrées, le soupir, le
 // noting, les sons de fond, les deux minuteurs, « Pour ce moment : », et Réglages › Moment difficile, où la voix
 // s'ajoute), dans ce parcours et, en plus, dans le leur : cibles de 44 pt au doigt, mots interdits, polices, rien de
-// téléchargé, mouvement réduit.
+// téléchargé, mouvement réduit. v11 (8/11) : les écrans de l'émotion suivent le thème (spec §9), noirs en sombre comme avant,
+// sur le gris clair d'Aujourd'hui en clair ; le parcours les contrôle déjà dans les deux thèmes (contraste, anneau de la
+// couleur d'un mot à soi à 3:1, largeur et grand texte). En plus, en très grand texte (33 à 53), la capsule où le mot choisi
+// s'écrit en clair, pour le plus long mot de la carte. « Tes zones », qui suivait déjà le thème, est contrôlée sans changer.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -137,8 +140,8 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 
 // Les choix faits visibles sans leur coche (jamais la couleur seule). Une question cochée a sa propre case ; le mot choisi
 // de la carte des émotions (v9) a sa forme, la double capsule de 156 au lieu d'un disque de 96 (visuel §2.4) ; la couleur
-// choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau autour du disque (blanc sur le noir du relevé,
-// couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
+// choisie d'un mot à soi (v9, les quatre bulles en petit), son anneau autour du disque (blanc sur le noir du relevé, foncé
+// sur son gris clair en clair depuis la v11, couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
 // d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
 // L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`. La valeur
 // notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près) et sa graisse de 700.
@@ -294,8 +297,9 @@ const ECRANS = (ids) => [
       })).toBeLessThanOrEqual(1);
     }
   }, '.aujourdhui .roue-choix.notee'],
-  // v9 (4/8) : les écrans noirs de l'émotion, comme How We Feel : les quatre bulles et « C'était vers… » ouvert, puis la
-  // carte ouverte par une bulle, puis un mot au sens corrigé, choisi : la double capsule et sa carte du bas.
+  // v9 (4/8) : les écrans de l'émotion, comme How We Feel (noirs ; selon le thème depuis la v11) : les quatre bulles et
+  // « C'était vers… » ouvert, puis la carte ouverte par une bulle, puis un mot au sens corrigé, choisi : la double capsule et
+  // sa carte du bas (en clair, le mot sur sa capsule).
   ['Émotion du moment', async (p) => {
     await aller(p, '#/moment');
     await p.getByRole('button', { name: 'Maintenant', exact: true }).click();
@@ -534,6 +538,59 @@ test('à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
     return f;
   });
+  expect(fautes).toEqual({});
+});
+
+// v11 (8/11) : la capsule du mot choisi, à la carte du bas (elle reste dans la carte, avant la flèche) et à l'écran 3 (elle tient
+// dans l'écran, et son texte, qui passe à la ligne s'il le faut, y reste). Rien ne défile de côté. En sombre, sans capsule, le
+// mot obéit aux mêmes règles.
+const capsuleDebordante = (page, selecteur) => page.locator(selecteur).evaluate((e) => {
+  const fautes = [];
+  const r = e.getBoundingClientRect();
+  if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`hors de l'écran : ${Math.round(r.left)} → ${Math.round(r.right)}`);
+  const plage = document.createRange();
+  plage.selectNodeContents(e);
+  // De côté, chaque ligne reste dans la capsule ; en hauteur, ce sont ses lignes qui la font, et la boîte des lettres, plus
+  // haute que le pas des lignes, la dépasse sans rien en montrer.
+  if ([...plage.getClientRects()].some((q) => q.width > 0 && (q.left < r.left - 0.5 || q.right > r.right + 0.5))) fautes.push('texte hors de la capsule');
+  if (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1) fautes.push('coupé');
+  const carte = e.closest('.carte-du-bas');
+  if (carte) {
+    const [c, f] = [carte.getBoundingClientRect(), carte.querySelector('.continuer').getBoundingClientRect()];
+    if (r.right > f.left + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) fautes.push('hors de la carte du bas');
+  }
+  if (document.documentElement.scrollWidth > innerWidth + 0.5) fautes.push(`page : ${document.documentElement.scrollWidth} px de large`);
+  return fautes;
+});
+
+test('très grand texte (33 à 53), en clair et en sombre : la capsule du plus long mot de la carte ne déborde pas, à la carte du bas et à l\'écran 3', async ({ page }) => {
+  test.setTimeout(240000);
+  const fautes = {};
+  for (const schema of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: schema });
+    for (const taille of [null, 23, 33, 40, 47, 53]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+      await aller(page, '#/aujourdhui');
+      await aller(page, '#/moment');
+      const vue = vueMoment(page);
+      await noter(vue, 'bleu', 'Désillusionné');
+      await stabiliser(page);
+      const ou = `${schema === 'light' ? 'clair' : 'sombre'}, ${taille ? `${taille} px` : 'défaut'}`;
+      // En clair, c'est bien une capsule : le fond de la case du mot, opaque.
+      const fond = await page.locator('.mot-carte-du-bas').evaluate((e) => getComputedStyle(e).backgroundColor);
+      expect(fond === 'rgba(0, 0, 0, 0)', ou).toBe(schema === 'dark');
+      const bas = await capsuleDebordante(page, '.carte-du-bas .mot-carte-du-bas');
+      if (bas.length) fautes[`${ou}, carte du bas`] = bas;
+      await continuer(vue).click();
+      await expect(vue.getByRole('heading', { name: 'Désillusionné', level: 1 })).toBeVisible();
+      await stabiliser(page);
+      const ecran3 = await capsuleDebordante(page, '.mot-rappel');
+      if (ecran3.length) fautes[`${ou}, écran 3`] = ecran3;
+      await terminer(vue).click();
+      await expect(page).toHaveURL(/#\/aujourdhui$/);
+    }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});
 });
 

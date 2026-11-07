@@ -19,7 +19,8 @@ export function usePleinEcran() {
 // voyaient pas assez en clair). `icone` (v7, le lecteur de Bien-être) met le titre en grand en tête du corps, avec
 // l'icône dans un carré à la couleur du parcours, au lieu du nom dans la barre. v9 : l'Émotion du moment, qui portait
 // la puce de droite et le panneau des réponses collé en bas, a ses propres écrans noirs (ui/ecrans/moment.js).
-// `noir` (v10, « Réveil la nuit ») : fond noir dans les deux thèmes, comme ces écrans (.ecran-noir).
+// `noir` (v10, « Réveil la nuit ») : fond noir dans les deux thèmes (.ecran-noir), pour ne pas éclairer la chambre ; il le
+// reste en v11, quand les écrans de l'émotion, noirs comme lui jusque-là, suivent le thème.
 export function CadreParcours({ titre, teinte, etape, nbEtapes = 0, surFermer, sousTitre, pied, sansPoint = false, icone, noir = false, children }) {
   usePleinEcran();
   const recap = etape === 'recap';

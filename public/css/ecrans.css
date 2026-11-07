@@ -712,25 +712,28 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .bloc-etape { display: flex; flex-direction: column; gap: 8px; }
 .sous-titre-etape { font-size: var(--t-sous); font-weight: 600; color: var(--text-2); }
 /* ---------- Émotion du moment (v9, spec §4 et §5 ; visuel-hwf.md) ----------
-   Comme How We Feel : plein écran, fond noir dans les deux thèmes (les jetons de base y prennent leurs valeurs sombres,
-   tokens.css, .ecran-noir), sans barre d'onglets. Mesures en pt de l'iPhone (1 px CSS = 1 pt). */
-.moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: #000; color: #fff; --anneau: #fff; }
+   Comme How We Feel : plein écran, sans barre d'onglets. Mesures en pt de l'iPhone (1 px CSS = 1 pt). v11 (spec §9) : ces
+   écrans suivent le thème. En sombre, le noir de How We Feel, inchangé ; en clair, le fond d'Aujourd'hui et des cartes
+   blanches. Leurs couleurs passent par les jetons --moment-* (tokens.css), et par le CSS seul : rien n'est recalculé quand
+   le thème change, écran ouvert. Les bulles (fond, texte noir, halos) n'en dépendent pas. */
+.moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: var(--bg); color: var(--moment-texte); --anneau: var(--moment-focus); }
 /* Les boutons en verre, en haut (visuel §1.2 et §2.9) : capsules de 48 × 44, à 16 du bord, juste sous la barre d'état ;
-   « verre » sombre, un liseré clair et une ombre intérieure. Sur la carte, translucide et flouté. */
+   « verre » sombre, un liseré clair et une ombre intérieure (blanc translucide en clair, plus bas). Sur la carte,
+   translucide et flouté. */
 .verre {
   position: absolute; z-index: 3; top: calc(var(--zone-haut) + 0.3px); width: 48px; height: 44px; padding: 0; border: 0;
-  border-radius: 22px; display: grid; place-items: center; background: #1b1b1b; color: #f2f2f2;
+  border-radius: 22px; display: grid; place-items: center; background: var(--moment-verre); color: var(--moment-verre-texte);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, .14), inset 0 0 3px rgba(0, 0, 0, .35);
 }
 .verre.gauche { left: calc(16px + var(--zone-gauche)); }
 .verre.droite { right: calc(16px + var(--zone-droite)); }
 .verre svg { display: block; }
-.verre:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.verre:focus-visible, .bulle-mot:focus-visible, .continuer:focus-visible { outline: 2px solid var(--moment-focus); outline-offset: 3px; }
 .bulle-zone:focus-visible { outline: 2px solid var(--anneau, var(--text)); outline-offset: 3px; }
 /* Les grandes bulles de l'écran 1 : le contour passe au-delà de leurs halos (environ 12 pt hors de la face), au-dessus
    des bulles voisines. Les petites, sans halo, le gardent à 3. */
 .quatre-bulles:not(.petites):not(.comptes) .bulle-zone:focus-visible { z-index: 1; outline-offset: 16px; }
-.ecran-carte .verre { background: rgba(32, 32, 32, .85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ecran-carte .verre { background: var(--moment-verre-carte); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 
 /* Écran 1 (visuel §1) : le titre (haut à 121 sur l'iPhone, 27/32 en police système grasse), les quatre bulles (haut à 306), puis
    « Maintenant ▾ ». Il défile en hauteur s'il manque de place (grand texte) ; l'espace au-dessus des bulles cède d'abord. */
@@ -739,7 +742,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   display: flex; flex-direction: column; align-items: center;
   padding: calc(var(--zone-haut) + 74px) calc(16px + var(--zone-droite)) calc(24px + var(--zone-bas)) calc(16px + var(--zone-gauche));
 }
-.titre-bulles { flex: none; max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; text-wrap: balance; }
+.titre-bulles { flex: none; max-width: 358px; text-align: center; color: var(--moment-texte); font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; text-wrap: balance; }
 .espace-bulles { flex: 0 1 121px; min-height: 28px; }
 /* Les bulles : une grille 2 × 2 de disques de 145, 21,5 d'écart. Dans une bulle, trois halos de la couleur médiane à 80 %,
    sous la face ; une bulle se dessine au-dessus des précédentes (rouge, jaune, bleu, vert : l'ordre du code). */
@@ -788,7 +791,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-bulle { display: block; white-space: nowrap; }
 /* En petit (v9, spec §4.5 : la couleur d'un mot à soi) : 104 de diamètre, sans halo, le libellé à 12 (le corps des bulles
    de la carte) sur 92 utiles ; la bulle choisie cerclée, à 3 de son bord (un contour : l'écart laisse voir le fond, noir
-   ou carte), de blanc sur le noir (--anneau, posé par .moment-plein), du texte ailleurs (Réglages). */
+   ou carte), à la couleur du focus de l'émotion (--anneau, posé par .moment-plein : foncé en clair, blanc sur le noir), du
+   texte ailleurs (Réglages). */
 .quatre-bulles.petites { grid-template-columns: repeat(2, 104px); gap: 12px; align-self: center; }
 .quatre-bulles.petites .bulle-zone { width: 104px; height: 104px; }
 .quatre-bulles.petites .etiquette-bulle { width: 92px; font-size: 0.706rem; line-height: 1.15; }
@@ -806,7 +810,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .moment-plein .puce-quand > .btn-lien { width: auto; min-height: var(--cible); padding: 0 10px; gap: 6px; }
 .moment-plein .choix-vers { flex: none; justify-content: center; max-width: 358px; margin-top: 6px; }
 
-/* Écran 2 (visuel §2) : la carte plein écran, qui défile dans les deux sens sous un voile noir en haut. */
+/* Écran 2 (visuel §2) : la carte plein écran, qui défile dans les deux sens sous un voile en haut, à la couleur du fond. */
 .ecran-carte { position: absolute; inset: 0; animation: apparition-carte var(--duree-anim) ease-out; }
 @keyframes apparition-carte { from { opacity: 0; } to { opacity: 1; } }
 .carte-defile {
@@ -836,20 +840,22 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   font: 700 0.706rem/1.12 var(--police); letter-spacing: -0.01em; overflow-wrap: normal; transition: transform .45s cubic-bezier(.2, .8, .2, 1);
 }
 .bulle-mot.choisi .etiquette-mot { transform: translate(-50%, -50%) scale(.923); }
-/* Le voile noir du haut (visuel §2.7) : 0,6 sous la barre d'état, puis plus rien à 84 pt sous elle. */
+/* Le voile du haut (visuel §2.7), noir sur le noir, gris clair sur le clair : 0,6 sous la barre d'état, puis plus rien à 84 pt
+   sous elle. */
 .carte-fondu {
   position: absolute; z-index: 2; inset: 0 0 auto 0; height: calc(var(--zone-haut) + 83px); pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .6) 0, rgba(0, 0, 0, .6) 30.8%, rgba(0, 0, 0, .44) 51.5%, rgba(0, 0, 0, .28) 64.6%,
-    rgba(0, 0, 0, .12) 77.7%, rgba(0, 0, 0, .04) 90.8%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(180deg, rgba(var(--moment-voile), .6) 0, rgba(var(--moment-voile), .6) 30.8%, rgba(var(--moment-voile), .44) 51.5%,
+    rgba(var(--moment-voile), .28) 64.6%, rgba(var(--moment-voile), .12) 77.7%, rgba(var(--moment-voile), .04) 90.8%, rgba(var(--moment-voile), 0) 100%);
 }
 /* La carte du bas (visuel §2.8) : une capsule de 365 × 100 au moins, à 12,7 des bords et 8 au-dessus de la zone du bas,
-   en #2c2c2e ; le texte à 40 du bord, le rond blanc de 76 à droite. Elle grandit avec le texte (grand texte compris). */
+   en #2c2c2e (blanche en clair) ; le texte à 40 du bord, le rond blanc de 76 à droite (foncé en clair). Elle grandit avec le
+   texte (grand texte compris). */
 .carte-du-bas-zone {
   position: absolute; z-index: 3; left: calc(12.7px + var(--zone-gauche)); right: calc(12.7px + var(--zone-droite));
   bottom: calc(8px + var(--zone-bas)); pointer-events: none;
 }
 .carte-du-bas {
-  pointer-events: auto; min-height: 100px; border-radius: 50px; background: #2c2c2e; box-shadow: 0 3px 16px rgba(0, 0, 0, .5);
+  pointer-events: auto; min-height: 100px; border-radius: 50px; background: var(--moment-carte-bas); box-shadow: 0 3px 16px rgba(0, 0, 0, .5);
   display: flex; align-items: center; gap: 16px; padding: 12px 12px 12px 40px;
   animation: arrivee-carte-du-bas .3s cubic-bezier(.2, .8, .2, 1);
 }
@@ -859,21 +865,22 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    le mot et trois lignes tiennent dans les 76 pt utiles. */
 .mot-carte-du-bas, .definition-carte-du-bas { font: 400 1rem/1.076rem var(--police); }
 .mot-carte-du-bas { color: var(--c); overflow-wrap: anywhere; }
-.definition-carte-du-bas { margin-top: 0; color: #fff; text-wrap: pretty; }
+.definition-carte-du-bas { margin-top: 0; color: var(--moment-texte); text-wrap: pretty; }
 .continuer {
-  flex: 0 0 76px; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #000;
+  flex: 0 0 76px; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; background: var(--moment-plein); color: var(--moment-plein-on);
   display: grid; place-items: center;
 }
 /* Écran 3, « Ce que je faisais » (spec §4.3 et §13.1 ; visuel §5, le style des autres écrans de How We Feel) : ✕ en
-   haut ; le corps, qui défile en hauteur sous lui ; « Terminer » en bas, une capsule blanche au texte noir, sous la
-   flèche de l'écran 2 (la garde de 350 ms l'y protège d'un second toucher). Tout est centré, comme l'écran 1 : le mot en
-   rappel, en police système grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie comme dans la carte du
-   bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone ; « Aucun mot » en gris ; « Ce que je faisais » en titre gras, ses pastilles sur
-   #2c2c2e (la surface de la carte du bas), un choix fait à la couleur de la case du mot (--c-fill, posé aussi par
+   haut ; le corps, qui défile en hauteur sous lui ; « Terminer » en bas, une capsule blanche au texte noir (foncée au texte
+   blanc en clair), sous la flèche de l'écran 2 (la garde de 350 ms l'y protège d'un second toucher). Tout est centré, comme
+   l'écran 1 : le mot en rappel, en police système grasse, dans la couleur de sa case (--c-mot, posé par moment.js, éclaircie
+   comme dans la carte du bas), ou de sa zone pour un mot à soi mis de côté (-fill), en blanc sans zone (en clair : la
+   capsule, plus bas) ; « Aucun mot » en gris ; « Ce que je faisais » en titre gras, ses pastilles sur #2c2c2e (la surface
+   de la carte du bas ; blanches en clair), un choix fait à la couleur de la case du mot (--c-fill, posé aussi par
    moment.js : la même que le mot en rappel), sinon de sa zone (.zone-* : -fill), le texte en -on de la zone (les mêmes
-   dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090. */
+   dans les deux thèmes), à la couleur action sans zone. Le texte secondaire en #909090 (--text-2 en clair). */
 .ecran-faisais {
-  position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; --c-mot: var(--c-fill, #fff);
+  position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: var(--moment-choix); --c-mot: var(--c-fill, var(--moment-texte));
   animation: apparition-carte var(--duree-anim) ease-out;
 }
 .corps-faisais {
@@ -887,25 +894,25 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   max-width: 358px; color: var(--c-mot); font: 700 2rem/2.353rem var(--police); letter-spacing: -0.01em;
   overflow-wrap: anywhere; text-wrap: balance;
 }
-.mot-rappel.sans-mot { color: #909090; }
-.detail-rappel { max-width: 358px; color: #909090; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
+.mot-rappel.sans-mot { color: var(--moment-gris); }
+.detail-rappel { max-width: 358px; color: var(--moment-gris); font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
 .changer-mot { margin-top: 2px; font-weight: 600; }
 .faisais { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .titre-faisais {
   display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 358px; text-align: center;
-  color: #fff; font: 700 1.294rem/1.647rem var(--police); letter-spacing: -0.01em;
+  color: var(--moment-texte); font: 700 1.294rem/1.647rem var(--police); letter-spacing: -0.01em;
 }
-.titre-faisais svg { flex: none; width: 20px; height: 20px; color: #909090; }
+.titre-faisais svg { flex: none; width: 20px; height: 20px; color: var(--moment-gris); }
 .choix-faisais { width: 100%; max-width: 358px; }
 .choix-faisais .pastilles { justify-content: center; }
 /* « Pour ce moment : » (v10, spec §8), après « Ce que je faisais », dans le corps qui défile : une ligne en gris, puis deux ou
    trois boutons d'exercice, au corps et à la couleur de texte des activités, avec un contour et sans fond (rien n'invite, rien
-   n'insiste), les mêmes dans les deux thèmes. En très grand texte, ils passent à la ligne, et leur texte aussi. */
+   n'insiste), les mêmes pour toutes les zones. En très grand texte, ils passent à la ligne, et leur texte aussi. */
 .pour-ce-moment { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.titre-pour-ce-moment { max-width: 358px; text-align: center; color: #909090; font: 400 var(--t-sous)/1.35 var(--police); }
+.titre-pour-ce-moment { max-width: 358px; text-align: center; color: var(--moment-gris); font: 400 var(--t-sous)/1.35 var(--police); }
 .propositions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; max-width: 358px; }
 .proposition {
-  max-width: 100%; min-height: var(--cible); padding: 4px 14px; border: 1px solid #6e6e73; border-radius: 22px;
+  max-width: 100%; min-height: var(--cible); padding: 4px 14px; border: 1px solid var(--moment-contour); border-radius: 22px;
   background: none; color: var(--text); font: 400 var(--t-sous)/1.25 var(--police); overflow-wrap: anywhere;
 }
 .supprimer-releve { align-self: center; }
@@ -915,25 +922,26 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .pied-faisais { flex: none; padding: 28px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) calc(16px + var(--zone-gauche)); }
 .terminer-releve {
   display: block; width: 100%; max-width: 358px; min-height: 56px; margin: 0 auto; padding: 8px 20px; border: 0; border-radius: 28px;
-  background: #fff; color: #000; font: 600 1.059rem/1.25 var(--police);
+  background: var(--moment-plein); color: var(--moment-plein-on); font: 600 1.059rem/1.25 var(--police);
 }
-.terminer-releve:focus-visible, .changer-mot:focus-visible, .proposition:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.terminer-releve:focus-visible, .changer-mot:focus-visible, .proposition:focus-visible { outline: 2px solid var(--moment-focus); outline-offset: 3px; }
 /* La loupe (v9, spec §4.4) : ← en verre et, à sa droite, le champ, une capsule de verre de 44 de haut ; dessous, les mots
-   trouvés, chacun à la couleur de sa zone (-fill, la même dans les deux thèmes, AA sur le noir) en police système grasse, et le
-   début de sa définition en gris ; puis « Ajouter mon mot « … » », derrière un rond blanc au « + » noir. */
+   trouvés, chacun à la couleur de sa zone (-fill, AA sur le noir ; en clair, -text, AA sur le clair) en police système
+   grasse, et le début de sa définition en gris ; puis « Ajouter mon mot « … » », derrière un rond blanc au « + » noir (foncé
+   au « + » blanc en clair). */
 .ecran-loupe { position: absolute; inset: 0; display: flex; flex-direction: column; animation: apparition-carte var(--duree-anim) ease-out; }
 .champ-loupe {
   position: absolute; z-index: 3; top: calc(var(--zone-haut) + 0.3px); left: calc(72px + var(--zone-gauche)); right: calc(16px + var(--zone-droite));
-  height: 44px; border-radius: 22px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 13px; background: #1b1b1b; color: #909090;
+  height: 44px; border-radius: 22px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 13px; background: var(--moment-verre); color: var(--moment-gris);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, .14), inset 0 0 3px rgba(0, 0, 0, .35);
 }
 .champ-loupe:focus-within { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .7); }
 .champ-loupe svg { flex: none; }
 .champ-loupe input {
-  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: #fff; outline: none;
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--moment-texte); outline: none;
   font: 400 1rem/1.2 var(--police); -webkit-appearance: none; appearance: none;
 }
-.champ-loupe input::placeholder { color: #909090; }
+.champ-loupe input::placeholder { color: var(--moment-gris); }
 .champ-loupe input::-webkit-search-decoration { -webkit-appearance: none; }
 .corps-loupe {
   flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
@@ -942,35 +950,35 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .resultats-loupe { margin: 0; padding: 0; list-style: none; }
 .resultat-loupe {
   width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
-  padding: 10px 4px; border: 0; border-bottom: 1px solid #1f1f1f; background: none; text-align: left;
+  padding: 10px 4px; border: 0; border-bottom: 1px solid var(--moment-filet); background: none; text-align: left;
 }
 .mot-resultat { color: var(--c-fill); font: 700 1.118rem/1.25 var(--police); letter-spacing: -0.01em; overflow-wrap: anywhere; }
-.extrait-resultat { color: #909090; font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
-.sans-resultat { padding: 14px 4px 0; color: #909090; font-size: var(--t-sous); line-height: 1.35; }
+.extrait-resultat { color: var(--moment-gris); font-size: var(--t-sous); line-height: 1.35; text-wrap: pretty; }
+.sans-resultat { padding: 14px 4px 0; color: var(--moment-gris); font-size: var(--t-sous); line-height: 1.35; }
 .sans-resultat:empty { padding: 0; }
 .ajouter-mot {
   width: 100%; min-height: 64px; display: flex; align-items: center; gap: 14px; margin-top: 6px; padding: 10px 4px; border: 0; background: none;
-  color: #fff; text-align: left; font: 400 1rem/1.3 var(--police); overflow-wrap: anywhere;
+  color: var(--moment-texte); text-align: left; font: 400 1rem/1.3 var(--police); overflow-wrap: anywhere;
 }
-.rond-ajouter { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #000; }
-.resultat-loupe:focus-visible, .ajouter-mot:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.rond-ajouter { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--moment-plein); color: var(--moment-plein-on); }
+.resultat-loupe:focus-visible, .ajouter-mot:focus-visible { outline: 2px solid var(--moment-focus); outline-offset: -2px; }
 /* iOS n'ouvre le clavier que pour un champ qui prend le focus au toucher même : cette amorce le prend, invisible, le temps
    que la loupe paraisse (recherche-emotion.js). 16 px : iOS ne zoome pas. */
 .amorce-clavier { position: fixed; top: 0; left: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; font-size: 16px; pointer-events: none; }
 
 /* Le mot à soi (v9, spec §4.5) : comme l'écran 3, ← en haut, le corps qui défile, et en bas, une fois le mot créé, le
-   rond blanc à la flèche de la carte du bas. Le titre en police système grasse ; les champs sur #2c2c2e ; une famille choisie à
-   la couleur de la zone du mot (.zone-*, -fill et -on), à la couleur action avant. */
-.ecran-mot { position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: #2c2c2e; animation: apparition-carte var(--duree-anim) ease-out; }
+   rond blanc à la flèche de la carte du bas (foncé en clair). Le titre en police système grasse ; les champs sur #2c2c2e
+   (blancs en clair) ; une famille choisie à la couleur de la zone du mot (.zone-*, -fill et -on), à la couleur action avant. */
+.ecran-mot { position: absolute; inset: 0; display: flex; flex-direction: column; --fond-choix: var(--moment-choix); animation: apparition-carte var(--duree-anim) ease-out; }
 .corps-mot {
   flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
   margin-top: calc(var(--zone-haut) + 52px);
   padding: 12px calc(16px + var(--zone-droite)) 24px calc(16px + var(--zone-gauche));
   display: flex; flex-direction: column; align-items: center; gap: 22px;
 }
-.titre-mot { max-width: 358px; text-align: center; color: #fff; font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; }
+.titre-mot { max-width: 358px; text-align: center; color: var(--moment-texte); font: 700 1.588rem/1.882rem var(--police); letter-spacing: -0.01em; }
 .pied-mot { flex: none; display: flex; justify-content: flex-end; padding: 8px calc(16px + var(--zone-droite)) calc(12px + var(--zone-bas)) 16px; }
-.ecran-mot .etiquette { color: #909090; }
+.ecran-mot .etiquette { color: var(--moment-gris); }
 /* Le formulaire du mot à soi, à la création comme dans Réglages › Émotions › « Mes mots » (ui/composants/mot-perso.js). */
 .formulaire-mot { width: 100%; max-width: 358px; display: flex; flex-direction: column; gap: 20px; }
 .rubrique-mot { display: flex; flex-direction: column; }
@@ -979,7 +987,31 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .erreur-mot { margin-top: 6px; color: var(--text); font-size: var(--t-sous); line-height: 1.35; }
 .erreur-mot:empty { margin: 0; }
 .aide-mot { margin-top: 12px; color: var(--text-2); font-size: var(--t-sous); line-height: 1.35; text-align: center; text-wrap: balance; }
-.ecran-mot .aide-mot { color: #909090; }
+.ecran-mot .aide-mot { color: var(--moment-gris); }
+/* En clair seulement (v11, spec §9 ; prototype-clair.css et prototype-clair-b.css) : des ombres douces à la place des
+   liserés pour le sombre (le verre, flouté comme sur la carte ; la carte du bas ; le champ de la loupe), une ombre sous les
+   grandes bulles de l'écran 1, qui détache le jaune et le vert du fond clair, et le mot trouvé au texte de sa zone. Le mot
+   choisi s'écrit en noir sur une capsule de la couleur de sa case (--c-fill, posé par la carte du bas et par moment.js ;
+   de sa zone pour un mot à soi mis de côté) : écrit tel quel sur le clair, le jaune n'aurait que 1,4:1. Sans couleur (un mot
+   à soi sans zone), pas de capsule : le noir seul. Le rayon d'une capsule est la moitié de sa hauteur sur une ligne, à toute
+   taille de texte ; un mot qui passe à la ligne (très grand texte) y reste, dans un rectangle aux coins aussi ronds. La
+   capsule de la carte du bas prend 6 pt de plus en hauteur (1 au-dessus et au-dessous du mot, 4 avant la définition) : la
+   carte du bas en rend 4 sur ses marges du haut et du bas (10 au lieu de 12 ; la flèche de 76 y tient toujours), pour que le
+   mot et trois lignes de définition tiennent encore dans ses 100 pt. En sombre, rien de cela : le mot garde sa couleur éclaircie (--c, --c-mot). */
+@media (prefers-color-scheme: light) {
+  .verre {
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, .14), 0 1px 4px rgba(0, 0, 0, .10);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  }
+  .moment-plein .quatre-bulles:not(.petites) .bulle-zone .face { box-shadow: 0 1px 2px rgba(0, 0, 0, .10); }
+  .carte-du-bas { padding-top: 10px; padding-bottom: 10px; box-shadow: 0 3px 16px rgba(0, 0, 0, .18), 0 0 0 0.5px rgba(0, 0, 0, .08); }
+  .champ-loupe { box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, .14), 0 1px 4px rgba(0, 0, 0, .08); }
+  .champ-loupe:focus-within { box-shadow: inset 0 0 0 1.5px var(--moment-focus); }
+  .mot-resultat { color: var(--c-text); }
+  .mot-carte-du-bas { display: inline-block; padding: 1px 10px; border-radius: calc(0.538rem + 1px); background: var(--c-fill); color: #000; font-weight: 600; }
+  .mot-carte-du-bas:not(:last-child) { margin-bottom: 4px; }
+  .mot-rappel:not(.sans-mot) { padding: 2px 22px 4px; border-radius: calc(1.177rem + 3px); background: var(--c-fill); color: #000; }
+}
 
 /* Analyse v4 : Avant tes explosions */
 .mots-utilisateur { margin-top: var(--esp-3); }
@@ -1198,8 +1230,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   .disque-souffle[class] { transform: scale(.8); }
   .disque-souffle.phase-inspire, .disque-souffle.phase-inspire-encore, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c); }
 }
-/* « Réveil la nuit » (v10, spec §5.2) : le fond noir des écrans de l'émotion (.ecran-noir, tokens.css), dans les deux thèmes,
-   mais rien n'y éclaire la chambre : texte gris (4,5:1 au moins), teinte éteinte. */
+/* « Réveil la nuit » (v10, spec §5.2) : le fond noir (.ecran-noir, tokens.css), dans les deux thèmes, qu'avaient aussi les écrans
+   de l'émotion jusqu'à la v10 (ils suivent le thème depuis la v11), mais rien n'y éclaire la chambre : texte gris (4,5:1 au
+   moins), teinte éteinte. */
 .parcours.ecran-noir {
   color: var(--text);
   --text: #8e8f92; --text-2: #87888b; --action: #8e8f92; --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d;
