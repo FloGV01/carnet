@@ -46,13 +46,17 @@ const ouvrirRefuges = async (page) => {
   await page.getByRole('list', { name: 'Entrées' }).getByRole('link', { name: 'Mes refuges' }).click();
   await expect(titres(page)).toBeVisible();
 };
-// Passe par Réglages pour que Moment difficile soit monté de nouveau (et relise la base).
+// Passe par Réglages pour que Moment difficile soit monté de nouveau (et relise la base). Le titre « Mon plan » est là dès
+// le premier rendu : on attend que la carte soit remplie (son contenu ou « Écrire mon plan »), c'est-à-dire le plan et les
+// refuges lus, pour qu'aucun contrôle, une absence surtout, ne passe avant eux. « Une chose à la fois » vient d'une troisième
+// lecture : l'ordre des blocs se relit donc avec `expect.poll`.
 const ouvrirMoment = async (page) => {
   await aller(page, '#/reglages');
   await expect(page.getByRole('heading', { name: 'Réglages', level: 1 })).toBeVisible();
   await aller(page, '#/moment-difficile');
   const v = page.getByRole('dialog', { name: 'Moment difficile' });
   await expect(v.getByRole('heading', { name: 'Mon plan', level: 2 })).toBeVisible();
+  await expect(v.locator('.plan-moment').locator('.contenu-plan, a.action')).toHaveCount(1);
   return v;
 };
 // Chaque ligne d'écoute : son lien, son nom lu, sa sortie au trait, sans `target`.
@@ -272,12 +276,10 @@ test('Moment difficile : les quatre boutons en tête et à l\'écran ; une ligne
   for (const nomBouton of ['Panique', 'Colère', 'Trop-plein', 'Réveil la nuit']) {
     await expect(v.getByRole('group', { name: 'Un exercice court' }).getByRole('button', { name: nomBouton, exact: true })).toBeInViewport({ ratio: 1 });
   }
-  const m = await v.evaluate((d) => {
+  await expect.poll(() => v.evaluate((d) => {
     const corps = d.querySelector('.parcours-corps');
     return { defilement: corps.scrollTop, ordre: [...corps.querySelector('.etape').children].map((e) => e.classList[0] === 'carte' ? e.classList[1] : e.classList[0]) };
-  });
-  expect(m.defilement).toBe(0);
-  expect(m.ordre).toEqual(['exercices-courts', 'carte-respiration', 'ligne-carte', 'lignes-playlists', 'plan-moment']);
+  })).toEqual({ defilement: 0, ordre: ['exercices-courts', 'carte-respiration', 'ligne-carte', 'lignes-playlists', 'plan-moment'] });
   await verifierLignes(v, [
     { href: 'https://open.spotify.com/playlist/abc', nom: 'Pour souffler Spotify' },
     { href: 'https://music.apple.com/fr/playlist/calme/pl.u-abc', nom: 'Playlist 3' },
@@ -307,14 +309,14 @@ test('Moment difficile : sans refuges, aucune trace ; des titres seuls gardent �
   await ecrireMeta(page, 'monPlan', PLAN);
   let v = await ouvrirMoment(page);
   const ordre = () => v.evaluate((d) => [...d.querySelector('.etape').children].map((e) => e.className));
-  expect(await ordre()).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'carte plan-moment']);
+  await expect.poll(ordre).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'carte plan-moment']);
   await expect(v).not.toContainText('Mes titres');
   await expect(v.locator('.rubrique-plan h3')).toHaveText(['Quand ça monte, je…', 'Si c\'est trop, je…']);
   // Des refuges vides, ou une playlist sans lien : rien non plus.
   for (const refuges of [null, { titres: '  ', playlists: [] }, { playlists: [{ nom: 'Sans lien' }] }]) {
     await ecrireMeta(page, 'refuges', refuges);
     v = await ouvrirMoment(page);
-    expect(await ordre()).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'carte plan-moment']);
+    await expect.poll(ordre).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'carte plan-moment']);
     await expect(v).not.toContainText('Mes titres');
   }
   // Sans plan ni refuges : « Écrire mon plan », comme aujourd'hui.

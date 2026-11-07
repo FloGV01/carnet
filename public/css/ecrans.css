@@ -1053,10 +1053,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-actions { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px var(--marge) 12px; }
 .une-chose-actions .btn { min-height: 64px; font-size: 1.125rem; }
 .une-chose-tout { grid-column: 1 / -1; justify-content: center; font-weight: 600; }
-/* Bien-être (v7 ; v10 : « Reprendre », les favoris, les quatre entrées), la ligne fixe en bas. Aucun compteur. */
+/* Bien-être (v7 ; v10 : « Reprendre », les favoris, les quatre entrées ; v11 : cinq), la ligne fixe en bas. Aucun compteur. */
 .bien-etre { gap: 12px; }
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
-/* Les quatre entrées : des rangées de 60, le carré à la couleur de Bien-être, le libellé 17/600, le chevron. */
+/* Les cinq entrées (v11 : Mes refuges après le Programme) : des rangées de 60, le carré à la couleur de Bien-être, le libellé 17/600, le chevron. */
 .entrees .ligne-carte { min-height: 60px; padding-block: 8px; font-weight: 600; }
 .entrees .ligne-libelle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .carte-respiration { padding: 18px 16px 16px; }
