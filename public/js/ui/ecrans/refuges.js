@@ -12,7 +12,7 @@ import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
 import { LignesPlaylists, lireRefuges } from '../composants/refuges.js';
 import { coche, libelleChoix } from '../composants/coche.js';
-import { afficherToast } from '../composants/toast.js';
+import { afficherToast, fermerToast } from '../composants/toast.js';
 import { repo } from '../../donnees.js';
 import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { etatApp } from '../../store.js';
@@ -57,28 +57,42 @@ export function MesRefuges() {
   const compte = useRef(0);
   const file = useRef(Promise.resolve());
   const [, signaler] = useIndicateur();
+  // Le toast de « Retirer ces playlists » encore ouvert (son identifiant), que toute autre écriture des playlists ferme.
+  const retrait = useRef(null);
+  const oublierRetrait = () => {
+    if (retrait.current) fermerToast(retrait.current);
+    retrait.current = null;
+  };
   const neuve = () => { compte.current += 1; return compte.current; };
   const poserCles = (c) => { lignes.current = c; setCles(c); };
   // Toutes les lignes de saisie repartent de zéro : une par playlist notée, puis la ligne vide s'il en reste moins de trois.
   const recompter = (r) => poserCles(Array.from({ length: Math.min(r.playlists.length + 1, MAX_PLAYLISTS) }, neuve));
   // La connexion à Spotify : la demande en attente d'un code, la liste lue (en mémoire de l'écran), l'échec, l'attente d'une
-  // réponse.
+  // réponse, le code gardé après une coupure du réseau.
   const spotify = connexionDisponible();
   const [attente, setAttente] = useState(() => spotify && Boolean(lireAttente(window)));
   const [liste, setListe] = useState(null);
   const [echec, setEchec] = useState(null);
   const [enCours, setEnCours] = useState(false);
+  const [codeGarde, setCodeGarde] = useState(null);
 
+  // Réseau coupé : la demande reste (plateforme/spotify.js), et le code avec elle, déjà dans le champ, pour relancer d'un
+  // toucher. Sans cela, le code d'un retour dans l'app, retiré de l'adresse et jamais montré, ne pourrait pas se recoller.
   const finir = (code) => {
     setEchec(null);
     setEnCours(true);
     finirConnexion({ code, win: window })
-      .then((l) => setListe(l), (e) => setEchec(e && e.raison === 'refus' ? 'refus' : 'autre'))
+      .then((l) => { setListe(l); setCodeGarde(null); }, (e) => {
+        setEchec(e && e.raison === 'refus' ? 'refus' : 'autre');
+        setCodeGarde(e && e.raison === 'reseau' ? code : null);
+      })
       .finally(() => { setEnCours(false); setAttente(Boolean(lireAttente(window))); });
   };
-  // La page de Spotify s'ouvre ; si elle s'ouvre par-dessus l'app, le bouton reste utilisable, et le champ du code est là.
+  // La page de Spotify s'ouvre ; si elle s'ouvre par-dessus l'app, le bouton reste utilisable, et le champ du code est là,
+  // vide : un code gardé appartenait à la demande d'avant.
   const choisir = () => {
     setEchec(null);
+    setCodeGarde(null);
     setEnCours(true);
     ouvrirConnexion({ win: window })
       .then(() => setAttente(true), () => setEchec('autre'))
@@ -112,6 +126,7 @@ export function MesRefuges() {
   // Une ligne qui n'est plus affichée n'écrit rien.
   const changerPlaylist = (cle, changement) => {
     if (!lignes.current.includes(cle)) return Promise.resolve();
+    oublierRetrait();
     let avant = 0;
     let i = -1;
     return ecrire((brut) => {
@@ -141,13 +156,30 @@ export function MesRefuges() {
       return true;
     }, () => false);
   };
-  const basculer = (p) => remplacer((r) => basculerSpotify(r, p));
-  // « Retirer ces playlists », avec « Annuler » : les playlists d'avant reviennent, à leur place ; les titres ne bougent pas.
+  const basculer = (p) => { oublierRetrait(); return remplacer((r) => basculerSpotify(r, p)); };
+  // « Retirer ces playlists », avec « Annuler » : les playlists d'avant le retrait (lues dans sa transaction) reviennent, à
+  // leur place ; les titres ne bougent pas. « Annuler » ne défait que le retrait : une autre écriture des playlists (une ligne
+  // tapée ou collée, une playlist choisie) ferme le toast, et une liste qui n'est plus celle laissée par le retrait n'est pas
+  // remplacée (un « Annuler » touché après une écriture venue d'ailleurs) : rien de ce qui a été écrit depuis ne se perd.
   const retirer = () => {
-    const avant = refuges.playlists;
-    remplacer(sansSpotify).then((ok) => ok && afficherToast('Playlists de Spotify retirées', {
-      libelle: 'Annuler', faire: () => remplacer((r) => ({ ...r, playlists: avant })),
-    }));
+    oublierRetrait();
+    let avant = null;
+    let apres = null;
+    remplacer((r) => {
+      const reste = sansSpotify(r);
+      avant = r.playlists;
+      apres = JSON.stringify(reste.playlists);
+      return reste;
+    }).then((ok) => {
+      if (!ok) return;
+      retrait.current = afficherToast('Playlists de Spotify retirées', {
+        libelle: 'Annuler',
+        faire: () => {
+          retrait.current = null;
+          remplacer((r) => (JSON.stringify(r.playlists) === apres ? { ...r, playlists: avant } : r));
+        },
+      });
+    });
   };
 
   if (!refuges) return html`<main class="ecran fiche refuges"><${Entete} titre="Mes refuges" retour=${revenir} /></main>`;
@@ -165,7 +197,7 @@ export function MesRefuges() {
       ${(spotify || deSpotify) && html`<div class="carte compte-spotify">
         ${spotify && html`<button type="button" class="btn btn-plein" disabled=${enCours} aria-describedby="note-compte-spotify" onClick=${choisir}>Choisir dans mon compte</button>
           <p class="note-import" id="note-compte-spotify">Une seule lecture : Carnet ne garde pas la connexion.</p>`}
-        ${spotify && attente && html`<${ChampCode} enCours=${enCours} surFinir=${finir} />`}
+        ${spotify && attente && html`<${ChampCode} key=${codeGarde || ''} code=${codeGarde} enCours=${enCours} surFinir=${finir} />`}
         ${echec && html`<p class="texte-import" role="status">${ECHECS[echec]}</p>`}
         ${liste && html`<${ListeSpotify} liste=${liste} refuges=${refuges} plein=${plein} surBasculer=${basculer} />`}
         ${deSpotify && html`<button type="button" class="btn" onClick=${retirer}>Retirer ces playlists</button>`}
@@ -173,7 +205,8 @@ export function MesRefuges() {
       ${cles.map((cle, i) => {
         const p = refuges.playlists[i] || null;
         const n = i + 1;
-        return html`<div class="carte saisie-playlist" key=${cle}>
+        // Dès la frappe, avant l'écriture (500 ms plus tard) : « Annuler » ne remplacerait plus ce qui s'écrit.
+        return html`<div class="carte saisie-playlist" key=${cle} onInput=${oublierRetrait}>
           <${ChampTexte} id=${`refuges-nom-${i}`} etiquette=${html`Nom<span class="visuellement-cache"> de la playlist ${n}</span>`}
             valeur=${p && p.nom} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:nom-${i}`}
             surEnregistrer=${(nom) => changerPlaylist(cle, { nom })} />
@@ -187,16 +220,17 @@ export function MesRefuges() {
 }
 
 // Le code, quand le retour de Spotify est arrivé dans Safari (la page du code, ui/ecrans/code-spotify.js) : collé ici, il finit
-// la connexion avec la demande restée dans l'app.
-function ChampCode({ enCours, surFinir }) {
+// la connexion avec la demande restée dans l'app. `code` : celui d'un essai coupé par le réseau, déjà écrit dans le champ (le
+// champ est remonté à chaque nouveau code gardé, par sa clé).
+function ChampCode({ code, enCours, surFinir }) {
   const zone = useRef(null);
   const valider = () => {
-    const code = zone.current && zone.current.value.trim();
-    if (code && !enCours) surFinir(code);
+    const saisi = zone.current && zone.current.value.trim();
+    if (saisi && !enCours) surFinir(saisi);
   };
   return html`<div class="code-compte">
     <label class="etiquette" for="code-spotify">Code de Spotify</label>
-    <input id="code-spotify" ref=${zone} class="champ-ligne" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+    <input id="code-spotify" ref=${zone} class="champ-ligne" defaultValue=${code || ''} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
       enterkeyhint="done" onKeyDown=${(e) => { if (e.key === 'Enter') valider(); }} />
     <button type="button" class="btn" disabled=${enCours} onClick=${valider}>Finir la connexion</button>
   </div>`;

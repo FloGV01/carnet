@@ -231,6 +231,50 @@ test('point de vigilance 5, sans réseau : un state qui ne correspond pas, un co
   expect(await lireMeta(page, 'refuges')).toEqual(notes);
 });
 
+test('« Annuler » ne défait que le retrait : une playlist collée pendant le toast le ferme et reste ; une liste changée entre-temps n\'est pas remplacée', async ({ page }) => {
+  await demarrer(page);
+  const collee = { nom: 'Collée', lien: 'https://open.spotify.com/playlist/m1', source: null };
+  const s1 = { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/s1', source: 'spotify' };
+  const s2 = { nom: 'Pour marcher', lien: 'https://open.spotify.com/playlist/s2', source: 'spotify' };
+  const depart = { titres: 'Pluie lente', playlists: [collee, s1, s2] };
+  const annuler = page.locator('.toast').getByRole('button', { name: 'Annuler', exact: true });
+  // Lu dans l'état de l'app, sans attendre : le toast se ferme seul au bout de 5 s.
+  const toastOuvert = () => page.evaluate(() => Boolean(window.__carnet.etatApp.lire().toast));
+  const retirer = async () => {
+    await bouton(page, 'Retirer ces playlists').click();
+    await expect.poll(async () => (await lireMeta(page, 'refuges'))?.playlists).toEqual([collee]);
+    await expect(annuler).toBeVisible();
+  };
+  await ecrireMeta(page, 'refuges', depart);
+  await ouvrirRefuges(page);
+  // Rien d'autre entre-temps : les playlists de Spotify reviennent à leur place, les titres n'ont pas bougé.
+  await retirer();
+  await annuler.click();
+  await expect.poll(() => lireMeta(page, 'refuges')).toEqual(depart);
+  await expect(lignes(ecran(page))).toHaveCount(3);
+  // Une playlist collée à la main dans la ligne vide revenue : dès la frappe, le toast se ferme ; la playlist reste.
+  await retirer();
+  await page.getByLabel('Lien de la playlist 2', { exact: true }).fill('https://open.spotify.com/playlist/neuve');
+  expect(await toastOuvert()).toBe(false);
+  await expect(annuler).toHaveCount(0);
+  await page.getByLabel('Nom de la playlist 2', { exact: true }).fill('Neuve à la main');
+  await page.getByLabel('Nom de la playlist 2', { exact: true }).blur();
+  const neuve = { nom: 'Neuve à la main', lien: 'https://open.spotify.com/playlist/neuve', source: null };
+  await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: 'Pluie lente', playlists: [collee, neuve] });
+  // Une liste écrite entre le retrait et « Annuler » (ici, hors de l'écran) : « Annuler » ne la remplace pas.
+  await ecrireMeta(page, 'refuges', depart);
+  await ouvrirRefuges(page);
+  await retirer();
+  const ailleurs = { titres: 'Pluie lente', playlists: [collee, { nom: 'Écrite ailleurs', lien: 'https://open.spotify.com/playlist/ailleurs', source: null }] };
+  await ecrireMeta(page, 'refuges', ailleurs);
+  await annuler.click();
+  // L'écran relit la liste à cette écriture : les deux lignes d'écoute de la base, sans Spotify.
+  await expect(lignes(ecran(page))).toHaveCount(2);
+  expect(await hrefs(lignes(ecran(page)))).toEqual(ailleurs.playlists.map((p) => p.lien));
+  await expect(bouton(page, 'Retirer ces playlists')).toHaveCount(0);
+  expect(await lireMeta(page, 'refuges')).toEqual(ailleurs);
+});
+
 // ---------- Avec les deux hôtes de Spotify, simulés ----------
 
 test.describe('avec Spotify simulé', () => {
@@ -361,6 +405,15 @@ test.describe('avec Spotify simulé', () => {
     await expect(champCode(page)).toHaveCount(0);
     expect(await attente(page)).toBeNull();
     expect(await toutCeQuiEstGarde(page)).not.toContain('jeton-de-test');
+    // Une playlist choisie pendant le toast de « Retirer ces playlists » le ferme : « Annuler » ne la retirerait pas.
+    await choix(page, 'Pour souffler').click();
+    await expect.poll(async () => (await lireMeta(page, 'refuges'))?.playlists.length).toBe(1);
+    await bouton(page, 'Retirer ces playlists').click();
+    await expect.poll(() => lireMeta(page, 'refuges')).toBeNull();
+    await expect(page.locator('.toast').getByRole('button', { name: 'Annuler', exact: true })).toBeVisible();
+    await choix(page, 'Pour marcher').click();
+    expect(await page.evaluate(() => Boolean(window.__carnet.etatApp.lire().toast))).toBe(false);
+    await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [{ nom: 'Pour marcher', lien: 'https://open.spotify.com/playlist/s2', source: 'spotify' }] });
   });
 
   test('point de vigilance 5, avec réseau : 401 et 403, réseau coupé, réponse d\'une autre forme ; aucun plantage, aucun jeton, les refuges intacts', async ({ page }) => {
@@ -392,11 +445,27 @@ test.describe('avec Spotify simulé', () => {
         await expect(ecran(page).getByText('Aucune playlist dans ce compte.'), ou).toBeVisible();
         await expect(statut(page)).toHaveCount(0);
       }
-      // Seul le réseau coupé garde la demande : le code peut se recoller, le champ est là.
+      // Seul le réseau coupé garde la demande, et le code du retour avec elle, déjà dans le champ : il se relance d'un toucher.
       expect(Boolean(await attente(page)), ou).toBe(garde);
       await expect(champCode(page)).toHaveCount(garde ? 1 : 0);
+      if (garde) await expect(champCode(page), ou).toHaveValue('code-de-test');
       expect(await lireMeta(page, 'refuges'), ou).toEqual(notes);
       expect(await toutCeQuiEstGarde(page), ou).not.toContain('jeton-de-test');
+      if (options.jeton === 'coupe') {
+        // Le réseau revenu : « Finir la connexion » relance le même code, avec la même demande, et la liste s'affiche.
+        await page.unrouteAll({ behavior: 'wait' });
+        await page.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort('blockedbyclient'));
+        const demandes = await simulerSpotify(page);
+        await bouton(page, 'Finir la connexion').click();
+        await expect(groupeSpotify(page).getByRole('button'), ou).toHaveCount(4);
+        expect(demandes.jeton).toHaveLength(1);
+        expect(Object.fromEntries(new URLSearchParams(demandes.jeton[0].corps))).toMatchObject({ code: 'code-de-test', code_verifier: VERIFIER });
+        await expect(statut(page)).toHaveCount(0);
+        await expect(champCode(page)).toHaveCount(0);
+        expect(await attente(page)).toBeNull();
+        expect(await lireMeta(page, 'refuges'), ou).toEqual(notes);
+        expect(await toutCeQuiEstGarde(page), ou).not.toContain('jeton-de-test');
+      }
       await page.evaluate((c) => localStorage.removeItem(c), CLE);
     }
   });
