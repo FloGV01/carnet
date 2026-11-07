@@ -1077,3 +1077,11 @@ test('v11 : l\'import remplace Mes refuges ; un fichier qui n\'en a pas les reti
   await revenirAvantImport(b.repo);
   assert.deepEqual(await b.repo.meta.lire('refuges'), ici);
 });
+
+// v11 (6/11) : l'aperçu de l'import nomme Mes refuges ; des refuges vidés sont écrits null, et n'annoncent alors rien à perdre.
+test('v11 : aperçu de l\'import, les refuges ont leurs mots ; vidés (null), rien à perdre', () => {
+  assert.equal(phraseMeta(['refuges']), 'Les refuges seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan', 'refuges']), 'Mon plan et les refuges seront remplacés par ce que contient le fichier.');
+  assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: null }], []), []);
+  assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: { titres: 'Une chanson', playlists: [] } }], []), ['refuges']);
+});

@@ -662,6 +662,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-champ-reglage .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); }
 .heures-moment .pastille { min-width: 56px; justify-content: center; }
 .ma-journee, .mon-plan { gap: 14px; }
+/* Mes refuges (v11) : ses titres, puis ses playlists, chacune une carte avec son nom et son lien, à la suite des lignes qui
+   s'écoutent. */
+.playlists-refuges { gap: 10px; }
+.playlists-refuges > .etiquette { margin-bottom: -4px; }
+.saisie-playlist { display: flex; flex-direction: column; gap: 10px; }
+.saisie-playlist .etiquette { margin-bottom: 4px; }
+/* Sans dictée, le texte prend toute la largeur : un lien collé tient sur moins de lignes. */
+.saisie-playlist .champ-avec-dicter .champ-texte { padding-right: 14px; }
 .ligne-plan { padding: 0 var(--marge); flex: none; display: flex; align-items: center; gap: 8px; }
 /* Enfants directs seulement : la feuille « En parler » s'ouvre dans la ligne et doit garder son aspect (v6.1). */
 .ligne-plan > .btn-lien { font-size: var(--t-sous); }
@@ -1017,6 +1025,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* « Une chose à la fois › » : une carte d'une ligne, en 600, avec son chevron. */
 .une-chose-acces.ligne-carte { min-height: 54px; padding: 0 14px 0 16px; background: var(--surface); border-radius: var(--r-carte); font-weight: 600; }
 .une-chose-acces.ligne-carte svg { width: 18px; height: 18px; }
+/* Les playlists de Mes refuges (v11), dans Moment difficile et dans Mes refuges : une carte d'une ligne chacune, comme « Une
+   chose à la fois », le carré de musique à la couleur de l'écran, le nom en 600 et, dessous, « Spotify » en discret, puis la
+   sortie. En très grand texte, le nom passe à la ligne et la carte grandit. */
+.lignes-playlists { display: flex; flex-direction: column; gap: 10px; }
+.lien-refuge.ligne-carte { min-height: 54px; padding: 8px 14px 8px 12px; gap: 12px; background: var(--surface); border-radius: var(--r-carte); font-weight: 600; }
+.lien-refuge .ligne-libelle { min-width: 0; overflow-wrap: anywhere; }
+.lien-refuge .ligne-sous { display: block; font-weight: 400; }
+.lien-refuge.ligne-carte > svg { width: 18px; height: 18px; }
 /* Mon plan (2b) : une carte ; en tête, un carré de 28 à la couleur du parcours (icône Mon plan), le titre en 21/600 et
    « Modifier » à droite (couleur action, 600, cible de 44). Les rubriques en capitales, le texte en 19, interligne 1,45. */
 .plan-moment { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 16px; }

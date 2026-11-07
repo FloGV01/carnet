@@ -201,3 +201,11 @@ test('v9 · un relevé de l\'Émotion du moment rouvert : /moment/ID (l\'écran 
   assert.equal(lireRoute('#/moment-difficile').nom, 'moment-difficile');
   for (const h of ['#/moment/', '#/moment/hu_x/y', '#/moment/hu x']) assert.equal(lireRoute(h).inconnue, true, h);
 });
+
+test('v11 · Mes refuges : /refuges, onglet Bien-être, qu\'on l\'ouvre de Bien-être ou de Réglages › Mon plan ; rien d\'autre', () => {
+  assert.deepEqual(lireRoute('#/refuges'), { nom: 'refuges', params: {}, chemin: '/refuges' });
+  assert.equal(versHash('refuges'), '#/refuges');
+  assert.equal(ongletDe('refuges'), 'bien-etre');
+  assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan ne change pas d\'onglet');
+  for (const h of ['#/refuges/', '#/refuges/x', '#/bien-etre/refuges', '#/mon-plan/refuges']) assert.equal(lireRoute(h).inconnue, true, h);
+});

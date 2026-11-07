@@ -43,6 +43,7 @@ import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 import { Minuteur } from './ui/ecrans/minuteur.js';
 import { Concentration } from './ui/ecrans/concentration.js';
 import { Sons } from './ui/ecrans/sons.js';
+import { MesRefuges } from './ui/ecrans/refuges.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -88,6 +89,7 @@ const ECRANS = {
   minuteur: () => html`<${Minuteur} />`,
   concentration: () => html`<${Concentration} />`,
   sons: () => html`<${Sons} />`,
+  refuges: () => html`<${MesRefuges} />`,
 };
 
 function useEtatApp() {

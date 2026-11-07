@@ -3,7 +3,9 @@
 // fenêtre, les zones sûres (encoche, barre d'accueil) et la hauteur utile entre elles : des chiffres techniques, rien sur
 // l'usage (v11 : sans la marge du soir ni celle de « J'ai fini pour ce soir », qui ne servaient qu'à la règle du soir sans
 // défiler, levée). v10 (spec §14.2) : 2 min de bruit rose en session « playback », pour vérifier sur l'iPhone qu'un son de
-// fond continue écran verrouillé.
+// fond continue écran verrouillé. v11 (spec §8.5) : « Ouvrir une playlist », les trois formes du lien de la première playlist
+// de Mes refuges (lien web, nouvelle fenêtre, lien direct vers l'app), pour noter laquelle ouvre l'app de musique et où l'on
+// revient. Le lien n'entre jamais dans le rapport : seule la forme touchée y est notée.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { suspendreSon } from '../composants/signal-sonore.js';
@@ -22,6 +24,8 @@ import { pourAffichage } from '../../domain/typographie.js';
 import { repo } from '../../donnees.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
 import { zonesSures, hauteurUtile } from '../mesures.js';
+import { lireRefuges } from '../composants/refuges.js';
+import { formesDuLien, playlistsAOuvrir } from '../../domain/refuges.js';
 
 const enc = new TextEncoder();
 const ESSAI_FOND_S = 120;
@@ -66,10 +70,13 @@ export function Diagnostic() {
   const fond = useRef(null);
   const finFond = useRef(null);
   const zoneDicter = useRef(null);
+  // La première playlist de Mes refuges qui a un lien : undefined tant qu'elle n'est pas lue, null s'il n'y en a pas.
+  const [playlist, setPlaylist] = useState(undefined);
   const ecran = useEcran();
   const noter = (test, resultat) => setJournal((j) => [...j, `${test} : ${resultat}`]);
 
   useEffect(() => {
+    lireRefuges().then((r) => setPlaylist(playlistsAOuvrir(r)[0] || null), () => setPlaylist(null));
     (async () => {
       const stockage = await etatStockage();
       setInfos({
@@ -216,6 +223,15 @@ export function Diagnostic() {
         <button type="button" class="btn" onClick=${essayerFond}>${fondActif ? 'Arrêter le son de fond' : 'Son de fond, écran verrouillé'}</button>
         <p class="discret">${pourAffichage('Lance 2 min de bruit rose. À vérifier : verrouille l\'iPhone, le son doit continuer, puis s\'éteindre en fondu à la fin des 2 min. Il joue aussi en mode silencieux et met la musique en pause.')}</p>
       </div>
+    </section>
+    <section class="section" aria-labelledby="titre-ouvrir-playlist">
+      <h2 id="titre-ouvrir-playlist">Ouvrir une playlist</h2>
+      ${playlist === null && html`<p class="discret">Note d'abord une playlist dans Mes refuges.</p>`}
+      ${playlist && html`<div class="actions">
+        ${formesDuLien(playlist.lien).map((f) => html`<a class="btn" href=${f.href} ...${f.nouvelle ? { target: '_blank' } : {}}
+          rel=${f.nouvelle ? 'noopener noreferrer' : 'noreferrer'} onClick=${() => noter('Ouvrir une playlist', f.nom)}>${f.nom}</a>`)}
+        <p class="discret">À noter : où ça s'ouvre, où on revient.</p>
+      </div>`}
     </section>
     <section class="section">
       <h2>Rapport</h2>

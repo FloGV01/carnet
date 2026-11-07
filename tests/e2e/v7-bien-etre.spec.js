@@ -3,7 +3,7 @@ import { viderBase, aller, appPrete } from '../aides/saisie.js';
 import { noter, continuer } from '../aides/emotion.js';
 import { installerParole, parole, installerVerrou, verrou, cacher, montrer, seances, environ } from '../aides/lecteur.js';
 
-// v7 · Bien-être (spec §6) : l'onglet (v10 : les quatre entrées, la ligne fixe ; le reste dans v10-bien-etre.spec.js), un exercice une
+// v7 · Bien-être (spec §6) : l'onglet (v10 et v11 : les entrées, la ligne fixe ; le reste dans v10-bien-etre.spec.js), un exercice une
 // consigne par écran, la lecture à voix haute (synthèse vocale factice, voix française du système), le verrou d'écran
 // (factice), les séances (menées au bout ou arrêtées après 60 s, une seule, avec leur origine), le repère de Mes jours,
 // et aucun compteur.
@@ -68,11 +68,11 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await expect(page).toHaveURL(/#\/bien-etre\/programme$/);
 });
 
-test('l\'écran Bien-être (v10) : sans rien, ni « Reprendre » ni « Favoris » ; les quatre entrées dans l\'ordre, la ligne fixe en bas ; plus de cohérence cardiaque ni de séance qui vient ; aucun compteur', async ({ page }) => {
+test('l\'écran Bien-être (v10) : sans rien, ni « Reprendre » ni « Favoris » ; les cinq entrées (v11) dans l\'ordre, la ligne fixe en bas ; plus de cohérence cardiaque ni de séance qui vient ; aucun compteur', async ({ page }) => {
   await aller(page, '#/bien-etre');
   const ecran = page.locator('main.bien-etre');
   const entrees = ecran.getByRole('list', { name: 'Entrées' }).getByRole('link');
-  await expect(entrees).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme']);
+  await expect(entrees).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
   // Ni carte ni région : ni « Reprendre », ni « Favoris », ni cohérence cardiaque, ni séance du Programme à lancer.
   await expect(ecran.getByRole('region')).toHaveCount(0);
   await expect(ecran.getByRole('heading', { level: 2 })).toHaveCount(0);
@@ -89,7 +89,7 @@ test('l\'écran Bien-être (v10) : sans rien, ni « Reprendre » ni « Favoris �
     expect(h).toBeGreaterThanOrEqual(44);
     if (i) expect(y).toBeGreaterThanOrEqual(avantPlaces[i - 1][1] + avantPlaces[i - 1][3]);
   }
-  expect((await ecran.locator('.ligne-fixe').boundingBox()).y).toBeGreaterThanOrEqual(avantPlaces[3][1] + avantPlaces[3][3]);
+  expect((await ecran.locator('.ligne-fixe').boundingBox()).y).toBeGreaterThanOrEqual(avantPlaces[4][1] + avantPlaces[4][3]);
   // Rien ne compte les séances : l'écran est le même, aux mêmes places, avant et après six séances de toutes origines.
   const avant = await ecran.innerText();
   await page.evaluate(async () => {
@@ -101,7 +101,7 @@ test('l\'écran Bien-être (v10) : sans rien, ni « Reprendre » ni « Favoris �
   await page.reload();
   await appPrete(page);
   await aller(page, '#/bien-etre');
-  await expect(entrees).toHaveCount(4);
+  await expect(entrees).toHaveCount(5);
   expect(await ecran.innerText()).toBe(avant);
   expect(await places()).toEqual(avantPlaces);
   // Ni « séance », ni « déjà », ni « fois », ni chiffre.

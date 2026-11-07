@@ -59,6 +59,8 @@ export const ROUTES = [
   { nom: 'minuteur', motif: '/minuteur' },
   { nom: 'concentration', motif: '/concentration' },
   { nom: 'sons', motif: '/sons' },
+  // v11 (spec §8.1) : Mes refuges, ouvert depuis Bien-être et depuis Réglages › Mon plan.
+  { nom: 'refuges', motif: '/refuges' },
 ].map((r) => ({ ...r, re: new RegExp(`^${r.motif}$`) }));
 
 export function lireRoute(hash) {
@@ -83,11 +85,12 @@ export function versHash(nom, params = {}) {
 }
 
 // Onglet actif pour une route donnée. Export PSY et Vue soignants s'ouvrent depuis Soins. v7 : l'Historique sort de la
-// barre et s'ouvre par sa porte en haut de l'Analyse ; lui et un jour ouvert depuis lui allument l'onglet Analyse.
+// barre et s'ouvre par sa porte en haut de l'Analyse ; lui et un jour ouvert depuis lui allument l'onglet Analyse. v11 : Mes
+// refuges allume Bien-être, même ouvert depuis Réglages › Mon plan.
 export function ongletDe(nom) {
   if (['aujourdhui', 'jour', 'moment', 'moment-releve', 'moment-difficile', 'crise', 'apres-coup-liste', 'apres-coup', 'episode', 'symptome'].includes(nom)) return 'aujourdhui';
   if (['analyse', 'comprendre', 'historique', 'historique-jour'].includes(nom)) return 'analyse';
-  if (['bien-etre', 'entree-bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons'].includes(nom)) return 'bien-etre';
+  if (['bien-etre', 'entree-bien-etre', 'coherence', 'programme', 'seance-programme', 'exercice', 'minuteur', 'concentration', 'sons', 'refuges'].includes(nom)) return 'bien-etre';
   if (['soins', 'rdv', 'consultation', 'traitement', 'export-psy', 'soignants'].includes(nom)) return 'soins';
   return 'reglages';
 }

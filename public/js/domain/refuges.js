@@ -80,3 +80,44 @@ export const playlistsAOuvrir = (r) => normaliserRefuges(r).playlists.filter((p)
 
 // Le nom affiché d'une playlist : le sien, sinon « Playlist 1 » (i : sa place dans la liste, à partir de 0).
 export const nomPlaylist = (p, i) => (p && textePropre(p.nom)) || `Playlist ${i + 1}`;
+
+// Une playlist écrite à la main dans Mes refuges (v11, tâche 6) : la ligne i change, ou s'ajoute à la fin quand i est au-delà
+// des lignes notées (la ligne vide de l'écran), s'il en reste moins de trois. `changement` donne `nom`, `lien` ou les deux ;
+// la source ne se donne pas ici. Un lien changé à la main fait perdre la source (ce qui est collé ne vient plus de Spotify) ;
+// le même lien recollé, ou un nom changé, la garde. Tout repasse par la lecture : un lien refusé n'est pas gardé, sans erreur,
+// et une ligne vidée de son nom et de son lien disparaît. Un indice qui n'en est pas un ne change rien.
+export function avecPlaylist(r, i, changement) {
+  const n = normaliserRefuges(r);
+  if (!Number.isInteger(i) || i < 0) return n;
+  const ch = estObjet(changement) ? changement : {};
+  const ancienne = n.playlists[i];
+  if (!ancienne && n.playlists.length >= MAX_PLAYLISTS) return n;
+  const ligne = { ...(ancienne || { nom: null, lien: null, source: null }) };
+  if ('nom' in ch) ligne.nom = ch.nom;
+  if ('lien' in ch) {
+    if (lienAccepte(ch.lien) !== ligne.lien) ligne.source = null;
+    ligne.lien = ch.lien;
+  }
+  const playlists = ancienne ? n.playlists.map((p, k) => (k === i ? ligne : p)) : [...n.playlists, ligne];
+  return normaliserRefuges({ ...n, playlists });
+}
+
+// Les trois formes d'un lien que le Diagnostic essaie sur l'iPhone (spec §8.5) : le lien web, le même dans une nouvelle
+// fenêtre, et le lien direct vers l'app pour une playlist du lecteur public de Spotify (spotify:playlist:<id>) ou un lien de
+// Musique (music://…). Un lien qui va déjà vers l'app n'a que cette forme ; un lien refusé n'en a aucune. Rien n'est suivi ici.
+const PLAYLIST_SPOTIFY = /^\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?playlist\/([A-Za-z0-9]+)\/?$/;
+const HOTE_MUSIQUE = 'music.apple.com';
+export function formesDuLien(lien) {
+  const propre = lienAccepte(lien);
+  if (!propre) return [];
+  const directe = (href) => ({ nom: 'Lien direct vers l\'app', href, nouvelle: false });
+  const url = new URL(propre);
+  if (url.protocol !== 'https:') return [directe(propre)];
+  const formes = [{ nom: 'Lien web', href: propre, nouvelle: false }, { nom: 'Lien web, nouvelle fenêtre', href: propre, nouvelle: true }];
+  const nu = !url.port && !url.username && !url.password;
+  const id = nu && url.hostname === HOTE_SPOTIFY && (url.pathname.match(PLAYLIST_SPOTIFY) || [])[1];
+  const app = id ? `spotify:playlist:${id}`
+    : nu && url.hostname === HOTE_MUSIQUE ? lienAccepte(`music://${url.hostname}${url.pathname}${url.search}`) : null;
+  if (app) formes.push(directe(app));
+  return formes;
+}

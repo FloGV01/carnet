@@ -81,6 +81,10 @@ const C = {
   ajouter: 'M5 5h14v14H5z M12 9v6 M9 12h6',
   // Bien-être (v10) : l'épingle d'un favori.
   epingle: 'M8.5 3h7 M9.5 3v6.5L6 14v2.5h12V14l-3.5-4.5V3 M12 16.5V21.5',
+  // Mes refuges (v11) : la sortie d'un lien qui quitte Carnet (pas le caractère flèche, compté comme emoji), et deux notes de
+  // musique, pour l'entrée de Bien-être et les lignes des playlists.
+  sortie: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+  musique: 'M9 18V5l11-2v13 M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M14 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
 };
 
 export const Icones = Object.fromEntries(Object.entries(C).map(([nom, d]) => [nom, (options) => svg(d, options)]));

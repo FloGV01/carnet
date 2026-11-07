@@ -4,7 +4,8 @@
 //   depuis son début. Absente sans valeur valide. Ni date, ni « déjà fait ».
 // - « Favoris », les éléments épinglés (composants/epingle.js), dans l'ordre où ils l'ont été, chacun avec son bouton lecture.
 //   Absente s'il n'y en a pas.
-// - Les quatre entrées, toujours dans cet ordre : trois listes (ecrans/entree-bien-etre.js) et l'écran du Programme.
+// - Les entrées, toujours dans cet ordre : trois listes (ecrans/entree-bien-etre.js), l'écran du Programme et, depuis la v11
+//   (spec §8.4), Mes refuges : une cinquième entrée, dérogation aux « quatre entrées » de la v10.
 // - En bas, une ligne fixe.
 // Aucun compteur : ni nombre de séances, ni série, ni « déjà fait aujourd'hui », ni rappel, et aucun tri selon l'heure. La fin d'une
 // lecture laisse le message « Noter mon émotion » quelques secondes (lecteur.js) ; rien ne s'ouvre tout seul.
@@ -25,10 +26,11 @@ export const LIGNE_FIXE = 'Tu peux t\'arrêter à tout moment.';
 
 const RETOUR = versHash('bien-etre');
 const ICONES_ENTREES = { calmer: 'respiration', dormir: 'sommeil', concentrer: 'historique' };
-// Les quatre entrées : les trois listes, puis le Programme, qui a son écran.
+// Les cinq entrées : les trois listes, puis le Programme et Mes refuges (v11), qui ont leur écran.
 const LIGNES_ENTREES = [
   ...ENTREES.map((x) => ({ id: x.id, titre: x.titre, icone: ICONES_ENTREES[x.id], href: versHash('entree-bien-etre', { entree: x.id }) })),
   { id: 'programme', titre: 'Programme', icone: 'bienEtre', href: versHash('programme') },
+  { id: 'refuges', titre: 'Mes refuges', icone: 'musique', href: versHash('refuges') },
 ];
 
 // La carte « Reprendre » : un lien vers l'écran de départ de l'élément (le titre de la carte, le sien) et, à droite, le bouton

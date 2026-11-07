@@ -197,6 +197,8 @@ textarea.champ-texte {
 textarea.champ-texte:placeholder-shown { max-height: calc(var(--lignes) * 1lh + var(--cadre-texte)); }
 textarea.champ-texte[data-lignes="3"] { --lignes: 3; }
 textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
+/* Une ligne (v11, le nom et le lien d'une playlist de Mes refuges) : elle grandit aussi avec le texte, et garde une cible de 44. */
+textarea.champ-texte[data-lignes="1"] { --lignes: 1; min-height: max(var(--cible), calc(1lh + var(--cadre-texte))); }
 .champ-ligne { width: 100%; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-petit); border: 1px solid transparent; background: var(--fond-choix); }
 .case { display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); }
 .case input { width: 22px; height: 22px; accent-color: var(--action); }

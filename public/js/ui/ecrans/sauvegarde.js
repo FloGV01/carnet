@@ -49,7 +49,7 @@ const NOMS_META = {
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
   respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
   ressourcer: 'les réglages de « Me ressourcer »', definitionsRoue: 'les définitions des émotions',
-  motsPerso: 'les mots ajoutés à la carte des émotions', favorisBienEtre: 'les exercices épinglés',
+  motsPerso: 'les mots ajoutés à la carte des émotions', favorisBienEtre: 'les exercices épinglés', refuges: 'les refuges',
 };
 // Accord au féminin seulement si tout ce qui est nommé est féminin, comme pour la perte.
 const META_FEMININES = new Set(['definitionsRoue']);
