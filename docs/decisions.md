@@ -1696,7 +1696,7 @@ L'app y prend aussi son nom, **Emozio** (entrée « 2026-11-07 : le nom Emozio �
 
 - `icone.svg` reprend la piste B ; `npm run icones` rend les PNG sous des noms `v11-`, sur fond noir : plus de cadre bleu sur l'icône masquable. **Le rouge et le vert des émotions sortent ici de leurs écrans** : c'est son choix (spec §10).
 - `theme-color` : `#e7eaee` en clair, `#000000` en sombre ; le manifest prend les couleurs du clair. Pas d'activation d'office d'une nouvelle version dans `sw.js`.
-- Aide iPhone : « Changer d'icône sans rien perdre », les 5 étapes de la spec mot pour mot, et ce que la copie ne garde pas. Aucune étape ne fait supprimer quoi que ce soit avant la dernière.
+- Aide iPhone : « Changer d'icône sans rien perdre », les 5 étapes de la spec, mot pour mot sauf le nom Emozio et sa vérification sous l'icône (étapes 1 et 3 ; entrée « 2026-11-07 : le nom Emozio »), et ce que la copie ne garde pas. Aucune étape ne fait supprimer quoi que ce soit avant la dernière.
 - « Revenir à l'état d'avant l'import » passe par une confirmation qui dit ce qui sera remplacé, lue par VoiceOver. Un import sur une base vide (`estBaseVide`) ne prend plus de copie : la ligne n'apparaît pas après le passage à la nouvelle icône.
 
 ### Contrôle global (tâche 11)

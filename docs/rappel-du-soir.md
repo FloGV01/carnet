@@ -7,10 +7,10 @@ L'app n'envoie aucune notification. Les rappels sont des automatisations de l'ap
 3. Choisir **Exécuter immédiatement**, puis désactiver la notification d'exécution.
 4. **Nouvelle automatisation vierge**, puis ajouter l'action **Afficher une notification**, avec le texte : « Le soir dans Emozio, si tu veux. »
 
-## Humeur du moment (si tu veux)
+## Émotion du moment (si tu veux)
 
 Les heures se choisissent dans Réglages › Rappels. Pour chacune, refaire les mêmes 4 étapes avec cette
-heure-là et le texte : « Humeur du moment, si tu veux. » Ensuite, ouvrir Emozio et toucher « Humeur », en bas d'Aujourd'hui.
+heure-là et le texte : « Émotion du moment, si tu veux. » Ensuite, ouvrir Emozio et toucher « Émotion », en bas.
 Les heures ne servent qu'à ce pas-à-pas : rien dans l'app ne compare les heures aux relevés.
 
 ## Bon à savoir

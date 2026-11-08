@@ -39,7 +39,14 @@ test('docs/decisions.md : l\'entrée v11.0.0, ses règles levées, l\'exception 
   }
   const reseau = section(v11, 'L\'exception réseau : la connexion à Spotify (spec §8.3)');
   for (const x of ['**Le risque accepté**', '`playlist-read-private`', '`script-src` reste `\'self\'`', '**`CLAUDE.md`**']) assert.ok(reseau.includes(x), `exception réseau : ${x}`);
-  assert.match(section(v11, 'L\'icône et « Revenir » (tâche 10)'), /\*\*Le rouge et le vert des émotions sortent ici de leurs écrans\*\*/);
+  const icone = section(v11, 'L\'icône et « Revenir » (tâche 10)');
+  assert.match(icone, /\*\*Le rouge et le vert des émotions sortent ici de leurs écrans\*\*/);
+  // Relecture du nom : depuis le nom Emozio (entrée du 07/11), les étapes de l'Aide iPhone ne sont plus celles de la spec
+  // mot pour mot. Aucune ligne du journal ne le dit plus sans dire l'exception du nom.
+  assert.ok(icone.includes('les 5 étapes de la spec, mot pour mot sauf le nom Emozio et sa vérification sous l\'icône (étapes 1 et 3 ; entrée « 2026-11-07 : le nom Emozio »)'));
+  const motPourMot = doc('docs', 'decisions.md').split('\n').filter((l) => l.includes('Changer d\'icône sans rien perdre') && l.includes('mot pour mot'));
+  assert.ok(motPourMot.length >= 2, 'les deux entrées parlent des étapes');
+  assert.deepEqual(motPourMot.filter((l) => !/mot pour mot sauf le nom Emozio|pour ce seul nom/.test(l)), []);
   const ecarts = section(v11, 'Écarts au texte de la spec');
   for (const x of ['`oubli*`', '« Retirer ces playlists »', '« Une seule lecture : Emozio ne garde pas la connexion. »',
     'le soir entier est contrôlé à 33 px ; à partir de 40 px, seul ce que la v11 y ajoute']) {

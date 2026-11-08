@@ -112,3 +112,23 @@ test('docs : l\'entrée « 2026-11-07 : le nom Emozio », la recette vérifie le
   assert.ok(format.includes('`emozio-sauvegarde-AAAA-MM-JJ-HHMM.json`') && format.includes('l\'identifiant `format` reste `carnet-sauvegarde`'));
   assert.ok(format.includes('L\'import ne lit jamais le nom d\'un fichier'));
 });
+
+// Relecture du nom : docs/rappel-du-soir.md, que le renommage met à jour, dit ce que disent les écrans. Depuis la v7,
+// l'écran Rappels dit « Émotion du moment » et le bouton du bas d'Aujourd'hui « Émotion » ; la doc disait encore « Humeur ».
+test('docs/rappel-du-soir.md reprend l\'écran Rappels : les textes des notifications, son titre et le bouton du bas d\'Aujourd\'hui, sans « Humeur »', () => {
+  const rappel = sansCommentaires(lire(pub('js', 'ui', 'ecrans', 'rappel.js')));
+  const textes = [...rappel.matchAll(/« ([^«»]*, si tu veux\.) »/g)].map((m) => m[1]);
+  assert.deepEqual(textes, ['Le soir dans Emozio, si tu veux.', 'Émotion du moment, si tu veux.']);
+  const titres = [...rappel.matchAll(/<h2 class="libelle-section">([^<]+)<\/h2>/g)].map((m) => m[1]);
+  assert.deepEqual(titres, ['Le soir', 'Émotion du moment']);
+  const titre = titres[1];
+  const bouton = rappel.match(/touche « ([^«»]+) », en bas\./)[1];
+  // Le bouton que l'écran nomme est bien celui de la bande du bas d'Aujourd'hui, qui ouvre l'Émotion du moment.
+  const aujourdhui = sansCommentaires(lire(pub('js', 'ui', 'ecrans', 'aujourdhui.js')));
+  assert.equal(aujourdhui.match(/href="#\/moment"[^]*?<span class="libelle-action">([^<]+)<\/span>/)[1], bouton);
+  const docRappel = lire(join(RACINE, 'docs', 'rappel-du-soir.md'));
+  for (const t of textes) assert.ok(docRappel.includes(`« ${t} »`), t);
+  assert.ok(docRappel.includes(`\n## ${titre} (si tu veux)\n`), 'titre de section');
+  assert.ok(docRappel.includes(`ouvrir Emozio et toucher « ${bouton} », en bas.`), 'bouton');
+  assert.doesNotMatch(docRappel, /Humeur/);
+});
