@@ -1,4 +1,4 @@
-# Carnet v6 (« V2 ») : spécification (construite, version 6.0.0)
+# Emozio v6 (« V2 ») : spécification (construite, version 6.0.0)
 
 Brainstorming du 8 au 12 octobre 2026, après la v5.0.0. Choix faits point par point par l'utilisateur, à partir de
 quatre études contre-vérifiées :
@@ -14,7 +14,7 @@ corrigée.
 - **Usage strictement personnel** : la commercialisation est écartée.
 - **Règles inchangées** : celles de CLAUDE.md et du cahier des charges restent en vigueur.
 - **Une seule règle assouplie**, et seulement par un réglage éteint au départ (§5) : « rien ne s'ouvre tout seul ».
-- **Ce que fait Carnet** : il observe, range et rend les mots de l'utilisateur. Il ne conseille jamais, n'explique jamais et ne lance aucune alerte calculée.
+- **Ce que fait Emozio** : il observe, range et rend les mots de l'utilisateur. Il ne conseille jamais, n'explique jamais et ne lance aucune alerte calculée.
 
 **Livraison** : en une seule fois (choix du 12/10), version 6.0.0.
 
@@ -270,7 +270,7 @@ L'énergie heure par heure reste dans l'Analyse.
 - **Code** : la règle est une fonction pure de `domain/ressourcer.js`.
 - **Mots** : jamais « alerte », « tu devrais » ni « pense à ».
 
-**Sieste** : la page d'aide iPhone (§6) explique le raccourci « Sieste » (minuteur, Ne pas déranger, sons). C'est l'iPhone qui sonne, pas Carnet.
+**Sieste** : la page d'aide iPhone (§6) explique le raccourci « Sieste » (minuteur, Ne pas déranger, sons). C'est l'iPhone qui sonne, pas Emozio.
 
 ## 6. Moment difficile
 
@@ -391,7 +391,7 @@ Sans plan, le lien « Écrire mon plan » remplace la phrase actuelle. Avec un p
   - **Sauvegardes témoins** aux formats 1, 2 et 3. Elles sont générées avec le `construireSauvegarde` des tags v3.0.0, v4.0.0 et v5.0.0, sur une base 100 % inventée.
     - « Complète » veut dire : chaque store, chaque champ non nul au moins une fois, un élément renommé, un élément archivé, un id inconnu, et un mémo en ZIP.
   - **« Vérifier mes données »** dans l'écran Diagnostic (caché, appui long sur la version) : des nombres seulement (fiches par table, mémos sans fiche, fiches illisibles), sans libellé ni texte. C'est différent de « Vérifier un fichier » dans Réglages, qui a été refusé.
-  - **Procédure « Carnet TEST »** dans `docs/deploiement.md`, facultative. L'utilisateur active lui-même le déploiement de la branche `dev` sur Netlify.
+  - **Procédure « Emozio TEST »** dans `docs/deploiement.md`, facultative. L'utilisateur active lui-même le déploiement de la branche `dev` sur Netlify.
 
 ## 9. Données, sauvegarde, architecture
 
@@ -430,7 +430,7 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
 - **Perte chiffrée** : `chiffrerPerte` et la somme `base` comptent les notes : « N notes présentes ici et absentes du fichier seront effacées ».
 - **Revenir à l'état d'avant l'import** : une copie qui n'a pas de tableau `notes` laisse les notes telles quelles, comme pour `humeurs`.
 - **Listes à réensemencer** : `listesManquantes` (utilisé par « Revenir ») et `toutEffacer` versent aussi `SEED_V4_AJOUTS`.
-- **Format plus récent** : une version plus ancienne de Carnet refuse proprement un fichier au format 4 (comportement existant).
+- **Format plus récent** : une version plus ancienne de l'app refuse proprement un fichier au format 4 (comportement existant).
 - **Documentation** : `docs/format-sauvegarde.md`.
 
 **Code pur**
@@ -548,7 +548,7 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
   - nouveaux filtres et recherche étendue dans l'Historique (les filtres et la recherche actuels restent) ;
   - catalogue d'exercices écrits par l'app.
 - **V3** :
-  - l'assistant IA : « Copier pour PSY » sur un épisode, un accès direct à l'export, une notice pour PSY ; Claude dans Carnet seulement si l'utilisateur lève la règle « zéro réseau » ;
+  - l'assistant IA : « Copier pour PSY » sur un épisode, un accès direct à l'export, une notice pour PSY ; Claude dans l'app seulement si l'utilisateur lève la règle « zéro réseau » ;
   - la page « Depuis ton dernier rendez-vous ».
 
 ## 12. Relecture de l'utilisateur (13/10)
@@ -565,7 +565,7 @@ L'empreinte de `SEED_V4_AJOUTS` entre dans le verrou. Les tests `migrations-fige
 
 Construite le 15/10, en 26 tâches, sur la branche `dev`. Version 6.0.0, base `DB_VERSION` 4, sauvegarde `FORMAT_VERSION` 4.
 
-- **Données** : comme prévu (§9). Sauvegardes témoins aux formats 1, 2 et 3 dans `tests/fixtures`, « Vérifier mes données » dans le Diagnostic, procédure « Carnet TEST » dans `docs/deploiement.md`. Les mémos se repèrent par `repo.audios.parents()`, sans lire les sons.
+- **Données** : comme prévu (§9). Sauvegardes témoins aux formats 1, 2 et 3 dans `tests/fixtures`, « Vérifier mes données » dans le Diagnostic, procédure « Emozio TEST » dans `docs/deploiement.md`. Les mémos se repèrent par `repo.audios.parents()`, sans lire les sons.
 - **Humeur du jour** (§1.0) : comme prévu. Ma semaine prend le plus bas et le plus haut jour par jour, parmi les relevés s'il y en a, sinon le soir, jamais les deux un même jour. L'Historique a une ligne pour un jour qui n'a que des relevés (« humeur 5,6 »), comme l'export PSY.
 - **Calibration** (§10) : aucun seuil n'a changé. Sur les relevés inventés, le bout en bout atteint 3 journaux sur 30 pour les scénarios AR(1), soit la limite de 10 %.
 - **Saisie du soir** : le repli « Ce qui a pesé · ce qui a rechargé » est fermé au départ. À 390 × 797, en clair comme en sombre, les champs et « Mes points positifs » tiennent sans défiler ; les replis suivants se lisent en faisant défiler la page.
@@ -662,6 +662,7 @@ Version 11.0.0, construite du 05 au 08/11 en 11 tâches sur la branche `dev`. El
 - **« Mes refuges »** : ses titres et trois playlists, dans Moment difficile et dans Bien-être, avec la connexion à son compte Spotify, au seul toucher : la seule exception à « zéro réseau », sans jeton gardé ;
 - les **écrans de l'émotion suivent désormais le thème** : clairs en thème clair, le mot choisi sur une capsule de sa couleur, inchangés en sombre ; « Réveil la nuit » reste noir ;
 - un **geste de retour** (le doigt vers la droite) sur les écrans à « Retour », une nouvelle icône, et « Revenir à l'état d'avant l'import » qui demande confirmation ;
-- la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 8 ; l'Export PSY ne change que par le texte des demi-heures.
+- la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 8 ; l'Export PSY ne change que par le texte des demi-heures ;
+- l'app s'appelle désormais **Emozio** (« Carnet » jusqu'à la v10) : seul ce que l'utilisateur voit change, et les fichiers exportés (`emozio-…`) ; la base, l'identifiant du format de sauvegarde, le cache et les clés locales gardent le nom interne `carnet` (`docs/decisions.md`, entrée du 07/11).
 
 Le détail, les appels du concepteur, l'exception réseau, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 08/11.

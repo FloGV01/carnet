@@ -1555,11 +1555,50 @@ Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allon
 7. Sens ta mâchoire. Les dents peuvent se séparer un peu. *(20 s)*
 8. Reste là. Il n'y a rien à attendre. *(20 s)*
 
+## 2026-11-07 : le nom Emozio
+
+Choix de l'utilisateur le 07/11, pendant la construction de la v11. Le nom entre dans la v11.0.0, après la construction et ses relectures, avant la publication : une seule réinstallation sur l'iPhone, pour l'icône et pour le nom.
+
+- **Pourquoi** : « Carnet » était banal. Il sonnait comme un devoir à remplir et ne disait pas ce qu'est l'app.
+- **Ses critères** : un nom que personne n'utilise déjà, court, qui dise le thème (les émotions, le TDAH et l'autisme ; les images du refuge et de la météo intérieure), sans demander de discrétion.
+- **Écartés** : « Feels », qui lui plaisait, est pris par une app de rencontre française connue ; « Emozione » est pris (un parfum, des coffrets cadeaux).
+- **Emozio** : quasi libre. C'est le mot basque pour « émotion » ; aucune app ne porte ce nom, seulement une petite agence web néerlandaise (et une agence de marketing au Mexique). Prononciation : « é-mo-zio ».
+- **Un nom propre, sans article** : « Emozio s'ouvre depuis l'écran d'accueil », « reviens dans Emozio ». Là où « Carnet » servait de nom commun, la phrase est réécrite plutôt que le mot remplacé : « l'ancien Carnet » devient « l'ancienne app », « un Carnet vide » « une base vide », « si Carnet est à l'écran » « si l'app est à l'écran ».
+
+### Ce qui change : ce que l'utilisateur voit
+
+- `index.html` (`<title>`, `apple-mobile-web-app-title`, `application-name`, le texte d'attente, le `<noscript>`) et le manifest (`name`, `short_name`) : « Emozio ». Le nom sous l'icône ne change qu'avec une nouvelle icône (spec v11 §10).
+- Les textes de l'app : le guide d'installation (`?forcer-guide`), Réglages et l'import (« dossier Emozio »), l'Aide iPhone, les Rappels, le Diagnostic, Mes refuges, la page du code de Spotify, le minuteur de concentration, Réglages › Émotions, et les messages de l'import et de la base (« une sauvegarde d'Emozio », « une version plus récente d'Emozio »).
+- **Les fichiers exportés** : `emozio-sauvegarde-AAAA-MM-JJ-HHMM.json` (ou `.zip`, ou `-partie-N-sur-T.zip`, et sa variante `.txt`), `emozio-consultation-AAAA-MM-JJ.pdf` (vue soignants), `emozio-test.json`, `.zip` et `.pdf` (Diagnostic). L'import ne lit jamais le nom d'un fichier : une sauvegarde `carnet-sauvegarde-…` s'importe telle quelle (`docs/format-sauvegarde.md`).
+- **L'Aide iPhone, « Changer d'icône sans rien perdre »** : les 5 étapes de la spec v11 §10 suivent le nouveau nom. L'accord de l'utilisateur prime sur le « mot pour mot » de la spec pour ce seul nom : le nom « Emozio » se vérifie avec l'icône (étapes 1 et 3), « l'ancienne app » et « la nouvelle app, Emozio » remplacent « l'ancien » et « le nouveau Carnet ». Comme avant, rien n'est supprimé avant la dernière étape.
+- `.gitignore` ajoute `emozio-*.json`, `.zip`, `.pdf` et `.txt` à côté des motifs `carnet-*`, gardés pour les anciens fichiers. `CLAUDE.md` prend le nom, cite `emozio-*.zip` parmi les fichiers à ne jamais lire et dit que le nom interne reste `carnet`. `package.json` : la description commence par « Emozio ».
+- La documentation vivante suit : le README, l'installation, le déploiement (« Emozio TEST »), le rappel du soir, la recette de l'iPhone, le format de sauvegarde, `docs/v6-specification.md` et `docs/design/integration.md`.
+
+### Ce qui garde le nom interne `carnet`, et pourquoi
+
+- **La base IndexedDB `carnet`** (`db/repository.js`, `db/migrations.js`) : renommée, l'app ouvrirait une base neuve et croirait repartir de zéro.
+- **`FORMAT = 'carnet-sauvegarde'`** (`db/sauvegarde.js`) : les anciennes sauvegardes doivent rester importables, et les nouvelles gardent cet identifiant, que l'import vérifie.
+- **Le préfixe de cache `carnet-` de `sw.js`** : le nettoyage des anciens caches continue de les retrouver.
+- **Les clés `localStorage` `carnet:…`** (brouillons, réglages du lecteur et des minuteurs, replis, demande de connexion à Spotify en attente) et les identifiants internes (`window.__carnet` des tests, la classe `revenir-carnet`, le marqueur `carnet-test` du fichier de test du Diagnostic, jamais importé) : les renommer ferait perdre ces repères, sans rien changer à l'écran.
+- **Le champ `name` de `package.json`** (`suivi-audhd`), le dépôt et le site Netlify : l'adresse ne change jamais, le stockage de l'iPhone y est lié.
+- **Les traces de leur temps** gardent « Carnet » : les entrées de ce journal avant la v11, les spécifications v4 et v5, les maquettes et prompts de Claude Design, les specs et plans de `docs/superpowers/`.
+
+### Textes à relire après la publication
+
+- La notification du soir des Rappels (`ui/ecrans/rappel.js`, `docs/rappel-du-soir.md`) : « Le soir dans Emozio, si tu veux. », à la place de « Carnet du soir, si tu veux. ».
+- Réglages › Émotions : « Revenir au texte d'Emozio ».
+- Le minuteur de concentration : « Le temps restant s'affiche, et continue si tu quittes Emozio. Un bol à la fin, si l'app est à l'écran. ».
+- L'Aide iPhone, « Changer d'icône sans rien perdre » : « Redémarrer l'iPhone : l'icône a peut-être changé. Si oui, et si son nom est « Emozio », c'est fini. », « Dans l'ancienne app : … », « … s'il montre la nouvelle icône et le nom « Emozio », Ajouter. … », « Ouvrir la nouvelle app, Emozio, qui doit être vide : … », « Ranger l'ancienne app dans un dossier, et ne plus y écrire. La supprimer plus tard, ou jamais. ».
+
+Test : `tests/unit/nom-emozio.test.js` (le manifest et `index.html`, aucun « Carnet » à l'écran, le nom interne gardé, les fichiers en `emozio-`, l'import d'un ancien nom, `.gitignore`, `CLAUDE.md`).
+
 ## 2026-11-08 : v11.0.0, six retours après la v10
 
 Source : les premiers retours d'usage après la v10 (04/11), puis ses réponses aux formulaires (04 et 05/11). Spec : `docs/superpowers/specs/2026-11-05-carnet-v11-design.md`, qui fait foi. Plan : `docs/superpowers/plans/2026-11-05-carnet-v11.md`, en 11 tâches, une par commit, chacune relue puis corrigée. Version 11.0.0, à publier en une fois, avec l'accord de l'utilisateur.
 
 La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base reste en `DB_VERSION` 6, confirmé : aucun magasin ni transformation, `gratitudes` arrive par `normaliserJournee`, et `migrations.lock.json` ne change pas. Les vocabulaires figés (roue, `declencheur`, `dessous`, clés d'`APRES_COUP`) et les 144 couleurs de la carte ne changent pas.
+
+L'app y prend aussi son nom, **Emozio** (entrée « 2026-11-07 : le nom Emozio », plus haut) : seuls ce que l'utilisateur voit et le nom des fichiers exportés changent ; le nom interne reste `carnet`.
 
 ### Décisions de l'utilisateur (spec §2, 04 et 05/11)
 
@@ -1578,7 +1617,7 @@ La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base
 1. **Les gratitudes** sont citées sous « J'ai fini pour ce soir », visibles dans l'Historique et sa recherche, et relues dans un repli fermé « Tes gratitudes » de l'Analyse : les 2 plus récentes de la semaine, avec leur jour, sans nombre. Jamais dans la vue soignants (spec §6).
 2. **« Ce que j'en retiens »** reste dans l'app : ni Export PSY, ni vue soignants, ni feuille « Voir » d'En consultation, pour rester cohérent (spec §7).
 3. **Trois playlists au plus** dans Mes refuges (spec §8.1).
-4. **Aucun jeton gardé** : on se connecte, Carnet lit la liste des playlists, il en choisit jusqu'à 3, et le jeton est jeté. Rien à voler ni à renouveler ; chaque mise à jour repasse par la page de Spotify (spec §8.3).
+4. **Aucun jeton gardé** : on se connecte, Emozio lit la liste des playlists, il en choisit jusqu'à 3, et le jeton est jeté. Rien à voler ni à renouveler ; chaque mise à jour repasse par la page de Spotify (spec §8.3).
 5. **Le passage d'icône en pas-à-pas fixe** dans Réglages › Aide iPhone (spec §10).
 
 ### Règles levées ou changées (spec §13)
@@ -1591,11 +1630,11 @@ La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base
 
 ### L'exception réseau : la connexion à Spotify (spec §8.3)
 
-- **Ce qui s'ouvre** : `connect-src` gagne exactement `https://accounts.spotify.com` et `https://api.spotify.com` (`netlify.toml`). `script-src`, `img-src` et le reste ne bougent pas : ni pochette, ni script de Spotify, ni lecture dans Carnet.
+- **Ce qui s'ouvre** : `connect-src` gagne exactement `https://accounts.spotify.com` et `https://api.spotify.com` (`netlify.toml`). `script-src`, `img-src` et le reste ne bougent pas : ni pochette, ni script de Spotify, ni lecture dans Emozio.
 - **Quand** : uniquement au toucher sur « Choisir dans mon compte », dans Mes refuges. Jamais à l'ouverture de l'app ni dans Moment difficile, où l'heure d'une demande dirait à Spotify l'heure d'un moment difficile. La garde réseau des tests reste active partout ailleurs (`tests/aides/gardes.js`).
 - **Comment** : la connexion PKCE de Spotify, sans secret, avec le seul droit `playlist-read-private`. Le Client ID (qui n'est pas un secret, donné le 05/11) est écrit dans `public/js/plateforme/spotify.js`, seul fichier réseau hors de `sw.js` ; `tests/unit/architecture.test.js` a une exception étroite pour ce fichier et ces deux hôtes. Un jeton n'entre jamais dans `meta` ni dans une sauvegarde, et un test le vérifie.
-- **Ce que Spotify apprend** : l'usage de cette app par son compte, l'adresse de Carnet, son adresse IP et l'heure de ces demandes. Aucune requête ne contient de donnée du journal, des émotions ou des épisodes.
-- **Le risque accepté** : jusqu'ici, un script malveillant ne pouvait rien envoyer en silence. Avec cette ouverture, il pourrait écrire vers un compte Spotify. Cela suppose qu'un script hostile tourne déjà dans Carnet : `script-src` reste `'self'`, et l'app ne charge aucun script tiers.
+- **Ce que Spotify apprend** : l'usage de cette app par son compte, l'adresse d'Emozio, son adresse IP et l'heure de ces demandes. Aucune requête ne contient de donnée du journal, des émotions ou des épisodes.
+- **Le risque accepté** : jusqu'ici, un script malveillant ne pouvait rien envoyer en silence. Avec cette ouverture, il pourrait écrire vers un compte Spotify. Cela suppose qu'un script hostile tourne déjà dans Emozio : `script-src` reste `'self'`, et l'app ne charge aucun script tiers.
 - **`CLAUDE.md`**, ligne « Zéro réseau » : elle dit l'exception (au seul toucher, `plateforme/spotify.js` seul fichier réseau hors de `sw.js`, aucun jeton gardé, deux hôtes dans `connect-src`). Le reste de la règle ne change pas.
 
 ### Identifiants (plan)
@@ -1634,7 +1673,7 @@ La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base
 ### Mes refuges et la connexion à Spotify (tâches 6 et 7)
 
 - L'écran, ouvert depuis la cinquième entrée de Bien-être et depuis Réglages › Mon plan : ses titres, un par ligne, et trois playlists, chacune un nom et un lien, écrits seuls au fil de la frappe. Un lien refusé n'est pas gardé, sans message.
-- Une playlist qui a un lien s'écoute d'un toucher, dans Mes refuges et dans Moment difficile, sous « Une chose à la fois » : un lien qui sort de Carnet, avec l'icône de sortie au trait (pas le caractère ↗, compté comme emoji). Les titres rejoignent Mon plan dans Moment difficile seulement. Sans playlist ni titre, rien n'apparaît.
+- Une playlist qui a un lien s'écoute d'un toucher, dans Mes refuges et dans Moment difficile, sous « Une chose à la fois » : un lien qui sort d'Emozio, avec l'icône de sortie au trait (pas le caractère ↗, compté comme emoji). Les titres rejoignent Mon plan dans Moment difficile seulement. Sans playlist ni titre, rien n'apparaît.
 - Le Diagnostic, « Ouvrir une playlist », essaie trois formes du lien (`formesDuLien`) : lien web, lien web dans une nouvelle fenêtre, lien direct vers l'app, sans lien dans le rapport.
 - **Le retour de Spotify** (`?code=`, `?state=`, `?error=`) est lu et retiré de l'adresse tout en haut de `main.js`, avant le guide d'installation et le retour sur Aujourd'hui. Dans l'app, la connexion se finit dans Mes refuges ; hors de l'app installée, une page montre le code à coller dans Mes refuges.
 - **Point de vigilance 5** : un `state` qui ne correspond pas, un refus, un retour sans demande, 401 et 403, réseau coupé, une réponse d'une autre forme, un nom piégé, un élément `null`, un lien d'un autre hôte : aucun plantage, aucun jeton, les refuges déjà notés intacts. Réseau coupé au retour : le code est gardé dans le champ, et « Finir la connexion » le relance.
@@ -1658,7 +1697,7 @@ La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base
 - `icone.svg` reprend la piste B ; `npm run icones` rend les PNG sous des noms `v11-`, sur fond noir : plus de cadre bleu sur l'icône masquable. **Le rouge et le vert des émotions sortent ici de leurs écrans** : c'est son choix (spec §10).
 - `theme-color` : `#e7eaee` en clair, `#000000` en sombre ; le manifest prend les couleurs du clair. Pas d'activation d'office d'une nouvelle version dans `sw.js`.
 - Aide iPhone : « Changer d'icône sans rien perdre », les 5 étapes de la spec mot pour mot, et ce que la copie ne garde pas. Aucune étape ne fait supprimer quoi que ce soit avant la dernière.
-- « Revenir à l'état d'avant l'import » passe par une confirmation qui dit ce qui sera remplacé, lue par VoiceOver. Un import sur un Carnet vide (`estBaseVide`) ne prend plus de copie : la ligne n'apparaît pas après le passage à la nouvelle icône.
+- « Revenir à l'état d'avant l'import » passe par une confirmation qui dit ce qui sera remplacé, lue par VoiceOver. Un import sur une base vide (`estBaseVide`) ne prend plus de copie : la ligne n'apparaît pas après le passage à la nouvelle icône.
 
 ### Contrôle global (tâche 11)
 
@@ -1695,38 +1734,39 @@ Une relecture des corrections de la relecture finale. Six constats, tous vérifi
 
 ### Écarts au texte de la spec
 
-- **§8.3, « Oublier »** : le mot répond à `oubli*`, interdit (`tests/aides/mots-interdits.js`, spec §4). L'app dit « Retirer ces playlists » et « Une seule lecture : Carnet ne garde pas la connexion. ». Le filtre n'a pas changé.
+- **§8.3, « Oublier »** : le mot répond à `oubli*`, interdit (`tests/aides/mots-interdits.js`, spec §4). L'app dit « Retirer ces playlists » et « Une seule lecture : Emozio ne garde pas la connexion. ». Le filtre n'a pas changé.
 - **§13, le très grand texte du soir** : le soir entier est contrôlé à 33 px ; à partir de 40 px, seul ce que la v11 y ajoute (voir « Contrôle global »).
 
 ### En attente de l'utilisateur
 
 - **Avant d'essayer la connexion à Spotify**, de son côté, une fois :
-  - vérifier l'adresse de retour inscrite dans l'app créée chez Spotify : exactement celle du site de production, `https://<site>.netlify.app/`, **barre finale comprise** (Carnet envoie l'adresse de l'app sans paramètres ni `#`) ;
+  - vérifier l'adresse de retour inscrite dans l'app créée chez Spotify : exactement celle du site de production, `https://<site>.netlify.app/`, **barre finale comprise** (Emozio envoie l'adresse de l'app sans paramètres ni `#`) ;
   - si Spotify répond 403 (« Spotify refuse cette connexion »), s'ajouter à la liste d'utilisateurs de l'app, chez Spotify : elle reste en mode développement ;
   - préparer ses playlists dans Spotify ;
   - **jamais son mot de passe** : la connexion, c'est lui seul qui la fait, sur la page de Spotify.
 - **Le correctif 11.0.1** (spec §8.5), selon ce que l'iPhone montre :
   - si ni le retour dans l'app ni le code à coller ne marchent, il retire la connexion (la constante vidée), et les liens collés restent ;
-  - si le lien web s'ouvre dans une page Safari au-dessus de Carnet plutôt que dans l'app de musique, il passe à la forme du Diagnostic qui marche mieux. La v11 sort avec le lien web.
-- **Les limites assumées, à lui dire** (spec §8.5) : si iOS a fermé Carnet pendant l'écoute, il se rouvre sur Aujourd'hui ; lancer un exercice ou un son de fond peut couper la musique ; sans réseau, la connexion et l'ouverture d'une playlist ne marchent pas, mais la liste écrite et les liens notés restent lisibles ; Spotify a changé ces règles trois fois en 2026, et l'app, en mode développement, est à la merci d'un prochain changement.
-- **Le passage à la nouvelle icône** (spec §10), à lui donner après la publication : les 5 étapes, aussi dans Réglages › Aide iPhone. Une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et supprimer l'ancienne efface ses données : rien n'est à supprimer avant d'avoir vérifié la copie dans le nouveau Carnet. Dans Safari, l'ancien service worker sert encore l'ancienne page tant que l'onglet n'est pas fermé (étape 3).
+  - si le lien web s'ouvre dans une page Safari au-dessus d'Emozio plutôt que dans l'app de musique, il passe à la forme du Diagnostic qui marche mieux. La v11 sort avec le lien web.
+- **Les limites assumées, à lui dire** (spec §8.5) : si iOS a fermé Emozio pendant l'écoute, il se rouvre sur Aujourd'hui ; lancer un exercice ou un son de fond peut couper la musique ; sans réseau, la connexion et l'ouverture d'une playlist ne marchent pas, mais la liste écrite et les liens notés restent lisibles ; Spotify a changé ces règles trois fois en 2026, et l'app, en mode développement, est à la merci d'un prochain changement.
+- **Le passage à la nouvelle icône** (spec §10), à lui donner après la publication : les 5 étapes, aussi dans Réglages › Aide iPhone. Une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et supprimer l'ancienne efface ses données : rien n'est à supprimer avant d'avoir vérifié la copie dans la nouvelle app. Dans Safari, l'ancien service worker sert encore l'ancienne page tant que l'onglet n'est pas fermé (étape 3).
+- **Le nom Emozio** (entrée du 07/11) : il n'apparaît sous l'icône qu'avec la nouvelle icône (le passage ci-dessus) ; l'ancienne garde « Carnet ». Facultatif, de son côté : renommer son app dans le tableau de bord développeur de Spotify, car ce nom s'affiche sur la page d'autorisation ; renommer son dossier iCloud Drive « Carnet » en « Emozio », le nom que l'app lui donne désormais. Les anciennes sauvegardes (`carnet-sauvegarde-…`) restent importables, quel que soit leur dossier.
 - **Les textes nouveaux** (plus bas) sont des propositions, à relire après la publication.
 - **Les points de la v10 restent ouverts** (spec §3) : le ▶ d'un favori ou de « Reprendre », l'épingle sur les lignes du Programme, les écrans hérités qui débordent en très grand texte (le soir compris, voir plus haut), la fin de « Réveil la nuit » en thème clair, les quatre boutons de Moment difficile en sombre, les exercices et la table « Pour ce moment : » à relire. Ceux de la v7 à la v9 aussi : Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé. Le soir avec les zones sûres et « Durée › » en deux touchers sont clos (voir « Règles levées ou changées »).
-- **Hors de la v11** (spec §3) : les fois semblables, la préparation pour le psy, de nouveaux filtres, le sport en minutes, un « Dit » ou un rappel sur les gratitudes, écouter de la musique dans Carnet, et ce qui a été proposé le 05/11 sans être retenu.
+- **Hors de la v11** (spec §3) : les fois semblables, la préparation pour le psy, de nouveaux filtres, le sport en minutes, un « Dit » ou un rappel sur les gratitudes, écouter de la musique dans Emozio, et ce qui a été proposé le 05/11 sans être retenu.
 
 ### À essayer sur l'iPhone
 
-Le détail, à cocher, est dans `docs/recette-iphone.md`, « v11 » : le geste de retour au doigt, et le défilement de côté des pages qui débordent en très grand texte ; le glissement de la roue, sa fin, la page qui défile dessous, le doigt posé pendant un recentrage, la taille du texte changée au Centre de contrôle, et les Oui / Non de Contact et de Sport un cran au-dessus du texte par défaut ; le soir encore en moins de 30 s avec ses trois roues ; la connexion à Spotify et son retour ; l'ouverture d'une playlist (Diagnostic) et le retour dans Carnet ; la nouvelle icône et le passage sans perte, et la boîte « Revenir » lue par VoiceOver ; les bulles pâles au soleil et la barre du haut en clair.
+Le détail, à cocher, est dans `docs/recette-iphone.md`, « v11 » : le geste de retour au doigt, et le défilement de côté des pages qui débordent en très grand texte ; le glissement de la roue, sa fin, la page qui défile dessous, le doigt posé pendant un recentrage, la taille du texte changée au Centre de contrôle, et les Oui / Non de Contact et de Sport un cran au-dessus du texte par défaut ; le soir encore en moins de 30 s avec ses trois roues ; la connexion à Spotify et son retour ; l'ouverture d'une playlist (Diagnostic) et le retour dans Emozio ; la nouvelle icône et le passage sans perte, et la boîte « Revenir » lue par VoiceOver ; les bulles pâles au soleil et la barre du haut en clair.
 
 ### Textes nouveaux à relire après la publication
 
-Écrits pour Carnet, d'après la spec et le plan. Un texte se corrige dans le fichier indiqué ; les identifiants ne changent pas.
+Écrits pour Emozio, d'après la spec et le plan. Un texte se corrige dans le fichier indiqué ; les identifiants ne changent pas.
 
 - **Le soir** (`ui/ecrans/aujourdhui.js`) : la carte « Mes gratitudes », consigne « Ce pour quoi je suis reconnaissant. À qui je dis merci. ». Les roues, pour VoiceOver : « Durée de la nuit », « Durée du sport », « Comment c'était » ; dans les détails, « Activité 1 : durée », « Contact 1 : comment c'était ». Les valeurs sont celles des listes (« 4 h ou moins », « 4 h 30 », … « 10 h ou plus »).
 - **L'Analyse** (`ui/ecrans/analyse.js`) : la porte « Épisodes », le repli « Tes gratitudes ».
 - **L'épisode rouvert** (`ui/ecrans/parcours-fiche.js`) : « Ce que j'en retiens ».
-- **Mes refuges** (`ui/ecrans/refuges.js`, `ui/composants/refuges.js`) : « Mes refuges », « Mes titres » (« Un titre par ligne. »), « Mes playlists », « Nom », « Lien », « Playlist 2 » pour une playlist sans nom ; « Choisir dans mon compte », « Une seule lecture : Carnet ne garde pas la connexion. », « Code de Spotify », « Finir la connexion », « Spotify », « Aucune playlist dans ce compte. », « Retirer ces playlists », puis « Playlists de Spotify retirées » et « Annuler » ; les échecs « La connexion n'a pas abouti. Tes liens notés restent. » et « Spotify refuse cette connexion. Tes liens notés restent. ».
-- **La page du code** (`ui/ecrans/code-spotify.js`) : « Code de Spotify », « Copie ce code, reviens dans Carnet, puis colle-le dans Mes refuges. », « Copier le code », « Copié. », « La copie n'a pas marché : sélectionne le code. ».
+- **Mes refuges** (`ui/ecrans/refuges.js`, `ui/composants/refuges.js`) : « Mes refuges », « Mes titres » (« Un titre par ligne. »), « Mes playlists », « Nom », « Lien », « Playlist 2 » pour une playlist sans nom ; « Choisir dans mon compte », « Une seule lecture : Emozio ne garde pas la connexion. », « Code de Spotify », « Finir la connexion », « Spotify », « Aucune playlist dans ce compte. », « Retirer ces playlists », puis « Playlists de Spotify retirées » et « Annuler » ; les échecs « La connexion n'a pas abouti. Tes liens notés restent. » et « Spotify refuse cette connexion. Tes liens notés restent. ».
+- **La page du code** (`ui/ecrans/code-spotify.js`) : « Code de Spotify », « Copie ce code, reviens dans Emozio, puis colle-le dans Mes refuges. », « Copier le code », « Copié. », « La copie n'a pas marché : sélectionne le code. ».
 - **Bien-être et Mon plan** : l'entrée « Mes refuges » ; dans Moment difficile, la rubrique « Mes titres » de Mon plan. L'aperçu de l'import nomme « les refuges ».
 - **Le Diagnostic** (`ui/ecrans/diagnostic.js`) : « Ouvrir une playlist », « Note d'abord une playlist dans Mes refuges. », « Lien web », « Lien web, nouvelle fenêtre », « Lien direct vers l'app », « À noter : où ça s'ouvre, où on revient. ».
 - **Réglages** (`ui/ecrans/reglages.js`, `ui/ecrans/aide-iphone.js`) : la confirmation « Revenir à l'état d'avant l'import ? », « Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du … Les mémos vocaux d'avant l'import ne reviennent pas. », action « Revenir » ; l'Aide iPhone, son introduction et « Changer d'icône sans rien perdre », dont la note « La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser. ».

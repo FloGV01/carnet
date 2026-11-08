@@ -41,14 +41,14 @@ test('docs/decisions.md : l\'entrée v11.0.0, ses règles levées, l\'exception 
   for (const x of ['**Le risque accepté**', '`playlist-read-private`', '`script-src` reste `\'self\'`', '**`CLAUDE.md`**']) assert.ok(reseau.includes(x), `exception réseau : ${x}`);
   assert.match(section(v11, 'L\'icône et « Revenir » (tâche 10)'), /\*\*Le rouge et le vert des émotions sortent ici de leurs écrans\*\*/);
   const ecarts = section(v11, 'Écarts au texte de la spec');
-  for (const x of ['`oubli*`', '« Retirer ces playlists »', '« Une seule lecture : Carnet ne garde pas la connexion. »',
+  for (const x of ['`oubli*`', '« Retirer ces playlists »', '« Une seule lecture : Emozio ne garde pas la connexion. »',
     'le soir entier est contrôlé à 33 px ; à partir de 40 px, seul ce que la v11 y ajoute']) {
     assert.ok(ecarts.includes(x), `écarts : ${x}`);
   }
   assert.match(section(v11, 'Contrôle global (tâche 11)'), /Le soir non plus à 33 px, en entier, page comprise\. À partir de 40 px, seules les trois roues/);
   const attente = section(v11, 'En attente de l\'utilisateur');
   for (const x of ['**barre finale comprise**', '403', 'préparer ses playlists', '**jamais son mot de passe**', '**Le correctif 11.0.1**', '**Les limites assumées, à lui dire**',
-    '**Le passage à la nouvelle icône**', '**Les points de la v10 restent ouverts**']) {
+    '**Le passage à la nouvelle icône**', '**Le nom Emozio**', 'tableau de bord développeur de Spotify', '**Les points de la v10 restent ouverts**']) {
     assert.ok(attente.includes(x), `en attente : ${x}`);
   }
   assert.ok(v11.includes('### Textes nouveaux à relire après la publication\n'));
@@ -75,8 +75,8 @@ test('docs/recette-iphone.md, « v11 » : les six points de la spec §14, et le 
   const recette = doc('docs', 'recette-iphone.md');
   const v11 = sectionV11(recette);
   assert.ok(recette.includes('## v11'));
-  for (const x of ['**Le geste de retour, au doigt**', '**La roue, au doigt**', '**La connexion à Spotify et son retour dans Carnet**',
-    '**L\'ouverture d\'une playlist et le retour dans Carnet**', '**La nouvelle icône et le passage sans perte**', 'au soleil', 'La barre du haut',
+  for (const x of ['**Le geste de retour, au doigt**', '**La roue, au doigt**', '**La connexion à Spotify et son retour dans Emozio**',
+    '**L\'ouverture d\'une playlist et le retour dans Emozio**', '**La nouvelle icône et le passage sans perte**', 'au soleil', 'La barre du haut',
     '**Le soir, encore en moins de 30 s**']) {
     assert.ok(v11.includes(x), `recette : ${x}`);
   }

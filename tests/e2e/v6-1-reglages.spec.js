@@ -73,7 +73,10 @@ test('Rappels : les heures de l\'humeur du moment s\'y choisissent d\'un toucher
   await expect(page.locator('main.rappel')).toContainText('Refais les mêmes étapes pour chaque heure choisie.');
   // v7 : l'écran s'appelle « Émotion du moment », et le bouton de la bande du bas « Émotion ».
   await expect(page.getByRole('heading', { name: 'Émotion du moment', level: 2 })).toBeVisible();
-  await expect(page.locator('main.rappel')).toContainText('Texte de la notification : « Émotion du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Émotion », en bas.');
+  await expect(page.locator('main.rappel')).toContainText('Texte de la notification : « Émotion du moment, si tu veux. » Ensuite, ouvre Emozio et touche « Émotion », en bas.');
+  // Le nom de l'app, sans article : la notification du soir le dit, et le Dock aussi.
+  await expect(page.locator('main.rappel')).toContainText('avec le texte « Le soir dans Emozio, si tu veux. »');
+  await expect(page.locator('main.rappel')).toContainText('où Emozio est vide. Garde plutôt Emozio dans le Dock.');
   await expect(page.locator('main.rappel')).not.toContainText('Humeur');
   expect(await lireJournee(page)).toBeNull();
 

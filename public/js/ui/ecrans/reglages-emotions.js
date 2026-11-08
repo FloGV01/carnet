@@ -3,7 +3,7 @@
 // creux, après les sept familles. Un toucher sur un mot ouvre le champ de sa définition ; le texte s'enregistre à la
 // sortie du champ seulement, ou si l'app passe en arrière-plan (méta `definitionsRoue`, sauvegardée avec le reste) : la
 // frappe reste dans le brouillon local, et rien ne bouge sous le doigt pendant qu'on réécrit (ChampTexte `aLaSortie`).
-// « Revenir au texte de Carnet » retire la correction ; un champ vidé fait de même. Le texte de Carnet
+// « Revenir au texte d'Emozio » retire la correction ; un champ vidé fait de même. Le texte d'Emozio
 // (domain/definitions-roue.js) ne change jamais.
 // v9 (spec §4.5) : après « Sans famille », qui reste la seule (un mot à soi sans famille le dit sur sa rangée), la
 // rubrique « Mes mots », les mots ajoutés depuis la loupe de l'émotion du moment : ceux de la carte, dans l'ordre de
@@ -106,12 +106,12 @@ function MesMots({ ouvert, surOuvrir }) {
 
 export function ReglagesEmotions() {
   const [corrections, setCorrections] = useState(null);
-  // Le mot dont le champ est ouvert, et le tour du champ : « Revenir » le remonte avec le texte de Carnet.
+  // Le mot dont le champ est ouvert, et le tour du champ : « Revenir » le remonte avec le texte d'Emozio.
   const [ouvert, setOuvert] = useState(null);
   const [tour, setTour] = useState(0);
   const file = useRef(Promise.resolve());
   const aFocaliser = useRef(false);
-  // Une lecture impossible : le texte de Carnet partout.
+  // Une lecture impossible : le texte d'Emozio partout.
   useEffect(() => { repo.meta.lire('definitionsRoue').catch(() => null).then((v) => setCorrections(v || {})); }, []);
   useEffect(() => {
     if (!aFocaliser.current || !ouvert) return;
@@ -151,7 +151,7 @@ export function ReglagesEmotions() {
               : html`<button type="button" class="ligne-carte bouton-definition" onClick=${() => ouvrir(m.id)}>
                   <span class="mot-definitions">${m.libelle}</span>${' '}<span class="texte-definitions">${definition(m.id, corrections)}</span>
                 </button>`}
-            ${corrigee && html`<button type="button" class="btn-lien revenir-carnet" onClick=${() => revenir(m.id)}>Revenir au texte de Carnet</button>`}
+            ${corrigee && html`<button type="button" class="btn-lien revenir-carnet" onClick=${() => revenir(m.id)}>Revenir au texte d'Emozio</button>`}
           </li>`;
         })}
       </ul>

@@ -60,7 +60,7 @@ if (!guide) {
 // Accès de test, uniquement en local.
 if (estLocal(location)) window.__carnet = { repo, etatApp };
 
-// Le texte d'attente « Carnet » du HTML est retiré : Preact ne le remplace pas de lui-même.
+// Le texte d'attente « Emozio » du HTML est retiré : Preact ne le remplace pas de lui-même.
 const racine = document.getElementById('app');
 racine.textContent = '';
 render(html`<${App} guide=${guide} codeSpotify=${issueSpotify === 'copier' ? retourSpotify.code : null} />`, racine);

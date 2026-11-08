@@ -40,7 +40,7 @@ test('aller-retour JSON sans mémo : identique à l\'original', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);
   const [f] = await exporter(a.repo, { versionApp: '1.0.0' });
-  assert.match(f.nom, /^carnet-sauvegarde-2026-09-30-2100\.json$/);
+  assert.match(f.nom, /^emozio-sauvegarde-2026-09-30-2100\.json$/);
   const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
   assert.deepEqual(analyse.erreurs, []);
   assert.equal(analyse.resume.journees, 2);

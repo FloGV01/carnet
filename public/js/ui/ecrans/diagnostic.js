@@ -52,12 +52,12 @@ async function fabriquerPdfTest() {
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#1F1D1A'; ctx.font = '64px -apple-system, sans-serif';
-  ctx.fillText('Carnet : page de test', 140, 220);
+  ctx.fillText('Emozio : page de test', 140, 220);
   ctx.strokeStyle = '#3B4A6B'; ctx.lineWidth = 6; ctx.strokeRect(140, 300, 1374, 600);
   const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
   const jpeg = new Uint8Array(await blob.arrayBuffer());
   const pdf = creerPdfJpeg(jpeg, { largeurPx: 1654, hauteurPx: 2339 });
-  return new File([pdf], 'carnet-test.pdf', { type: 'application/pdf' });
+  return new File([pdf], 'emozio-test.pdf', { type: 'application/pdf' });
 }
 
 export function Diagnostic() {
@@ -87,7 +87,7 @@ export function Diagnostic() {
         ua: navigator.userAgent,
       });
       const json = JSON.stringify({ format: 'carnet-test', date: new Date().toISOString() }, null, 2);
-      const variantes = variantesTexte('carnet-test.json', json, 'application/json');
+      const variantes = variantesTexte('emozio-test.json', json, 'application/json');
       const zip = creerZip([
         { nom: 'sauvegarde.json', donnees: enc.encode(json) },
         { nom: 'audios/test.bin', donnees: new Uint8Array(2048).map((_, i) => i % 251) },
@@ -96,7 +96,7 @@ export function Diagnostic() {
       try { pdf = await fabriquerPdfTest(); } catch (e) { noter('Fabrication du PDF', `échec (${e && e.message})`); }
       setFichiers({
         json: premierPartageable(variantes), jsonVariantes: variantes,
-        zip: new File(zip.morceaux, 'carnet-test.zip', { type: 'application/zip' }), pdf,
+        zip: new File(zip.morceaux, 'emozio-test.zip', { type: 'application/zip' }), pdf,
       });
     })();
   }, []);
@@ -104,9 +104,9 @@ export function Diagnostic() {
   const partagerFichier = (cle, libelle) => {
     const f = fichiers[cle];
     if (!f) { noter(libelle, 'fichier non prêt ou non partageable'); return; }
-    partager(f, { titre: 'Carnet' }).then((r) => noter(libelle, `${r} (${f.type || 'sans type'})`));
+    partager(f, { titre: 'Emozio' }).then((r) => noter(libelle, `${r} (${f.type || 'sans type'})`));
   };
-  const copierTest = () => copier('Carnet : test du presse-papier').then((ok) => noter('Presse-papier', ok ? 'copié' : 'échec'));
+  const copierTest = () => copier('Emozio : test du presse-papier').then((ok) => noter('Presse-papier', ok ? 'copié' : 'échec'));
   const imprimer = () => { try { window.print(); noter('Impression', 'appel fait (vérifier à l\'écran)'); } catch (e) { noter('Impression', `échec (${e && e.message})`); } };
   const persister = () => demanderPersistance().then((r) => noter('Persistance', String(r)));
   // Des nombres seulement : rien de ce que l'utilisateur a écrit n'est affiché ni copié.
@@ -161,7 +161,7 @@ export function Diagnostic() {
   useEffect(() => () => { if (micro.url) URL.revokeObjectURL(micro.url); }, [micro.url]);
 
   const rapport = () => [
-    `Carnet ${infos.version} · ${new Date().toLocaleString('fr-FR')}`,
+    `Emozio ${infos.version} · ${new Date().toLocaleString('fr-FR')}`,
     `Mode : ${infos.mode} · SW : ${infos.sw}`,
     ...(ecran ? [`Écran : ${ecran.largeur} × ${ecran.fenetre} · zones sûres ${texteZones(ecran.zones)} · hauteur utile ${px(ecran.utile)}`] : []),
     `Stockage protégé : ${infos.persiste} · utilisé ${infos.utilise} / quota ${infos.quota}`,

@@ -1295,7 +1295,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .reglages-ressourcer .ligne-interrupteur { padding-top: 12px; padding-bottom: 12px; }
 .reglages-ressourcer .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); line-height: 1.35; }
 /* Réglages › Émotions (v8) : une carte par famille, sous son nom et un point à sa couleur ; une rangée par mot, le mot
-   puis son sens. Touchée, la rangée devient le champ de la définition ; « Revenir au texte de Carnet » la suit. */
+   puis son sens. Touchée, la rangée devient le champ de la définition ; « Revenir au texte d'Emozio » la suit. */
 .reglages-emotions { gap: 10px; }
 .famille-definitions { display: flex; flex-direction: column; gap: 6px; }
 .titre-famille-definitions { display: flex; align-items: center; gap: 8px; padding: 10px 0 0; }

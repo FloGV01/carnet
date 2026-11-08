@@ -1,6 +1,6 @@
 // La carte du bas de l'émotion (v9, spec §4.2 ; visuel-hwf.md §2.8), comme How We Feel : une capsule sombre au-dessus du
 // bas de l'écran, le mot choisi à la couleur de sa bulle (éclaircie pour rester lisible, ui/carte-geometrie.js), sa
-// définition dessous (la correction de l'utilisateur, sinon le texte de Carnet ou celui du mot à soi), et un rond blanc
+// définition dessous (la correction de l'utilisateur, sinon le texte d'Emozio ou celui du mot à soi), et un rond blanc
 // avec une flèche, « Continuer ». Elle grandit avec le texte, sans jamais couper la définition (point de vigilance 2).
 // Sa zone est toujours là, vide sans mot : VoiceOver annonce le mot qui y paraît (aria-live). v11 (spec §9) : en clair, la
 // capsule est blanche, le rond foncé, et le mot s'écrit en noir sur une capsule de la couleur de sa bulle (--c-fill) ; les

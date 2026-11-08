@@ -1,10 +1,10 @@
-// Définitions des 79 mots de la roue (v8, spec §4) : écrites pour Carnet, une phrase courte et neutre, au masculin
+// Définitions des 79 mots de la roue (v8, spec §4) : écrites pour Emozio, une phrase courte et neutre, au masculin
 // comme les mots. Elles décrivent ce qu'on ressent ou la situation, sans juger ni conseiller. Pur, figé comme la roue :
 // l'utilisateur les corrige dans Réglages › Émotions, et ses corrections vivent dans la méta `definitionsRoue`
-// ({ [idMot]: texte }), sauvegardée avec le reste. Le texte de Carnet ne change pas ; il revient quand une correction
+// ({ [idMot]: texte }), sauvegardée avec le reste. Le texte d'Emozio ne change pas ; il revient quand une correction
 // est retirée.
 // v9 (spec §6 et §13.3) : 144 mots, les 65 ajouts à la fin de chaque famille, puis les deux mots sans famille. Seule une
-// nouvelle version change un texte de Carnet : la v9 en change six (« // v9 »), qui contenaient le mot d'une nouvelle
+// nouvelle version change un texte d'Emozio : la v9 en change six (« // v9 »), qui contenaient le mot d'une nouvelle
 // bulle (Craintif, Accompli, Mécontent, Extasié) ou le sens d'un ajout (Libéré, celui de Soulagé ; Tranquille, celui
 // d'Insouciant). Aucune définition ne reprend celles de How We Feel ou de Yale.
 import { motPerso } from './roue.js';
@@ -179,7 +179,7 @@ const correctionDe = (id, corrections) => {
 };
 
 // La définition affichée : la correction de l'utilisateur, sinon la définition d'un mot à soi (méta `motsPerso`, v9),
-// sinon le texte de Carnet ; null pour un id inconnu, et pour un mot à soi sans définition.
+// sinon le texte d'Emozio ; null pour un id inconnu, et pour un mot à soi sans définition.
 export function definition(id, corrections, perso) {
   if (aDefinition(id)) return correctionDe(id, corrections) ?? DEFINITIONS[id];
   const mot = motPerso(id, perso);
@@ -188,12 +188,12 @@ export function definition(id, corrections, perso) {
   return correctionDe(id, corrections) ?? sienne;
 }
 
-// Le mot a-t-il une correction (différente du texte de Carnet) ?
+// Le mot a-t-il une correction (différente du texte d'Emozio) ?
 export const estCorrigee = (id, corrections) => aDefinition(id) && correctionDe(id, corrections) !== null
   && correctionDe(id, corrections) !== DEFINITIONS[id];
 
-// Les corrections après un changement, sans modifier l'objet reçu : un texte vide, ou le texte de Carnet, retire la
-// correction (« Revenir au texte de Carnet »). Les clés inconnues ou illisibles sont laissées telles quelles.
+// Les corrections après un changement, sans modifier l'objet reçu : un texte vide, ou le texte d'Emozio, retire la
+// correction (« Revenir au texte d'Emozio »). Les clés inconnues ou illisibles sont laissées telles quelles.
 export function corriger(corrections, id, texte) {
   const suivantes = corrections && typeof corrections === 'object' && !Array.isArray(corrections) ? { ...corrections } : {};
   const t = typeof texte === 'string' ? texte.trim() : '';

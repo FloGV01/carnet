@@ -126,7 +126,7 @@ export const SCHEMAS = {
 export const STORES_SAISIE = Object.keys(SCHEMAS);
 export const CHAMPS_TECHNIQUES = ['createdAt', 'updatedAt'];
 
-// Maxima appliqués aux seuls imports de fichiers étrangers, jamais aux saisies ni aux sauvegardes de Carnet.
+// Maxima appliqués aux seuls imports de fichiers étrangers, jamais aux saisies ni aux sauvegardes d'Emozio.
 const SANS_PLAFOND = new Set(['app', 'sauvegarde']);
 const MAX_IMPORT = { texte: 20000, heureBrute: 20 };
 

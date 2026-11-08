@@ -8,7 +8,7 @@
 // démarre aussitôt un exercice court (#/crise/<id>), dans le lecteur en mode crise, sans choix de durée et sans compte à
 // rebours ; il revient ici à la fin. Le bouton touché n'est pas une donnée : seule la séance est notée, d'origine
 // `moment-difficile`. Les trois cartes restent en dessous : l'écran peut défiler, le pied reste à sa place.
-// v11 (spec §8.4) : ses playlists de Mes refuges, une ligne chacune sous « Une chose à la fois », un toucher sort de Carnet
+// v11 (spec §8.4) : ses playlists de Mes refuges, une ligne chacune sous « Une chose à la fois », un toucher sort d'Emozio
 // vers l'app de musique ; ses titres avec le reste de Mon plan. Rien n'est lu que la base : aucune requête d'ici, où l'heure
 // d'une demande dirait celle d'un moment difficile. Sans playlist ni titre, rien n'apparaît.
 import { html, useEffect, useRef, useState } from '../lib.js';

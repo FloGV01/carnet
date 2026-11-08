@@ -1,7 +1,7 @@
 // « Mes refuges » (v11, spec §8.1) : ses titres, un par ligne, et jusqu'à trois playlists, chacune un nom et un lien. Ouvert
-// depuis Bien-être et depuis Réglages › Mon plan. Tout est facultatif et Carnet ne propose rien. Tout s'écrit seul au fil de la
+// depuis Bien-être et depuis Réglages › Mon plan. Tout est facultatif et l'app ne propose rien. Tout s'écrit seul au fil de la
 // frappe, en file comme Mon plan, et part dans la sauvegarde avec lui. En tête des playlists, les lignes qui ont un lien : c'est
-// d'ici qu'on écoute depuis Bien-être (spec §8.4), sans réseau venant de Carnet. Un lien refusé (ni https, ni spotify, ni
+// d'ici qu'on écoute depuis Bien-être (spec §8.4), sans réseau venant de l'app. Un lien refusé (ni https, ni spotify, ni
 // music) n'est pas gardé, sans message ; « ?si=… » est retiré (domain/refuges.js).
 // v11 (7/11) · Choisir dans son compte Spotify (spec §8.3), la seule exception à « zéro réseau », et seulement d'ici, au toucher
 // sur « Choisir dans mon compte » (plateforme/spotify.js). Au retour, la liste de ses playlists s'affiche en mémoire de l'écran,
@@ -196,7 +196,7 @@ export function MesRefuges() {
       <${LignesPlaylists} playlists=${refuges.playlists} />
       ${(spotify || deSpotify) && html`<div class="carte compte-spotify">
         ${spotify && html`<button type="button" class="btn btn-plein" disabled=${enCours} aria-describedby="note-compte-spotify" onClick=${choisir}>Choisir dans mon compte</button>
-          <p class="note-import" id="note-compte-spotify">Une seule lecture : Carnet ne garde pas la connexion.</p>`}
+          <p class="note-import" id="note-compte-spotify">Une seule lecture : Emozio ne garde pas la connexion.</p>`}
         ${spotify && attente && html`<${ChampCode} key=${codeGarde || ''} code=${codeGarde} enCours=${enCours} surFinir=${finir} />`}
         ${echec && html`<p class="texte-import" role="status">${ECHECS[echec]}</p>`}
         ${liste && html`<${ListeSpotify} liste=${liste} refuges=${refuges} plein=${plein} surBasculer=${basculer} />`}

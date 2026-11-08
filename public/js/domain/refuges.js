@@ -1,6 +1,6 @@
 // Mes refuges (v11, spec §8) : la méta `refuges`, une liste de titres écrite par l'utilisateur et jusqu'à 3 playlists.
 // Forme : { titres: string|null, playlists: [{ nom: string|null, lien: string|null, source: 'spotify'|null }] }.
-// Carnet ne propose aucune chanson. Pur : aucun réseau ici, un lien n'est jamais suivi, seulement relu.
+// Emozio ne propose aucune chanson. Pur : aucun réseau ici, un lien n'est jamais suivi, seulement relu.
 // La méta vient aussi d'une sauvegarde, peut-être abîmée ou écrite à la main (point de vigilance 4) : à la lecture, un
 // mauvais type, un lien d'un autre schéma, une ligne en trop ou une source inconnue sont ignorés ou remis en forme, sans
 // erreur. Un nom reste du texte, jamais du HTML : c'est l'écran qui l'affiche comme tel.

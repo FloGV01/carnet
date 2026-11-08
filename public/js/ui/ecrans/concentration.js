@@ -5,7 +5,7 @@
 // - Pendant : le temps restant et « Arrêter ». L'heure de fin est fixée une fois, au départ, à l'horloge murale : le temps
 //   continue quand la page est cachée, il n'y a pas de pause. L'écran est gardé allumé. Session « ambient » : le son respecte
 //   le mode silencieux et ne coupe pas la musique ; son volume est celui de l'écran des sons.
-// - La fin : « Le temps est passé. », sans chiffre, et le bol seulement si Carnet est à l'écran à cet instant. Au retour après
+// - La fin : « Le temps est passé. », sans chiffre, et le bol seulement si l'app est à l'écran à cet instant. Au retour après
 //   l'heure de fin, le même texte, sans bol.
 // Les réglages restent sur cet appareil (`carnet:concentration`), écrits seulement quand ils changent.
 import { html, useEffect, useReducer, useRef, useState } from '../lib.js';
@@ -150,7 +150,7 @@ export function Concentration() {
         <p class="lecteur-duree">${reglages.duree} min</p>
         <${Epingle} id=${ID} titre=${titre} />
       </div>
-      <p class="lecteur-description">Le temps restant s'affiche, et continue si tu quittes Carnet. Un bol à la fin, si Carnet est à l'écran.</p>
+      <p class="lecteur-description">Le temps restant s'affiche, et continue si tu quittes Emozio. Un bol à la fin, si l'app est à l'écran.</p>
       <${Segmente} etiquette="Durée" classe="large" options=${OPTIONS_DUREE} valeur=${reglages.duree} surChoix=${(v) => changer('duree', v)} sansVide=${true} />
       <div class="lecteur-centre">
         <button type="button" class="bouton-lecture grand" aria-label="Commencer" onClick=${commencer}>${Icones.lecture()}</button>

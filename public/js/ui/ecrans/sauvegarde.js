@@ -94,7 +94,7 @@ export function Sauvegarde() {
   return html`<main class="ecran import">
     <${Entete} titre="Importer une sauvegarde" retour=${retour} />
     <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisir} />
-    ${!etat && html`<p class="texte-import">Choisis le fichier de sauvegarde (.json ou .zip), par exemple dans iCloud Drive, dossier Carnet.</p>
+    ${!etat && html`<p class="texte-import">Choisis le fichier de sauvegarde (.json ou .zip), par exemple dans iCloud Drive, dossier Emozio.</p>
       ${boutonFichier('Choisir un fichier')}`}
     ${etat && etat.erreur && html`<p class="texte-import" role="status">${etat.erreur}</p>${boutonFichier('Choisir un autre fichier')}`}
     ${a && html`<section class="apercu-import" aria-label="Aperçu de l'import">

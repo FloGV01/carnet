@@ -53,7 +53,7 @@ export function Soignants() {
       const blob = await new Promise((ok) => toile.current.toBlob(ok, 'image/jpeg', 0.85));
       if (!actif || !blob) return;
       const octets = creerPdfJpeg(new Uint8Array(await blob.arrayBuffer()), { largeurPx: TAILLE_PX.largeur, hauteurPx: TAILLE_PX.hauteur });
-      setPdf({ pro, prenom, fichier: new File([octets], `carnet-consultation-${aujourdhui}.pdf`, { type: 'application/pdf' }) });
+      setPdf({ pro, prenom, fichier: new File([octets], `emozio-consultation-${aujourdhui}.pdf`, { type: 'application/pdf' }) });
     })();
     return () => { actif = false; };
   }, [pro, prenom]);

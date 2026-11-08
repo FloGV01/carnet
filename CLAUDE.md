@@ -1,9 +1,10 @@
-# CLAUDE.md : Carnet (suivi-audhd)
+# CLAUDE.md : Emozio (suivi-audhd)
 
 PWA personnelle de suivi quotidien (journal du soir, épisodes émotionnels, symptômes, traitement, rendez-vous), pour un seul utilisateur, sur iPhone, installée sur l'écran d'accueil.
 
 - **Référence** : `docs/cahier-des-charges.md`. Ses décisions du §2 ne se rediscutent pas.
 - **Plan d'implémentation** : `~/.claude/plans/tu-as-ici-les-golden-truffle.md`, à suivre jalon par jalon (J0 à J12).
+- **Nom** : l'app s'appelle Emozio depuis la v11 (avant : « Carnet »), un nom propre, sans article. Le nom interne reste `carnet` : la base IndexedDB `carnet`, `FORMAT = 'carnet-sauvegarde'`, le préfixe de cache `carnet-` de `sw.js`, les clés `localStorage` `carnet:…`, le dépôt et le site Netlify. Ne jamais les renommer : l'app croirait repartir de zéro, et les anciennes sauvegardes ne s'importeraient plus. Les fichiers exportés s'appellent `emozio-…`.
 
 ## Règles qui priment sur tout
 
@@ -27,7 +28,7 @@ Le hook `pre-push` relance `npm test`.
 
 ## Données privées
 
-- Ne jamais lire `donnees-privees/`, un `*sauvegarde*.json` ou un `carnet-*.zip`.
+- Ne jamais lire `donnees-privees/`, un `*sauvegarde*.json`, un `carnet-*.zip` ou un `emozio-*.zip`.
 - Jamais de donnée réelle dans les tests ni dans les fixtures.
 - `tests/unit/vie-privee.test.js` bloque les prénoms, noms, médicaments et lieux personnels, par empreinte.
 

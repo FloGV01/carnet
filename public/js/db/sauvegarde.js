@@ -1,7 +1,7 @@
 // Sauvegarde et restauration. Export : une photographie cohérente (une seule transaction),
 // en .json s'il n'y a aucun mémo, sinon en .zip (sauvegarde.json + audios/<id>.m4a),
 // découpé en parties au-delà de 150 Mo. Import : remplacement uniquement, jamais de fusion,
-// précédé d'une copie de secours (sauf sur un Carnet vide, v11) et appliqué en une seule transaction.
+// précédé d'une copie de secours (sauf sur une base vide, v11) et appliqué en une seule transaction.
 import { req } from './idb.js';
 import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
@@ -53,7 +53,7 @@ function extension(mime) {
 }
 
 export function nomFichier(date, { partie, total, zip }) {
-  const base = `carnet-sauvegarde-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+  const base = `emozio-sauvegarde-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
   return `${base}${total > 1 ? `-partie-${partie}-sur-${total}` : ''}.${zip ? 'zip' : 'json'}`;
 }
 
@@ -111,8 +111,8 @@ export async function exporter(repo, { versionApp }) {
 
 const MESSAGES = {
   ILLISIBLE: 'Ce fichier est illisible.',
-  FORMAT: 'Ce fichier ne ressemble pas à une sauvegarde de Carnet.',
-  FUTUR: 'Ce fichier vient d\'une version plus récente de Carnet.',
+  FORMAT: 'Ce fichier ne ressemble pas à une sauvegarde d\'Emozio.',
+  FUTUR: 'Ce fichier vient d\'une version plus récente d\'Emozio.',
   TRONQUE: 'Ce fichier semble tronqué ou abîmé.',
 };
 
@@ -336,7 +336,7 @@ const listeTouchee = (it) => {
   return it.origine !== 'defaut' || !d || it.libelle !== d.libelle || Boolean(it.archive) !== d.archive || it.ordre !== d.ordre;
 };
 
-// v11 : un Carnet vide n'a rien à garder (spec §10) : l'import n'y prend pas de copie, et « Revenir à l'état d'avant
+// v11 : une base vide n'a rien à garder (spec §10) : l'import n'y prend pas de copie, et « Revenir à l'état d'avant
 // l'import » n'apparaît pas après le passage à une nouvelle icône. Vide : aucune fiche, aucune méta de l'utilisateur
 // (même vidée), et des listes telles que l'app les a versées : aucune créée par lui ou recréée par un import, aucune
 // liste par défaut renommée, rangée ou déplacée. Dans le doute, la copie est prise. Pur.
@@ -346,7 +346,7 @@ export function estBaseVide(donnees) {
   return !(donnees.listes || []).some(listeTouchee);
 }
 
-// Remplacement complet, en une seule transaction (copie de secours comprise, sauf sur un Carnet vide).
+// Remplacement complet, en une seule transaction (copie de secours comprise, sauf sur une base vide).
 export async function remplacer(repo, analyse, { panne } = {}) {
   const h = repo.maintenant().toISOString();
   const actuel = await lireTout(repo);

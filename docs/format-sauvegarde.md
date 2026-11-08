@@ -1,12 +1,13 @@
-# Format de sauvegarde de Carnet
+# Format de sauvegarde d'Emozio
 
 ## Fichiers
 
-- **Sans mémo vocal** : un seul fichier `carnet-sauvegarde-AAAA-MM-JJ-HHMM.json`.
-- **Avec des mémos** : un fichier `carnet-sauvegarde-AAAA-MM-JJ-HHMM.zip`, sans compression, qui contient :
+- **Sans mémo vocal** : un seul fichier `emozio-sauvegarde-AAAA-MM-JJ-HHMM.json`.
+- **Avec des mémos** : un fichier `emozio-sauvegarde-AAAA-MM-JJ-HHMM.zip`, sans compression, qui contient :
   - `sauvegarde.json` ;
   - `audios/<id>.m4a`, un fichier par mémo.
 - **Au-delà de 150 Mo** : plusieurs fichiers `…-partie-N-sur-T.zip`. Chaque partie contient le JSON complet et une tranche des audios, par ordre de date. À l'import, on choisit toutes les parties d'un coup.
+- **Le nom Emozio (v11)** : seul le nom des fichiers change. Avant, ils s'appelaient `carnet-sauvegarde-…` ; l'identifiant `format` reste `carnet-sauvegarde` (plus bas), dans les anciens fichiers comme dans les nouveaux. L'import ne lit jamais le nom d'un fichier : une ancienne sauvegarde, ou un fichier renommé, s'importe tel quel.
 
 ## sauvegarde.json
 
@@ -84,7 +85,7 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
 4. **Aperçu** : contenu du fichier, ce qui serait effacé (notes et séances comprises), mémos absents des fichiers choisis, et les deux dates si le fichier est plus ancien que la dernière saisie.
 5. **Application** :
    - copie de secours `avant-import`, 3 au maximum, sans les audios ;
-   - sauf sur un Carnet vide (v11, `estBaseVide`) : aucune fiche (mémos et humeurs du moment compris), aucune méta de l'utilisateur, même vidée, et des listes telles que l'app les verse, sans élément créé par l'utilisateur ou recréé par un import, ni élément par défaut renommé, rangé ou déplacé. Il n'y a alors rien à garder : aucune copie n'est prise, et « Revenir à l'état d'avant l'import » n'apparaît pas après ce premier import (passage à une nouvelle icône) ;
+   - sauf sur une base vide (v11, `estBaseVide`) : aucune fiche (mémos et humeurs du moment compris), aucune méta de l'utilisateur, même vidée, et des listes telles que l'app les verse, sans élément créé par l'utilisateur ou recréé par un import, ni élément par défaut renommé, rangé ou déplacé. Il n'y a alors rien à garder : aucune copie n'est prise, et « Revenir à l'état d'avant l'import » n'apparaît pas après ce premier import (passage à une nouvelle icône) ;
    - puis une seule transaction qui vide et réécrit tout.
 6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions, mots ajoutés à la carte, exercices épinglés, Mes refuges…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
 7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant. Depuis la v11, il demande d'abord confirmation et dit ce qui sera remplacé ; les mémos vocaux d'avant l'import ne reviennent pas (la copie ne les contient pas).

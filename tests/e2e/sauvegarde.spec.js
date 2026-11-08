@@ -22,7 +22,7 @@ test('exporter puis restaurer sur une base vidée redonne les mêmes données', 
   await page.evaluate(() => window.__carnet.repo.episodes.creer({ date: '2026-09-30', heure: '18:42', emotion: 'emotion:colere' }));
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-30'))).toMatchObject({ sommeilRessenti: 'sommeil:moyen', lieu: 'lieu:bureau' });
   const f = await exporterVers(page);
-  expect(f.nom).toBe('carnet-sauvegarde-2026-09-30-2100.json');
+  expect(f.nom).toBe('emozio-sauvegarde-2026-09-30-2100.json');
   await expect(page.getByText(/Dernière sauvegarde : 30 septembre 2026/)).toBeVisible();
   await viderBase(page);
   await aller(page, '#/reglages');

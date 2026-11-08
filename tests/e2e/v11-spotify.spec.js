@@ -95,7 +95,7 @@ const poserAttente = (page, state = 'etat-de-test') => page.evaluate(([c, v, s])
 const statut = (page) => ecran(page).getByRole('status');
 const N_ABOUTI = 'La connexion n\'a pas abouti. Tes liens notés restent.';
 const REFUS = 'Spotify refuse cette connexion. Tes liens notés restent.';
-// Tout ce que Carnet garde : le localStorage et la méta entière (lue dans la base).
+// Tout ce qu'Emozio garde : le localStorage et la méta entière (lue dans la base).
 const toutCeQuiEstGarde = (page) => page.evaluate(async () => {
   const base = await new Promise((ok, ko) => { const r = indexedDB.open('carnet'); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); });
   const meta = await new Promise((ok, ko) => { const r = base.transaction('meta').objectStore('meta').getAll(); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); });
@@ -118,7 +118,7 @@ const ouvrirMoment = async (page) => {
   await expect(v.locator('.plan-moment').locator('.contenu-plan, a.action')).toHaveCount(1);
   return v;
 };
-// Le retour de Spotify dans l'app : la page d'autorisation est quittée pour l'adresse de Carnet, avec le code.
+// Le retour de Spotify dans l'app : la page d'autorisation est quittée pour l'adresse d'Emozio, avec le code.
 const revenirDeSpotify = async (page, params) => {
   await page.goto(`/?${params}`);
   await appPrete(page);
@@ -144,7 +144,7 @@ test('constante vide : ni bouton ni champ de code, même avec une demande en att
   await ouvrirRefuges(page);
   await expect(choisirDansMonCompte(page)).toHaveCount(0);
   await expect(champCode(page)).toHaveCount(0);
-  await expect(ecran(page)).not.toContainText('Carnet ne garde pas la connexion');
+  await expect(ecran(page)).not.toContainText('Emozio ne garde pas la connexion');
   // Les liens déjà notés restent, et se retirent toujours.
   await expect(lignes(ecran(page))).toHaveCount(1);
   await expect(bouton(page, 'Retirer ces playlists')).toBeVisible();
@@ -169,7 +169,7 @@ test('constante remplie : Aujourd\'hui, Moment difficile, Bien-être et Mes refu
   await expect(page.getByRole('list', { name: 'Entrées' })).toBeVisible();
   await ouvrirRefuges(page);
   await expect(choisirDansMonCompte(page)).toBeVisible();
-  await expect(ecran(page).locator('#note-compte-spotify')).toHaveText('Une seule lecture : Carnet ne garde pas la connexion.');
+  await expect(ecran(page).locator('#note-compte-spotify')).toHaveText('Une seule lecture : Emozio ne garde pas la connexion.');
   await expect(choisirDansMonCompte(page)).toHaveAttribute('aria-describedby', 'note-compte-spotify');
   // Sans demande en attente, pas de champ de code.
   await expect(champCode(page)).toHaveCount(0);
@@ -182,9 +182,9 @@ test('la page du code : un retour dans Safari, avec ou sans demande en attente, 
     if (avecAttente) await poserAttente(page, 'x');
     await page.goto('/?forcer-guide&code=code-de-safari&state=x');
     await expect(page.getByRole('heading', { name: 'Code de Spotify', level: 1 })).toBeVisible();
-    await expect(page.locator('main.code-spotify')).toContainText('Copie ce code, reviens dans Carnet, puis colle-le dans Mes refuges.');
+    await expect(page.locator('main.code-spotify')).toContainText('Copie ce code, reviens dans Emozio, puis colle-le dans Mes refuges.');
     await expect(page.locator('.valeur-code')).toHaveText('code-de-safari');
-    await expect(page.getByRole('heading', { name: 'Installer Carnet' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Installer Emozio' })).toHaveCount(0);
     expect(await adresse(page)).toBe('/?forcer-guide#/aujourdhui');
     // La connexion ne se finit jamais ici : la demande, s'il y en a une, reste.
     expect(Boolean(await attente(page))).toBe(avecAttente);
@@ -193,7 +193,7 @@ test('la page du code : un retour dans Safari, avec ou sans demande en attente, 
   }
   // Sans code, le guide, comme avant.
   await page.goto('/?forcer-guide');
-  await expect(page.getByRole('heading', { name: 'Installer Carnet' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Installer Emozio' })).toBeVisible();
 });
 
 test('point de vigilance 5, sans réseau : un state qui ne correspond pas, un code sans demande, un refus de Spotify ; rien ne part, les refuges restent', async ({ page }) => {

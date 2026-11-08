@@ -45,7 +45,7 @@ d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
 
 ## Défauts corrigés au passage
 
-- Le texte d'attente « Carnet » du HTML restait affiché sous l'app sur les écrans courts.
+- Le texte d'attente du HTML (le nom de l'app) restait affiché sous l'app sur les écrans courts.
 - Un double toucher sur « Mémo vocal » pendant la demande d'autorisation pouvait ouvrir deux flux :
   le bouton est inactif jusqu'à la réponse.
 - `-apple-system-body` vaut 13 px sur Mac : les tests WebKit tournaient avec un texte plus petit que
@@ -132,5 +132,5 @@ Aucun écran de la v11 n'est dessiné par Claude Design. Spécification : `docs/
 - **Les écrans de l'émotion suivent désormais le thème** (les quatre bulles, la carte, « Ce que je faisais », la loupe, le mot à soi, un relevé rouvert) : en clair, le gris d'Aujourd'hui, des cartes blanches, des boutons en verre blanc translucide et un rond « Continuer » foncé, d'après le prototype de la v11 ; le mot choisi s'écrit en noir sur une capsule de sa couleur. En sombre, rien ne change. Les couleurs passent par les jetons `--moment-*` (`tokens.css`) ; les bulles et leur texte noir ne bougent pas. « Réveil la nuit » garde son fond noir dans les deux thèmes.
 - **La roue** : une bande de vrais boutons sur le fond des choix, dans la carte de sa rubrique, avec une fenêtre au milieu (`--surface`, neutre, à vide ; la teinte de la carte une fois notée, la valeur en 700 et `-text`) ; les bords s'effacent en fondu sans toucher aux deux voisines de la valeur du milieu.
 - **Mes gratitudes** : la forme de « Mes points positifs », à sa couleur. **Mes refuges** : un écran de Bien-être en champs et cartes groupées, une ligne par playlist avec l'icône `musique` et l'icône de sortie au trait. **La porte « Épisodes »** : le carré des épisodes, à côté d'« Historique ».
-- **L'icône** : la piste B, « Les quatre zones », sur fond noir ; `theme-color` `#e7eaee` en clair, `#000000` en sombre.
+- **L'icône** : la piste B, « Les quatre zones », sur fond noir, avec le nom « Emozio » dessous (manifest, `apple-mobile-web-app-title`) ; `theme-color` `#e7eaee` en clair, `#000000` en sombre.
 - **Vérification** : captures (WebKit, 390 × 844, clair et sombre, jusqu'à 53 px de texte), hors dépôt, et le test de contrôle étendu aux écrans de la v11.

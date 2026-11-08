@@ -1,5 +1,5 @@
 // Mes refuges (v11, spec §8) : la lecture de la méta, et les lignes d'écoute de ses playlists, dans Mes refuges et dans Moment
-// difficile. Écouter, c'est toucher un lien qui fait sortir de Carnet vers l'app de musique : aucune requête n'en part, ni
+// difficile. Écouter, c'est toucher un lien qui fait sortir d'Emozio vers l'app de musique : aucune requête n'en part, ni
 // aperçu, ni image (spec §8.2). Le nom d'une playlist est du texte, jamais du HTML.
 import { html } from '../lib.js';
 import { repo } from '../../donnees.js';

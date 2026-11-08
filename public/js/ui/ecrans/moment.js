@@ -1,5 +1,5 @@
 // Émotion du moment (v9, spec §4, §7 et §13 ; v8 : la carte dans un panneau, v7 : la roue en familles, « Humeur du
-// moment » de la v4 à la v6.1) : comme How We Feel, en plein écran, sans barre d'onglets ni en-tête de Carnet. Sur fond
+// moment » de la v4 à la v6.1) : comme How We Feel, en plein écran, sans barre d'onglets ni en-tête de l'app. Sur fond
 // noir dans les deux thèmes jusqu'à la v10 ; depuis la v11 (spec §9), l'écran suit le thème du système, par le CSS seul
 // (ecrans.css, jetons --moment-*) : en sombre, le noir de How We Feel ; en clair, le fond d'Aujourd'hui, et le mot choisi
 // en noir sur une capsule de la couleur de sa case.
@@ -178,7 +178,7 @@ export function Moment({ id = null }) {
   const { donnees } = useDonnees(async () => {
     // Les définitions corrigées (méta `definitionsRoue`), les mots à soi (méta `motsPerso`), les activités de « Ce que je
     // faisais », le réglage et le plan de la règle « Me ressourcer », le relevé rouvert : une lecture qui échoue donne le
-    // texte de Carnet, aucun mot à soi, aucune activité, la règle éteinte, ou le retour sur Aujourd'hui. La carte reste.
+    // texte d'Emozio, aucun mot à soi, aucune activité, la règle éteinte, ou le retour sur Aujourd'hui. La carte reste.
     const [corrections, perso, items, reglage, plan, lu] = await Promise.all([
       repo.meta.lire('definitionsRoue').catch(() => null), repo.meta.lire('motsPerso').catch(() => null), repo.listes.items().catch(() => []),
       lireRessourcer(), lirePlan().catch(() => normaliserPlan(null)), id ? repo.humeurs.lire(id).catch(() => null) : null,

@@ -16,13 +16,13 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
-test('Réglages › Émotions : les mots par famille et leur sens ; un toucher ouvre le champ, la sortie l\'enregistre ; « Revenir au texte de Carnet »', async ({ page }) => {
+test('Réglages › Émotions : les mots par famille et leur sens ; un toucher ouvre le champ, la sortie l\'enregistre ; « Revenir au texte d\'Emozio »', async ({ page }) => {
   await aller(page, '#/reglages');
   await page.getByRole('link', { name: 'Émotions', exact: true }).click();
   await expect(page).toHaveURL(/#\/reglages\/emotions$/);
   await expect(page.getByRole('heading', { name: 'Émotions', level: 1 })).toBeVisible();
   // Sept familles, dans l'ordre de la roue, puis « Sans famille » (v9 : Fatigué, Épuisé) ; sous chacune, ses mots et le
-  // texte de Carnet. Enfin « Mes mots » (v9, 6/8 : les mots à soi, tests/e2e/v9-mot-perso.spec.js), vide ici.
+  // texte d'Emozio. Enfin « Mes mots » (v9, 6/8 : les mots à soi, tests/e2e/v9-mot-perso.spec.js), vide ici.
   await expect(page.locator('main h2')).toHaveText([...FAMILLES.map((f) => f.libelle), 'Sans famille', 'Mes mots']);
   // Le point de « Sans famille » est creux : aucune couleur de famille.
   await expect(page.getByRole('region', { name: 'Sans famille', exact: true }).locator('.point-famille')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -31,7 +31,7 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
     await expect(section.locator('.mot-definitions')).toHaveText(f.mots.map((m) => m.libelle));
     await expect(section.locator('.texte-definitions')).toHaveText(f.mots.map((m) => DEFINITIONS[m.id]));
   }
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(0);
   expect(await lireCorrections(page)).toBeNull();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
@@ -44,26 +44,26 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   // Rien n'est enregistré pendant la frappe, même après une pause : seulement à la sortie du champ.
   await page.clock.runFor(700);
   expect(await lireCorrections(page)).toBeNull();
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(0);
   // La sortie du champ l'enregistre.
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await expect.poll(() => lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(1);
   // Un autre mot : le premier se referme sur son nouveau texte.
   await page.getByRole('button', { name: /^Calme Rien/ }).click();
   await expect(page.getByRole('textbox', { name: 'Calme', exact: true })).toBeFocused();
   await expect(page.getByRole('button', { name: 'Irrité Agacé par un bruit qui revient.' })).toBeVisible();
-  // Vider le champ pour le réécrire : la correction reste jusqu'à la sortie, et « Revenir au texte de Carnet » avec elle.
+  // Vider le champ pour le réécrire : la correction reste jusqu'à la sortie, et « Revenir au texte d'Emozio » avec elle.
   await page.getByRole('button', { name: 'Irrité Agacé par un bruit qui revient.' }).click();
   const irrite = page.getByRole('textbox', { name: 'Irrité', exact: true });
   await expect(irrite).toBeFocused();
   await irrite.fill('');
   await page.clock.runFor(700);
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(1);
   expect(await lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
   await irrite.pressSequentially('Agacé par un bruit qui revient.');
   await page.clock.runFor(700);
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(1);
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await page.clock.runFor(300);
   expect(await lireCorrections(page)).toEqual({ 'roue:colere:irrite': 'Agacé par un bruit qui revient.' });
@@ -78,20 +78,20 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await finir(vue);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
 
-  // « Revenir au texte de Carnet » retire la correction ; la carte reprend le texte de Carnet.
+  // « Revenir au texte d'Emozio » retire la correction ; la carte reprend le texte d'Emozio.
   await aller(page, '#/reglages/emotions');
-  await page.getByRole('button', { name: 'Revenir au texte de Carnet' }).click();
+  await page.getByRole('button', { name: 'Revenir au texte d\'Emozio' }).click();
   await expect.poll(() => lireCorrections(page)).toEqual({});
   await expect(page.getByRole('button', { name: `Irrité ${DEFINITIONS['roue:colere:irrite']}` })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Revenir au texte de Carnet' })).toHaveCount(0);
-  // Un champ vidé, ou remis au texte de Carnet, n'est pas une correction.
+  await expect(page.getByRole('button', { name: 'Revenir au texte d\'Emozio' })).toHaveCount(0);
+  // Un champ vidé, ou remis au texte d'Emozio, n'est pas une correction.
   await page.getByRole('button', { name: /^Calme Rien/ }).click();
   const calme = page.getByRole('textbox', { name: 'Calme', exact: true });
   await calme.fill('');
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await page.clock.runFor(700);
   expect(await lireCorrections(page)).toEqual({});
-  // v9 : un mot sans famille se corrige comme les autres, puis revient au texte de Carnet.
+  // v9 : un mot sans famille se corrige comme les autres, puis revient au texte d'Emozio.
   const sansFamille = page.getByRole('region', { name: 'Sans famille', exact: true });
   await sansFamille.getByRole('button', { name: `Fatigué ${DEFINITIONS['roue:aucune:fatigue']}` }).click();
   const fatigue = page.getByRole('textbox', { name: 'Fatigué', exact: true });
@@ -99,10 +99,10 @@ test('Réglages › Émotions : les mots par famille et leur sens ; un toucher o
   await fatigue.fill('Lourd, envie de poser la tête.');
   await page.getByRole('heading', { name: 'Émotions', level: 1 }).click();
   await expect.poll(() => lireCorrections(page)).toEqual({ 'roue:aucune:fatigue': 'Lourd, envie de poser la tête.' });
-  await sansFamille.getByRole('button', { name: 'Revenir au texte de Carnet' }).click();
+  await sansFamille.getByRole('button', { name: 'Revenir au texte d\'Emozio' }).click();
   await expect.poll(() => lireCorrections(page)).toEqual({});
   await expect(page.getByRole('textbox', { name: 'Fatigué', exact: true })).toHaveValue(DEFINITIONS['roue:aucune:fatigue']);
-  // Épuisé ouvert, Fatigué se referme sur le texte de Carnet.
+  // Épuisé ouvert, Fatigué se referme sur le texte d'Emozio.
   await sansFamille.getByRole('button', { name: `Épuisé ${DEFINITIONS['roue:aucune:epuise']}` }).click();
   await expect(page.getByRole('textbox', { name: 'Épuisé', exact: true })).toBeFocused();
   await expect(sansFamille.getByRole('button', { name: `Fatigué ${DEFINITIONS['roue:aucune:fatigue']}` })).toBeVisible();
