@@ -488,3 +488,44 @@ test('vigilance 2 · une page plus large que l\'écran (53 px : Traitement, Rend
   await expect(page.locator('.app')).not.toHaveClass(/deborde-de-cote/);
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
+
+// Contre-relecture : un ResizeObserver posé sur body faisait naître par intermittence « ResizeObserver loop completed with
+// undelivered notifications » (v11-refuges, « Diagnostic, Ouvrir une playlist », 2 fois sur 40 sous charge) : la hauteur de
+// body suit le chargement des données, et elle changeait encore après le rappel, dans la même image. La garde des e2e compte
+// cette erreur. Seul le témoin de l'Entete (1em, caché) est observé, pour la taille du texte ; jamais body ni html.
+test('vigilance 2 · le débord de côté se mesure sans observer body ni html : seul le témoin de la taille du texte est observé', async ({ page }) => {
+  await page.addInitScript(() => {
+    const RO = window.ResizeObserver;
+    window.__observes = [];
+    window.ResizeObserver = class extends RO {
+      observe(cible, options) { window.__observes.push(cible); super.observe(cible, options); }
+    };
+  });
+  await page.reload();
+  await appPrete(page);
+  for (const hash of ['#/diagnostic', '#/traitement/nouveau', '#/soignants']) {
+    await ouvrir(page, hash, '#/soins');
+    await expect(page.locator('h1.titre-ecran')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.__observes.some((c) => c.isConnected && c.matches('.entete-pousse > .temoin-texte'))), hash).toBe(true);
+    expect(await page.evaluate(() => window.__observes.filter((c) => c === document.body || c === document.documentElement).length), hash).toBe(0);
+  }
+});
+
+// Contre-relecture : sans observateur sur body, un débord né après le premier rendu (la base lue, une liste qui s'allonge)
+// se voit par un MutationObserver, à l'image suivante ; reparti, la page rend le geste horizontal. Un bloc trop large posé
+// dans l'écran tient lieu de ces données.
+test('vigilance 2 · un débord né après l\'ouverture (contenu ajouté) rend le défilement de côté, et le geste revient quand il part', async ({ page }) => {
+  await ouvrir(page, '#/soignants', '#/soins');
+  await expect(page.locator('h1.titre-ecran')).toBeVisible();
+  await page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))));
+  await expect(page.locator('.app')).not.toHaveClass(/deborde-de-cote/);
+  await page.evaluate(() => {
+    const bloc = document.createElement('div');
+    bloc.id = 'bloc-large';
+    bloc.style.cssText = 'width: 800px; height: 1px;';
+    document.querySelector('main.ecran').append(bloc);
+  });
+  await expect(page.locator('.app')).toHaveClass(/deborde-de-cote/);
+  await page.evaluate(() => document.getElementById('bloc-large').remove());
+  await expect(page.locator('.app')).not.toHaveClass(/deborde-de-cote/);
+});

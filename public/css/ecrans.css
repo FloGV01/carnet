@@ -686,6 +686,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-champ-reglage .ligne-libelle { flex: 1; min-width: 0; font-size: var(--t-sous); }
 .heures-moment .pastille { min-width: 56px; justify-content: center; }
 .ma-journee, .mon-plan { gap: 14px; }
+/* Les « Si… alors… » de l'éditeur de Mon plan : un « si » sans espace (un lien collé) passe à la ligne, et « Retirer »
+   reste dans la carte, à portée du doigt (contre-relecture de la v11 : un « si » de 70 signes élargissait la ligne à 602 px
+   pour 362, et la carte, qui coupe ce qui dépasse, rejetait le bouton hors de l'écran). */
+.mon-plan .ligne-info > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 /* Mes refuges (v11) : ses titres, puis ses playlists, chacune une carte avec son nom et son lien, à la suite des lignes qui
    s'écoutent. */
 .playlists-refuges { gap: 10px; }

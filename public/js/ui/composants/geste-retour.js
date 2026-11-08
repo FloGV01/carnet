@@ -26,23 +26,39 @@ export function useGesteRetour(surRetour) {
 // « Retour » hérités débordent déjà de côté (Rendez-vous, Traitement, Soins › Traitement, la Vue soignants, Rappels) :
 // `pan-y pinch-zoom` sur .app ôtait au doigt ce défilement, et ce qui dépasse à droite ne s'atteignait plus. Une telle page
 // le rend à iOS (.deborde-de-cote, ecrans.css) : le geste de retour peut alors être pris par iOS, comme depuis un graphe
-// montré en tableau. Mesuré au montage, quand la fenêtre change, quand la page redevient visible et quand le contenu change
-// de taille (la taille du texte changée, ou la base lue après le premier rendu) ; la classe part avec l'écran.
-export function useDebordeDeCote(actif) {
+// montré en tableau. Mesuré au montage, quand la fenêtre change, quand la page redevient visible, quand la taille du texte
+// change écran ouvert (Centre de contrôle, sans `resize`) et quand le contenu change (la base lue après le premier rendu) ;
+// la classe part avec l'écran.
+// Contre-relecture : un ResizeObserver posé sur body faisait naître par intermittence « ResizeObserver loop completed with
+// undelivered notifications » (une erreur de page, que la garde des e2e compte) : la hauteur de body suit le chargement des
+// données, et elle changeait encore après son rappel, dans la même image. Seul un témoin est donc observé (`temoin`, dans
+// l'Entete : 1em de large, hors flux, caché), dont la taille ne suit que celle du texte ; le contenu, lui, par un
+// MutationObserver, qui n'a pas cette boucle. La mesure attend l'image suivante, une fois par image au plus.
+export function useDebordeDeCote(actif, temoin) {
   useEffect(() => {
     const app = actif ? document.querySelector('.app') : null;
     if (!app) return undefined;
     const doc = document.documentElement;
-    const mesurer = () => { app.classList.toggle('deborde-de-cote', doc.scrollWidth > doc.clientWidth + 1); };
-    const surVisible = () => { if (document.visibilityState === 'visible') mesurer(); };
-    const observateur = typeof ResizeObserver === 'function' ? new ResizeObserver(mesurer) : null;
-    if (observateur) observateur.observe(document.body);
+    let image = null;
+    const mesurer = () => {
+      image = null;
+      app.classList.toggle('deborde-de-cote', doc.scrollWidth > doc.clientWidth + 1);
+    };
+    const demander = () => { if (image === null) image = requestAnimationFrame(mesurer); };
+    const surVisible = () => { if (document.visibilityState === 'visible') demander(); };
+    const cible = temoin && temoin.current;
+    const taille = cible && typeof ResizeObserver === 'function' ? new ResizeObserver(demander) : null;
+    if (taille) taille.observe(cible);
+    const contenu = typeof MutationObserver === 'function' ? new MutationObserver(demander) : null;
+    if (contenu) contenu.observe(app, { childList: true, subtree: true, characterData: true, attributes: true });
     mesurer();
-    window.addEventListener('resize', mesurer);
+    window.addEventListener('resize', demander);
     document.addEventListener('visibilitychange', surVisible);
     return () => {
-      if (observateur) observateur.disconnect();
-      window.removeEventListener('resize', mesurer);
+      if (taille) taille.disconnect();
+      if (contenu) contenu.disconnect();
+      cancelAnimationFrame(image);
+      window.removeEventListener('resize', demander);
       document.removeEventListener('visibilitychange', surVisible);
       app.classList.remove('deborde-de-cote');
     };

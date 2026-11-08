@@ -149,6 +149,10 @@
   --zone-bas: env(safe-area-inset-bottom, 0px);
   --zone-gauche: env(safe-area-inset-left, 0px);
   --zone-droite: env(safe-area-inset-right, 0px);
+  /* La zone du haut pour ce qui couvre tout l'écran, barre d'état comprise (le voile d'une confirmation, rendu dans main) :
+     le bandeau « Nouvelle version prête » remet --zone-haut à 0 dans main, pas celle-ci, résolue ici, sur la racine
+     (contre-relecture de la v11). */
+  --zone-haut-ecran: var(--zone-haut);
 
   /* Durées : 200 ms au plus, supprimées avec « Réduire les animations » */
   --duree: 150ms;

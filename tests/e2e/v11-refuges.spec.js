@@ -327,6 +327,31 @@ test('Moment difficile : un texte sans espace de 70 signes dans « Mes titres »
   expect(mesure).toEqual({ corps: 0, page: 390, dehors: [] });
 });
 
+// Contre-relecture : la même liste dans l'éditeur de Mon plan (#/mon-plan, antérieur à la v11). Un « si » sans espace de
+// 70 signes élargissait la ligne à 602 px pour 362 ; la carte, qui coupe ce qui dépasse, rejetait « Retirer » hors de
+// l'écran, hors d'atteinte du doigt. Il passe à la ligne, et le bouton reste dans la carte.
+test('Mon plan, l\'éditeur : un « si » sans espace de 70 signes passe à la ligne ; rien ne sort de la carte, et « Retirer » s\'atteint au doigt et retire la ligne', async ({ page }) => {
+  const long = `https://open.spotify.com/track/${'x7'.repeat(20).slice(0, 39)}`;
+  expect(long).toHaveLength(70);
+  await ecrireMeta(page, 'monPlan', { quandCaMonte: 'je sors marcher', siAlors: [{ si: long, alors: 'je sors' }] });
+  await aller(page, '#/mon-plan');
+  const liste = page.locator('main.mon-plan ul.carte-groupe');
+  await expect(liste).toContainText(`Si ${long}, alors je sors`);
+  const mesure = await liste.evaluate((ul) => {
+    const carte = ul.getBoundingClientRect();
+    const dehors = [...ul.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.left < carte.left - 0.5 || r.right > carte.right + 0.5); })
+      .map((e) => e.tagName.toLowerCase());
+    const b = ul.querySelector('button.effacer');
+    const r = b.getBoundingClientRect();
+    return { deborde: ul.scrollWidth - ul.clientWidth, page: document.documentElement.scrollWidth, dehors,
+      atteint: b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)) };
+  });
+  expect(mesure).toEqual({ deborde: 0, page: 390, dehors: [], atteint: true });
+  await page.getByRole('button', { name: `Retirer « si ${long} »`, exact: true }).tap();
+  await expect.poll(async () => (await lireMeta(page, 'monPlan')).siAlors).toEqual([]);
+  await expect(liste).toHaveCount(0);
+});
+
 test('Moment difficile : sans refuges, aucune trace ; des titres seuls gardent « Modifier » ; des playlists seules, « Écrire mon plan »', async ({ page }) => {
   // Mon plan seul : l'écran d'avant la v11.
   await ecrireMeta(page, 'monPlan', PLAN);

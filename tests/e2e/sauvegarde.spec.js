@@ -1,5 +1,5 @@
 import { test, expect } from '../aides/gardes.js';
-import { viderBase, toucher, aller } from '../aides/saisie.js';
+import { viderBase, toucher, aller, simulerZonesSures } from '../aides/saisie.js';
 import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub.js';
 
 test.beforeEach(async ({ page }) => {
@@ -132,8 +132,59 @@ test('la confirmation « Revenir », au texte par défaut au milieu de l\'écran
   // À 53 px, « Annuler » au doigt : la boîte se ferme, la copie est toujours là.
   await boite.getByRole('button', { name: 'Annuler', exact: true }).tap();
   await expect(boite).toHaveCount(0);
+  // Contre-relecture : la taille déjà réglée quand la boîte s'ouvre (le cas réel, réglée dans iOS). Le focus initial sur
+  // « Annuler » faisait défiler le voile jusqu'en bas : le titre hors de l'écran (de −402 à −143 px), la question à remonter
+  // pour la lire. Ouverte à 53 px, la boîte part du haut, le voile non défilé, le focus sur « Annuler » ; chaque bouton
+  // s'atteint ensuite en défilant, comme plus haut (amené par le bas : le défilement, en pixels entiers, laisse au plus un
+  // demi-pixel sous le bord).
+  await ligne.click();
+  await expect(boite).toBeVisible();
+  const ouverte = await place();
+  expect(ouverte.defile, '53 px, ouverte en grand : le voile défile').toBe(true);
+  expect(await voile.evaluate((v) => v.scrollTop), '53 px, ouverte en grand : le voile en haut').toBe(0);
+  expect(ouverte.titre, '53 px, ouverte en grand : le haut du titre dans l\'écran').toBeGreaterThanOrEqual(0);
+  await expect(boite.getByRole('button', { name: 'Annuler', exact: true })).toBeFocused();
+  for (const nom of ['Annuler', 'Revenir']) {
+    const atteint = await boite.getByRole('button', { name: nom, exact: true }).evaluate((b) => {
+      b.scrollIntoView({ block: 'nearest' });
+      const r = b.getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= innerHeight + 0.5 && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b;
+    });
+    expect(atteint, `53 px, ouverte en grand : « ${nom} » touchable`).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(boite).toHaveCount(0);
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   await expect(ligne).toBeVisible();
+});
+
+// Contre-relecture : la boîte est rendue dans main, où le bandeau « Nouvelle version prête » remet --zone-haut à 0 (il prend
+// la zone sûre pour lui). Le voile, fixe, couvre pourtant tout l'écran, barre d'état comprise : il n'avait plus que 24 px en
+// haut, et en très grand texte, la boîte partie du haut passait sous l'heure et l'îlot. Zones simulées : 47 en haut, 34 en bas.
+test('avec le bandeau « Nouvelle version prête », le voile d\'une confirmation garde la zone sûre du haut : à 53 px, la boîte part sous la barre d\'état', async ({ page }) => {
+  await simulerZonesSures(page);
+  await page.evaluate(() => window.__carnet.repo.tx(['snapshots'], 'readwrite', (t) => {
+    t.objectStore('snapshots').put({ id: 'avant-import-2026-09-29T19:00:00.000Z', type: 'avant-import', date: '2026-09-29T19:00:00.000Z', schemaVersion: 6, data: {} });
+  }));
+  await aller(page, '#/reglages');
+  await page.evaluate(() => window.__carnet.etatApp.maj({ majDisponible: true }));
+  await expect(page.locator('.bandeau')).toBeVisible();
+  const ligne = page.getByRole('button', { name: "Revenir à l'état d'avant l'import", exact: true });
+  const boite = page.getByRole('alertdialog', { name: "Revenir à l'état d'avant l'import ?" });
+  for (const px of [null, 53]) {
+    const quoi = px ? `${px} px` : 'texte par défaut';
+    await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, px);
+    await ligne.click();
+    await expect(boite).toBeVisible();
+    const m = await page.locator('.voile').evaluate((v) => ({ haut: getComputedStyle(v).paddingTop, bas: getComputedStyle(v, '::after').height,
+      boite: v.querySelector('.boite-confirmation').getBoundingClientRect().top, defile: v.scrollHeight > v.clientHeight + 0.5 }));
+    expect([m.haut, m.bas], `${quoi} : les zones sûres du voile`).toEqual(['47px', '34px']);
+    expect(m.boite, `${quoi} : la boîte sous la barre d'état`).toBeGreaterThanOrEqual(47);
+    if (px) expect(m.defile, `${quoi} : le voile défile, la boîte part du haut`).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(boite).toHaveCount(0);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 });
 
 test('v6 : les notes sont dans le fichier, et une note absente du fichier est annoncée avant d\'être effacée', async ({ page }) => {

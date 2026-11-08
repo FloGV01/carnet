@@ -21,7 +21,8 @@ import { vidanges } from '../../store.js';
 //   jusqu'à sa cible, sauf si le doigt reprend la main. Le doigt levé sans geste marqué, la bande revient sur sa valeur
 //   par le code (sur l'iPhone, le doigt a pu arrêter le recentrage entre deux valeurs), sans rien écrire.
 // - La fin ne dépend pas de `scrollend` (Safari 26.2 seulement) : aucun `scroll` depuis FIN_GLISSEMENT_MS, doigt levé,
-//   compté depuis le dernier `scroll` ou le `touchend`. Un toucher sur une valeur éteint le geste en cours.
+//   compté depuis le dernier `scroll` ou le `touchend`. Rien ne s'écrit le doigt posé, même quand il rattrape la bande en
+//   élan. Un toucher sur une valeur éteint le geste en cours.
 // - Une valeur en attente (un glissement pas encore arrêté) s'écrit aussitôt au démontage, à `pagehide`, la page cachée
 //   et avant une fermeture forcée de la base (vidanges), comme un texte : l'appelant donne une `key` avec la date, et le
 //   rappel d'origine écrit sur le jour d'origine.
@@ -151,8 +152,14 @@ export function RoueChoix({ etiquette, options, valeur, surChoix, centre }) {
         if (Math.abs(b.scrollLeft - g.cible) < 1) g.cible = null;
         return;
       }
-      if (g.doigt && g.bouge) g.marque = true;
-      else if (g.marque) relancer();
+      // Le doigt posé, la fin attend toujours son lever (touchend), même quand il rattrape la bande encore en élan d'un
+      // premier glissement (contre-relecture : un `scroll` reçu là, sous le seuil, relançait la fin, qui écrivait 150 ms
+      // plus tard, le doigt encore posé).
+      if (g.doigt) {
+        if (g.bouge) g.marque = true;
+        return;
+      }
+      if (g.marque) relancer();
     };
     const surCache = () => { if (document.visibilityState === 'hidden') finir(); else recaler(); };
     const passif = { passive: true };

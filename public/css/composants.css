@@ -24,6 +24,9 @@
   border: 0; background: none; color: var(--action); font-weight: 400; font-size: var(--t-corps);
 }
 .retour svg { width: 22px; height: 22px; }
+/* Le témoin de la taille du texte (geste-retour.js, useDebordeDeCote) : 1em de large, hors flux, caché. Il ne déborde
+   jamais (53 px au plus grand texte) et sa taille ne suit que celle du texte, jamais le chargement des données. */
+.temoin-texte { position: absolute; width: 1em; height: 0; visibility: hidden; pointer-events: none; }
 
 /* ---------- Cartes et listes ---------- */
 /* Carte 2b : --surface sans bordure, rayon 14 ; dedans, un choix non fait est en --surface-2. */
@@ -165,10 +168,12 @@
    d'état, et le voile défile jusqu'à ses boutons. L'espace du bas, au-dessus de la barre d'accueil, est une rangée de la
    grille (::after) : WebKit ne compte pas le padding du bas d'une grille dans ce qui défile. La rangée de la boîte grandit
    avec elle (min-content : la boîte, qui coupe ses coins, aurait sinon un minimum nul). Le défilement ne passe pas à la
-   page dessous. */
+   page dessous. Le haut garde la zone sûre de l'écran même sous le bandeau « Nouvelle version prête », qui remet
+   --zone-haut à 0 dans main, où la boîte est rendue (contre-relecture : en très grand texte, son titre passait sous
+   l'heure) : --zone-haut-ecran (tokens.css). */
 .voile-boite {
   grid-template-rows: minmax(min-content, 1fr) auto; justify-items: center; align-items: start; overflow-y: auto; overscroll-behavior: contain;
-  padding: max(24px, var(--zone-haut)) 24px 0;
+  padding: max(24px, var(--zone-haut-ecran)) 24px 0;
 }
 .voile-boite::after { content: ""; height: max(24px, var(--zone-bas)); }
 .boite-confirmation { width: min(290px, 100%); margin-block: auto; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); text-align: center; overflow: hidden; }
@@ -177,9 +182,11 @@
 .boite-texte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); }
 /* Les deux boutons côte à côte, à parts égales ; quand le mot de l'un ne tient plus dans sa moitié (très grand texte :
    « Revenir » dès 47 px, mesuré dans WebKit), ils passent l'un sous l'autre, en pleine largeur, au lieu d'être coupés par
-   la boîte. Le filet entre eux est le fond du pied, vu dans l'écart d'un pixel, sur une ligne comme sur deux. */
+   la boîte. C'est la largeur minimale d'un élément flex (min-width: auto, celle de son mot le plus long, min-content) qui
+   les fait passer à la ligne : chaque action tient en un mot (Annuler, Revenir, Supprimer, Effacer, Arrêter). Le filet
+   entre eux est le fond du pied, vu dans l'écart d'un pixel, sur une ligne comme sur deux. */
 .boite-pied { display: flex; flex-wrap: wrap; gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
-.boite-pied button { flex: 1 1 calc(50% - .5px); min-width: min(100%, max-content); min-height: 48px; border: 0; background: var(--surface); color: var(--action); font-size: var(--t-corps); }
+.boite-pied button { flex: 1 1 calc(50% - .5px); min-height: 48px; border: 0; background: var(--surface); color: var(--action); font-size: var(--t-corps); }
 .boite-pied .boite-action { font-weight: 600; }
 
 /* ---------- Rubriques ---------- */

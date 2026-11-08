@@ -308,6 +308,60 @@ test('vigilance 1 · le recentrage du code n\'est pas un glissement : un doigt p
   }
 });
 
+// Contre-relecture : un second glissement qui rattrape le premier, moins de 150 ms après son lâcher (le geste encore
+// marqué). Sur l'iPhone, la bande en élan suit le doigt sans seuil : un `scroll` arrive avant que le doigt ait bougé de
+// 6 px. Il relançait la fin, et la roue écrivait 150 ms plus tard, le doigt encore posé (5 h 30), puis la valeur du lâcher.
+// Le doigt posé, rien ne s'écrit : une seule écriture, au lâcher. Les écritures sont comptées sur journal.patch.
+test('vigilance 1 · un second glissement qui rattrape le premier : rien n\'est écrit tant que le doigt est posé, puis une seule écriture, au lâcher', async ({ page }) => {
+  await expect(roue(page)).toBeVisible();
+  await page.evaluate(() => {
+    const journal = window.__carnet.repo.journal;
+    const patch = journal.patch.bind(journal);
+    window.__ecritures = [];
+    journal.patch = (...a) => { window.__ecritures.push(a[1]); return patch(...a); };
+  });
+  await figer(page);
+  // Le doigt garde sa place d'un appel à l'autre (window.__doigt) ; `vers` amène la bande sur une valeur et attend son `scroll`.
+  const geste = (pas) => roue(page).evaluate(async (g, liste) => {
+    const bande = g.querySelector('.roue-defile');
+    const r = bande.getBoundingClientRect();
+    window.__doigt = window.__doigt || { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const d = window.__doigt;
+    const doigt = (type, enContact) => {
+      const t = document.createTouch(window, bande, 1, d.x + scrollX, d.y + scrollY, d.x, d.y);
+      bande.dispatchEvent(new TouchEvent(type, { bubbles: true, touches: document.createTouchList(...(enContact ? [t] : [])), changedTouches: document.createTouchList(t) }));
+    };
+    const vers = async (nom) => {
+      const q = [...bande.querySelectorAll('.roue-valeur')].find((x) => x.textContent === nom).getBoundingClientRect();
+      const cible = bande.scrollLeft + q.left + q.width / 2 - (r.left + r.width / 2);
+      await new Promise((ok) => { bande.addEventListener('scroll', ok, { once: true }); bande.scrollLeft = cible; });
+    };
+    for (const [quoi, arg] of liste) {
+      if (quoi === 'poser') doigt('touchstart', true);
+      else if (quoi === 'bouger') { d.x -= arg; doigt('touchmove', true); }
+      else if (quoi === 'vers') await vers(arg);
+      else if (quoi === 'lever') doigt('touchend', false);
+    }
+  }, pas);
+  // Premier glissement, vers 6 h 30, lâché ; 40 ms plus tard (le geste encore marqué), le doigt se pose de nouveau, la bande
+  // le suit sous le seuil (3 px, vers 6 h), puis au-delà (40 px de plus, vers 5 h 30), et le doigt reste posé 400 ms.
+  await geste([['poser'], ['bouger', 40], ['vers', '6 h 30'], ['lever']]);
+  await page.clock.runFor(40);
+  await geste([['poser'], ['bouger', 3], ['vers', '6 h'], ['bouger', 37], ['vers', '5 h 30']]);
+  await page.clock.runFor(400);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.__ecritures), 'doigt posé : rien d\'écrit').toEqual([]);
+  expect(await heures(page)).toBeNull();
+  // Le doigt levé : la fin, 150 ms après, écrit la valeur au centre, une seule fois.
+  await geste([['lever']]);
+  await page.clock.runFor(1000);
+  await page.clock.resume();
+  await expect.poll(() => heures(page)).toBe(5.5);
+  await page.clock.runFor(500);
+  expect(await page.evaluate(() => window.__ecritures)).toEqual([{ heuresSommeil: 5.5 }]);
+  await expect(valeur(page, '5 h 30')).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('vigilance 1 · une valeur en attente s\'écrit aussitôt, sur son jour : au changement de jour, la page cachée, à pagehide', async ({ page }) => {
   await noter(page, [[VEILLE, 9]]);
   const veille = await lue(page, VEILLE);
