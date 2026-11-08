@@ -768,11 +768,12 @@ test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableau
   expect(fautes).toEqual({});
 });
 
-// v11 (11/11) : en très grand texte (33 à 53), Mes refuges plein ne sort pas de l'écran de côté, page comprise ; sur le soir, ce
-// que la v11 y ajoute non plus : les trois roues notées et la carte Mes gratitudes, écrite. Le reste du soir déborde encore dès
-// 40 px (« nuit dernière », « Télétravail », le résumé d'un relevé), comme en v10, à l'identique (page de 395, 449 puis 496 px) :
-// un écran hérité, hors de la v11 (spec v11 §3 ; docs/decisions.md, v10, « En attente de l'utilisateur »).
-test('très grand texte (33 à 53) : Mes refuges plein, et sur le soir ses trois roues notées et Mes gratitudes écrites, ne sortent pas de l\'écran de côté', async ({ page }) => {
+// v11 (11/11) : en très grand texte (33 à 53), Mes refuges plein ne sort pas de l'écran de côté, page comprise. Le soir, à 33 px,
+// non plus, en entier, page comprise. À partir de 40 px, seul ce que la v11 y ajoute est contrôlé : les trois roues notées et la
+// carte Mes gratitudes, écrite. Le reste du soir y déborde encore (« nuit dernière », « Télétravail », le résumé d'un relevé),
+// comme en v10, à l'identique (page de 395, 449 puis 496 px) : un écran hérité, hors de la v11 (spec v11 §3 ; docs/decisions.md,
+// v10, « En attente de l'utilisateur »).
+test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px, et ses trois roues notées et Mes gratitudes écrites au-delà, ne sortent pas de l\'écran de côté', async ({ page }) => {
   test.setTimeout(180000);
   await verser(page);
   await page.evaluate(async (r) => {
@@ -790,7 +791,7 @@ test('très grand texte (33 à 53) : Mes refuges plein, et sur le soir ses trois
     await expect(page.locator('.aujourdhui .roue-choix.notee')).toHaveCount(3);
     await expect(page.locator(nouveauDuSoir)).toHaveCount(4);
     await stabiliser(page);
-    const soir = await debordements(page, nouveauDuSoir);
+    const soir = taille === 33 ? await debordements(page) : await debordements(page, nouveauDuSoir);
     if (soir.length) fautes[`le soir, ${taille} px`] = soir;
     await remonter(page, '#/refuges');
     await expect(page.locator('main.refuges a.lien-refuge')).toHaveCount(2);

@@ -41,7 +41,11 @@ test('docs/decisions.md : l\'entrée v11.0.0, ses règles levées, l\'exception 
   for (const x of ['**Le risque accepté**', '`playlist-read-private`', '`script-src` reste `\'self\'`', '**`CLAUDE.md`**']) assert.ok(reseau.includes(x), `exception réseau : ${x}`);
   assert.match(section(v11, 'L\'icône et « Revenir » (tâche 10)'), /\*\*Le rouge et le vert des émotions sortent ici de leurs écrans\*\*/);
   const ecarts = section(v11, 'Écarts au texte de la spec');
-  for (const x of ['`oubli*`', '« Retirer ces playlists »', '« Une seule lecture : Carnet ne garde pas la connexion. »']) assert.ok(ecarts.includes(x), `écarts : ${x}`);
+  for (const x of ['`oubli*`', '« Retirer ces playlists »', '« Une seule lecture : Carnet ne garde pas la connexion. »',
+    'le soir entier est contrôlé à 33 px ; à partir de 40 px, seul ce que la v11 y ajoute']) {
+    assert.ok(ecarts.includes(x), `écarts : ${x}`);
+  }
+  assert.match(section(v11, 'Contrôle global (tâche 11)'), /Le soir non plus à 33 px, en entier, page comprise\. À partir de 40 px, seules les trois roues/);
   const attente = section(v11, 'En attente de l\'utilisateur');
   for (const x of ['**barre finale comprise**', '403', 'préparer ses playlists', '**jamais son mot de passe**', '**Le correctif 11.0.1**', '**Les limites assumées, à lui dire**',
     '**Le passage à la nouvelle icône**', '**Les points de la v10 restent ouverts**']) {
@@ -63,16 +67,29 @@ test('les journaux de version ont leur section v11, qui renvoie à sa spécifica
   for (const x of ['docs/superpowers/specs/2026-11-05-carnet-v11-design.md', 'docs/decisions.md', 'suivent désormais le thème']) assert.ok(v11d.includes(x), x);
 });
 
+// La recette se coche à chaque jalon : la section v11 s'arrête à l'en-tête suivant (une v12 plus bas n'y compte pas), et ses
+// sept points restent sept, cochés ou non.
+const sectionV11 = (recette) => recette.slice(recette.indexOf('## v11')).split(/\n(?=## )/)[0];
+
 test('docs/recette-iphone.md, « v11 » : les six points de la spec §14, et le soir encore en moins de 30 s avec trois roues', () => {
   const recette = doc('docs', 'recette-iphone.md');
-  const v11 = recette.slice(recette.indexOf('## v11'));
+  const v11 = sectionV11(recette);
   assert.ok(recette.includes('## v11'));
   for (const x of ['**Le geste de retour, au doigt**', '**La roue, au doigt**', '**La connexion à Spotify et son retour dans Carnet**',
     '**L\'ouverture d\'une playlist et le retour dans Carnet**', '**La nouvelle icône et le passage sans perte**', 'au soleil', 'La barre du haut',
     '**Le soir, encore en moins de 30 s**']) {
     assert.ok(v11.includes(x), `recette : ${x}`);
   }
-  assert.equal((v11.match(/^- \[ \] /gm) || []).length, 7);
+  assert.equal((v11.match(/^- \[[ xX]\] /gm) || []).length, 7);
+});
+
+test('docs/recette-iphone.md, « v11 » : le compte de ses points tient quand l\'utilisateur en coche un, et quand une section v12 vient après', () => {
+  const recette = doc('docs', 'recette-iphone.md');
+  const cochee = recette.replace('- [ ] **La roue, au doigt**', '- [x] **La roue, au doigt**').replace('- [ ] **Le geste de retour', '- [X] **Le geste de retour');
+  assert.notEqual(cochee, recette);
+  const suivie = `${cochee.trimEnd()}\n\n## v12\n\n- [ ] Un point de la v12.\n- [ ] Un autre.\n- [ ] Un troisième.\n`;
+  for (const r of [recette, cochee, suivie]) assert.equal((sectionV11(r).match(/^- \[[ xX]\] /gm) || []).length, 7);
+  assert.ok(!sectionV11(suivie).includes('## v12'));
 });
 
 // Spec v11 §13 : les 4 test.fail() de la v8 et la marge du soir du Diagnostic sont partis avec la règle du soir sans défiler.
