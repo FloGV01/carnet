@@ -2,6 +2,8 @@ import { html, useEffect, useRef } from '../lib.js';
 
 // Boîte de confirmation (alertdialog). Les deux boutons sont en accent : le rouge est réservé
 // à « Effacer définitivement ». Focus initial sur Annuler ; Échap vaut Annuler.
+// Le texte décrit la boîte (aria-describedby) : le focus va droit sur Annuler, et VoiceOver lit ainsi ce qui sera
+// supprimé ou remplacé, pas seulement le titre. Un id fixe suffit : une seule boîte est ouverte à la fois.
 export function Confirmation({ titre, texte, action, surAnnuler, surConfirmer }) {
   const annuler = useRef(null);
   useEffect(() => {
@@ -12,10 +14,10 @@ export function Confirmation({ titre, texte, action, surAnnuler, surConfirmer })
     return () => { document.removeEventListener('keydown', touche); if (precedent && precedent.focus) precedent.focus(); };
   }, []);
   return html`<div class="voile">
-    <div class="boite-confirmation" role="alertdialog" aria-modal="true" aria-label=${titre}>
+    <div class="boite-confirmation" role="alertdialog" aria-modal="true" aria-label=${titre} aria-describedby=${texte ? 'boite-texte' : null}>
       <div class="boite-corps">
         <p class="boite-titre">${titre}</p>
-        ${texte && html`<p class="boite-texte">${texte}</p>`}
+        ${texte && html`<p class="boite-texte" id="boite-texte">${texte}</p>`}
       </div>
       <div class="boite-pied">
         <button type="button" ref=${annuler} onClick=${surAnnuler}>Annuler</button>

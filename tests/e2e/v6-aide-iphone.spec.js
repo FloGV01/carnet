@@ -69,4 +69,7 @@ test('v11 : « Changer d\'icône sans rien perdre », les cinq étapes de la spe
   textes.slice(0, -1).forEach((t, i) => expect(t, `étape ${i + 1}`).not.toMatch(supprimer));
   // Ce que la copie ne garde pas, en note.
   await expect(icone.locator('.note-import')).toHaveText('La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser.');
+  // Cette rubrique passe par Carnet (Exporter, Importer) : l'introduction ne dit « Carnet ne lance rien et ne lit rien »
+  // que des réglages de l'iPhone.
+  await expect(page.locator('main > p.note-import')).toHaveText('Ce que l\'iPhone fait lui-même, et comment changer d\'icône sans rien perdre. Pour les réglages, tout se règle dans l\'iPhone : Carnet ne lance rien et ne lit rien de tout cela. Le nom des menus peut varier un peu selon la version d\'iOS.');
 });

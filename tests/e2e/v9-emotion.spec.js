@@ -970,6 +970,8 @@ test('« Supprimer ce relevé » : une confirmation ; confirmé, retour à Ma jo
   // Annuler dans la boîte : rien ne change.
   await supprimerReleve(vue).click();
   await expect(boite).toBeVisible();
+  // Boîte sans texte : aucune description, et aucun renvoi vers un élément absent.
+  await expect(boite).not.toHaveAttribute('aria-describedby');
   await expect(boite.getByRole('button', { name: 'Annuler' })).toBeFocused();
   await boite.getByRole('button', { name: 'Annuler' }).click();
   await expect(boite).toHaveCount(0);

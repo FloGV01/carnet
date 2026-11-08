@@ -1,8 +1,10 @@
 import { html } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 
-// Texte fixe, comme le pas-à-pas du rappel : ce que l'iPhone fait lui-même, et comment le régler.
-// Rien n'est lu, écrit ni compté, et le texte ne dit jamais quand s'en servir. Les chemins sont à vérifier sur l'iPhone.
+// Texte fixe, comme le pas-à-pas du rappel : ce que l'iPhone fait lui-même et comment le régler, puis comment changer
+// d'icône sans rien perdre (v11), seule rubrique qui passe par Carnet (Exporter, Importer) : l'introduction ne dit donc
+// « Carnet ne lance rien et ne lit rien » que des réglages. La page ne lit, n'écrit ni ne compte rien, et le texte ne dit
+// jamais quand s'en servir. Les chemins sont à vérifier sur l'iPhone.
 const RUBRIQUES = [
   {
     titre: 'Sons d\'arrière-plan',
@@ -79,7 +81,7 @@ const RUBRIQUES = [
 export function AideIphone() {
   return html`<main class="ecran aide-iphone">
     <${Entete} titre="Aide iPhone" retour=${() => { location.hash = '#/reglages'; }} />
-    <p class="note-import">Ce que l'iPhone fait lui-même. Tout se règle dans l'iPhone : Carnet ne lance rien et ne lit rien de tout cela. Le nom des menus peut varier un peu selon la version d'iOS.</p>
+    <p class="note-import">Ce que l'iPhone fait lui-même, et comment changer d'icône sans rien perdre. Pour les réglages, tout se règle dans l'iPhone : Carnet ne lance rien et ne lit rien de tout cela. Le nom des menus peut varier un peu selon la version d'iOS.</p>
     ${RUBRIQUES.map((r) => html`<section class="aide-rubrique">
       <h2 class="libelle-section">${r.titre}</h2>
       <ol class="etapes">${r.etapes.map((e) => html`<li>${e}</li>`)}</ol>

@@ -60,6 +60,8 @@ test('perte chiffrée, refus d\'un fichier illisible, revenir à l\'état d\'ava
   await ligne.click();
   await expect(boite).toBeVisible();
   await expect(boite.locator('.boite-texte')).toHaveText("Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du 30 septembre 2026. Les mémos vocaux d'avant l'import ne reviennent pas.");
+  // Le texte décrit la boîte : le focus va droit sur « Annuler », et VoiceOver doit lire ce qui sera remplacé.
+  await expect(boite).toHaveAccessibleDescription(/sera remplacé par ce qu'il y avait avant l'import du 30 septembre 2026/);
   await expect(boite.getByRole('button')).toHaveText(['Annuler', 'Revenir']);
   await expect(boite.getByRole('button', { name: 'Annuler' })).toBeFocused();
   expect(await page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toBeNull();
