@@ -77,6 +77,65 @@ test('perte chiffrée, refus d\'un fichier illisible, revenir à l\'état d\'ava
   await expect.poll(() => page.evaluate(() => window.__carnet.repo.journal.lire('2026-09-29'))).toMatchObject({ humeur: 3 });
 });
 
+// Relecture finale : en très grand texte, le long texte de « Revenir à l'état d'avant l'import ? » faisait sortir la boîte
+// de l'écran, car le voile, fixe, ne défilait pas : son titre coupé en haut dès 47 px, ses deux boutons hors d'atteinte du
+// doigt à 53 px. Le voile défile : la boîte part du haut, chaque bouton, amené dans la vue, se touche, et tout en bas, la
+// boîte garde 24 px au-dessus du bord (la barre d'accueil). Ses deux boutons passent l'un sous l'autre quand « Revenir » ne
+// tient plus dans sa moitié : aucun n'est coupé. Au texte par défaut, elle reste au milieu, ses boutons côte à côte, et
+// rien ne défile. Une copie posée en base, comme après un import.
+test('la confirmation « Revenir », au texte par défaut au milieu de l\'écran ; à 47 et 53 px, le voile défile : le titre en haut dans l\'écran, « Annuler » et « Revenir » entiers et atteints au doigt', async ({ page }) => {
+  await page.evaluate(() => window.__carnet.repo.tx(['snapshots'], 'readwrite', (t) => {
+    t.objectStore('snapshots').put({ id: 'avant-import-2026-09-29T19:00:00.000Z', type: 'avant-import', date: '2026-09-29T19:00:00.000Z', schemaVersion: 6, data: {} });
+  }));
+  await aller(page, '#/reglages');
+  const ligne = page.getByRole('button', { name: "Revenir à l'état d'avant l'import", exact: true });
+  const boite = page.getByRole('alertdialog', { name: "Revenir à l'état d'avant l'import ?" });
+  const voile = page.locator('.voile');
+  // `coupes` : les boutons dont le libellé sort du bouton ou de la boîte ; `cote` : les deux boutons sur une même ligne.
+  const place = () => boite.evaluate((b) => {
+    const [r, v] = [b.getBoundingClientRect(), b.closest('.voile')];
+    const boutons = [...b.querySelectorAll('button')];
+    const plage = document.createRange();
+    const coupes = boutons.filter((x) => {
+      const q = x.getBoundingClientRect();
+      plage.selectNodeContents(x);
+      return x.scrollWidth > x.clientWidth + 0.5 || [...plage.getClientRects()].some((t) => t.left < Math.max(q.left, r.left) - 0.5 || t.right > Math.min(q.right, r.right) + 0.5);
+    }).map((x) => x.textContent);
+    const [a, c] = boutons.map((x) => x.getBoundingClientRect());
+    return { haut: r.top, bas: innerHeight - r.bottom, defile: v.scrollHeight > v.clientHeight + 0.5, titre: b.querySelector('.boite-titre').getBoundingClientRect().top,
+      coupes, cote: Math.abs(a.top - c.top) < 0.5 };
+  });
+  await ligne.click();
+  await expect(boite).toBeVisible();
+  const p = await place();
+  expect([p.defile, p.coupes, p.cote]).toEqual([false, [], true]);
+  expect(Math.abs(p.haut - p.bas)).toBeLessThanOrEqual(1);
+  for (const px of [47, 53]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, px);
+    await voile.evaluate((v) => { v.scrollTop = 0; });
+    const q = await place();
+    expect(q.defile, `${px} px : le voile défile`).toBe(true);
+    expect(q.titre, `${px} px : le haut du titre dans l'écran`).toBeGreaterThanOrEqual(0);
+    expect([q.coupes, q.cote], `${px} px : l'un sous l'autre, aucun coupé`).toEqual([[], false]);
+    await voile.evaluate((v) => { v.scrollTop = v.scrollHeight; });
+    expect((await place()).bas, `${px} px : 24 px sous la boîte, tout en bas`).toBeGreaterThanOrEqual(23.5);
+    for (const nom of ['Annuler', 'Revenir']) {
+      const atteint = await boite.getByRole('button', { name: nom, exact: true }).evaluate((b) => {
+        b.scrollIntoView({ block: 'nearest' });
+        const r = b.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= innerHeight && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b;
+      });
+      expect(atteint, `${px} px : « ${nom} » touchable`).toBe(true);
+    }
+    await voile.evaluate((v) => { v.scrollTop = 0; });
+  }
+  // À 53 px, « Annuler » au doigt : la boîte se ferme, la copie est toujours là.
+  await boite.getByRole('button', { name: 'Annuler', exact: true }).tap();
+  await expect(boite).toHaveCount(0);
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  await expect(ligne).toBeVisible();
+});
+
 test('v6 : les notes sont dans le fichier, et une note absente du fichier est annoncée avant d\'être effacée', async ({ page }) => {
   // Rien d'autre que des notes ici : la perte n'est chiffrée que si les notes comptent.
   const gardee = await page.evaluate(() => window.__carnet.repo.notes.creer({ date: '2026-09-30', heure: '20:00', texte: 'Dans le fichier' }));

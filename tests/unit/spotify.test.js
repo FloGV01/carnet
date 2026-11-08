@@ -30,11 +30,13 @@ function fenetre({ search = '', hash = '#/aujourdhui', stockage = {} } = {}) {
 }
 const avecAttente = (attente = { verifier: VERIFIER, state: 'etat-1', creeLe: MAINTENANT - 1000 }) => fenetre({ stockage: { [CLE]: JSON.stringify(attente) } });
 
+// L'identifiant lui-même n'est écrit que dans plateforme/spotify.js (spec §8.3), jamais ici : vidé (le correctif 11.0.1 de
+// la spec §8.5), la constante seule change, et ce test reste vrai (relecture finale de la v11).
 test('connexionDisponible : la constante remplie seulement ; vide, la connexion disparaît', () => {
-  assert.equal(SPOTIFY_CLIENT_ID, 'c7b1b16a8d264b159baf378296be5402');
-  assert.equal(connexionDisponible(), true);
+  assert.equal(typeof SPOTIFY_CLIENT_ID, 'string');
+  assert.equal(connexionDisponible(), SPOTIFY_CLIENT_ID.trim() !== '');
   assert.equal(connexionDisponible('client-de-test'), true);
-  for (const x of ['', '   ', null, undefined, 12]) assert.equal(connexionDisponible(x), x === undefined, String(x));
+  for (const x of ['', '   ', null, 12]) assert.equal(connexionDisponible(x), false, String(x));
 });
 
 test('defiPkce : l\'exemple de la RFC 7636 (annexe B)', async () => {

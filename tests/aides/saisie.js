@@ -57,21 +57,36 @@ export async function glisser(page, selecteur, dx, dy = 0, duree = 300) {
   }, [...depart, dx, dy]);
 }
 
-// La roue (v11, ui/composants/roue-choix.js) au doigt : le doigt posé sur la bande (touchstart), la bande amenée sur chaque
-// libellé tour à tour (scrollLeft, en attendant son `scroll`), puis le doigt levé (touchend). `roue` : le groupe (un
-// locator). La fin du glissement vient 150 ms après le dernier `scroll` ou le touchend, à l'horloge de l'app.
+// La roue (v11, ui/composants/roue-choix.js) au doigt : le doigt posé au milieu de la bande (touchstart), puis, pour chaque
+// libellé tour à tour, le doigt qui va de côté (touchmove, à l'opposé du défilement) et la bande amenée sur lui
+// (scrollLeft, en attendant son `scroll`), puis le doigt levé (touchend). Seul un `scroll` reçu après que le doigt a bougé
+// de côté compte pour un glissement (relecture finale). `roue` : le groupe (un locator). La fin du glissement vient 150 ms
+// après le dernier `scroll` ou le touchend, à l'horloge de l'app. Les points de contact passent par document.createTouch
+// (WebKit, où le constructeur Touch est refusé), sinon par Touch.
 export async function glisserRoue(roue, ...libelles) {
   await roue.evaluate(async (g, noms) => {
     const bande = g.querySelector('.roue-defile') || g;
-    bande.dispatchEvent(new Event('touchstart', { bubbles: true }));
+    const r = bande.getBoundingClientRect();
+    const y = r.top + r.height / 2;
+    let x = r.left + r.width / 2;
+    const doigt = (type, enContact) => {
+      const t = typeof document.createTouch === 'function'
+        ? document.createTouch(window, bande, 1, x + scrollX, y + scrollY, x, y)
+        : new Touch({ identifier: 1, target: bande, clientX: x, clientY: y });
+      const liste = (l) => (typeof document.createTouchList === 'function' ? document.createTouchList(...l) : l);
+      bande.dispatchEvent(new TouchEvent(type, { bubbles: true, touches: liste(enContact ? [t] : []), changedTouches: liste([t]) }));
+    };
+    doigt('touchstart', true);
     for (const nom of noms) {
-      const b = [...bande.querySelectorAll('button')].find((x) => x.textContent.trim() === nom);
+      const b = [...bande.querySelectorAll('button')].find((v) => v.textContent.trim() === nom);
       if (!b) throw new Error(`roue : « ${nom} » introuvable`);
-      const [r, q] = [bande.getBoundingClientRect(), b.getBoundingClientRect()];
+      const q = b.getBoundingClientRect();
       const cible = bande.scrollLeft + (q.left + q.width / 2) - (r.left + r.width / 2);
       if (Math.abs(cible - bande.scrollLeft) < 0.5) continue;
+      x -= cible - bande.scrollLeft;
+      doigt('touchmove', true);
       await new Promise((ok) => { bande.addEventListener('scroll', ok, { once: true }); bande.scrollLeft = cible; });
     }
-    bande.dispatchEvent(new Event('touchend', { bubbles: true }));
+    doigt('touchend', false);
   }, libelles);
 }

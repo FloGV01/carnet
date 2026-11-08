@@ -361,9 +361,11 @@
    règle se pose sur .app, pour que la barre d'onglets, le message et le bandeau, hors de main, l'aient aussi. Elle se pose
    aussi sur les zones de l'écran qui défilent : les graphes de Comprendre et l'aperçu de l'Export PSY, qui ne défile qu'en
    hauteur. Un graphe montré en tableau garde auto : en très grand texte, son tableau défile de côté, et departIgnore écarte
-   alors le geste qui part de lui. */
-.app:has(> main.ecran > .entete-pousse),
-.app:has(> main.ecran > .entete-pousse) :is(.apercu-export, .graphe:not(:has(table))),
+   alors le geste qui part de lui. De même, une page plus large que l'écran (très grand texte, sur des écrans hérités :
+   Rendez-vous, Traitement, la Vue soignants, Rappels) garde son défilement de côté au doigt (.deborde-de-cote, posée par
+   geste-retour.js, relecture finale) : iOS peut alors prendre le geste de retour pour lui. */
+.app:not(.deborde-de-cote):has(> main.ecran > .entete-pousse),
+.app:not(.deborde-de-cote):has(> main.ecran > .entete-pousse) :is(.apercu-export, .graphe:not(:has(table))),
 .parcours.relecture, .parcours.relecture .parcours-corps,
 .moment-plein.relecture, .moment-plein.relecture .corps-faisais { touch-action: pan-y pinch-zoom; }
 
@@ -476,18 +478,23 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Contact et Sport côte à côte (spec §5.4) : la carte est étroite, on y voit surtout la valeur du milieu. Les voisines n'y
    montreraient qu'une tranche, parfois une lettre coupée (le « t » de « Ressourçant » autour de « Neutre ») : chaque valeur
    prend toute la bande (les espaceurs tombent à 0, les voisines sortent de la vue), et seule la fenêtre peinte (::before)
-   garde la largeur d'une valeur, au moins la bande moins 8 px de chaque côté : la bande reste visible autour d'elle. Un
-   toucher sur cette marge grise vise donc la valeur du milieu, celle qui se voit, jamais une voisine invisible (relecture
-   de la tâche 3 : il notait Coûteux, et le Oui du contact avec). Le texte, centré, ne bouge pas : quand la fenêtre est
-   plus étroite que la bande, il y tient déjà sur une ligne, à 8 px de ses bords au moins. Rien ne change dans le détail
-   ni dans une carte seule, en pleine largeur.
+   en est plus étroite : la bande moins 8 px de chaque côté, la même dans les deux roues (relecture finale : à la largeur
+   de « Moins de 15 min », celle du Sport ne laissait que 2 px de gris, deux fins croissants, et à vide en clair un
+   rectangle blanc sur la carte blanche, à côté de la roue du Contact). La bande reste visible autour d'elle. Un toucher
+   sur cette marge grise vise donc la valeur du milieu, celle qui se voit, jamais une voisine invisible (relecture de la
+   tâche 3 : il notait Coûteux, et le Oui du contact avec). Le texte, centré, garde 6 px au moins jusqu'au bord de la
+   fenêtre (14 px de marge dans le bouton) : « Moins de 15 min » passe à la ligne, en deux lignes équilibrées (« Moins de »,
+   « 15 min »), « Ressourçant » tient sur une ligne tant
+   que les cartes sont côte à côte (jusqu'à 22 px de texte à 390, 21 px à 375, mesuré dans WebKit). Rien ne change dans
+   le détail ni dans une carte seule, en pleine largeur.
    Côte à côte (la paire a la place de deux demi-cartes de 8,4 em et de leur écart), les deux roues ont deux lignes de haut
-   (l'interligne de 1,15 de la roue, et ses marges de 4 px) : « Moins de 15 min » passe à la ligne dès 18 px de texte, et
-   une roue plus haute que sa voisine décalerait les Oui / Non, alignés depuis la v7. Au texte par défaut, cela fait
-   44,8 px au lieu de 44. L'une sous l'autre, chacune garde sa hauteur. */
+   (l'interligne de 1,15 de la roue, et ses marges de 4 px) : « Moins de 15 min » y passe à la ligne, et une roue plus
+   haute que sa voisine décalerait les Oui / Non, alignés depuis la v7. Au texte par défaut, cela fait 44,8 px au lieu de
+   44. L'une sous l'autre, chacune garde sa hauteur. */
 .aujourdhui .deux-colonnes { container: paire / inline-size; }
 .deux-colonnes .roue-choix { --l-roue: 100%; }
-.deux-colonnes .roue-choix::before { width: min(max(var(--l-valeur), calc(100% - 16px)), 100%); }
+.deux-colonnes .roue-choix::before { width: calc(100% - 16px); }
+.deux-colonnes .roue-valeur { padding-inline: 14px; text-wrap: balance; }
 @container paire (min-width: calc(16.8em + 8px)) {
   .deux-colonnes .roue-valeur { min-height: max(var(--cible), calc(2 * 1.15em + 8px)); }
 }
@@ -711,8 +718,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .feuille-tete .fermer { font-weight: 600; }
 .feuille-tete .fermer svg { width: 18px; height: 18px; }
 .contenu-plan { display: flex; flex-direction: column; gap: 12px; }
-.rubrique-plan p { font-size: var(--t-corps); line-height: 1.45; white-space: pre-wrap; }
-.liste-si-alors { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
+/* Un texte sans espace (un lien collé dans « Mes titres ») passe à la ligne, comme .texte-lecture : sinon, il sortait de la
+   carte Mon plan et faisait défiler Moment difficile de côté (relecture finale de la v11). Les « Si… alors… » aussi. */
+.rubrique-plan p { font-size: var(--t-corps); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.liste-si-alors { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; overflow-wrap: anywhere; }
 .lien-apres-coup { padding: 10px 10px 10px 16px; min-height: 56px; }
 .lien-apres-coup .ligne-libelle { display: flex; flex-direction: column; gap: 2px; }
 .titre-apres-coup { font-weight: 600; }
@@ -1305,9 +1314,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* « J'ai fini pour ce soir » (v5) */
 .fini-soir { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .fini-soir .phrase-recap { margin-top: 0; }
-.fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; }
+/* Les points positifs et les gratitudes cités : un texte sans espace passe à la ligne (relecture finale de la v11). */
+.fini-positifs { font-size: var(--t-sous); color: var(--text-2); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* Analyse v5 : Ma semaine, sélecteur collant, Mes jours, Ta journée, barres en jours */
-.lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; }
+/* « Tes points positifs », « Tes gratitudes » : un texte sans espace passe à la ligne (relecture finale de la v11). */
+.lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
 /* v6 : du plus bas au plus haut des anciennes notes d'un jour, sous le point de la note du jour */
 .g-trait { stroke: var(--c); stroke-width: 2; stroke-linecap: round; opacity: .7; }

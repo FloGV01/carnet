@@ -257,6 +257,57 @@ test('vigilance 1 · un toucher éteint le glissement en cours : la valeur noté
   await expect(presses(page)).toHaveCount(0);
 });
 
+// Relecture finale : un défilement lancé par le code n'est pas un glissement. Retoucher la valeur notée l'efface, et la
+// bande revient au centre en douceur ; un doigt posé sur la bande pendant ce recentrage, immobile ou la page qui défile,
+// prenait ses `scroll` pour un glissement : au lever, la valeur du milieu s'écrivait à la place de l'effacement (7 h, ou
+// Neutre). Seul un doigt qui a bougé de côté peut marquer un geste. Le doigt posé ici n'a pas de point de contact : il ne
+// bouge jamais.
+test('vigilance 1 · le recentrage du code n\'est pas un glissement : un doigt posé pendant qu\'il ramène la bande au centre, après un effacement, immobile ou la page qui défile, n\'écrit rien (la nuit, le contact)', async ({ page }) => {
+  const CAS = [
+    { nom: 'Durée de la nuit', notee: '9 h', centre: '7 h', champ: (e) => e?.heuresSommeil ?? null, attendu: 9 },
+    { nom: 'Comment c\'était', notee: 'Coûteux', centre: 'Neutre', champ: (e) => e?.contacts ?? null, attendu: [{ avec: null, effet: 'contactEffet:couteux' }] },
+  ];
+  for (const c of CAS) {
+    for (const pageDefile of [false, true]) {
+      const quoi = `${c.nom}${pageDefile ? ', la page qui défile' : ', doigt immobile'}`;
+      await viderBase(page);
+      const g = groupe(page, c.nom);
+      await expect(g).toBeVisible();
+      await g.scrollIntoViewIfNeeded();
+      await dans(g, c.notee).click();
+      await expect.poll(async () => c.champ(await lue(page)), quoi).toEqual(c.attendu);
+      await centreeDans(g, c.notee);
+      await figer(page);
+      // Retouchée : effacée, la bande part vers le centre ; dès son premier `scroll`, le doigt se pose, la page défile ou
+      // non, et les `scroll` suivants du recentrage arrivent doigt posé, jusqu'à sa cible ; puis le doigt se lève.
+      const vus = await g.evaluate(async (r, [notee, centre, defile]) => {
+        const bande = r.querySelector('.roue-defile');
+        const bouton = (nom) => [...bande.querySelectorAll('.roue-valeur')].find((x) => x.textContent === nom);
+        const prochain = (x) => new Promise((ok) => x.addEventListener('scroll', ok, { once: true }));
+        const [rb, q] = [bande.getBoundingClientRect(), bouton(centre).getBoundingClientRect()];
+        const cible = bande.scrollLeft + q.left + q.width / 2 - (rb.left + rb.width / 2);
+        let n = 0;
+        bouton(notee).click();
+        await prochain(bande);
+        bande.dispatchEvent(new Event('touchstart', { bubbles: true }));
+        if (defile) { const p = prochain(window); window.scrollBy(0, 120); await p; }
+        while (Math.abs(bande.scrollLeft - cible) >= 1) { await prochain(bande); n += 1; }
+        bande.dispatchEvent(new Event('touchend', { bubbles: true }));
+        return n;
+      }, [c.notee, c.centre, pageDefile]);
+      expect(vus, `${quoi} : des scroll du recentrage, doigt posé`).toBeGreaterThan(0);
+      await expect.poll(async () => c.champ(await lue(page)), quoi).toBeNull();
+      const apres = await lue(page);
+      await page.clock.runFor(1000);
+      await page.clock.resume();
+      await page.clock.runFor(1000);
+      expect(await lue(page), `${quoi} : rien d'écrit après l'effacement, updatedAt compris`).toEqual(apres);
+      await expect(g.locator('[aria-pressed="true"]'), quoi).toHaveCount(0);
+      await centreeDans(g, c.centre);
+    }
+  }
+});
+
 test('vigilance 1 · une valeur en attente s\'écrit aussitôt, sur son jour : au changement de jour, la page cachée, à pagehide', async ({ page }) => {
   await noter(page, [[VEILLE, 9]]);
   const veille = await lue(page, VEILLE);
@@ -414,6 +465,25 @@ test('de 17 à 53 px de texte (390 et 375) : la bande reste dans sa carte, aucun
     }
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});
+
+// Relecture finale : la taille du texte qui change écran ouvert (Centre de contrôle › Taille du texte, sur l'iPhone) ne
+// donne ni `resize` ni `visibilitychange`. En grandissant, WebKit gardait la valeur au centre ; en rapetissant, la bande
+// partait au bout, et la fenêtre teintée montrait « 10 h ou plus » pour une nuit de 7 h 30. Chaque roue se recale, sans
+// rien écrire.
+test('la taille du texte qui change écran ouvert, sans resize : chaque roue reste sur sa valeur (la nuit notée, le contact et le sport vides), sans rien écrire', async ({ page }) => {
+  await noter(page, [[AUJ, 7.5]]);
+  const avant = await lue(page);
+  await centree(page, '7 h 30');
+  for (const taille of ['33px', '', '24px', '']) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = t; }, taille);
+    await centree(page, '7 h 30');
+    await expect(presses(page)).toHaveText(['7 h 30']);
+    await centreeDans(groupe(page, 'Comment c\'était'), 'Neutre');
+    await centreeDans(groupe(page, 'Durée du sport'), '15 à 30 min');
+  }
+  await page.clock.runFor(1000);
+  expect(await lue(page)).toEqual(avant);
 });
 
 // ---------- v11 (3/11) · Les roues Sport et Contact humain (spec §5.4) ----------
@@ -613,7 +683,7 @@ test('la rangée Contact et Sport n\'a que 60 px de plus avec ses roues ; aucune
     }
     for (const largeur of [390, 375]) {
       await page.setViewportSize({ width: largeur, height: 844 });
-      for (const px of [17, 18, 19, 20, 21, 28, 33, 40, 47, 53]) {
+      for (const px of [17, 18, 19, 20, 21, 22, 28, 33, 40, 47, 53]) {
         await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; document.body.style.fontSize = ''; }, px);
         const quoi = `${ouverts ? 'détails ouverts' : 'cartes'} · ${largeur} · ${px} px`;
         expect(await fautesDesRoues(page), quoi).toEqual([]);
@@ -627,22 +697,39 @@ test('la rangée Contact et Sport n\'a que 60 px de plus avec ses roues ; aucune
         });
         if (px <= 21 && largeur === 390) expect(paire.cote, `${quoi} : côte à côte`).toBe(true);
         if (paire.cote) expect([paire.ouiNon, paire.roues], `${quoi} : Oui / Non alignés, roues de même hauteur`).toEqual([0, 0]);
+        // Relecture finale : côte à côte, les deux fenêtres laissent 8 px de gris de chaque côté, et le texte de la plus
+        // longue valeur notée (« Moins de 15 min » passé à la ligne, « Ressourçant » sur une) en garde 6 jusqu'à leur bord.
+        if (paire.cote && !ouverts) {
+          await centreeDans(groupe(page, 'Comment c\'était'), 'Ressourçant');
+          await centreeDans(groupe(page, 'Durée du sport'), 'Moins de 15 min');
+          for (const r of await sousLesBords(page)) {
+            expect(r.marge, `${quoi} · ${r.roue}`).toBeCloseTo(8, 1);
+            expect(r.jeu, `${quoi} · ${r.roue}`).toBeGreaterThanOrEqual(6);
+          }
+        }
       }
       await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
     }
   }
 });
 
-// Relecture de la tâche 3 : côte à côte, la fenêtre peinte laisse voir la bande grise sur quelques px de chaque côté (8
-// dans la carte Contact). Toute la bande est pourtant à la valeur du milieu : un toucher sur cette marge, où l'on ne voit
-// que le gris, note ou efface la valeur qui se voit au milieu, jamais une voisine invisible (Coûteux, et le Oui du contact
-// avec). À 2 px de chaque bord de la bande, à mi-hauteur, à 390 et à 375 : vides, notées au milieu de la liste, puis aux
-// deux bouts.
+// Relecture de la tâche 3 : côte à côte, la fenêtre peinte laisse voir la bande grise sur 8 px de chaque côté. Toute la
+// bande est pourtant à la valeur du milieu : un toucher sur cette marge, où l'on ne voit que le gris, note ou efface la
+// valeur qui se voit au milieu, jamais une voisine invisible (Coûteux, et le Oui du contact avec). À 2 px de chaque bord
+// de la bande, à mi-hauteur, à 390 et à 375 : vides, notées au milieu de la liste, puis aux deux bouts. Relecture finale :
+// la fenêtre est la même dans les deux roues (celle du Sport, à la largeur de « Moins de 15 min », ne laissait que 2 px de
+// gris), et le texte de la valeur du milieu garde 6 px au moins jusqu'à son bord (« Moins de 15 min » passe à la ligne).
 const sousLesBords = (page) => page.evaluate(() => [...document.querySelectorAll('.deux-colonnes .roue-choix')].map((g) => {
   const d = g.querySelector('.roue-defile').getBoundingClientRect();
   const sous = (x) => document.elementFromPoint(x, d.top + d.height / 2)?.closest('.roue-valeur')?.textContent ?? null;
-  const marge = (d.width - Number.parseFloat(getComputedStyle(g, '::before').width)) / 2;
-  return { roue: g.getAttribute('aria-label'), sous: [sous(d.left + 2), sous(d.left + d.width / 2), sous(d.right - 2)], marge };
+  const fenetre = Number.parseFloat(getComputedStyle(g, '::before').width);
+  const marge = (d.width - fenetre) / 2;
+  const milieu = [...g.querySelectorAll('.roue-valeur')].find((b) => { const q = b.getBoundingClientRect(); return Math.abs(q.left + q.width / 2 - (d.left + d.width / 2)) <= 1; });
+  const plage = document.createRange();
+  plage.selectNodeContents(milieu);
+  const lignes = [...plage.getClientRects()].filter((t) => t.width > 0);
+  const jeu = Math.min(...lignes.map((t) => t.left - (d.left + marge)), ...lignes.map((t) => d.right - marge - t.right));
+  return { roue: g.getAttribute('aria-label'), sous: [sous(d.left + 2), sous(d.left + d.width / 2), sous(d.right - 2)], marge, jeu };
 }));
 const auBord = async (page, nom, cote) => {
   const d = await groupe(page, nom).locator('.roue-defile').boundingBox();
@@ -659,9 +746,12 @@ test('côte à côte, un toucher sur la marge grise autour de la fenêtre vise l
       await centreeDans(groupe(page, 'Durée du sport'), sport);
       const vu = await sousLesBords(page);
       expect(vu.map((r) => [r.roue, ...r.sous]), quoi).toEqual([['Comment c\'était', contact, contact, contact], ['Durée du sport', sport, sport, sport]]);
-      // Le dessin ne change pas : dans la carte Contact, la bande grise se voit toujours sur 8 px de chaque côté de la
-      // fenêtre.
-      expect(vu[0].marge, quoi).toBeCloseTo(8, 0);
+      // Le dessin ne change pas : dans les deux cartes, la bande grise se voit sur 8 px de chaque côté de la fenêtre, et le
+      // texte du milieu est à 6 px au moins du bord de celle-ci.
+      for (const r of vu) {
+        expect(r.marge, `${quoi} · ${r.roue}`).toBeCloseTo(8, 1);
+        expect(r.jeu, `${quoi} · ${r.roue}`).toBeGreaterThanOrEqual(6);
+      }
     }
   };
   await auMilieu('Neutre', '15 à 30 min');

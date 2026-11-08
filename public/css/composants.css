@@ -159,13 +159,27 @@
 
 /* ---------- Boîte de confirmation ---------- */
 .voile { position: fixed; inset: 0; z-index: 50; background: rgba(10, 9, 8, .38); display: grid; place-items: center; padding: 24px; }
-.boite-confirmation { width: min(290px, 100%); background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); text-align: center; overflow: hidden; }
+/* Le voile d'une confirmation défile quand la boîte n'y tient plus (relecture finale de la v11 : en très grand texte, le
+   long texte de « Revenir à l'état d'avant l'import ? » la faisait sortir de l'écran, en haut et en bas, ses deux boutons
+   hors d'atteinte du doigt). Ses marges automatiques la centrent quand elle tient ; sinon, elle part du haut, sous la barre
+   d'état, et le voile défile jusqu'à ses boutons. L'espace du bas, au-dessus de la barre d'accueil, est une rangée de la
+   grille (::after) : WebKit ne compte pas le padding du bas d'une grille dans ce qui défile. La rangée de la boîte grandit
+   avec elle (min-content : la boîte, qui coupe ses coins, aurait sinon un minimum nul). Le défilement ne passe pas à la
+   page dessous. */
+.voile-boite {
+  grid-template-rows: minmax(min-content, 1fr) auto; justify-items: center; align-items: start; overflow-y: auto; overscroll-behavior: contain;
+  padding: max(24px, var(--zone-haut)) 24px 0;
+}
+.voile-boite::after { content: ""; height: max(24px, var(--zone-bas)); }
+.boite-confirmation { width: min(290px, 100%); margin-block: auto; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); text-align: center; overflow: hidden; }
 .boite-corps { padding: 20px 18px 16px; display: grid; gap: 6px; }
 .boite-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.3; text-wrap: pretty; }
 .boite-texte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); }
-.boite-pied { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
-.boite-pied button { min-height: 48px; border: 0; background: none; color: var(--action); font-size: var(--t-corps); }
-.boite-pied button:first-child { border-right: 1px solid var(--line); }
+/* Les deux boutons côte à côte, à parts égales ; quand le mot de l'un ne tient plus dans sa moitié (très grand texte :
+   « Revenir » dès 47 px, mesuré dans WebKit), ils passent l'un sous l'autre, en pleine largeur, au lieu d'être coupés par
+   la boîte. Le filet entre eux est le fond du pied, vu dans l'écart d'un pixel, sur une ligne comme sur deux. */
+.boite-pied { display: flex; flex-wrap: wrap; gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
+.boite-pied button { flex: 1 1 calc(50% - .5px); min-width: min(100%, max-content); min-height: 48px; border: 0; background: var(--surface); color: var(--action); font-size: var(--t-corps); }
 .boite-pied .boite-action { font-weight: 600; }
 
 /* ---------- Rubriques ---------- */

@@ -208,6 +208,35 @@ test('Analyse : un repli fermé « Tes gratitudes », sous « Tes points positif
     .toEqual([['Tes points positifs', 'false'], ['Tes gratitudes', 'false']]);
 });
 
+// Relecture finale : un texte sans espace (un lien collé, 70 signes) ne passait pas à la ligne. Avec une telle gratitude,
+// « J'ai fini » faisait 587 px de large, et l'Analyse, « Tes gratitudes » ouvert, 620 : la page défilait de côté. Les
+// gratitudes et les points positifs cités passent à la ligne, comme les notes.
+const SANS_ESPACE = `https://open.spotify.com/track/${'x7'.repeat(20).slice(0, 39)}`;
+const largeurs = (page, selecteur) => page.evaluate((s) => ({
+  page: document.documentElement.scrollWidth, ecran: innerWidth,
+  dehors: [...document.querySelectorAll(s)].filter((e) => { const r = e.getBoundingClientRect(); return r.left < -0.5 || r.right > innerWidth + 0.5; }).length,
+}), selecteur);
+
+test('une gratitude et des points positifs sans espace (70 signes) passent à la ligne : « J\'ai fini » et l\'Analyse, ses deux replis ouverts, ne défilent pas de côté', async ({ page }) => {
+  expect(SANS_ESPACE).toHaveLength(70);
+  expect(SANS_ESPACE).not.toMatch(/\s/);
+  await noter(page, [[AUJ, { lieu: 'lieu:bureau', pointsPositifs: SANS_ESPACE, gratitudes: SANS_ESPACE }], [VEILLE, { pointsPositifs: SANS_ESPACE, gratitudes: SANS_ESPACE }]]);
+  await page.reload();
+  await page.getByRole('button', { name: 'J\'ai fini pour ce soir' }).click();
+  const soiree = page.getByRole('region', { name: 'Ta soirée' });
+  await expect(soiree.locator('.fini-positifs')).toHaveText([`« ${SANS_ESPACE} »`, `« ${SANS_ESPACE} »`]);
+  expect(await largeurs(page, '.fini-positifs')).toEqual({ page: 390, ecran: 390, dehors: 0 });
+  await aller(page, '#/analyse');
+  const semaine = page.getByRole('region', { name: 'Ma semaine' });
+  for (const nom of ['Tes points positifs', 'Tes gratitudes']) {
+    const bouton = semaine.getByRole('button', { name: new RegExp(`^${nom}`) });
+    await bouton.click();
+    await expect(bouton).toHaveAttribute('aria-expanded', 'true');
+  }
+  await expect(semaine.locator('.lignes-semaine li')).toHaveCount(4);
+  expect(await largeurs(page, '.lignes-semaine li')).toEqual({ page: 390, ecran: 390, dehors: 0 });
+});
+
 // Effacer puis « Annuler » perdait les textes du soir : les zones, nées avec l'ancienne entrée le temps de la relecture, se
 // vidaient à l'arrivée de la nouvelle, puis enregistraient ce vide en partant, juste après la restauration (v11, corrigé).
 test('effacer la journée vide aussi ses gratitudes, et « Annuler » les fait revenir, avec les points positifs et les notes', async ({ page }) => {

@@ -450,3 +450,41 @@ test('vigilance 2 · le geste horizontal reste à la page : touch-action « pan-
   expect(await touchAction('.moment-plein.relecture')).toBe('pan-y pinch-zoom');
   expect(await touchAction('.moment-plein.relecture .corps-faisais')).toBe('pan-y pinch-zoom');
 });
+
+// Relecture finale : en très grand texte, des écrans hérités à « Retour » débordent déjà de côté (recette, « Taille du texte
+// au plus grand »). `pan-y pinch-zoom` sur .app leur ôtait au doigt le défilement de côté de la page : ce qui dépasse à
+// droite ne s'atteignait plus. Une page plus large que l'écran le rend à iOS (touch-action auto, effective jusqu'au titre ;
+// le geste de retour peut alors être pris par iOS) ; revenue à sa largeur, au texte par défaut, elle garde le geste. La
+// taille du texte change ici sans `resize`, comme au Centre de contrôle.
+test('vigilance 2 · une page plus large que l\'écran (53 px : Traitement, Rendez-vous, Vue soignants) garde son défilement de côté au doigt ; au texte par défaut, le geste horizontal revient à la page', async ({ page }) => {
+  const etat = () => page.evaluate(() => {
+    const effectif = (e) => {
+      const valeurs = new Set();
+      for (let el = e; el; el = el.parentElement) {
+        const s = getComputedStyle(el);
+        if (s.touchAction !== 'auto') valeurs.add(s.touchAction);
+        if (/^(auto|scroll)$/.test(s.overflowX) || /^(auto|scroll)$/.test(s.overflowY)) break;
+      }
+      return [...valeurs].join(' ∩ ') || 'auto';
+    };
+    return { large: document.documentElement.scrollWidth > innerWidth, app: getComputedStyle(document.querySelector('.app')).touchAction,
+      titre: effectif(document.querySelector('h1.titre-ecran')) };
+  });
+  const etroite = { large: false, app: 'pan-y pinch-zoom', titre: 'pan-y pinch-zoom' };
+  for (const hash of ['#/traitement/nouveau', '#/rdv/nouveau', '#/soignants']) {
+    await ouvrir(page, hash, '#/soins');
+    await expect(page.locator('h1.titre-ecran')).toBeVisible();
+    await expect.poll(etat, hash).toEqual(etroite);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '53px'; });
+    await expect.poll(etat, `${hash} à 53 px`).toEqual({ large: true, app: 'auto', titre: 'auto' });
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    await expect.poll(etat, `${hash} revenu au texte par défaut`).toEqual(etroite);
+  }
+  // Un onglet, ensuite : la classe est partie avec l'écran.
+  await page.evaluate(() => { document.documentElement.style.fontSize = '53px'; });
+  await ouvrir(page, '#/traitement/nouveau', '#/soins');
+  await expect.poll(etat).toMatchObject({ large: true, app: 'auto' });
+  await aller(page, '#/soins');
+  await expect(page.locator('.app')).not.toHaveClass(/deborde-de-cote/);
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+});

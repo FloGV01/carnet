@@ -4,6 +4,7 @@ import { html, useEffect, useRef } from '../lib.js';
 // à « Effacer définitivement ». Focus initial sur Annuler ; Échap vaut Annuler.
 // Le texte décrit la boîte (aria-describedby) : le focus va droit sur Annuler, et VoiceOver lit ainsi ce qui sera
 // supprimé ou remplacé, pas seulement le titre. Un id fixe suffit : une seule boîte est ouverte à la fois.
+// En très grand texte, le voile défile jusqu'aux boutons (.voile-boite, relecture finale de la v11).
 export function Confirmation({ titre, texte, action, surAnnuler, surConfirmer }) {
   const annuler = useRef(null);
   useEffect(() => {
@@ -13,7 +14,7 @@ export function Confirmation({ titre, texte, action, surAnnuler, surConfirmer })
     document.addEventListener('keydown', touche);
     return () => { document.removeEventListener('keydown', touche); if (precedent && precedent.focus) precedent.focus(); };
   }, []);
-  return html`<div class="voile">
+  return html`<div class="voile voile-boite">
     <div class="boite-confirmation" role="alertdialog" aria-modal="true" aria-label=${titre} aria-describedby=${texte ? 'boite-texte' : null}>
       <div class="boite-corps">
         <p class="boite-titre">${titre}</p>

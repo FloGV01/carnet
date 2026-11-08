@@ -305,6 +305,28 @@ test('Moment difficile : les quatre boutons en tête et à l\'écran ; une ligne
   await expect(feuille.getByRole('link')).toHaveCount(0);
 });
 
+// Relecture finale : un titre sans espace (un lien collé dans « Mes titres », 70 signes) ne passait pas à la ligne : il
+// sortait de la carte Mon plan, coupé à son bord, et le corps de Moment difficile défilait de côté (721 px pour 390). Il
+// passe à la ligne, comme le reste du plan (une rubrique et un « Si… alors… » aussi longs).
+test('Moment difficile : un texte sans espace de 70 signes dans « Mes titres » et dans le plan passe à la ligne ; rien ne sort de la carte Mon plan, rien ne défile de côté', async ({ page }) => {
+  const long = `https://open.spotify.com/track/${'x7'.repeat(20).slice(0, 39)}`;
+  expect(long).toHaveLength(70);
+  await ecrireMeta(page, 'monPlan', { quandCaMonte: long, siAlors: [{ si: long, alors: long }] });
+  await ecrireMeta(page, 'refuges', { titres: `${long}\nPluie lente`, playlists: [] });
+  const v = await ouvrirMoment(page);
+  const plan = v.getByRole('region', { name: 'Mon plan' });
+  await expect(plan.locator('.rubrique-plan').last().locator('p')).toHaveText(`${long}\nPluie lente`);
+  await expect(plan).toContainText(long);
+  const mesure = await v.evaluate((d) => {
+    const corps = d.querySelector('.parcours-corps');
+    const carte = d.querySelector('.plan-moment').getBoundingClientRect();
+    const dehors = [...d.querySelectorAll('.plan-moment *')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.left < carte.left - 0.5 || r.right > carte.right + 0.5); })
+      .map((e) => e.tagName.toLowerCase());
+    return { corps: corps.scrollWidth - corps.clientWidth, page: document.documentElement.scrollWidth, dehors };
+  });
+  expect(mesure).toEqual({ corps: 0, page: 390, dehors: [] });
+});
+
 test('Moment difficile : sans refuges, aucune trace ; des titres seuls gardent « Modifier » ; des playlists seules, « Écrire mon plan »', async ({ page }) => {
   // Mon plan seul : l'écran d'avant la v11.
   await ecrireMeta(page, 'monPlan', PLAN);
