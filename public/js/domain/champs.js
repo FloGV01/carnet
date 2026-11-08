@@ -9,6 +9,8 @@ const T = {
   // true ou null : false veut dire « pas noté », donc null.
   vrai: { type: 'vrai' },
   int: (min, max) => ({ type: 'int', min, max }), ref: (liste) => ({ type: 'ref', liste }),
+  // v11 : un nombre de min à max, par demi-heure (la durée de la nuit).
+  demiHeures: (min, max) => ({ type: 'demiHeures', min, max }),
   refs: (liste) => ({ type: 'refs', liste }), questions: { type: 'questions' },
   // Objet de sous-champs (vide → null) et lignes d'objets (lignes vides retirées, aucune → null).
   // contexte : sous-champs remplis par l'app (le jour d'écriture), qui seuls ne gardent pas l'objet.
@@ -36,19 +38,31 @@ export const CONTACT = { avec: T.refs('contactAvec'), effet: T.ref('contactEffet
 // D'où une séance a été lancée (v7) : l'onglet Bien-être, Moment difficile ou la carte « Pour récupérer, je… ».
 export const ORIGINES_SEANCE = Object.freeze(['bien-etre', 'moment-difficile', 'ressourcer']);
 
-// Durée de la nuit (v8) : un nombre d'heures entier, de « 4 h ou moins » à « 10 h ou plus » (spec v8 §7 bis).
+// Durée de la nuit (v8) : de « 4 h ou moins » à « 10 h ou plus » (spec v8 §7 bis), par demi-heure depuis la v11
+// (spec v11 §5.1) : 4, 4,5, 5, … 9,5, 10, soit 13 valeurs. Les bornes de la v8 ne bougent pas.
 export const HEURES_SOMMEIL = Object.freeze({ min: 4, max: 10 });
-// « 4 h ou moins », « 6 h », « 10 h ou plus » ; null pour une valeur hors de la liste.
+export const VALEURS_HEURES_SOMMEIL = Object.freeze(
+  Array.from({ length: (HEURES_SOMMEIL.max - HEURES_SOMMEIL.min) * 2 + 1 }, (_, i) => HEURES_SOMMEIL.min + i / 2),
+);
+// Un nombre de min à max, entier ou à la demi-heure : ni texte ('7'), ni booléen, ni NaN, ni l'infini.
+const estDemiHeure = (h, min, max) => typeof h === 'number' && Number.isInteger(h * 2) && h >= min && h <= max;
+export const estHeuresSommeil = (h) => estDemiHeure(h, HEURES_SOMMEIL.min, HEURES_SOMMEIL.max);
+// « 4 h ou moins », « 6 h », « 7 h 30 », « 10 h ou plus » (jamais « 7,5 h ») ; null pour une valeur hors de la liste.
 export function texteHeuresSommeil(h) {
-  if (!Number.isInteger(h) || h < HEURES_SOMMEIL.min || h > HEURES_SOMMEIL.max) return null;
+  if (!estHeuresSommeil(h)) return null;
   if (h === HEURES_SOMMEIL.min) return `${h} h ou moins`;
   if (h === HEURES_SOMMEIL.max) return `${h} h ou plus`;
-  return `${h} h`;
+  return Number.isInteger(h) ? `${h} h` : `${Math.floor(h)} h 30`;
 }
 
 // cles : champs techniques. saisis : champs que l'utilisateur renseigne.
 // heuresSommeil (v8) : la durée de la nuit qui précède le jour, comme sommeilRessenti ; 4 veut dire
-// « 4 h ou moins » et 10 « 10 h ou plus ». Coucher, lever et réveils restent pour les nuits déjà notées.
+// « 4 h ou moins » et 10 « 10 h ou plus », par demi-heure depuis la v11. Coucher, lever et réveils restent pour les
+// nuits déjà notées.
+// gratitudes (v11) : « Mes gratitudes », un texte du soir, comme les points positifs. Jamais dans l'Export PSY ni la vue
+// soignants (spec v11 §6).
+// ceQueJeRetiens (v11) : « Ce que j'en retiens », un texte écrit sur l'épisode rouvert, à part d'apresCoup : l'écrire ne
+// touche pas à apresCoup.jour, donc ne refait pas partir un vieil épisode vers l'Export PSY (spec v11 §7).
 export const SCHEMAS = {
   journal: {
     cles: { date: T.date },
@@ -57,7 +71,7 @@ export const SCHEMAS = {
       sportMouvement: T.bool, explosions: T.int(0, 5), traitementPris: T.ref('traitementPris'), pointsPositifs: T.texte,
       heureCoucher: T.heure, heureLever: T.heure, reveilsNocturnes: T.int(0, 5), notes: T.texte,
       activites: T.lignes(ACTIVITE), contacts: T.lignes(CONTACT), pese: T.refs('pese'), recharge: T.refs('recharge'),
-      heuresSommeil: T.int(HEURES_SOMMEIL.min, HEURES_SOMMEIL.max),
+      heuresSommeil: T.demiHeures(HEURES_SOMMEIL.min, HEURES_SOMMEIL.max), gratitudes: T.texte,
     },
   },
   episodes: {
@@ -65,7 +79,7 @@ export const SCHEMAS = {
     saisis: {
       heure: T.heure, situation: T.texte, emotion: T.ref('emotion'), intensite: T.int(1, 10),
       declencheur: T.ref('declencheur'), dessous: T.ref('dessous'), reaction: T.ref('reaction'), ceQuiAAide: T.texte,
-      apresCoup: T.objet(APRES_COUP, ['jour']),
+      apresCoup: T.objet(APRES_COUP, ['jour']), ceQueJeRetiens: T.texte,
     },
   },
   symptomes: {
@@ -112,7 +126,7 @@ export const SCHEMAS = {
 export const STORES_SAISIE = Object.keys(SCHEMAS);
 export const CHAMPS_TECHNIQUES = ['createdAt', 'updatedAt'];
 
-// Maxima appliqués aux seuls imports de fichiers étrangers, jamais aux saisies ni aux sauvegardes de Carnet.
+// Maxima appliqués aux seuls imports de fichiers étrangers, jamais aux saisies ni aux sauvegardes d'Emozio.
 const SANS_PLAFOND = new Set(['app', 'sauvegarde']);
 const MAX_IMPORT = { texte: 20000, heureBrute: 20 };
 
@@ -162,6 +176,9 @@ function normaliserChamp(nom, def, v, ctx, erreurs, avertissements) {
       erreurs.push(`${nom} : vrai ou vide attendu`); return null;
     case 'int':
       if (!Number.isInteger(v) || v < def.min || v > def.max) { erreurs.push(`${nom} : entier de ${def.min} à ${def.max} attendu`); return null; }
+      return v;
+    case 'demiHeures':
+      if (!estDemiHeure(v, def.min, def.max)) { erreurs.push(`${nom} : de ${def.min} à ${def.max} par demi-heure attendu`); return null; }
       return v;
     case 'ref':
       if (typeof v !== 'string' || listeDe(v) !== def.liste) { erreurs.push(`${nom} : référence invalide`); return null; }
@@ -278,6 +295,11 @@ export function estVide(store, valeur) {
   const contexte = CONTEXTE[store] || [];
   return Object.keys(SCHEMAS[store].saisis).every((k) => contexte.includes(k) || valeur[k] === null || valeur[k] === undefined);
 }
+
+// L'Export PSY et la vue soignants (v11, spec §6) : une journée qui n'a que des gratitudes n'y existe pas, ni sa ligne, ni
+// sa date, ni son « 0 explosion » (elle compterait comme notée le soir). Les autres journées restent telles quelles : les
+// gratitudes n'y sont jamais lues.
+export const sansGratitudesSeules = (journal) => journal.filter((j) => j.gratitudes == null || !estVide('journal', { ...j, gratitudes: null }));
 
 export function referencesDe(store, valeur) {
   return Object.entries(SCHEMAS[store].saisis).flatMap(([nom, def]) => refsDuChamp(def, valeur[nom]));

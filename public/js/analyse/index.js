@@ -27,6 +27,15 @@ function emotionsDe(releves, perso) {
   };
 }
 
+// Ma semaine : les 2 textes les plus récents d'un champ du soir depuis `du` (les points positifs, v11 les gratitudes), chacun
+// avec son jour et coupé à 120 signes. Jamais leur nombre.
+const DERNIERS_TEXTES = 2;
+const MAX_TEXTE_SEMAINE = 120;
+function derniersTextes(journal, champ, du) {
+  return journal.filter((j) => j.date >= du && j[champ]).sort((a, b) => b.date.localeCompare(a.date)).slice(0, DERNIERS_TEXTES)
+    .map((j) => ({ date: j.date, texte: j[champ].length > MAX_TEXTE_SEMAINE ? `${j[champ].slice(0, MAX_TEXTE_SEMAINE - 1)}…` : j[champ] }));
+}
+
 export function analyze(data, ctx) {
   const { aujourdhui, items, zeroDepuis = null } = ctx;
   // Humeur du jour (v6, humeur-jour.js), avant tout le reste : dans chaque journal, `humeur` est la
@@ -68,15 +77,15 @@ export function analyze(data, ctx) {
     emotions[f] = emotionsDe(releves.filter((r) => r.date >= du && r.date <= au), data.perso);
   }
   // Ma semaine : les 7 derniers jours, quelle que soit la période choisie. Les émotions par famille, et les 2 points
-  // positifs les plus récents (dans un repli fermé).
+  // positifs les plus récents, comme les 2 gratitudes (v11), chacun dans un repli fermé.
   const debut7 = addDays(aujourdhui, -6);
-  const positifs = journal.filter((j) => j.date >= debut7 && j.pointsPositifs).sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 2).map((j) => ({ date: j.date, texte: j.pointsPositifs.length > 120 ? `${j.pointsPositifs.slice(0, 119)}…` : j.pointsPositifs }));
+  const positifs = derniersTextes(journal, 'pointsPositifs', debut7);
+  const gratitudes = derniersTextes(journal, 'gratitudes', debut7);
   // Tes zones (v9, spec §13.2) : les relevés de chaque zone par semaine, sur les 12 dernières semaines quelle que soit la
   // période choisie ; rien après aujourd'hui (jour logique, comme les périodes).
   const zonesSemaines = zonesParSemaine(releves, dernieresSemaines(aujourdhui), data.perso);
   return {
     aujourdhui, premier, fenetres, classements: classes, moments, tesMoments: lesMoments, frise: frises, reperesTraitement: reperes, emotions, zonesSemaines,
-    semaine: { du: debut7, au: aujourdhui, positifs, emotions: parFamille(releves.filter((r) => r.date >= debut7)) },
+    semaine: { du: debut7, au: aujourdhui, positifs, gratitudes, emotions: parFamille(releves.filter((r) => r.date >= debut7)) },
   };
 }

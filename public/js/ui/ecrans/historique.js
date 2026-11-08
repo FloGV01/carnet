@@ -5,6 +5,7 @@
 // Les anciennes notes de 1 à 10 restent : l'humeur d'un jour (puce et filtre) est l'humeur du jour (v6), et le
 // filtre « Humeur (notes) », nommé comme la rangée de Mes jours (v8), n'est proposé que si une note existe.
 // L'Historique a quitté la barre d'onglets (v7) : il s'ouvre par sa porte en haut de l'Analyse, et « Retour » y ramène.
+// v11 : la porte « Épisodes », à côté, l'ouvre forcé sur ce segment (allerAuxEpisodes). Aucune liste nouvelle.
 import { html, useState, useRef, useEffect, useLayoutEffect } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { Segmente } from '../composants/segmente.js';
@@ -49,6 +50,16 @@ function depart() {
 }
 // « Tout effacer » et une sauvegarde importée : rien de ce qui a été cherché ou filtré ne reste en mémoire.
 export function reinitialiserHistorique() { memoire = null; }
+
+// La porte « Épisodes » de l'Analyse (v11, spec §7) : l'Historique s'ouvre sur ce segment, quel que soit le dernier retenu.
+// Elle part de l'état de départ, car `memoire` vaut null à la première ouverture. Venue d'un autre segment, elle remet les
+// filtres et la position à zéro (changer de segment, lui, ne remet que les filtres) ; déjà sur « Épisodes », elle les garde.
+// Le retour d'un épisode ne passe pas par elle : la mémoire y garde filtres et position.
+export function allerAuxEpisodes() {
+  const etat = depart();
+  memoire = etat.segment === 'episodes' ? etat : { ...etat, segment: 'episodes', f: {}, position: 0 };
+  ecrireLocal(CLE_SEGMENT, 'episodes');
+}
 
 function Extrait({ ex }) {
   if (!ex) return null;
@@ -144,7 +155,8 @@ export function Historique() {
             const t = [libelle(carte, e.emotion), e.intensite].filter((x) => x != null).join(' ');
             if (t) note.push(t);
           }
-          if (j.pointsPositifs) note.push(`« ${debutTexte(j.pointsPositifs, 34)} »`);
+          // Les points positifs, puis les gratitudes (v11), chacun en début de texte.
+          for (const t of [j.pointsPositifs, j.gratitudes]) if (t) note.push(`« ${debutTexte(t, 34)} »`);
           return html`<li><a class="ligne-carte ligne-hist" href=${versHash('historique-jour', { date: j.date })}>
             <span class="hist-corps">
               <span class="hist-date">${formaterJour(j.date)}${avecMemo.has(`journal:${j.date}`) && html`<${IconeMemo} />`}</span>

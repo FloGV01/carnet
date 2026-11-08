@@ -36,7 +36,7 @@ const onglet = (page, nom) => page.getByRole('navigation', { name: 'Navigation p
 // v7 : par la porte « Historique », en haut de l'Analyse.
 const ouvrirHistorique = async (page) => {
   await onglet(page, 'Analyse').click();
-  await page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();
 };
 const positionY = (page) => page.evaluate(() => window.scrollY);

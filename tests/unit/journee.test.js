@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CHAMPS_JOURNEE, JOURNEE_DEFAUT, normaliserJournee, champsVisibles, champsAffiches, repliAffiche, repliNuitAffiche, nuitRenseignee, MASQUE_NUIT,
+  changerPremiereLigne, NOMS_CHAMPS, champRenseigne, deplacerChamp,
 } from '../../public/js/domain/journee.js';
-import { texteHeuresSommeil } from '../../public/js/domain/champs.js';
+import { texteHeuresSommeil, VALEURS_HEURES_SOMMEIL } from '../../public/js/domain/champs.js';
 
 test('le masque peseRecharge survit à normaliserJournee, hors de l\'ordre des champs', () => {
   const j = normaliserJournee({ ordre: ['humeur', 'lieu'], masques: ['explosions', 'peseRecharge'], heuresMoment: [] });
@@ -107,5 +108,98 @@ test('v8 : la durée de la nuit tient la carte Sommeil affichée, même masquée
 
 test('v8 : les libellés de la durée, de « 4 h ou moins » à « 10 h ou plus », rien hors bornes', () => {
   assert.deepEqual([4, 5, 6, 7, 8, 9, 10].map(texteHeuresSommeil), ['4 h ou moins', '5 h', '6 h', '7 h', '8 h', '9 h', '10 h ou plus']);
-  for (const h of [3, 11, 6.5, '6', null, undefined]) assert.equal(texteHeuresSommeil(h), null, String(h));
+  for (const h of [3, 11, 6.25, '6', null, undefined]) assert.equal(texteHeuresSommeil(h), null, String(h));
+});
+
+test('v11 : les demi-heures disent « 7 h 30 », jamais « 7,5 » ; rien hors de la liste', () => {
+  assert.deepEqual([4, 4.5, 5, 7.5, 9.5, 10].map(texteHeuresSommeil), ['4 h ou moins', '4 h 30', '5 h', '7 h 30', '9 h 30', '10 h ou plus']);
+  for (const h of VALEURS_HEURES_SOMMEIL) assert.doesNotMatch(texteHeuresSommeil(h), /[,.]/, String(h));
+  for (const h of [3.5, 10.5, 7.25, '7.5', true, NaN, Infinity]) assert.equal(texteHeuresSommeil(h), null, String(h));
+});
+
+// v11 (3/11, spec §5.4) : la roue d'une carte Sport ou Contact écrit la durée ou l'effet de la première ligne seulement.
+test('v11 : changerPremiereLigne change la première ligne seule, sans toucher à l\'entrée reçue', () => {
+  const marche = { type: 'typeSport:marche', duree: null };
+  const lignes = [marche];
+  assert.deepEqual(changerPremiereLigne(lignes, 'duree', 'dureeSport:de_30_a_60'), [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }]);
+  assert.deepEqual(lignes, [{ type: 'typeSport:marche', duree: null }], 'pur : l\'entrée reste telle quelle');
+  // Deux lignes : la seconde intacte, la même.
+  const velo = { type: 'typeSport:velo', duree: 'dureeSport:moins_15' };
+  const deux = changerPremiereLigne([marche, velo], 'duree', 'dureeSport:plus_60');
+  assert.deepEqual(deux, [{ type: 'typeSport:marche', duree: 'dureeSport:plus_60' }, velo]);
+  assert.equal(deux[1], velo);
+  // Un contact : l'effet, « avec qui » gardé.
+  assert.deepEqual(changerPremiereLigne([{ avec: ['contactAvec:amis'], effet: 'contactEffet:neutre' }], 'effet', 'contactEffet:couteux'),
+    [{ avec: ['contactAvec:amis'], effet: 'contactEffet:couteux' }]);
+});
+
+test('v11 : changerPremiereLigne sur rien de noté crée la première ligne ; effacer la seule valeur d\'une ligne la retire, et plus aucune ligne donne null', () => {
+  for (const vide of [null, undefined, []]) {
+    assert.deepEqual(changerPremiereLigne(vide, 'duree', 'dureeSport:de_15_a_30'), [{ duree: 'dureeSport:de_15_a_30' }], String(vide));
+    assert.equal(changerPremiereLigne(vide, 'effet', null), null, String(vide));
+  }
+  // Une ligne vidée sort ; la suivante devient la première.
+  assert.equal(changerPremiereLigne([{ type: null, duree: 'dureeSport:moins_15' }], 'duree', null), null);
+  const velo = { type: 'typeSport:velo', duree: null };
+  assert.deepEqual(changerPremiereLigne([{ type: null, duree: 'dureeSport:moins_15' }, velo], 'duree', null), [velo]);
+  // Effacer la durée garde le type : la ligne reste.
+  assert.deepEqual(changerPremiereLigne([{ type: 'typeSport:marche', duree: 'dureeSport:moins_15' }], 'duree', null), [{ type: 'typeSport:marche', duree: null }]);
+  // « avec qui » vide compte comme vide, comme en base.
+  assert.equal(changerPremiereLigne([{ avec: [], effet: 'contactEffet:neutre' }], 'effet', null), null);
+  assert.equal(changerPremiereLigne([{ avec: null, effet: 'contactEffet:neutre' }], 'effet', null), null);
+  assert.deepEqual(changerPremiereLigne([{ avec: ['contactAvec:famille'], effet: 'contactEffet:neutre' }], 'effet', null), [{ avec: ['contactAvec:famille'], effet: null }]);
+});
+
+// ---------- v11 : Mes gratitudes, juste après les points positifs (spec §6) ----------
+
+test('v11 : « Mes gratitudes » est un champ du soir, le dernier par défaut, affiché, et porte le seul champ gratitudes', () => {
+  assert.equal(CHAMPS_JOURNEE.at(-1), 'gratitudes');
+  assert.equal(NOMS_CHAMPS.gratitudes, 'Mes gratitudes');
+  assert.deepEqual(JOURNEE_DEFAUT.masques, ['explosions', 'humeur', 'nuit'], 'affichée par défaut');
+  const defaut = normaliserJournee(null);
+  assert.deepEqual(defaut.ordre.slice(-2), ['positifs', 'gratitudes']);
+  assert.ok(champsVisibles(defaut).includes('gratitudes'));
+  assert.equal(champRenseigne('gratitudes', { gratitudes: 'merci au collègue' }), true);
+  assert.equal(champRenseigne('gratitudes', { gratitudes: null, pointsPositifs: 'une marche' }), false);
+  assert.equal(champRenseigne('positifs', { gratitudes: 'merci au collègue' }), false, 'les points positifs ne la portent pas');
+});
+
+test('v11 : un ordre réglé sans les gratitudes les reçoit juste après les points positifs, où qu\'ils soient', () => {
+  // L'ordre par défaut de la v10, enregistré par une app déjà installée.
+  const v10 = ['lieu', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement', 'positifs'];
+  assert.deepEqual(normaliserJournee({ ordre: v10, masques: [] }).ordre, [...v10, 'gratitudes']);
+  // Les points positifs montés en 2ᵉ : les gratitudes en 3ᵉ, pas à la fin.
+  const monte = normaliserJournee({ ordre: ['lieu', 'positifs', 'sommeil', 'humeur', 'contact', 'sport', 'explosions', 'traitement'], masques: [] });
+  assert.equal(monte.ordre.indexOf('gratitudes'), 2);
+  assert.deepEqual(monte.ordre.slice(0, 4), ['lieu', 'positifs', 'gratitudes', 'sommeil']);
+  // En tête aussi.
+  assert.deepEqual(normaliserJournee({ ordre: ['positifs', 'lieu'] }).ordre.slice(0, 3), ['positifs', 'gratitudes', 'lieu']);
+  // Un ordre incomplet sans points positifs : ils arrivent en fin d'ordre, les gratitudes juste après.
+  assert.deepEqual(normaliserJournee({ ordre: ['humeur', 'lieu'] }).ordre.slice(-2), ['positifs', 'gratitudes']);
+  for (const o of [v10, ['positifs', 'lieu'], ['humeur', 'lieu'], []]) {
+    assert.deepEqual([...normaliserJournee({ ordre: o }).ordre].sort(), [...CHAMPS_JOURNEE].sort(), String(o));
+  }
+});
+
+test('v11 : déplacées, les gratitudes gardent leur place à la relecture ; deplacerChamp les déplace', () => {
+  const depart = normaliserJournee(null);
+  const montee = deplacerChamp(depart, 'gratitudes', -1);
+  assert.deepEqual(montee.ordre.slice(-2), ['gratitudes', 'positifs']);
+  assert.deepEqual(normaliserJournee(montee).ordre, montee.ordre, 'relue, elle reste avant les points positifs');
+  let haut = depart;
+  for (let i = 0; i < CHAMPS_JOURNEE.length; i++) haut = deplacerChamp(haut, 'gratitudes', -1);
+  assert.equal(haut.ordre[0], 'gratitudes');
+  assert.deepEqual(normaliserJournee(haut).ordre, haut.ordre);
+  assert.deepEqual(deplacerChamp(depart, 'gratitudes', 1), depart, 'la dernière ne descend pas plus bas');
+});
+
+test('v11 : les points positifs masqués, les gratitudes restent visibles ; masquées, elles restent affichées un jour qui en a', () => {
+  const sansPositifs = normaliserJournee({ masques: ['explosions', 'humeur', 'nuit', 'positifs'] });
+  assert.ok(!champsVisibles(sansPositifs).includes('positifs'));
+  assert.ok(champsVisibles(sansPositifs).includes('gratitudes'));
+  assert.ok(champsAffiches(sansPositifs, {}).includes('gratitudes'));
+  const masquees = normaliserJournee({ masques: ['gratitudes'] });
+  assert.deepEqual(masquees.masques, ['gratitudes']);
+  assert.ok(!champsAffiches(masquees, { pointsPositifs: 'une marche' }).includes('gratitudes'));
+  assert.ok(champsAffiches(masquees, { gratitudes: 'merci à la voisine' }).includes('gratitudes'));
 });

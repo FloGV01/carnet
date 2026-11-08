@@ -1,9 +1,9 @@
 {
   "name": "suivi-audhd",
-  "version": "10.0.0",
+  "version": "11.0.0",
   "private": true,
   "type": "module",
-  "description": "Carnet : PWA personnelle de suivi quotidien, 100 % locale.",
+  "description": "Emozio : PWA personnelle de suivi quotidien, 100 % locale.",
   "scripts": {
     "serve": "node scripts/serve.mjs",
     "precache": "node scripts/precache.mjs",

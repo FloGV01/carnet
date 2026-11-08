@@ -1,4 +1,4 @@
-// Sauvegardes témoins aux formats 1 à 6 (tests/fixtures/temoins/), écrites par le code même des
+// Sauvegardes témoins aux formats 1 à 7 (tests/fixtures/temoins/), écrites par le code même des
 // versions publiées. Chaque tag est extrait avec git worktree dans un dossier temporaire hors du
 // dépôt, retiré à la fin même en cas d'erreur. Sa base (fake-indexeddb) est remplie de données
 // inventées par son creerRepository, puis exportée par son construireSauvegarde.
@@ -21,6 +21,7 @@ const VERSIONS = [
   { tag: 'v6.1.0', format: 4, json: 'format-4.json', exporteLe: '2026-10-19T19:30:00.000Z' },
   { tag: 'v7.0.0', format: 5, json: 'format-5.json', exporteLe: '2026-10-23T19:30:00.000Z' },
   { tag: 'v8.0.0', format: 6, json: 'format-6.json', exporteLe: '2026-10-26T19:30:00.000Z' },
+  { tag: 'v10.0.0', format: 7, json: 'format-7.json', exporteLe: '2026-11-04T19:30:00.000Z' },
 ];
 const dec = new TextDecoder();
 
@@ -123,6 +124,19 @@ export function controlerTemoin(octets) {
     exiger((d.humeurs || []).some((h) => h.emotion === null && h.humeur === null && typeof h.energie === 'string'), 'un relevé à énergie seule');
     exiger((d.humeurs || []).some((h) => h.emotion === 'roue:peur:accable'), 'un relevé Accablé');
   }
+  // Format 7 (v9 et v10) : un mot à soi et un relevé qui le cite, un mot sans famille, une séance du minuteur, des
+  // exercices épinglés et la voix des consignes.
+  if (f >= 7) {
+    const meta = (cle) => ((d.meta || []).find((m) => m.cle === cle) || {}).valeur;
+    const perso = meta('motsPerso');
+    const mots = perso && typeof perso === 'object' ? Object.keys(perso).filter((id) => id.startsWith('roue:perso:u-')) : [];
+    exiger(mots.length > 0, 'un mot à soi (méta motsPerso)');
+    exiger((d.humeurs || []).some((h) => mots.includes(h.emotion)), 'un relevé qui cite un mot à soi');
+    exiger((d.humeurs || []).some((h) => typeof h.emotion === 'string' && h.emotion.startsWith('roue:aucune:')), 'un relevé avec un mot sans famille');
+    exiger((d.seances || []).some((x) => x.exercice === 'minuteur'), 'une séance du minuteur');
+    exiger(Array.isArray(meta('favorisBienEtre')) && meta('favorisBienEtre').length > 0, 'des exercices épinglés (favorisBienEtre)');
+    exiger((meta('respiration') || {}).voix === true, 'la voix des consignes (respiration.voix)');
+  }
   if (zip) {
     const noms = new Set(entrees.map((e) => e.nom));
     const audios = d.audios || [];
@@ -147,6 +161,9 @@ function aleaFixe(graine) {
   };
 }
 
+// Un mot à soi (v9), d'identifiant fixe : la carte le tire au hasard (domain/mots-perso.js).
+const MOT_A_SOI = 'roue:perso:u-5e1f0a2b';
+
 // Données 100 % inventées, saisies comme dans l'app. format : ce que la version sait enregistrer.
 async function remplir(repo, horloge, format) {
   const a = (iso) => { horloge.t = new Date(iso); };
@@ -158,6 +175,9 @@ async function remplir(repo, horloge, format) {
   // Ce que la v8 ajoute (format 6) : durée de la nuit, séance « Faite » du Programme, définitions corrigées, relevé à
   // énergie seule et « Nuit en détail » masqué.
   const v8 = format >= 6;
+  // Ce que les v9 et v10 ajoutent (format 7) : un mot à soi et un relevé qui le cite, un mot sans famille, une séance du
+  // minuteur, des exercices épinglés et la voix des consignes.
+  const v10 = format >= 7;
 
   // Listes : un lieu renommé (l'ancien libellé reste en alias), un lieu créé par l'utilisateur,
   // un symptôme créé puis disparu de la base (son id devient inconnu).
@@ -277,6 +297,19 @@ async function remplir(repo, horloge, format) {
     a('2026-09-29T18:10:00.000Z');
     await repo.seances.creer({ date: '2026-09-29', heure: '20:00', exercice: 'respiration-abdominale', dureeS: 300, origine: 'bien-etre', fin: true, programme: 'respiration-abdominale' });
   }
+  // v9 et v10 : le mot à soi est écrit avant le relevé qui le cite (le repository le vérifie, comme la carte).
+  if (v10) {
+    a('2026-09-29T18:20:00.000Z');
+    await repo.meta.ecrire('motsPerso', {
+      [MOT_A_SOI]: { libelle: 'Tiraillé', zone: 'bleu', famille: 'tristesse', definition: 'Partagé entre deux envies.', archive: false, createdAt: '2026-09-29T18:20:00.000Z' },
+    });
+    a('2026-09-29T18:25:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '20:20', emotion: MOT_A_SOI, energie: 'energie:basse' });
+    a('2026-09-29T18:40:00.000Z');
+    await repo.seances.creer({ date: '2026-09-29', heure: '20:30', exercice: 'minuteur', dureeS: 600, origine: 'bien-etre' });
+    a('2026-09-29T19:00:00.000Z');
+    await repo.humeurs.creer({ date: '2026-09-29', heure: '20:55', emotion: 'roue:aucune:fatigue', energie: 'energie:basse', faisais: ['activiteMoment:travail'] });
+  }
   a('2026-09-29T19:50:00.000Z');
   await repo.journal.patch('2026-09-29', { lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien', ...(v8 ? { heuresSommeil: 7 } : {}) });
   await repo.listes.archiver('lieu:clinique');
@@ -302,11 +335,12 @@ async function remplir(repo, horloge, format) {
     });
   }
   if (v6) {
-    await repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: true });
+    await repo.meta.ecrire('respiration', { duree: 2, rythme: '4-6', son: true, ...(v10 ? { voix: true } : {}) });
     await repo.meta.ecrire('uneChoseALaFois', { rubriques: ['quandCaMonte', 'pourRecuperer'], siAlors: true });
     await repo.meta.ecrire('ressourcer', { energieBasse: true });
   }
   if (v8) await repo.meta.ecrire('definitionsRoue', { 'roue:joie:curieux': 'Envie d\'en savoir plus sur ce qui arrive.' });
+  if (v10) await repo.meta.ecrire('favorisBienEtre', ['soupir', 'minuteur']);
   // v7 : une séance après minuit, qui compte pour la veille.
   if (v7) {
     a('2026-09-29T23:35:00.000Z');

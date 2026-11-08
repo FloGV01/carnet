@@ -181,11 +181,15 @@ test('pas de section : un relevé rouvert, même après « Changer le mot » ; �
   }
 });
 
+// v11 (8/11) : l'écran suit le thème (spec §9). Sur le noir en sombre, comme avant ; sur le gris clair en clair, avec le texte et
+// le contour du thème : les mêmes couleurs pour toutes les zones, dans chaque thème.
 test('discret, dans les deux thèmes et pour toutes les zones : du texte et un contour, aucun fond, aucune couleur de zone ; contrastes AA ; des cibles de 44', async ({ page }) => {
   test.setTimeout(60000);
-  const vus = new Set();
+  const vus = { light: new Set(), dark: new Set() };
+  const FONDS = { light: '#e7eaee', dark: '#000000' };
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
+    const fondEcran = FONDS[colorScheme];
     for (const [zone, libelle, [premier]] of [TABLE[0], TABLE[3]]) {
       const vue = await ecran3(page, zone, libelle);
       const style = await exercice(vue, premier).evaluate((e) => {
@@ -194,18 +198,19 @@ test('discret, dans les deux thèmes et pour toutes les zones : du texte et un c
       });
       expect(style.fond, libelle).toBe('rgba(0, 0, 0, 0)');
       expect(style.trait).toBe('1px');
-      expect(contraste(style.texte, '#000000')).toBeGreaterThanOrEqual(4.5);
-      expect(contraste(style.contour, '#000000')).toBeGreaterThanOrEqual(3);
+      expect(await page.locator('.moment-plein').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(colorScheme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(231, 234, 238)');
+      expect(contraste(style.texte, fondEcran)).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(style.contour, fondEcran)).toBeGreaterThanOrEqual(3);
       expect(style.hauteur).toBeGreaterThanOrEqual(44);
       const titre = await section(vue).getByRole('heading', { level: 2 }).evaluate((e) => getComputedStyle(e).color);
-      expect(contraste(titre, '#000000')).toBeGreaterThanOrEqual(4.5);
-      vus.add(JSON.stringify([style.texte, style.contour, titre]));
+      expect(contraste(titre, fondEcran)).toBeGreaterThanOrEqual(4.5);
+      vus[colorScheme].add(JSON.stringify([style.texte, style.contour, titre]));
       await terminer(vue).click();
       await expect(page).toHaveURL(/#\/aujourdhui$/);
     }
   }
-  // Les mêmes couleurs partout.
-  expect(vus.size).toBe(1);
+  // Les mêmes couleurs partout, dans chaque thème.
+  expect([vus.light.size, vus.dark.size]).toEqual([1, 1]);
   await page.emulateMedia({ colorScheme: 'light' });
 });
 

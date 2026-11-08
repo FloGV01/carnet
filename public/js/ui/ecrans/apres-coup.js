@@ -149,8 +149,9 @@ export function ApresCoup({ id }) {
       if (b.type === 'declencheur') return libelle(carte, v);
       return String(v);
     }).filter(Boolean).join(' · ');
+    // Le récapitulatif se relit (v11, spec §11) : le doigt vers la droite y fait comme « Fermer », jamais aux étapes.
     return html`<${CadreParcours} titre="Après coup" teinte="ep" etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
-      pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+      relecture=${true} pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
         <h2 class="titre-question">Récapitulatif</h2>
         <ul class="liste recap">${etapes.flatMap((et, i) => et.recap.map(([nom, ...champs]) => {

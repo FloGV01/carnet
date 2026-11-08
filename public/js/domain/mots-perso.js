@@ -152,7 +152,7 @@ export function effacerMot(perso, id, estUtilise) {
 }
 
 // Import (relecture finale) : la méta `motsPerso` d'un fichier, telle que l'app l'aurait écrite. Un fichier qui ne vient
-// pas de Carnet peut tout y mettre ; creerMot, modifierMot et remettreSurLaCarte l'empêchent dans l'app. Sont gardées
+// pas d'Emozio peut tout y mettre ; creerMot, modifierMot et remettreSurLaCarte l'empêchent dans l'app. Sont gardées
 // les entrées dont l'id est celui d'un mot à soi et le libellé un texte non vide (NFC, sans espaces autour, coupé à
 // LIBELLE_MAX comme au clavier) ; une famille inconnue ou une définition qui n'est pas un texte deviennent null. Une
 // zone hors de la carte devient null et met le mot de côté (contre-relecture), comme un mot recréé (recreerSiAbsent) :
@@ -197,7 +197,7 @@ export function recreerSiAbsent(perso, id, horodatageFichier) {
 // ---------- la loupe (v9, spec §4.4) ----------
 
 // Le début d'une définition, dans la liste des résultats : coupé à un espace, avec « … », au-delà de EXTRAIT_MAX signes
-// (les textes de Carnet tiennent en entier ; une longue définition d'un mot à soi est coupée).
+// (les textes d'Emozio tiennent en entier ; une longue définition d'un mot à soi est coupée).
 export const EXTRAIT_MAX = 90;
 function debut(texte) {
   if (!texte || texte.length <= EXTRAIT_MAX) return texte || null;
@@ -211,7 +211,7 @@ function debut(texte) {
 // [{ id, libelle, zone, extrait }] : d'abord les mots dont le nom, ou un de ses mots, commence par le texte ; puis ceux
 // dont le nom le contient ; puis ceux qui le contiennent dans leur définition ; chaque groupe dans l'ordre alphabétique.
 // La définition est celle que la carte du bas affiche (la correction de l'utilisateur, sinon celle du mot à soi, sinon
-// le texte de Carnet) ; `extrait` en est le début, null sans définition. Un texte vide ne trouve rien.
+// le texte d'Emozio) ; `extrait` en est le début, null sans définition. Un texte vide ne trouve rien.
 export function chercher(perso, texte, corrections) {
   const cible = normLabel(texte);
   if (!cible) return [];

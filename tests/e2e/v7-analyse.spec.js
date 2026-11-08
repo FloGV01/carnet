@@ -142,7 +142,7 @@ test('la porte « Historique › » en haut de l\'Analyse ouvre l\'Historique ; 
     }
   });
   await aller(page, '#/analyse');
-  const porte = page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true });
+  const porte = page.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Historique', exact: true });
   const [p, comprendre] = await Promise.all([porte.boundingBox(), page.getByRole('group', { name: 'Comprendre', exact: true }).boundingBox()]);
   expect(p.y + p.height).toBeLessThanOrEqual(comprendre.y);
   expect(p.height).toBeGreaterThanOrEqual(44);

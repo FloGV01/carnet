@@ -422,7 +422,7 @@ test('v8 : la durée de la nuit se note, s\'efface d\'un second toucher, et ne t
   assert.equal((await repo.journal.patch('2026-09-30', { sommeilRessenti: 'sommeil:mal' })).heuresSommeil, 4, 'la qualité et la durée se notent à part');
   assert.equal((await repo.journal.patch('2026-09-30', { heuresSommeil: 10 })).heuresSommeil, 10, '« 10 h ou plus »');
   await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 11 }), ErreurValidation);
-  await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 7.5 }), ErreurValidation);
+  await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 7.25 }), ErreurValidation);
   assert.equal((await repo.journal.lire('2026-09-30')).heuresSommeil, 10, 'rien n\'est écrit');
   const efface = await repo.journal.patch('2026-09-30', { heuresSommeil: null });
   assert.equal(efface.heuresSommeil, null);
@@ -469,4 +469,24 @@ test('v8 : les sujets d\'un rendez-vous se règlent comme une liste (ajouter, re
   const apres = await repo.listes.items('sujetRdv');
   assert.deepEqual(apres.filter((i) => !i.archive).map((i) => i.libelle), ['Démarches', 'Sommeil', 'Traitement', 'Fatigue', 'Travail et trajets', 'Émotions', 'Autre chose']);
   assert.ok(apres.find((i) => i.id === 'sujetRdv:explosions').archive);
+});
+
+// ---- v11 ----
+
+test('v11 : une nuit à la demi-heure, des gratitudes seules et « Ce que j\'en retiens » s\'écrivent ; l\'Après coup n\'en est pas touché', async () => {
+  const { repo } = nouveauRepo();
+  assert.equal((await repo.journal.patch('2026-09-30', { heuresSommeil: 7.5 })).heuresSommeil, 7.5);
+  assert.equal((await repo.journal.patch('2026-09-30', { heuresSommeil: 4.5 })).heuresSommeil, 4.5);
+  await assert.rejects(repo.journal.patch('2026-09-30', { heuresSommeil: 10.5 }), ErreurValidation);
+  assert.equal((await repo.journal.lire('2026-09-30')).heuresSommeil, 4.5, 'rien n\'est écrit');
+  // Une journée qui n'a que des gratitudes est gardée ; vidée, elle part.
+  const merci = await repo.journal.patch('2026-10-01', { gratitudes: 'Merci à la voisine pour le pain.' });
+  assert.equal(merci.gratitudes, 'Merci à la voisine pour le pain.');
+  assert.equal(await repo.journal.patch('2026-10-01', { gratitudes: '  ' }), null);
+  // « Ce que j'en retiens » s'écrit à part de l'Après coup : son jour ne bouge pas (spec v11 §7).
+  const ep = await repo.episodes.creer({ date: '2026-09-20', heure: '18:00', situation: 'Réunion déplacée', apresCoup: { jour: '2026-09-21', pensees: 'Encore un changement' } });
+  const retenu = await repo.episodes.modifier(ep.id, { ceQueJeRetiens: 'Demander l\'ordre du jour la veille.' });
+  assert.equal(retenu.ceQueJeRetiens, 'Demander l\'ordre du jour la veille.');
+  assert.deepEqual(retenu.apresCoup, ep.apresCoup);
+  assert.equal(retenu.apresCoup.jour, '2026-09-21');
 });

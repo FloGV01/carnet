@@ -1,7 +1,7 @@
 // Sauvegarde et restauration. Export : une photographie cohérente (une seule transaction),
 // en .json s'il n'y a aucun mémo, sinon en .zip (sauvegarde.json + audios/<id>.m4a),
 // découpé en parties au-delà de 150 Mo. Import : remplacement uniquement, jamais de fusion,
-// précédé d'une copie de secours et appliqué en une seule transaction.
+// précédé d'une copie de secours (sauf sur une base vide, v11) et appliqué en une seule transaction.
 import { req } from './idb.js';
 import { DB_VERSION, MAX_SNAPSHOTS } from './migrations.js';
 import { DataError } from './erreurs.js';
@@ -12,9 +12,10 @@ import { estListe, listeDe } from '../domain/listes-def.js';
 import { SANS_LIBELLE } from '../domain/libelles.js';
 import { versContacts } from '../domain/contacts.js';
 import { normaliserPerso, recreerSiAbsent } from '../domain/mots-perso.js';
+import { normaliserRefuges, refugesVides } from '../domain/refuges.js';
 
 export const FORMAT = 'carnet-sauvegarde';
-export const FORMAT_VERSION = 7;
+export const FORMAT_VERSION = 8;
 export const SEUIL_PARTIE_OCTETS = 150 * 1024 * 1024;
 export const STORES_DONNEES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'meta', 'audios'];
 // Clés techniques : jamais exportées, jamais remplacées par un import ni par « Revenir ».
@@ -52,7 +53,7 @@ function extension(mime) {
 }
 
 export function nomFichier(date, { partie, total, zip }) {
-  const base = `carnet-sauvegarde-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+  const base = `emozio-sauvegarde-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
   return `${base}${total > 1 ? `-partie-${partie}-sur-${total}` : ''}.${zip ? 'zip' : 'json'}`;
 }
 
@@ -110,8 +111,8 @@ export async function exporter(repo, { versionApp }) {
 
 const MESSAGES = {
   ILLISIBLE: 'Ce fichier est illisible.',
-  FORMAT: 'Ce fichier ne ressemble pas à une sauvegarde de Carnet.',
-  FUTUR: 'Ce fichier vient d\'une version plus récente de Carnet.',
+  FORMAT: 'Ce fichier ne ressemble pas à une sauvegarde d\'Emozio.',
+  FUTUR: 'Ce fichier vient d\'une version plus récente d\'Emozio.',
   TRONQUE: 'Ce fichier semble tronqué ou abîmé.',
 };
 
@@ -198,6 +199,12 @@ export const MISES_A_NIVEAU = {
   6(s) {
     return { ...s, formatVersion: 7 };
   },
+  // v7 -> v8 (v11) : rien à transformer. Le format 8 peut avoir des nuits à la demi-heure, des gratitudes, « Ce que j'en
+  // retiens » et la méta `refuges`, qu'une app v10 ne connaît pas : elle refuse ainsi proprement un fichier de la v11.
+  // Une sauvegarde 7 n'en a aucun : les champs nouveaux se lisent vides.
+  7(s) {
+    return { ...s, formatVersion: 8 };
+  },
 };
 export function mettreANiveauSauvegarde(s) {
   let courant = s;
@@ -275,9 +282,17 @@ export function analyserFichiers(fichiers) {
     audios.push({ ...meta, data: octets.slice().buffer });
   }
   const dates = valides.journal.map((j) => j.date).concat(valides.episodes.map((e) => e.date)).sort();
-  const metaImportee = metaPerso
+  const metaAvecPerso = metaPerso
     ? metaFichier.filter((m) => m.cle !== 'motsPerso' || m === metaPerso).map((m) => (m === metaPerso ? { ...m, valeur: perso } : m))
     : perso === persoFichier ? metaFichier : [...metaFichier, { cle: 'motsPerso', valeur: perso }];
+  // v11 : Mes refuges, remis de même dans la forme que l'app écrit (point de vigilance 4). Un fichier abîmé ou écrit à la
+  // main peut tout y mettre : un mauvais type, un lien d'un autre schéma ou d'un autre hôte, une playlist en trop sont
+  // ignorés, sans erreur. Des refuges vides ne sont pas gardés.
+  const metaRefuges = metaAvecPerso.find((m) => m.cle === 'refuges');
+  const refuges = metaRefuges && normaliserRefuges(metaRefuges.valeur);
+  const metaImportee = metaRefuges
+    ? metaAvecPerso.filter((m) => m.cle !== 'refuges' || (m === metaRefuges && !refugesVides(refuges))).map((m) => (m === metaRefuges ? { ...m, valeur: refuges } : m))
+    : metaAvecPerso;
   return {
     sauvegarde: s,
     valides: { ...valides, listes: [...listes, ...ajoutsListes], meta: metaImportee, audios },
@@ -312,14 +327,32 @@ async function prendreCopie(t, type, horodatage, donnees) {
 }
 
 const STORES_REMPLACES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'listes', 'audios'];
+const STORES_FICHES = ['journal', 'episodes', 'symptomes', 'traitements', 'rdv', 'humeurs', 'notes', 'seances', 'audios'];
 
-// Remplacement complet, en une seule transaction (copie de secours comprise).
+// Les listes par défaut telles que l'app les verse (migrations, « Tout effacer ») : libellé, place et état.
+const VERSEES = new Map([SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, SEED_V6_AJOUTS].flatMap((seed) => seedItems(seed, '')).map((it) => [it.id, it]));
+const listeTouchee = (it) => {
+  const d = VERSEES.get(it.id);
+  return it.origine !== 'defaut' || !d || it.libelle !== d.libelle || Boolean(it.archive) !== d.archive || it.ordre !== d.ordre;
+};
+
+// v11 : une base vide n'a rien à garder (spec §10) : l'import n'y prend pas de copie, et « Revenir à l'état d'avant
+// l'import » n'apparaît pas après le passage à une nouvelle icône. Vide : aucune fiche, aucune méta de l'utilisateur
+// (même vidée), et des listes telles que l'app les a versées : aucune créée par lui ou recréée par un import, aucune
+// liste par défaut renommée, rangée ou déplacée. Dans le doute, la copie est prise. Pur.
+export function estBaseVide(donnees) {
+  if (STORES_FICHES.some((s) => (donnees[s] || []).length)) return false;
+  if ((donnees.meta || []).some((m) => estMetaUtilisateur(m.cle))) return false;
+  return !(donnees.listes || []).some(listeTouchee);
+}
+
+// Remplacement complet, en une seule transaction (copie de secours comprise, sauf sur une base vide).
 export async function remplacer(repo, analyse, { panne } = {}) {
   const h = repo.maintenant().toISOString();
   const actuel = await lireTout(repo);
   const v = analyse.valides;
   await repo.tx([...STORES_DONNEES, 'snapshots'], 'readwrite', async (t) => {
-    await prendreCopie(t, 'avant-import', h, actuel);
+    if (!estBaseVide(actuel)) await prendreCopie(t, 'avant-import', h, actuel);
     for (const s of STORES_REMPLACES) t.objectStore(s).clear();
     const meta = t.objectStore('meta');
     remplacerMeta(meta, actuel.meta, v.meta);

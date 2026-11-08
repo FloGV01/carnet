@@ -66,8 +66,9 @@ export function duree(min) {
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
 }
 
-// La durée d'une nuit (v8, Mes nuits) : « 4 h ou moins », « 6 h », « 10 h ou plus » pour les heures notées le soir ;
-// « 7 h 30 » pour une nuit ancienne, comptée du coucher au lever (« 11 h » pour une heure ronde) ; null sans durée.
+// La durée d'une nuit (v8, Mes nuits) : « 4 h ou moins », « 6 h », « 7 h 30 » (v11), « 10 h ou plus » pour les heures
+// notées le soir ; « 7 h 40 » pour une nuit ancienne, comptée du coucher au lever (« 11 h » pour une heure ronde) ; null
+// sans durée.
 export const texteHeuresNuit = (h) => (h == null ? null : texteHeuresSommeil(h) || (Number.isInteger(h) ? `${h} h` : duree(h * 60)));
 // Une nuit de Mes nuits (analyse/comprendre.js) : « Mal · 6 h », « Bien », « 7 h 30 » ; la qualité d'abord, comme
 // l'Export PSY. `lib` : le libellé d'un identifiant.

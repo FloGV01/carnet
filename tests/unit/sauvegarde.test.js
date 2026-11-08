@@ -4,9 +4,9 @@ import { nouveauRepo } from '../aides/repo.js';
 import { concatener } from '../../public/js/db/zip.js';
 import {
   exporter, construireSauvegarde, analyserFichiers, remplacer, chiffrerPerte, lireTout,
-  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES, MISES_A_NIVEAU,
+  revenirAvantImport, copieAvantImport, toutEffacer, FORMAT_VERSION, metaRemplacee, STORES_DONNEES, MISES_A_NIVEAU, estBaseVide,
 } from '../../public/js/db/sauvegarde.js';
-import { SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
+import { SEED_V1, SEED_V4_AJOUTS, SEED_V6_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { phrasePerte, phraseMeta } from '../../public/js/ui/ecrans/sauvegarde.js';
 import { TEXTE_EFFACER } from '../../public/js/ui/ecrans/effacer.js';
 import {
@@ -40,7 +40,7 @@ test('aller-retour JSON sans mémo : identique à l\'original', async () => {
   const a = nouveauRepo();
   await remplir(a.repo);
   const [f] = await exporter(a.repo, { versionApp: '1.0.0' });
-  assert.match(f.nom, /^carnet-sauvegarde-2026-09-30-2100\.json$/);
+  assert.match(f.nom, /^emozio-sauvegarde-2026-09-30-2100\.json$/);
   const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
   assert.deepEqual(analyse.erreurs, []);
   assert.equal(analyse.resume.journees, 2);
@@ -597,7 +597,8 @@ test('v8 : un format 6 tronqué est refusé, une nuit ou une séance hors bornes
   assert.deepEqual(a.valides.journal.map((j) => j.heuresSommeil), [7]);
   assert.deepEqual(a.valides.seances.map((x) => x.id), ['se_1']);
   assert.equal(a.erreurs.length, 4);
-  assert.match(a.erreurs.join(' ; '), /journal n° 2 : heuresSommeil : entier de 4 à 10 attendu/);
+  assert.match(a.erreurs.join(' ; '), /journal n° 2 : heuresSommeil : de 4 à 10 par demi-heure attendu/);
+  assert.match(a.erreurs.join(' ; '), /journal n° 3 : heuresSommeil : de 4 à 10 par demi-heure attendu/);
   assert.match(a.erreurs.join(' ; '), /seances n° 2 : fin : vrai ou vide attendu/);
   assert.match(a.erreurs.join(' ; '), /seances n° 3 : programme : texte attendu/);
 });
@@ -696,9 +697,7 @@ const FLOTTANT = 'roue:perso:u-0a1b2c3d';
 const DEBORDE = 'roue:perso:u-11111111';
 const motsPersoDe = (meta) => (meta.find((m) => m.cle === 'motsPerso') || {}).valeur;
 
-test('v9 : le format 8 est refusé, un format 7 tronqué aussi, une sauvegarde au format 6 passe au format 7 sans rien transformer', () => {
-  assert.equal(FORMAT_VERSION, 7);
-  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 8, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+test('v9 : un format 7 tronqué est refusé, une sauvegarde au format 6 passe au format 7 sans rien transformer', () => {
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 7, counts: { humeurs: 2 }, data: { humeurs: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
   // Les relevés de la v8 que la v9 lit autrement : énergie seule, famille seule de la v7, Accablé (bleu en v8, rouge en v9).
   const v6 = {
@@ -718,7 +717,7 @@ test('v9 : le format 8 est refusé, un format 7 tronqué aussi, une sauvegarde a
   assert.deepEqual(MISES_A_NIVEAU[6](v6), { ...v6, formatVersion: 7 });
   const a = analyserFichiers(json(v6));
   assert.deepEqual(v6, avant, 'mise à niveau pure');
-  assert.equal(a.sauvegarde.formatVersion, 7);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(a.sauvegarde.data, v6.data, 'rien n\'est transformé');
   assert.deepEqual(a.erreurs, []);
   assert.deepEqual(a.valides.humeurs.map((h) => [h.id, h.emotion, h.energie]),
@@ -741,7 +740,7 @@ test('v9 : les mots à soi et leurs relevés survivent à un export suivi d\'un 
 
   const [f] = await exporter(a.repo, { versionApp: '9.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 7);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.schemaVersion, 6);
   assert.deepEqual(motsPersoDe(contenu.data.meta), perso);
   assert.deepEqual(contenu.data.humeurs.map((h) => h.emotion).sort(), [FLOTTANT, DEBORDE].sort());
@@ -934,4 +933,201 @@ test('v9 : l\'import remplace les mots à soi, l\'aperçu le dit, « Revenir » 
   assert.equal(phraseMeta(['motsPerso']), 'Les mots ajoutés à la carte des émotions seront remplacés par ce que contient le fichier.');
   assert.equal(phraseMeta(['definitionsRoue', 'motsPerso']),
     'Les définitions des émotions et les mots ajoutés à la carte des émotions seront remplacés par ce que contient le fichier.');
+});
+
+// ---- v11 ----
+
+test('v11 : le format 9 est refusé, un format 8 tronqué aussi, une sauvegarde au format 7 passe au format 8 sans rien transformer', () => {
+  assert.equal(FORMAT_VERSION, 8);
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 9, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 8, counts: { journal: 2 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  const v7 = {
+    format: 'carnet-sauvegarde', formatVersion: 7, schemaVersion: 6, exportedAt: '2026-11-04T19:00:00.000Z',
+    counts: { journal: 1, episodes: 1, meta: 1 },
+    data: {
+      journal: [{ date: '2026-11-03', sommeilRessenti: 'sommeil:bien', heuresSommeil: 7, pointsPositifs: 'Marche au soleil' }],
+      episodes: [{ id: 'ep_1', date: '2026-11-02', heure: '18:00', situation: 'Réunion déplacée', apresCoup: { jour: '2026-11-03', pensees: 'Encore un changement' } }],
+      meta: [{ cle: 'favorisBienEtre', valeur: ['soupir'] }],
+    },
+  };
+  const avant = structuredClone(v7);
+  assert.deepEqual(MISES_A_NIVEAU[7](v7), { ...v7, formatVersion: 8 });
+  const a = analyserFichiers(json(v7));
+  assert.deepEqual(v7, avant, 'mise à niveau pure');
+  assert.equal(a.sauvegarde.formatVersion, 8);
+  assert.deepEqual(a.sauvegarde.data, v7.data, 'rien n\'est transformé');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual([a.valides.journal[0].heuresSommeil, a.valides.journal[0].gratitudes], [7, null], 'aucune gratitude inventée');
+  assert.deepEqual([a.valides.episodes[0].ceQueJeRetiens, a.valides.episodes[0].apresCoup.jour], [null, '2026-11-03']);
+  assert.deepEqual(a.valides.meta, v7.data.meta, 'aucun refuge inventé');
+});
+
+test('v11 : une nuit à 7 h 30, des gratitudes, « Ce que j\'en retiens » et Mes refuges survivent à un export suivi d\'un import', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  await a.repo.journal.patch('2026-09-30', { heuresSommeil: 7.5, gratitudes: 'Le pain partagé avec la voisine.' });
+  // Une journée qui n'a que des gratitudes.
+  await a.repo.journal.patch('2026-09-28', { gratitudes: 'Merci au collègue pour le trajet.' });
+  const ep = await a.repo.episodes.creer({ date: '2026-09-29', heure: '18:00', situation: 'Réunion déplacée', apresCoup: { jour: '2026-09-29', pensees: 'Encore' } });
+  await a.repo.episodes.modifier(ep.id, { ceQueJeRetiens: 'Demander l\'ordre du jour la veille.' });
+  const refuges = {
+    titres: 'Une chanson calme\nUne autre, plus lente',
+    playlists: [
+      { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc', source: 'spotify' },
+      { nom: null, lien: 'music://music.apple.com/fr/playlist/x', source: null },
+    ],
+  };
+  await a.repo.meta.ecrire('refuges', refuges);
+
+  const [f] = await exporter(a.repo, { versionApp: '11.0.0' });
+  const contenu = contenuDe(f);
+  assert.equal(contenu.formatVersion, 8);
+  assert.equal(contenu.data.journal.find((j) => j.date === '2026-09-30').heuresSommeil, 7.5);
+  assert.deepEqual(contenu.data.meta.find((m) => m.cle === 'refuges'), { cle: 'refuges', valeur: refuges });
+
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  const b = nouveauRepo();
+  await remplacer(b.repo, analyse);
+  const nuit = await b.repo.journal.lire('2026-09-30');
+  assert.deepEqual([nuit.heuresSommeil, nuit.gratitudes], [7.5, 'Le pain partagé avec la voisine.']);
+  assert.equal((await b.repo.journal.lire('2026-09-28')).gratitudes, 'Merci au collègue pour le trajet.');
+  const relu = await b.repo.episodes.lire(ep.id);
+  assert.equal(relu.ceQueJeRetiens, 'Demander l\'ordre du jour la veille.');
+  assert.deepEqual(relu.apresCoup, ep.apresCoup, 'l\'Après coup n\'en est pas touché');
+  assert.deepEqual(await b.repo.meta.lire('refuges'), refuges);
+  // Et un second export redonne les mêmes octets.
+  const [g] = await exporter(b.repo, { versionApp: '11.0.0' });
+  assert.ok(Buffer.from(octetsDe(g)).equals(Buffer.from(octetsDe(f))));
+});
+
+// Point de vigilance 4 : une sauvegarde abîmée ou modifiée à la main. Ses refuges sont remis dans la forme que l'app écrit :
+// tout ce qui ne va pas est ignoré ou remis en forme, sans erreur, et rien d'autre du fichier n'est perdu.
+test('v11 : des refuges abîmés ou écrits à la main sont remis en forme à l\'import, sans erreur ; vides, ils ne sont pas gardés', async () => {
+  const fichier = (valeur, autres = []) => ({
+    format: 'carnet-sauvegarde', formatVersion: 8, schemaVersion: 6, exportedAt: '2026-11-05T19:00:00.000Z',
+    counts: { journal: 1, meta: 1 + autres.length },
+    data: { journal: [{ date: '2026-11-04', pointsPositifs: 'Marche' }], meta: [{ cle: 'refuges', valeur }, ...autres] },
+  });
+  const refugesDe = (a) => (a.valides.meta.find((m) => m.cle === 'refuges') || {}).valeur;
+  const brut = {
+    titres: '  Une chanson calme  ',
+    playlists: [
+      { nom: '<img src=x onerror=alert(1)>', lien: 'javascript:alert(1)', source: null },
+      null,
+      { nom: '', lien: 'data:text/html,x' },
+      { nom: 'Sans chiffrement', lien: 'http://open.spotify.com/playlist/x' },
+      { nom: 'Ailleurs', lien: 'https://open.spotify.com.autre.test/p', source: 'spotify' },
+      { nom: 'De trop', lien: 'https://open.spotify.com/playlist/y' },
+    ],
+    jeton: 'jamais gardé',
+  };
+  const avant = structuredClone(brut);
+  const a = analyserFichiers(json(fichier(brut)));
+  assert.deepEqual(brut, avant, 'le fichier lu n\'est pas modifié');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(refugesDe(a), {
+    titres: 'Une chanson calme',
+    playlists: [
+      { nom: '<img src=x onerror=alert(1)>', lien: null, source: null },
+      { nom: 'Sans chiffrement', lien: null, source: null },
+      { nom: 'Ailleurs', lien: null, source: null },
+    ],
+  }, 'trois au plus, sans lien d\'un autre schéma ni d\'un autre hôte, et sans « Spotify » quand son lien est refusé ; une ligne sans nom ni lien lisible disparaît ; un nom reste du texte');
+  assert.equal(a.resume.journees, 1, 'le reste du fichier est lu');
+
+  // Cinq playlists : les trois premières lisibles ; un lien de partage perd son « ?si= » ; une autre source vaut null.
+  const cinq = analyserFichiers(json(fichier({
+    playlists: [1, 2, 3, 4, 5].map((n) => ({ nom: `P${n}`, lien: `https://open.spotify.com/playlist/p${n}?si=abc`, source: n === 2 ? 'deezer' : 'spotify' })),
+  })));
+  assert.deepEqual(cinq.erreurs, []);
+  assert.deepEqual(refugesDe(cinq), {
+    titres: null,
+    playlists: [1, 2, 3].map((n) => ({ nom: `P${n}`, lien: `https://open.spotify.com/playlist/p${n}`, source: n === 2 ? null : 'spotify' })),
+  });
+
+  // Un mauvais type, ou des refuges vides : la clé n'est pas gardée, et rien n'est en erreur.
+  for (const valeur of ['du texte', 12, null, [], { titres: '   ', playlists: [{ nom: ' ', lien: 'ftp://x' }] }]) {
+    const vide = analyserFichiers(json(fichier(valeur)));
+    assert.deepEqual(vide.erreurs, [], JSON.stringify(valeur));
+    assert.equal(refugesDe(vide), undefined, JSON.stringify(valeur));
+    assert.equal(vide.valides.journal.length, 1);
+  }
+  // Deux clés « refuges » dans un fichier écrit à la main : la première seule, comme les mots à soi.
+  const deux = analyserFichiers(json(fichier({ titres: 'Premier' }, [{ cle: 'refuges', valeur: { titres: 'Second' } }])));
+  assert.deepEqual(deux.valides.meta.filter((m) => m.cle === 'refuges'), [{ cle: 'refuges', valeur: { titres: 'Premier', playlists: [] } }]);
+
+  // Écrits tels quels : la base n'a que la forme propre.
+  const { repo } = nouveauRepo();
+  await remplacer(repo, a);
+  assert.deepEqual(await repo.meta.lire('refuges'), refugesDe(a));
+});
+
+test('v11 : l\'import remplace Mes refuges ; un fichier qui n\'en a pas les retire, « Revenir » les remet', async () => {
+  const ici = { titres: 'Écrits ici', playlists: [] };
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const [f] = await exporter(a.repo, { versionApp: '11.0.0' });
+  const b = nouveauRepo();
+  await b.repo.meta.ecrire('refuges', ici);
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(metaRemplacee((await lireTout(b.repo)).meta, analyse.valides.meta), ['refuges']);
+  await remplacer(b.repo, analyse);
+  assert.equal(await b.repo.meta.lire('refuges'), null);
+  await revenirAvantImport(b.repo);
+  assert.deepEqual(await b.repo.meta.lire('refuges'), ici);
+});
+
+// v11 (6/11) : l'aperçu de l'import nomme Mes refuges ; des refuges vidés sont écrits null, et n'annoncent alors rien à perdre.
+test('v11 : aperçu de l\'import, les refuges ont leurs mots ; vidés (null), rien à perdre', () => {
+  assert.equal(phraseMeta(['refuges']), 'Les refuges seront remplacés par ce que contient le fichier.');
+  assert.equal(phraseMeta(['monPlan', 'refuges']), 'Mon plan et les refuges seront remplacés par ce que contient le fichier.');
+  assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: null }], []), []);
+  assert.deepEqual(metaRemplacee([{ cle: 'refuges', valeur: { titres: 'Une chanson', playlists: [] } }], []), ['refuges']);
+});
+
+// v11 (10/11) : un Carnet vide n'a rien à garder (spec §10). L'import n'y prend pas de copie, et « Revenir à l'état d'avant
+// l'import » n'apparaît donc pas après le passage à la nouvelle icône. Tout ce qui vient de l'utilisateur garde la copie :
+// une fiche, une méta à lui (Mon plan seul suffit), une liste qu'il a créée ou une liste par défaut qu'il a touchée.
+test('v11 : un import sur un Carnet vide ne prend pas de copie ; une journée, Mon plan seul, une liste à soi, renommée ou rangée en prennent une', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const [f] = await exporter(a.repo, { versionApp: '11.0.0' });
+  const analyse = () => analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+
+  const vide = nouveauRepo();
+  assert.equal(estBaseVide(await lireTout(vide.repo)), true, 'Carnet tout neuf');
+  await remplacer(vide.repo, analyse());
+  assert.equal(await copieAvantImport(vide.repo), null);
+  assert.equal((await vide.repo.journal.lire('2026-09-30')).humeur, 6, 'l\'import est fait');
+  await assert.rejects(revenirAvantImport(vide.repo), (e) => e.code === 'INTROUVABLE');
+
+  // « Tout effacer » redonne un Carnet vide : les listes par défaut recréées et les clés techniques ne comptent pas.
+  await toutEffacer(a.repo);
+  assert.equal(estBaseVide(await lireTout(a.repo)), true, 'après Tout effacer');
+
+  const CAS = {
+    'une journée': (r) => r.journal.patch('2026-09-28', { humeur: 5 }),
+    'Mon plan seul': (r) => r.meta.ecrire('monPlan', { quandCaMonte: 'je sors' }),
+    'une liste à soi': (r) => r.listes.creer('lieu', 'Chez la voisine'),
+    'une liste renommée': (r) => r.listes.renommer('lieu:bureau', 'Au bureau'),
+    'une liste rangée': (r) => r.listes.archiver('lieu:bureau'),
+  };
+  for (const [quoi, faire] of Object.entries(CAS)) {
+    const b = nouveauRepo();
+    await faire(b.repo);
+    assert.equal(estBaseVide(await lireTout(b.repo)), false, quoi);
+    await remplacer(b.repo, analyse());
+    assert.ok(await copieAvantImport(b.repo), quoi);
+  }
+
+  // Pur : un seul mémo, une seule humeur du moment, une liste recréée par un import suffisent ; les clés techniques, non.
+  const techniques = ['schema', 'installation', 'explosionsDepuis', 'derniereEcriture', 'derniereSauvegarde'].map((cle) => ({ cle, valeur: 'x' }));
+  const bureau = seedItems(SEED_V1, 'h').find((i) => i.id === 'lieu:bureau');
+  assert.equal(estBaseVide({ meta: techniques, listes: [bureau] }), true);
+  assert.equal(estBaseVide({ listes: [{ ...bureau, ordre: bureau.ordre + 10 }] }), false, 'une liste par défaut déplacée');
+  assert.equal(estBaseVide({ audios: [{ id: 'au_1' }] }), false);
+  assert.equal(estBaseVide({ humeurs: [{ id: 'hu_1' }] }), false);
+  assert.equal(estBaseVide({ listes: [{ ...bureau, id: 'lieu:u-x', origine: 'import' }] }), false, 'une liste recréée par un import');
+  assert.equal(estBaseVide({ meta: [{ cle: 'favorisBienEtre', valeur: [] }] }), false, 'une méta à lui, même vidée');
 });

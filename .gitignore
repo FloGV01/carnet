@@ -8,6 +8,9 @@ donnees-privees/
 carnet-*.json
 carnet-*.zip
 carnet-*.pdf
+emozio-*.json
+emozio-*.zip
+emozio-*.pdf
 .DS_Store
 # Contenu d'une sauvegarde, même décompressée ou renommée
 *sauvegarde*.json
@@ -15,6 +18,7 @@ sauvegarde.json
 audios/
 *.m4a
 carnet-*.txt
+emozio-*.txt
 # Secrets
 .env*
 *.pem

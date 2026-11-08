@@ -8,12 +8,15 @@ import { Feuille } from './feuille.js';
 
 export const lirePlan = async () => normaliserPlan(await repo.meta.lire('monPlan'));
 
-export function ContenuPlan({ plan }) {
+// `titres` (v11) : ceux de Mes refuges, en dernière rubrique, une ligne par titre. Seul Moment difficile les donne : la feuille
+// d'un épisode ne change pas.
+export function ContenuPlan({ plan, titres = null }) {
   return html`<div class="contenu-plan">
     ${RUBRIQUES_PLAN.filter(([cle]) => plan[cle]).map(([cle, titre]) => html`<div class="rubrique-plan">
       <h3 class="libelle-section">${titre}</h3><p>${plan[cle]}</p></div>`)}
     ${plan.siAlors.length > 0 && html`<div class="rubrique-plan"><h3 class="libelle-section">${TITRE_SI_ALORS}</h3>
       <ul class="liste-si-alors">${plan.siAlors.map((x) => html`<li>${phraseSiAlors(x)}</li>`)}</ul></div>`}
+    ${titres && html`<div class="rubrique-plan"><h3 class="libelle-section">Mes titres</h3><p>${titres}</p></div>`}
   </div>`;
 }
 

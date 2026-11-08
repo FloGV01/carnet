@@ -13,7 +13,7 @@ import { CarreIcone } from '../composants/rubrique.js';
 const CARRES = {
   lieu: ['lieu', 'lieu'], sommeil: ['sommeil', 'sommeil'], humeur: ['humeur', 'humeur'], contact: ['contact', 'contact'],
   sport: ['sport', 'sport'], explosions: ['explosions', 'expl'], traitement: ['traitement', 'trt'], positifs: ['positifs', 'pos'],
-  [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'], [MASQUE_NUIT]: ['sommeil', 'sommeil'],
+  gratitudes: ['positifs', 'pos'], [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'], [MASQUE_NUIT]: ['sommeil', 'sommeil'],
 };
 // Les replis qui se masquent comme un champ, sans place dans l'ordre : « Nuit en détail » (coucher, lever, réveils ;
 // masqué par défaut depuis la v8) et « Ce qui a pesé · ce qui a rechargé ».

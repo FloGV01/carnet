@@ -177,7 +177,7 @@ test('v8 : une nuit hors bornes ou une séance au « fin » ou au « programme �
   assert.equal(verifierDonnees(saine).fichesIllisibles, 0);
   const res = verifierDonnees({
     ...saine,
-    journal: [...saine.journal, { date: '2026-10-01', heuresSommeil: 3 }, { date: '2026-10-02', heuresSommeil: 11 }, { date: '2026-10-03', heuresSommeil: 6.5 }],
+    journal: [...saine.journal, { date: '2026-10-01', heuresSommeil: 3 }, { date: '2026-10-02', heuresSommeil: 11 }, { date: '2026-10-03', heuresSommeil: 6.25 }],
     seances: [
       ...saine.seances,
       { id: 'se_2', date: '2026-10-01', heure: '09:00', exercice: 'coherence', dureeS: 300, origine: 'bien-etre', fin: 'oui' },

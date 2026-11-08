@@ -44,6 +44,9 @@ function revenir(origine) {
 
 // sortieDirecte (épisode, v6.1) : sur une fiche nouvelle, la dernière étape choisie ou passée ferme la fiche,
 // comme « Fermer » ; le récapitulatif s'ouvre quand on la rouvre.
+// « Ce que j'en retiens » (v11, spec §7) : sur l'épisode rouvert, sous la carte Après coup, même ancien et même sans Après
+// coup. Rangé à part d'apresCoup, il n'en touche pas le jour : un vieil épisode ne repart pas vers PSY. Vide, il ne dit rien
+// (ni consigne, ni « facultatif »). Hors de TEXTES_EPISODE : la feuille « Voir » d'En consultation ne le montre pas.
 export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte, avecPlan = false, sortieDirecte = false }) {
   const [items, setItems] = useState(null);
   const [fiche, setFiche] = useState(null);
@@ -214,8 +217,10 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="recap-nom">${et.recap}</span><span class=${v == null ? 'recap-val discret' : 'recap-val'}>${texte}</span>${Icones.chevron({ trait: 2 })}
       </button></li>`;
     });
+    // Le récapitulatif d'une fiche rouverte se relit (v11, spec §11) : le doigt vers la droite y fait comme « Fermer ». Celui
+    // d'une fiche neuve, menée jusque-là, finit une saisie : aucun geste, comme à ses étapes.
     return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
-      pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
+      relecture=${rouvert} pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
       <h2 class="titre-question">Récapitulatif</h2>
       <ul class="liste recap">${lignes}</ul>
@@ -228,6 +233,9 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
         <span class="ligne-libelle"><span class="titre-apres-coup">Après coup · TCC</span>
           <span class="note-carte-interne">${resumeApresCoup(fiche.apresCoup, carte) || 'Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.'}</span></span>
         ${Icones.chevron({ trait: 2 })}</a>`}
+      ${avecPlan && html`<div class="champ-recap"><${ChampTexte} id=${`${store}-ceQueJeRetiens`} etiquette="Ce que j'en retiens"
+        valeur=${fiche.ceQueJeRetiens} lignes=${2} cleBrouillon=${idRef.current ? `carnet:brouillon:${idRef.current}:ceQueJeRetiens` : null}
+        surEnregistrer=${(v) => { setFiche((f) => ({ ...f, ceQueJeRetiens: v })); return ecrireTexte({ ceQueJeRetiens: v }); }} /></div>`}
       <${EnParler} store=${store} element=${{ ...fiche, id: idRef.current }} carte=${carte} />
       ${idRef.current && html`<button type="button" class="lien-discret supprimer" onClick=${() => setConfirmer(true)}>Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'}</button>`}
       ${confirmer && html`<${Confirmation} titre=${`Supprimer ${nomFiche === 'Épisode' ? 'cet épisode' : 'ce symptôme'} ?`}

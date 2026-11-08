@@ -4,7 +4,7 @@ import { espionnerAudio, audio } from '../aides/audio.js';
 import { installerParole, parole, seances, environ } from '../aides/lecteur.js';
 import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub.js';
 
-// v10 (7/9) · Bien-être par besoin (spec §7 et §14.4) : l'accueil (« Reprendre », « Favoris », quatre entrées, à des places fixes), la
+// v10 (7/9) · Bien-être par besoin (spec §7 et §14.4) : l'accueil (« Reprendre », « Favoris », cinq entrées, à des places fixes), la
 // liste de chaque entrée (un bouton lecture et une épingle par ligne), ce que lance chaque élément et où il revient, le dernier
 // élément retenu, les favoris et leur sauvegarde, le point de vigilance 4 (favori ou « Reprendre » inconnu), le point de vigilance 5
 // (très grand texte), l'épingle sur chaque ligne du Programme, et un exercice du Programme lancé ailleurs, qui ne date rien.
@@ -19,6 +19,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 const CLE = 'carnet:bien-etre:dernier';
+// v11 (6/11) : Mes refuges, cinquième entrée, après le Programme (spec §8.4).
+const NB_ENTREES = 5;
 const LISTES = {
   calmer: ['Me calmer vite', ['Le soupir', 'Expiration longue', 'Ancrage court', 'Noter ce qui passe', 'Cohérence cardiaque', 'Minuteur silencieux']],
   dormir: ['Dormir ou me rendormir', ['Réveil la nuit', 'Expiration longue', 'Scan court', 'Sons de fond']],
@@ -63,7 +65,7 @@ const rienNeDeborde = async (page) => {
 
 // ---------- L'accueil ----------
 
-test('l\'accueil plein : « Reprendre », « Favoris », les quatre entrées, la ligne fixe, l\'un sous l\'autre, à des places qui ne bougent pas avec les séances ; aucun chiffre', async ({ page }) => {
+test('l\'accueil plein : « Reprendre », « Favoris », les cinq entrées, la ligne fixe, l\'un sous l\'autre, à des places qui ne bougent pas avec les séances ; aucun chiffre', async ({ page }) => {
   await ecrireFavoris(page, ['soupir', 'sons-de-fond']);
   await poser(page, JSON.stringify('expiration-longue'));
   await aller(page, '#/bien-etre');
@@ -76,7 +78,7 @@ test('l\'accueil plein : « Reprendre », « Favoris », les quatre entrées, la
   await expect(lancer(favoris(page), 'Sons de fond')).toBeVisible();
   // Sur l'accueil, on lance : l'épingle est dans les listes et sur l'écran de départ.
   await expect(accueil(page).locator('.epingle')).toHaveCount(0);
-  await expect(entrees(page)).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme']);
+  await expect(entrees(page)).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
   const cases = () => page.evaluate(() => [...document.querySelectorAll('main.bien-etre > *')].map((x) => { const r = x.getBoundingClientRect(); return [x.tagName, r.y, r.height]; }));
   const avant = await cases();
   expect(avant.map((x) => x[0])).toEqual(['HEADER', 'SECTION', 'SECTION', 'UL', 'P']);
@@ -95,12 +97,12 @@ test('l\'accueil plein : « Reprendre », « Favoris », les quatre entrées, la
   await page.reload();
   await appPrete(page);
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   expect(await cases()).toEqual(avant);
   expect(await accueil(page).innerText()).toBe(texte);
 });
 
-test('tant que les favoris ne sont pas lus, rien sous « Reprendre » : les quatre entrées arrivent ensemble, à leur place, sans sauter sous le doigt', async ({ page }) => {
+test('tant que les favoris ne sont pas lus, rien sous « Reprendre » : les cinq entrées arrivent ensemble, à leur place, sans sauter sous le doigt', async ({ page }) => {
   await ecrireFavoris(page, ['soupir', 'sons-de-fond']);
   await poser(page, JSON.stringify('expiration-longue'));
   await page.evaluate(() => {
@@ -116,27 +118,27 @@ test('tant que les favoris ne sont pas lus, rien sous « Reprendre » : les quat
   await expect(accueil(page).locator('.entrees')).toHaveCount(0);
   await expect(accueil(page).locator('.ligne-fixe')).toHaveCount(0);
   const haut = (await reprendre(page).boundingBox()).y;
-  // Chaque changement de l'écran note ce qu'il voit des entrées : aucune, ou les quatre, jamais une partie.
+  // Chaque changement de l'écran note ce qu'il voit des entrées : aucune, ou les cinq, jamais une partie.
   await page.evaluate(() => {
     window.__vues = [];
     const ecran = document.querySelector('main.bien-etre');
     new MutationObserver(() => window.__vues.push(ecran.querySelectorAll('.entrees a').length)).observe(ecran, { childList: true, subtree: true });
     window.__leverFavoris();
   });
-  await expect(entrees(page)).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme']);
+  await expect(entrees(page)).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
   await expect(favoris(page).locator('.exercice-titre')).toHaveText(['Le soupir', 'Sons de fond']);
-  expect(await page.evaluate(() => [...new Set(window.__vues)])).toEqual([4]);
+  expect(await page.evaluate(() => [...new Set(window.__vues)])).toEqual([NB_ENTREES]);
   expect((await reprendre(page).boundingBox()).y).toBe(haut);
   const place = (await accueil(page).locator('.entrees').boundingBox()).y;
   expect(place).toBeGreaterThanOrEqual((await favoris(page).boundingBox()).y + (await favoris(page).boundingBox()).height);
   // À la même place que si la lecture n'avait pas tardé.
   await aller(page, '#/aujourdhui');
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   expect((await accueil(page).locator('.entrees').boundingBox()).y).toBe(place);
 });
 
-test('les quatre entrées s\'ouvrent ; chaque liste, dans son ordre, avec un bouton lecture et une épingle par ligne, ses durées, et sans Savourer ; « Retour » ramène à l\'accueil, onglet Bien-être allumé', async ({ page }) => {
+test('les cinq entrées s\'ouvrent ; chaque liste, dans son ordre, avec un bouton lecture et une épingle par ligne, ses durées, et sans Savourer ; « Retour » ramène à l\'accueil, onglet Bien-être allumé', async ({ page }) => {
   for (const [id, [titre, elements]] of Object.entries(LISTES)) {
     await aller(page, '#/bien-etre');
     await entrees(page).filter({ hasText: titre }).click();
@@ -163,6 +165,14 @@ test('les quatre entrées s\'ouvrent ; chaque liste, dans son ordre, avec un bou
   await entrees(page).filter({ hasText: 'Programme' }).click();
   await expect.poll(() => adresse(page)).toBe('#/bien-etre/programme');
   await expect(page.locator('main.programme')).toBeVisible();
+  // v11 : « Mes refuges » ouvre son écran ; « Retour » ramène à l'accueil, onglet Bien-être allumé.
+  await aller(page, '#/bien-etre');
+  await entrees(page).filter({ hasText: 'Mes refuges' }).click();
+  await expect.poll(() => adresse(page)).toBe('#/refuges');
+  await expect(page.getByRole('heading', { name: 'Mes refuges', level: 1 })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Bien-être' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('button', { name: 'Retour', exact: true }).click();
+  await expect.poll(() => adresse(page)).toBe('#/bien-etre');
   // La durée sur la ligne : celle que le lecteur jouera.
   await aller(page, '#/bien-etre/calmer');
   await expect(lien(liste(page), 'Le soupir').locator('.exercice-description')).toHaveText(/^3\smin\s·\slà où tu es$/);
@@ -294,7 +304,7 @@ test('« Réveil la nuit » depuis « Dormir ou me rendormir » : le lecteur de 
 
 test('« Reprendre » : absent, puis le dernier élément lancé, même arrêté avant 60 s ; il relance depuis le début et revient à l\'accueil ; sans date ni « déjà fait »', async ({ page }) => {
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   await expect(reprendre(page)).toHaveCount(0);
   await aller(page, '#/bien-etre/calmer');
   await lancer(liste(page), 'Ancrage court').click();
@@ -400,7 +410,7 @@ test('relancer le même élément n\'écrit rien : la clé n\'est écrite que si
 test('épingler deux éléments depuis une entrée, puis un depuis le lecteur : l\'ordre est gardé ; désépingler ; rien d\'écrit comme saisie ; la région disparaît', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('derniereEcriture', 'marque'));
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   await expect(favoris(page)).toHaveCount(0);
   await aller(page, '#/bien-etre/dormir');
   await epingle(liste(page), 'Sons de fond').click();
@@ -432,7 +442,7 @@ test('épingler deux éléments depuis une entrée, puis un depuis le lecteur : 
   await epingle(liste(page), 'Réveil la nuit').click();
   await expect.poll(() => lireFavoris(page)).toEqual([]);
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   await expect(favoris(page)).toHaveCount(0);
   // Une épingle n'est pas une saisie ; aucun élément n'a été lancé.
   expect(await page.evaluate(() => window.__carnet.repo.meta.lire('derniereEcriture'))).toBe('marque');
@@ -468,7 +478,7 @@ test('point de vigilance 4 : un favori inconnu, des doublons, une méta ou une c
   await ecrireFavoris(page, ['retiré-depuis', 'soupir', 3, null, 'soupir', { a: 1 }, 'toString', 'sons-de-fond']);
   await poser(page, JSON.stringify('retiré-depuis'));
   await aller(page, '#/bien-etre');
-  await expect(entrees(page)).toHaveCount(4);
+  await expect(entrees(page)).toHaveCount(NB_ENTREES);
   await expect(reprendre(page)).toHaveCount(0);
   await expect(favoris(page).getByRole('listitem')).toHaveCount(2);
   await expect(favoris(page).locator('.exercice-titre')).toHaveText(['Le soupir', 'Sons de fond']);
@@ -485,7 +495,7 @@ test('point de vigilance 4 : un favori inconnu, des doublons, une méta ou une c
     await poser(page, cle);
     await aller(page, '#/aujourdhui');
     await aller(page, '#/bien-etre');
-    await expect(entrees(page)).toHaveCount(4);
+    await expect(entrees(page)).toHaveCount(NB_ENTREES);
     await expect(reprendre(page)).toHaveCount(0);
     await expect(favoris(page)).toHaveCount(0);
     await expect(accueil(page).locator('.ligne-element')).toHaveCount(0);
@@ -618,7 +628,7 @@ test('point de vigilance 5, très grand texte : l\'accueil, les listes et le Pro
   for (const taille of [17, 19, 21, 23, 28, 33, 40, 53]) {
     await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; }, taille);
     await aller(page, '#/bien-etre');
-    await expect(entrees(page)).toHaveCount(4);
+    await expect(entrees(page)).toHaveCount(NB_ENTREES);
     await expect(favoris(page).getByRole('listitem')).toHaveCount(4);
     await rienNeDeborde(page);
     if (taille === 53) await dessous(reprendre(page).locator('.lien-reprendre'), lancer(reprendre(page), 'Minuteur de concentration'));

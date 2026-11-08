@@ -142,8 +142,8 @@ Source : l'état des lieux du 18/10 (`docs/design/audit-v6/etat-des-lieux.html`)
   - les titres de section (Réglages, Soins, Listes, « Semaine du… », Diagnostic) sont sur le bord des cartes ;
   - « 5 minutes » ne se coupe plus, « Avec qui, comment c'était · Mouvement » se répartit sur deux lignes égales (A3) ;
   - la colonne des heures a une largeur fixe, en chiffres tabulaires, dans « Ma journée » et dans les relevés de l'humeur du moment.
-- **P2 · Après coup sans défiler** : la ligne « Après coup (TCC) · tes épisodes récents » passe juste sous « Mémo vocal », avant les replis. Ses règles ne changent pas.
-- **P3 · « J'ai fini pour ce soir » sans défiler** : sur la ligne de « Mémo vocal », à droite, toujours après un premier choix du soir.
+- **P2 · Après coup sans défiler** : la ligne « Après coup (TCC) · tes épisodes récents » passe juste sous « Mémo vocal », avant les replis. Ses règles ne changent pas. Levé en v11 : le soir ne tient plus sans défiler, la ligne garde sa place et s'atteint en défilant (voir l'entrée v11.0.0, « Règles levées ou changées »).
+- **P3 · « J'ai fini pour ce soir » sans défiler** : sur la ligne de « Mémo vocal », à droite, toujours après un premier choix du soir. Levé en v11 : le soir ne tient plus sans défiler, le bouton garde sa place et s'atteint en défilant (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **P4 · « Ma journée »** : la section « Épisodes et symptômes » devient « Ma journée ». Elle range par heure les humeurs du moment (« vers 14 h » compris, sans lien ni chevron) et les épisodes. Les symptômes viennent à la fin, « + Symptôme » dessous.
 - **P7 · « Ce qui a pesé · ce qui a rechargé »** : le repli se cale en haut de l'écran à son ouverture (un saut si « Réduire les animations »), ses grilles ont deux colonnes régulières.
 - **P8 · Épisode sans « Terminer »** : un épisode nouveau se ferme après « Ta réaction » (ou « Passer ») et revient à l'écran d'origine, avec « Épisode enregistré · Annuler ». Rouvert, il a son récapitulatif et « Terminer ».
@@ -624,14 +624,14 @@ La base passe à `DB_VERSION` 6 (liste `sujetRdv`, `MIGRATIONS[6]`, copie avant 
 - avec le bandeau « Nouvelle version prête », la carte des points positifs n'a que 5,6 px de marge au-dessus de la bande du bas ;
 - à 390 × 844, « J'ai fini pour ce soir » en a 6,6 avec le bandeau (P3), et la ligne Après coup 11,3 sans lui (P2).
 
-Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Sommeil garde donc Mal · Moyen · Bien, et la Durée s'ouvre par le lien « Durée › » de sa tête, fermé au départ, à chaque ouverture de l'écran et à chaque changement de jour. Il ne s'ouvre jamais seul, même quand une durée est notée. La durée se note en 2 touchers au lieu d'un.
+Aucune carte ne se resserre davantage sans cibles de moins de 44. La carte Sommeil garde donc Mal · Moyen · Bien, et la Durée s'ouvre par le lien « Durée › » de sa tête, fermé au départ, à chaque ouverture de l'écran et à chaque changement de jour. Il ne s'ouvre jamais seul, même quand une durée est notée. La durée se note en 2 touchers au lieu d'un. Levé en v11 : la durée se note sur une roue toujours visible, et « Durée › » disparaît (voir l'entrée v11.0.0, « Règles levées ou changées »).
 
 **Choix faits pendant la construction**
 - **Le lien « Durée › »** dit la durée notée (« 6 h › », « 4 h ou moins › »). VoiceOver lit « Durée de la nuit : 6 h ». Ouverte, la rangée reste ouverte après un choix, pour qu'une erreur se corrige tout de suite (comme les rubriques du lot 2b). Elle se referme par le lien. Ouvert, le lien garde la largeur de la plus longue durée (« 4 h ou moins », par une copie invisible et muette) : en grand texte (21 px et plus), le titre passe sous le lien dès l'ouverture, et noter une durée ne le fait plus passer à la ligne (relecture : la carte grandissait de 26 à 34 px sous le doigt, et la rangée des durées descendait d'autant). Fermé, il n'a que sa largeur.
 - **Les sept durées** sont sur deux rangées pleine largeur : 4 h ou moins à 7 h, puis 8 h à 10 h ou plus. Sept choix sur une rangée feraient 43 px de large. « ou moins » et « ou plus » passent en petit sous le nombre, en gris secondaire (--text-2), à la couleur du choix une fois choisi.
 - **Un choix de durée ne change pas la mise en page**, à toutes les tailles de texte (relecture). Avec la coche devant les deux lignes, « 4 h ou moins » choisi passait sur trois lignes (« 4 h / ou / moins ») : la première rangée passait de 44 à 49,8 px et tout ce qui suit sautait au toucher. La correction proposée (coche plus serrée, « ou moins » sans retour à la ligne) faisait déborder le choix à 375 de large et en grand texte (19 à 25 px). La coche se met donc devant le nombre seul, qui passe en 600, et la précision garde toute la largeur du choix et sa graisse (400), choisi ou non : en 600, « ou moins » passait encore à la ligne au choix à 23 px. Elle passe à la ligne au besoin, choisie ou non, de la même façon.
 - **En très grand texte**, quand la carte n'a plus 13,5 em (dès 26 px à 390 de large, 24 px à 375), les sept durées passent sur deux colonnes égales, comme Lieu (relecture : la grille de 12 gardait ses places de 3 et de 4, et les durées s'empilaient une par ligne, de deux largeurs).
-- **« Détail › » et « Durée › »** sont en couleur action, 13/600, au bout de la première ligne du titre de la carte. Le titre passe dessous au besoin : « Contact / humain » et « Sport / mouvement » restent sur deux lignes, comme en v7. Le lien ne prend aucune hauteur. Sa cible fait 45 px de haut, mesurée par ce qu'on touche vraiment (elementFromPoint sur chaque point, au texte par défaut et de 21 à 28 px) : elle déborde sur les marges de la carte, 6 px plus haut que bas, et passe devant le titre. Relecture : centrée et derrière le titre, la boîte mesurait 44 mais « Bien » en prenait le bas (10 % de la cible de « Durée › ») et la 2e ligne de « Sport / mouvement », peinte après le lien flottant, 14 % de celle du Sport. Son bas reste au-dessus des choix de la carte, et son haut sous ceux de la carte du dessus : elle ne prend rien à aucun choix.
+- **« Détail › » et « Durée › »** sont en couleur action, 13/600, au bout de la première ligne du titre de la carte. Le titre passe dessous au besoin : « Contact / humain » et « Sport / mouvement » restent sur deux lignes, comme en v7. Le lien ne prend aucune hauteur. Sa cible fait 45 px de haut, mesurée par ce qu'on touche vraiment (elementFromPoint sur chaque point, au texte par défaut et de 21 à 28 px) : elle déborde sur les marges de la carte, 6 px plus haut que bas, et passe devant le titre. Relecture : centrée et derrière le titre, la boîte mesurait 44 mais « Bien » en prenait le bas (10 % de la cible de « Durée › ») et la 2e ligne de « Sport / mouvement », peinte après le lien flottant, 14 % de celle du Sport. Son bas reste au-dessus des choix de la carte, et son haut sous ceux de la carte du dessus : elle ne prend rien à aucun choix. Levé en v11 pour « Durée › », parti avec la roue ; « Détail › » reste (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **Le détail du Sport et du Contact** est une carte de rubrique (« Sport en détail », « Contact en détail », à leur couleur) en pleine largeur sous la paire, ou sous la carte quand Contact et Sport ne se suivent pas. Les deux peuvent être ouverts ensemble, dans l'ordre de la paire. Leurs replis quittent la liste, qui garde « Ce qui a pesé · ce qui a rechargé », « Notes libres » et, pour une nuit déjà notée, « Nuit en détail ». Les résumés de ces deux replis (« Marche 30 à 60 min ») ne sont plus affichés sur le soir. Ils restent dans l'Historique, la page d'un jour et l'Export PSY.
 - **« Nuit en détail » masqué par défaut** : il se réaffiche dans Réglages › Le soir (« Nuit en détail · coucher, lever, réveils », sous les champs). Comme l'Humeur du soir en v6, le masque s'ajoute aux champs masqués déjà réglés par la migration 6 de la base, la mise à niveau du format 5 et « Revenir » vers une copie d'avant la v8. Sans réglage, la valeur par défaut s'applique à la lecture. **La migration 6, figée à la tâche 1, est donc modifiée** (empreinte du verrou mise à jour) : elle n'a jamais été publiée (la v8 n'est pas en ligne, et le site n'a pas de déploiement de branche). Elle relit la méta avant de l'écrire, pour qu'une base de la v5 (version 3), migrée d'un coup, garde aussi l'Humeur masquée par la migration 4 (vérifié dans WebKit et dans les tests unitaires). Une nuit qui a un coucher, un lever ou des réveils garde son repli, masqué ou non, carte Sommeil masquée comprise.
 - **La durée de la nuit se lit partout où se lit la qualité** : « nuit moyen · 6 h » dans le résumé du jour, les puces de l'Historique et le détail d'un jour de Mes jours ; « nuit Mal · 6 h » dans l'Export PSY.
@@ -701,7 +701,7 @@ Pistes à proposer, aucune appliquée :
 
 ### Relecture finale
 
-- **La marge du soir du Diagnostic est celle du soir, détails fermés.** Elle était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait « −71,7 px (le soir défile) » d'un soir qui tient (28,3 px fermé, dans WebKit avec les zones). Elle n'est plus prise, ni quand la fenêtre change de taille, tant que « Durée › » ou le « Détail › » du Sport ou du Contact est ouvert ; refermés, la mesure reprend. Test : `v8-fiabilite.spec.js` (Q27, détails fermés).
+- **La marge du soir du Diagnostic est celle du soir, détails fermés.** Elle était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait « −71,7 px (le soir défile) » d'un soir qui tient (28,3 px fermé, dans WebKit avec les zones). Elle n'est plus prise, ni quand la fenêtre change de taille, tant que « Durée › » ou le « Détail › » du Sport ou du Contact est ouvert ; refermés, la mesure reprend. Test : `v8-fiabilite.spec.js` (Q27, détails fermés). Levé en v11 : la marge du soir quitte le Diagnostic avec la règle du soir sans défiler (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **Le repère Bien-être de Mes jours est un losange plein.** Le contour arrondi de la v8 (Q29) faisait, sur 30 jours, un ovale de 5 × 8 px qui se lisait « 0 » : la rangée disait « 0  00 00 », comme un compteur à zéro. Le losange est plein, à la couleur de Bien-être (3,9:1 sur la carte en clair, 8,3:1 en sombre), de 8 px sur 7 jours et de 6 sur 30, avec 2 px entre deux jours voisins (1 au moins, par mois sur 5 ans). Il ne se confond ni avec « nuit bien », une barre du même bleu en sombre, ni avec un chiffre. Toujours le même repère, sans nombre.
 - **Les légendes de la carte de l'Émotion sont rangées contre le centre**, comme les bulles : celle de gauche alignée à droite, celle de droite à gauche. « Toute la carte » s'ouvre au milieu et ne montre que la moitié de chaque zone Moyenne : les deux légendes étaient hors du cadre, et rien ne disait quel côté était désagréable et lequel agréable. Elles tiennent maintenant dans cette moitié, à la marge de la page du bord de l'écran. Quand la place manque, la légende passe à la ligne après l'énergie (« Moyenne · », puis « plutôt désagréable ») : à 390 de large au texte par défaut, seule « Moyenne · plutôt désagréable » le fait ; à 375, les trois de gauche ; en grand texte, davantage. La légende ne change pas de place entre « Toute la carte » et une tuile. Test : `v8-emotion.spec.js`, à 390 et 375 de large, au texte par défaut et à 23 px.
 - **Un test instable stabilisé** : « la Vue soignants ouverte à froid lit la base une seule fois » (Q26) a échoué une fois dans une suite complète, avec deux lectures des rendez-vous. Aujourd'hui, ouvert au rechargement, lit les rendez-vous (le prochain) ; sous charge, sa lecture tombait après la pose des compteurs. Le test attend maintenant Aujourd'hui avant d'ouvrir la Vue soignants, comme son voisin.
@@ -739,7 +739,7 @@ Si l'assistant PSY de l'utilisateur lit la nuit d'un jour, ses consignes sont à
   - Allumé : il joue, et la musique se met en pause.
   - Moment difficile et « Respirer » restent muets au départ.
 - **Le souffle** : un bruit doux qui monte pendant l'inspiration et redescend à l'expiration, calé sur le disque. À essayer : son volume, sa douceur, et les bols de début, d'étape et de fin.
-- **La marge réelle du soir.** Le Diagnostic (appui long sur la version, dans Réglages) donne la hauteur utile, les zones sûres, la « Marge du soir » et la « Marge de « J'ai fini » » de l'app installée. Elles sont prises sur le soir d'aujourd'hui, détails fermés : « Durée › » ouverte, le soir défile, et ce n'est pas sa marge. Elles sont à comparer aux valeurs simulées : 28,3 px et −19,7 px (tâche 8).
+- **La marge réelle du soir.** Le Diagnostic (appui long sur la version, dans Réglages) donne la hauteur utile, les zones sûres, la « Marge du soir » et la « Marge de « J'ai fini » » de l'app installée. Elles sont prises sur le soir d'aujourd'hui, détails fermés : « Durée › » ouverte, le soir défile, et ce n'est pas sa marge. Elles sont à comparer aux valeurs simulées : 28,3 px et −19,7 px (tâche 8). Levé en v11 : la marge du soir quitte le Diagnostic avec la règle du soir sans défiler (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **La carte de l'Émotion sous le pouce** : le glissement, l'appui long (0,5 s) à côté du défilement, la taille des bulles.
 - **Le lecteur écran verrouillé**, la voix française du système, et le grand texte d'iOS sur la carte, le lecteur et le Programme.
 
@@ -1017,7 +1017,7 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 
 ### Appels du concepteur, à vérifier (spec §11 et §13)
 
-- Fond noir aussi en thème clair, pour tous les écrans du relevé.
+- Fond noir aussi en thème clair, pour tous les écrans du relevé. Levé en v11 : ils suivent le thème, sur le gris clair d'Aujourd'hui en clair, noirs en sombre (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - Titre de l'écran 1 en phrase, « Touche la couleur la plus proche de ce moment » ; « Maintenant ▾ » sous les bulles.
 - Toucher une couleur n'écrit rien ; toucher un mot écrit. Retoucher le mot choisi l'efface, énergie comprise (règle de Carnet, pas de How We Feel).
 - Un relevé se rouvre depuis Ma journée de n'importe quel jour, Historique compris, directement sur l'écran 3 ; il s'y supprime.
@@ -1060,7 +1060,7 @@ La base reste en `DB_VERSION` 6 : aucun magasin ne change, les mots à soi viven
 
 ### Écrans 1 et 2 : les quatre bulles et la carte (tâche 4)
 
-- **Plein écran noir**, dans les deux thèmes, sans barre d'onglets ni en-tête de Carnet ; la route reste `#/moment`.
+- **Plein écran noir**, dans les deux thèmes, sans barre d'onglets ni en-tête de Carnet ; la route reste `#/moment`. Levé en v11 : le plein écran suit le thème, noir en sombre seulement (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **Écran 1** : ✕ et la loupe en verre (48 × 44), le titre en gras (`ui-serif` en v9, police système depuis la v10), les quatre bulles en dégradé vertical sur trois halos de leur couleur médiane qui tournent lentement, « Maintenant ▾ » dessous (les heures de « C'était vers… »). Mesures et couleurs de `visuel-hwf.md` §1.
 - **Toucher une couleur** ouvre la carte sur le milieu de sa zone, sans rien écrire. La carte s'y arrête au bord des bulles : des bulles jusqu'aux bords de l'écran, jamais de noir vide sur le côté.
 - **Écran 2, la carte** : les 144 mots et les mots à soi, en bulles de 96 à la couleur de leur case (visuel §2.5, extrapolation bridée au-delà du 3ᵉ pas), texte noir en gras (`ui-serif` en v9, police système depuis la v10), corps = diamètre / 8, AA vérifié pour chaque case. Elle défile dans les deux sens, dans son cadre ; la page ne défile jamais de côté. Un voile noir en haut.
@@ -1131,7 +1131,7 @@ Si l'assistant PSY de l'utilisateur lit les COMPTEURS, ses consignes sont à met
 
 ### À essayer sur l'iPhone
 
-- **La barre d'état en thème clair au-dessus des écrans noirs** (spec §12) : rien n'est réglé. Si elle reste claire au-dessus du noir, une piste est de passer `theme-color` en noir le temps du relevé.
+- **La barre d'état en thème clair au-dessus des écrans noirs** (spec §12) : rien n'est réglé. Si elle reste claire au-dessus du noir, une piste est de passer `theme-color` en noir le temps du relevé. Levé en v11 : en clair, les écrans de l'émotion ne sont plus noirs, et `theme-color` vaut `#e7eaee` en clair, `#000000` en sombre (voir l'entrée v11.0.0, « Règles levées ou changées » et « L'icône et « Revenir » (tâche 10) »).
 - **La police** : levé en v10, la police système remplace New York partout (« Utilise la police iPhone »), carte des émotions comprise ; il n'y a plus de corps à caler pour elle.
 - **La carte sous le doigt** : le défilement dans les deux sens, sa fluidité sur l'iPhone 13 Pro, le recentrage doux après un mot, les halos qui tournent, et « Réduire les animations ».
 - **La loupe** : le clavier qui s'ouvre dès le toucher.
@@ -1254,7 +1254,7 @@ La base reste en `DB_VERSION` 6 et la sauvegarde au `FORMAT_VERSION` 7 : ni maga
 - **La police** : « Utilise la police iPhone ». La police système partout, carte des émotions comprise.
 - **A. Moment difficile** : quatre boutons en haut, Panique, Colère, Trop-plein, Réveil la nuit, chacun un seul exercice court ; la respiration, « Une chose à la fois » et Mon plan restent en dessous.
 - **C. Après une émotion notée** : deux ou trois exercices sur une ligne discrète, pour toutes les couleurs.
-- **D. Bien-être** : « Reprendre » et les favoris en tête, puis quatre entrées : Me calmer vite, Dormir ou me rendormir, Me concentrer, Programme.
+- **D. Bien-être** : « Reprendre » et les favoris en tête, puis quatre entrées : Me calmer vite, Dormir ou me rendormir, Me concentrer, Programme. Levé en v11 : une cinquième entrée, Mes refuges, après le Programme (voir l'entrée v11.0.0, « Règles levées ou changées »).
 - **E. Sons de fond fabriqués par l'iPhone** (bruit brun, bruit rose, vagues, pluie douce) : rien à télécharger.
 
 ### Appels du concepteur, à vérifier (spec §13 et §14)
@@ -1554,3 +1554,219 @@ Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allon
 6. Sens tes épaules, là où elles touchent le lit. *(20 s)*
 7. Sens ta mâchoire. Les dents peuvent se séparer un peu. *(20 s)*
 8. Reste là. Il n'y a rien à attendre. *(20 s)*
+
+## 2026-11-07 : le nom Emozio
+
+Choix de l'utilisateur le 07/11, pendant la construction de la v11. Le nom entre dans la v11.0.0, après la construction et ses relectures, avant la publication : une seule réinstallation sur l'iPhone, pour l'icône et pour le nom.
+
+- **Pourquoi** : « Carnet » était banal. Il sonnait comme un devoir à remplir et ne disait pas ce qu'est l'app.
+- **Ses critères** : un nom que personne n'utilise déjà, court, qui dise le thème (les émotions, le TDAH et l'autisme ; les images du refuge et de la météo intérieure), sans demander de discrétion.
+- **Écartés** : « Feels », qui lui plaisait, est pris par une app de rencontre française connue ; « Emozione » est pris (un parfum, des coffrets cadeaux).
+- **Emozio** : quasi libre. C'est le mot basque pour « émotion » ; aucune app ne porte ce nom, seulement une petite agence web néerlandaise (et une agence de marketing au Mexique). Prononciation : « é-mo-zio ».
+- **Un nom propre, sans article** : « Emozio s'ouvre depuis l'écran d'accueil », « reviens dans Emozio ». Là où « Carnet » servait de nom commun, la phrase est réécrite plutôt que le mot remplacé : « l'ancien Carnet » devient « l'ancienne app », « un Carnet vide » « une base vide », « si Carnet est à l'écran » « si l'app est à l'écran ».
+
+### Ce qui change : ce que l'utilisateur voit
+
+- `index.html` (`<title>`, `apple-mobile-web-app-title`, `application-name`, le texte d'attente, le `<noscript>`) et le manifest (`name`, `short_name`) : « Emozio ». Le nom sous l'icône ne change qu'avec une nouvelle icône (spec v11 §10).
+- Les textes de l'app : le guide d'installation (`?forcer-guide`), Réglages et l'import (« dossier Emozio »), l'Aide iPhone, les Rappels, le Diagnostic, Mes refuges, la page du code de Spotify, le minuteur de concentration, Réglages › Émotions, et les messages de l'import et de la base (« une sauvegarde d'Emozio », « une version plus récente d'Emozio »).
+- **Les fichiers exportés** : `emozio-sauvegarde-AAAA-MM-JJ-HHMM.json` (ou `.zip`, ou `-partie-N-sur-T.zip`, et sa variante `.txt`), `emozio-consultation-AAAA-MM-JJ.pdf` (vue soignants), `emozio-test.json`, `.zip` et `.pdf` (Diagnostic). L'import ne lit jamais le nom d'un fichier : une sauvegarde `carnet-sauvegarde-…` s'importe telle quelle (`docs/format-sauvegarde.md`).
+- **L'Aide iPhone, « Changer d'icône sans rien perdre »** : les 5 étapes de la spec v11 §10 suivent le nouveau nom. L'accord de l'utilisateur prime sur le « mot pour mot » de la spec pour ce seul nom : le nom « Emozio » se vérifie avec l'icône (étapes 1 et 3), « l'ancienne app » et « la nouvelle app, Emozio » remplacent « l'ancien » et « le nouveau Carnet ». Comme avant, rien n'est supprimé avant la dernière étape.
+- `.gitignore` ajoute `emozio-*.json`, `.zip`, `.pdf` et `.txt` à côté des motifs `carnet-*`, gardés pour les anciens fichiers. `CLAUDE.md` prend le nom, cite `emozio-*.zip` parmi les fichiers à ne jamais lire et dit que le nom interne reste `carnet`. `package.json` : la description commence par « Emozio ».
+- La documentation vivante suit : le README, l'installation, le déploiement (« Emozio TEST »), le rappel du soir, la recette de l'iPhone, le format de sauvegarde, `docs/v6-specification.md` et `docs/design/integration.md`.
+
+### Ce qui garde le nom interne `carnet`, et pourquoi
+
+- **La base IndexedDB `carnet`** (`db/repository.js`, `db/migrations.js`) : renommée, l'app ouvrirait une base neuve et croirait repartir de zéro.
+- **`FORMAT = 'carnet-sauvegarde'`** (`db/sauvegarde.js`) : les anciennes sauvegardes doivent rester importables, et les nouvelles gardent cet identifiant, que l'import vérifie.
+- **Le préfixe de cache `carnet-` de `sw.js`** : le nettoyage des anciens caches continue de les retrouver.
+- **Les clés `localStorage` `carnet:…`** (brouillons, réglages du lecteur et des minuteurs, replis, demande de connexion à Spotify en attente) et les identifiants internes (`window.__carnet` des tests, la classe `revenir-carnet`, le marqueur `carnet-test` du fichier de test du Diagnostic, jamais importé) : les renommer ferait perdre ces repères, sans rien changer à l'écran.
+- **Le champ `name` de `package.json`** (`suivi-audhd`), le dépôt et le site Netlify : l'adresse ne change jamais, le stockage de l'iPhone y est lié.
+- **Les traces de leur temps** gardent « Carnet » : les entrées de ce journal avant la v11, les spécifications v4 et v5, les maquettes et prompts de Claude Design, les specs et plans de `docs/superpowers/`.
+
+### Textes à relire après la publication
+
+- La notification du soir des Rappels (`ui/ecrans/rappel.js`, `docs/rappel-du-soir.md`) : « Le soir dans Emozio, si tu veux. », à la place de « Carnet du soir, si tu veux. ».
+- Réglages › Émotions : « Revenir au texte d'Emozio ».
+- Le minuteur de concentration : « Le temps restant s'affiche, et continue si tu quittes Emozio. Un bol à la fin, si l'app est à l'écran. ».
+- L'Aide iPhone, « Changer d'icône sans rien perdre » : « Redémarrer l'iPhone : l'icône a peut-être changé. Si oui, et si son nom est « Emozio », c'est fini. », « Dans l'ancienne app : … », « … s'il montre la nouvelle icône et le nom « Emozio », Ajouter. … », « Ouvrir la nouvelle app, Emozio, qui doit être vide : … », « Ranger l'ancienne app dans un dossier, et ne plus y écrire. La supprimer plus tard, ou jamais. ».
+
+Test : `tests/unit/nom-emozio.test.js` (le manifest et `index.html`, aucun « Carnet » à l'écran, le nom interne gardé, les fichiers en `emozio-`, l'import d'un ancien nom, `.gitignore`, `CLAUDE.md`).
+
+## 2026-11-08 : v11.0.0, six retours après la v10
+
+Source : les premiers retours d'usage après la v10 (04/11), puis ses réponses aux formulaires (04 et 05/11). Spec : `docs/superpowers/specs/2026-11-05-carnet-v11-design.md`, qui fait foi. Plan : `docs/superpowers/plans/2026-11-05-carnet-v11.md`, en 11 tâches, une par commit, chacune relue puis corrigée. Version 11.0.0, à publier en une fois, avec l'accord de l'utilisateur.
+
+La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base reste en `DB_VERSION` 6, confirmé : aucun magasin ni transformation, `gratitudes` arrive par `normaliserJournee`, et `migrations.lock.json` ne change pas. Les vocabulaires figés (roue, `declencheur`, `dessous`, clés d'`APRES_COUP`) et les 144 couleurs de la carte ne changent pas.
+
+L'app y prend aussi son nom, **Emozio** (entrée « 2026-11-07 : le nom Emozio », plus haut) : seuls ce que l'utilisateur voit et le nom des fichiers exportés changent ; le nom interne reste `carnet`.
+
+### Décisions de l'utilisateur (spec §2, 04 et 05/11)
+
+- **La roue** : la durée de la nuit sur une roue couchée, dans la carte Sommeil, **toujours visible**, à la demi-heure. Il a vu le coût : le soir défile davantage. Le sport (4 tranches) et le contact humain (« Comment c'était ») ont la même roue, dans leur carte.
+- **Mes gratitudes** : « les deux », ce pour quoi il est reconnaissant et à qui il dit merci, dans une carte sous « Mes points positifs », toujours visible.
+- **Les épisodes** : « Relire et compléter » et « Écrire ce que j'en retiens », depuis l'Analyse. Ni « Voir les fois semblables », ni « Préparer pour le psy ».
+- **Mes refuges** : sa liste de titres **et** ses playlists, dans Moment difficile et dans Bien-être, avec la **connexion à son compte Spotify**, coût affiché (une app à créer chez Spotify, la règle « zéro réseau » levée pour cela). Informé de Premium, de la reconnexion et du retour incertain sur iPhone : « Ca peut fonctionner en 5G si besoin. Et j'ai un compte premium ».
+- **Les écrans de l'émotion en thème clair** : le fond passe en clair comme le reste de l'app, le mot choisi sur une capsule de sa couleur. « Réveil la nuit » reste noir dans les deux thèmes.
+- **L'icône** : la piste B, « Les quatre zones ».
+- **Le geste de retour** : sur les écrans à « Retour », le doigt vers la droite revient en arrière ; l'onglet des jours garde son sens ; Analyse, Bien-être, Soins et Réglages : rien. Par-dessus l'app, seulement là où l'on relit.
+- **« Revenir à l'état d'avant l'import »** demande confirmation.
+- **L'Export PSY** : ni les gratitudes, ni « ce que j'en retiens ».
+
+### Appels du concepteur, à vérifier (spec §5 à §11)
+
+1. **Les gratitudes** sont citées sous « J'ai fini pour ce soir », visibles dans l'Historique et sa recherche, et relues dans un repli fermé « Tes gratitudes » de l'Analyse : les 2 plus récentes de la semaine, avec leur jour, sans nombre. Jamais dans la vue soignants (spec §6).
+2. **« Ce que j'en retiens »** reste dans l'app : ni Export PSY, ni vue soignants, ni feuille « Voir » d'En consultation, pour rester cohérent (spec §7).
+3. **Trois playlists au plus** dans Mes refuges (spec §8.1).
+4. **Aucun jeton gardé** : on se connecte, Emozio lit la liste des playlists, il en choisit jusqu'à 3, et le jeton est jeté. Rien à voler ni à renouveler ; chaque mise à jour repasse par la page de Spotify (spec §8.3).
+5. **Le passage d'icône en pas-à-pas fixe** dans Réglages › Aide iPhone (spec §10).
+
+### Règles levées ou changées (spec §13)
+
+- **Le soir ne tient plus sans défiler** à 390 × 844 (P2 et P3) : les roues ajoutent environ 54 px au Sommeil et à la rangée Contact et Sport, la carte des gratitudes environ 111 px. C'est son choix. Les tests qui l'exigeaient disent maintenant « atteignable », sans être affaiblis ailleurs, et « J'ai fini pour ce soir » passe au-dessus de la bande en défilant. Les 4 `test.fail()` de la v8 sont retirés, et le Diagnostic n'a plus « Marge du soir » ni « Marge de « J'ai fini » » : **la décision ouverte de la v8 sur le soir avec les zones sûres est close**. « Durée › » en deux touchers disparaît avec la roue. Contrôlé à la tâche 11 : aucun `test.fail`, aucun « tient sans défiler » exigé du soir, aucune « Marge du soir » ne reste.
+- **« Une seule zone, pas trois »** pour le texte du soir (cahier §4) : levée pour les gratitudes.
+- **« Quatre entrées » de Bien-être** (v10) : cinq. **Dérogation** : Mes refuges vient après le Programme.
+- **Les écrans de l'émotion noirs dans les deux thèmes** (appel du concepteur en v9) : levé. Ils suivent le thème ; en sombre, rien ne change.
+- **« Zéro réseau, aucun appel sortant »** (`CLAUDE.md`, cahier §2 et §8) : levée pour la seule connexion à Spotify, à son toucher (plus bas). « Hors ligne : obligatoire » reste vrai pour tout le reste.
+
+### L'exception réseau : la connexion à Spotify (spec §8.3)
+
+- **Ce qui s'ouvre** : `connect-src` gagne exactement `https://accounts.spotify.com` et `https://api.spotify.com` (`netlify.toml`). `script-src`, `img-src` et le reste ne bougent pas : ni pochette, ni script de Spotify, ni lecture dans Emozio.
+- **Quand** : uniquement au toucher sur « Choisir dans mon compte », dans Mes refuges. Jamais à l'ouverture de l'app ni dans Moment difficile, où l'heure d'une demande dirait à Spotify l'heure d'un moment difficile. La garde réseau des tests reste active partout ailleurs (`tests/aides/gardes.js`).
+- **Comment** : la connexion PKCE de Spotify, sans secret, avec le seul droit `playlist-read-private`. Le Client ID (qui n'est pas un secret, donné le 05/11) est écrit dans `public/js/plateforme/spotify.js`, seul fichier réseau hors de `sw.js` ; `tests/unit/architecture.test.js` a une exception étroite pour ce fichier et ces deux hôtes. Un jeton n'entre jamais dans `meta` ni dans une sauvegarde, et un test le vérifie.
+- **Ce que Spotify apprend** : l'usage de cette app par son compte, l'adresse d'Emozio, son adresse IP et l'heure de ces demandes. Aucune requête ne contient de donnée du journal, des émotions ou des épisodes.
+- **Le risque accepté** : jusqu'ici, un script malveillant ne pouvait rien envoyer en silence. Avec cette ouverture, il pourrait écrire vers un compte Spotify. Cela suppose qu'un script hostile tourne déjà dans Emozio : `script-src` reste `'self'`, et l'app ne charge aucun script tiers.
+- **`CLAUDE.md`**, ligne « Zéro réseau » : elle dit l'exception (au seul toucher, `plateforme/spotify.js` seul fichier réseau hors de `sw.js`, aucun jeton gardé, deux hôtes dans `connect-src`). Le reste de la règle ne change pas.
+
+### Identifiants (plan)
+
+- **Journal** : `heuresSommeil` de 4 à 10 par demi-heure (13 valeurs, bornes de la v8), `gratitudes` (texte), juste après `positifs` dans l'ordre du soir. **Épisode** : `ceQueJeRetiens` (texte, hors d'`APRES_COUP`).
+- **Méta `refuges`** : `{ titres, playlists: [{ nom, lien, source }] }`, 3 playlists au plus, `source` vaut `'spotify'` ou `null`.
+- **Route** : `#/refuges`, onglet Bien-être. **État d'app** : `retourSpotify`.
+- **Sur l'appareil** : `carnet:spotify:attente` (`{ verifier, state, creeLe }`, jamais de jeton, oubliée après une heure), `carnet:brouillon:refuges:<champ>`.
+- **Composants et classes** : `ui/composants/roue-choix.js` (`.roue-choix`, `.roue-valeur`), `.relecture` (là où le geste fait comme « Fermer »), jetons `--moment-*` (`tokens.css`). Icônes `sortie` et `musique` (`ui/icones.js`).
+- **Icônes de l'app** : `icons/v11-apple-touch-icon.png`, `v11-icone-192.png`, `v11-icone-512.png`, `v11-icone-maskable-512.png`.
+
+### Données (tâche 1)
+
+- Le témoin `tests/fixtures/temoins/format-7.json`, écrit par la v10.0.0 avant tout changement de format ; les témoins 1 à 6 restent identiques à l'octet. Une sauvegarde v10 s'importe en v11 sans transformation ; une sauvegarde v11 est refusée par une app plus ancienne.
+- Une demi-heure s'écrit « 7 h 30 », jamais « 7,5 », partout où la durée s'affiche, l'Export PSY compris : c'est son seul changement.
+- `domain/refuges.js`, pur : liens `https:`, `spotify:` et `music:` seuls, à la saisie et à la lecture d'une sauvegarde ; « ?si=… » retiré ; un lien reçu de Spotify n'est gardé que s'il vient de `open.spotify.com`, sinon il perd aussi sa source. Un nom est coupé à 200 signes, un emoji comptant pour un. Une méta abîmée ou écrite à la main est remise en forme sans erreur (point de vigilance 4).
+
+### La roue (tâches 2 et 3)
+
+- **Une bande de vrais boutons** (`aria-pressed`, 44 × 44 au moins), sans curseur ARIA fait main. Vide : rien de marqué, centrée sur 7 h (le milieu de la liste pour le sport et le contact), en teinte neutre, jamais la valeur de la veille. Toucher note et centre, retoucher efface. Un glissement du doigt note la valeur au centre 150 ms après l'arrêt, sans dépendre de `scrollend`.
+- **Ce qui n'est pas un glissement n'écrit rien** (point de vigilance 1) : un toucher sans défilement, la page qui défile le doigt posé sur la bande, un défilement sans doigt (centrage, VoiceOver), la valeur déjà notée. Jamais de bascule. Une valeur en attente s'écrit tout de suite sur son jour, au changement de jour ou au passage en arrière-plan.
+- **Le fondu des bords** épargne les deux voisines de la valeur du milieu, cibles visibles, qui gardent 4,5:1 (relecture de la tâche 2).
+- **Sport et Contact** : sous Oui / Non, la durée de la première activité et l'effet du premier contact (`changerPremiereLigne`, pur). Une valeur notée sur rien de noté met Oui, un Non reste un Non. Le détail règle la durée et l'effet sur la même roue. Côte à côte, chaque valeur prend toute la bande, et la marge grise vise la valeur du milieu, celle qui se voit (relecture de la tâche 3 : elle écrivait une voisine invisible).
+
+### Mes gratitudes (tâche 4)
+
+- La carte, sa consigne, la dictée et l'enregistrement seul, juste sous « Mes points positifs » ; `normaliserJournee` la place juste après eux dans un ordre réglé sans elle (une app déjà installée). Réglages › Le soir : son carré à la couleur des points positifs.
+- **Point de vigilance 3** : une journée qui n'a que des gratitudes n'existe pas pour l'Export PSY et la vue soignants (`sansGratitudesSeules`) : ni texte, ni ligne, ni « explosions 0 », ni date de début. Une journée qui n'a que le traitement pris garde sa ligne.
+- **Correctif hérité** : « Effacer cette journée » puis « Annuler » perdait les textes du soir (points positifs, notes) : la zone vidée enregistrait ce vide en partant. L'entrée est désormais posée avec la génération.
+
+### Revenir sur ses épisodes (tâche 5)
+
+- Une porte « Épisodes » à côté d'« Historique », en haut de l'Analyse, qui passe dessous en grand texte. Elle ouvre l'Historique forcé sur le segment « Épisodes » : aucune liste nouvelle, un épisode en 3 touchers depuis l'onglet ; filtres et position remis à zéro venant d'un autre segment, gardés sinon.
+- « Ce que j'en retiens » sous la carte Après coup de l'épisode rouvert, même ancien, même sans Après coup : sans consigne ni « facultatif », rien d'écrit à côté quand il est vide. L'écrire ne touche pas à `apresCoup.jour` : un vieil épisode ne repart pas vers l'Export PSY (prouvé à l'octet).
+
+### Mes refuges et la connexion à Spotify (tâches 6 et 7)
+
+- L'écran, ouvert depuis la cinquième entrée de Bien-être et depuis Réglages › Mon plan : ses titres, un par ligne, et trois playlists, chacune un nom et un lien, écrits seuls au fil de la frappe. Un lien refusé n'est pas gardé, sans message.
+- Une playlist qui a un lien s'écoute d'un toucher, dans Mes refuges et dans Moment difficile, sous « Une chose à la fois » : un lien qui sort d'Emozio, avec l'icône de sortie au trait (pas le caractère ↗, compté comme emoji). Les titres rejoignent Mon plan dans Moment difficile seulement. Sans playlist ni titre, rien n'apparaît.
+- Le Diagnostic, « Ouvrir une playlist », essaie trois formes du lien (`formesDuLien`) : lien web, lien web dans une nouvelle fenêtre, lien direct vers l'app, sans lien dans le rapport.
+- **Le retour de Spotify** (`?code=`, `?state=`, `?error=`) est lu et retiré de l'adresse tout en haut de `main.js`, avant le guide d'installation et le retour sur Aujourd'hui. Dans l'app, la connexion se finit dans Mes refuges ; hors de l'app installée, une page montre le code à coller dans Mes refuges.
+- **Point de vigilance 5** : un `state` qui ne correspond pas, un refus, un retour sans demande, 401 et 403, réseau coupé, une réponse d'une autre forme, un nom piégé, un élément `null`, un lien d'un autre hôte : aucun plantage, aucun jeton, les refuges déjà notés intacts. Réseau coupé au retour : le code est gardé dans le champ, et « Finir la connexion » le relance.
+- « Retirer ces playlists » a son « Annuler », qui ne défait que le retrait : une écriture venue d'ailleurs entre-temps n'est pas remplacée.
+- **Constante vide** (`SPOTIFY_CLIENT_ID`) : ni bouton ni champ de code. Le correctif 11.0.1 qui retirerait la connexion tient en ce changement.
+
+### Les écrans de l'émotion en clair (tâche 8)
+
+- Les écrans 1, 2 et 3, la loupe, Mon mot et un relevé rouvert passent par les jetons `--moment-*` : en clair, le gris d'Aujourd'hui et des cartes blanches, comme le prototype ; en sombre, les valeurs d'avant, et le style calculé de chaque élément est identique à celui de la v10. Les bulles ne bougent pas.
+- En clair, le mot choisi s'écrit en noir sur une capsule de sa couleur, à la carte du bas et à l'écran 3. Rien n'est recalculé si le thème change, écran ouvert.
+- « Réveil la nuit » garde `.ecran-noir`, seul.
+
+### Le geste de retour (tâche 9)
+
+- Sur un écran à « Retour », le doigt vers la droite fait comme ce bouton, au lâcher, aux seuils du changement de jour (`ecouterGlissement`). Là où l'on relit (`.relecture` : un épisode ou un symptôme rouvert, le récapitulatif de l'Après coup, un relevé rouvert), il fait comme « Fermer ». Une saisie, un exercice, un minuteur, les écrans de l'émotion et En consultation n'en ont pas.
+- **Point de vigilance 2** : `touch-action: pan-y pinch-zoom` sur ces écrans et sur leurs zones qui défilent (corps des parcours, graphes de Comprendre, aperçu de l'Export PSY), sans quoi WebKit repart de `auto` à chaque zone qui défile et iOS prendrait le geste. Un graphe montré en tableau garde son défilement de côté. Le geste au doigt reste à vérifier sur l'iPhone.
+- **Une page plus large que l'écran garde son défilement de côté** (relecture finale) : en très grand texte, des écrans hérités à « Retour » débordent déjà (Rendez-vous, Traitement, Soins › Traitement, la Vue soignants, Rappels), et `pan-y pinch-zoom` sur `.app` leur ôtait au doigt ce défilement : ce qui dépasse à droite ne s'atteignait plus. Une telle page porte `.deborde-de-cote` (`useDebordeDeCote`, `ui/composants/geste-retour.js`, mesuré au montage, à `resize`, à la page revue, quand la taille du texte change et quand le contenu change ; voir « Contre-relecture ») et garde `auto`. Le coût : sur ces pages, iOS peut prendre le geste de retour pour lui, comme depuis un graphe montré en tableau ; le bouton « Retour » reste. Test : `v11-geste.spec.js`, à 53 px.
+
+### L'icône et « Revenir » (tâche 10)
+
+- `icone.svg` reprend la piste B ; `npm run icones` rend les PNG sous des noms `v11-`, sur fond noir : plus de cadre bleu sur l'icône masquable. **Le rouge et le vert des émotions sortent ici de leurs écrans** : c'est son choix (spec §10).
+- `theme-color` : `#e7eaee` en clair, `#000000` en sombre ; le manifest prend les couleurs du clair. Pas d'activation d'office d'une nouvelle version dans `sw.js`.
+- Aide iPhone : « Changer d'icône sans rien perdre », les 5 étapes de la spec, mot pour mot sauf le nom Emozio et sa vérification sous l'icône (étapes 1 et 3 ; entrée « 2026-11-07 : le nom Emozio »), et ce que la copie ne garde pas. Aucune étape ne fait supprimer quoi que ce soit avant la dernière.
+- « Revenir à l'état d'avant l'import » passe par une confirmation qui dit ce qui sera remplacé, lue par VoiceOver. Un import sur une base vide (`estBaseVide`) ne prend plus de copie : la ligne n'apparaît pas après le passage à la nouvelle icône.
+
+### Contrôle global (tâche 11)
+
+- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 14 écrans de la v11 (`ECRANS_V11`) : le soir et ses trois roues, vides puis notées, Sport et Contact en détail, Mes gratitudes écrites ; l'Analyse et « Tes gratitudes » ouvert ; l'Historique par la porte Épisodes ; l'épisode rouvert et « Ce que j'en retiens » ; Mes refuges vide et plein ; Moment difficile avec ses playlists et ses titres ; Bien-être et ses cinq entrées ; le Diagnostic et « Ouvrir une playlist » ; la confirmation de « Revenir » ; l'Aide iPhone : 97 écrans en tout, contre 83 en v10. En clair et en sombre : contraste 4,5:1, ni tirets, aucun choix fait sans coche, aucune violation de la CSP ; rien ne sort de l'écran à 390 px, au texte par défaut et à 23 px.
+- **Sur ces 14 écrans, en plus**, en clair et en sombre, avec « Réduire les animations » : cibles de 44 pt au doigt, aucun mot interdit, aucune police à empattements, rien de téléchargé ni aucune requête sortante, rien qui bouge. Sous la boîte de confirmation, seule la boîte se touche : l'écran du dessous, sous son voile, n'est pas compté (`ciblesPetites`, paramètre `racine`). Les écrans de la connexion à Spotify ont leur propre contrôle (`v11-spotify.spec.js`), à cause de sa garde réseau.
+- **Le correctif que ce contrôle exigeait** (hérité de la v10) : sur le soir, la cible de « Jour précédent » perdait son bas. `.sous-jour` et sa marge de −6 px remontaient dessous : le point visé tombait sur le résumé au repos, sur « Enregistré » après un toucher. `.sous-jour` laisse passer les touchers (`pointer-events: none`), car elle n'a que du texte ; le message d'échec reste lisible.
+- **Très grand texte (33 à 53)** : Mes refuges plein ne sort pas de l'écran de côté, page comprise. Le soir non plus à 33 px, en entier, page comprise. À partir de 40 px, seules les trois roues notées et la carte Mes gratitudes sont contrôlées sur le soir : le reste y déborde encore (« nuit dernière », « Télétravail », le résumé d'un relevé), à l'identique de la v10 (page de 395, 449 puis 496 px). C'est un écran hérité, hors de la v11 (spec §3), que le test ne contrôle pas à ces tailles.
+- **Captures**, dans WebKit à 390 × 844, en clair et en sombre, gardées hors du dépôt : le soir (roues vides et notées, gratitudes), l'Analyse, Mes refuges, Moment difficile, Bien-être, le Diagnostic, la confirmation, l'Aide iPhone, et le soir et Mes refuges à 40 px. Rien à corriger.
+- **Version 11.0.0** (package.json, precache).
+
+### Relecture finale
+
+Trois relectures de la v11 entière (écrans, données, règles), corrigées dans un commit, chaque correction épinglée par un test.
+
+- **La roue : un défilement du code n'est plus un glissement** (point de vigilance 1). Retoucher la valeur notée l'effaçait, et un doigt posé sur la bande pendant son recentrage en douceur, immobile ou la page qui défile, prenait les `scroll` du code pour un geste : au lever, la valeur du milieu s'écrivait (7 h, Neutre). Seul un `scroll` reçu après que le doigt a bougé de côté (`touchmove`, plus de 6 px, plus en largeur qu'en hauteur) marque le geste ; le recentrage en douceur est ignoré jusqu'à sa cible, sauf si le doigt reprend la main ; le doigt levé sans geste, la bande revient sur sa valeur, sans rien écrire. L'aide de test `glisserRoue` pose de vrais points de contact.
+- **La roue suit la taille du texte changée écran ouvert** (Centre de contrôle, sans `resize`) : en rapetissant, la fenêtre teintée montrait « 10 h ou plus » pour une nuit de 7 h 30. Un `ResizeObserver` sur la largeur de la première valeur recale la roue à l'image suivante, sans rien écrire.
+- **La paire Contact et Sport a une seule fenêtre** : la bande moins 8 px de chaque côté, dans les deux roues. Celle du Sport, à la largeur de « Moins de 15 min », ne laissait que 2 px de gris (deux fins croissants), et à vide en clair un rectangle blanc sur la carte blanche. Le texte garde 6 px jusqu'au bord de la fenêtre : « Moins de 15 min » passe à la ligne, en deux lignes équilibrées, sans rien changer à la hauteur, déjà de deux lignes côte à côte.
+- **Les confirmations défilent** : en très grand texte, la boîte « Revenir à l'état d'avant l'import ? » sortait de l'écran (titre coupé dès 47 px, ses deux boutons hors d'atteinte du doigt à 53 px). Le voile défile (`.voile-boite`), la boîte part du haut quand elle n'y tient plus et garde 24 px au-dessus de la barre d'accueil ; au texte par défaut, elle reste au milieu. Ses deux boutons passent l'un sous l'autre quand le mot de l'un ne tient plus dans sa moitié (« Revenir » dès 47 px), au lieu d'être coupés par la boîte. La feuille garde son voile.
+- **Un texte sans espace passe à la ligne** (un lien collé, 70 signes) : dans Mon plan de Moment difficile (« Mes titres », les rubriques et les « Si… alors… »), sous « J'ai fini pour ce soir » et dans « Tes points positifs » et « Tes gratitudes » de l'Analyse, qui défilaient de côté.
+- **Le défilement de côté rendu aux pages qui débordent** en très grand texte : voir « Le geste de retour (tâche 9) ».
+- **Le Client ID de Spotify n'est écrit que dans `plateforme/spotify.js`** : le test unitaire le citait, et exigeait une constante remplie. Vidée (le correctif 11.0.1), la suite reste verte : vérifié avec les tests unitaires et les e2e de Mes refuges, de la connexion, des gratitudes et du contrôle global.
+- **Les règles levées sont annotées** « Levé en v11 » dans leurs entrées d'origine (v6.1, v8, v9, v10), comme la v10 l'avait fait.
+
+### Contre-relecture
+
+Une relecture des corrections de la relecture finale. Six constats, tous vérifiés et corrigés dans un commit, chacun épinglé par un test.
+
+- **Plus d'erreur « ResizeObserver loop » par intermittence.** `useDebordeDeCote` observait `body`, dont la hauteur suit le chargement des données : elle changeait encore après le rappel, dans la même image, et WebKit levait « ResizeObserver loop completed with undelivered notifications », une erreur de page que la garde des e2e compte (v11-refuges, « Diagnostic, Ouvrir une playlist » : 2 fois sur 40 sous charge, 4 processus en parallèle). Seul un témoin est observé : un `span` caché de l'Entete, hors flux, de 1em de large, dont la taille ne suit que celle du texte (il ne déborde jamais : 53 px au plus grand texte). Le contenu se suit par un `MutationObserver`, qui n'a pas cette boucle, et la mesure attend l'image suivante, une fois par image au plus ; `resize` et la page revue restent. Après correction : 0 sur 40 dans les mêmes conditions. Tests : `v11-geste.spec.js` (ni `body` ni `html` observés ; un débord né après l'ouverture rend le défilement de côté, et le geste revient quand il part ; les 53 px de Traitement, Rendez-vous et la Vue soignants inchangés).
+- **La roue n'écrit plus le doigt posé quand il rattrape la bande en élan.** Un second glissement moins de 150 ms après le premier (le geste encore marqué) : sur l'iPhone, la bande en élan suit le doigt sans seuil, et un `scroll` reçu avant 6 px relançait la fin, qui écrivait 150 ms plus tard, le doigt encore posé (5 h 30, puis 5 h au lâcher). Le doigt posé, un `scroll` ne fait plus que marquer le geste (s'il a bougé de côté) ; la fin part du lâcher. Test : `v11-roue.spec.js`, aucune écriture avant le `touchend`, puis une seule.
+- **La confirmation s'ouvre sur sa question en très grand texte.** La taille déjà réglée dans iOS, le focus initial sur « Annuler » faisait défiler le voile jusqu'en bas : à 53 px, le titre de « Revenir à l'état d'avant l'import ? » était hors de l'écran (de −402 à −143 px). Le focus ne fait plus défiler (`preventScroll`) : la boîte part du haut, VoiceOver reste sur « Annuler » et lit toujours le texte. Test : `sauvegarde.spec.js`, la boîte ouverte à 53 px.
+- **Le voile d'une confirmation garde la zone sûre du haut sous le bandeau « Nouvelle version prête ».** La boîte est rendue dans `main`, où le bandeau remet `--zone-haut` à 0 ; le voile, fixe sur tout l'écran, n'avait plus que 24 px en haut, et en très grand texte la boîte passait sous l'heure. Il prend `--zone-haut-ecran`, résolue sur la racine (`tokens.css`), que le bandeau ne touche pas : les zones sûres restent lues dans `tokens.css` seulement, et les tests les simulent toujours. Le bas n'a pas changé : `--zone-bas` n'est remise à 0 nulle part. Test : `sauvegarde.spec.js`, zones simulées, bandeau affiché, au texte par défaut et à 53 px.
+- **Une déclaration morte retirée** : `min-width: min(100%, max-content)` sur les boutons du pied des confirmations est invalide dans WebKit (un mot-clé intrinsèque n'est pas admis dans `min()`), donc ignorée. C'est la largeur minimale d'un élément flex (son mot le plus long) qui fait passer les boutons l'un sous l'autre ; chaque action tient en un mot. Rien ne change à l'écran : le test de la relecture finale reste vert.
+- **L'éditeur de Mon plan : un « si » sans espace passe à la ligne** (défaut antérieur à la v11, de la même famille que celui de Moment difficile). Un « si » de 70 signes élargissait la ligne à 602 px pour 362, et la carte, qui coupe ce qui dépasse, rejetait « Retirer » hors de l'écran : la ligne ne se retirait plus au doigt. Test : `v11-refuges.spec.js`, rien hors de la carte, « Retirer » atteint et la ligne retirée.
+
+### Écarts au texte de la spec
+
+- **§8.3, « Oublier »** : le mot répond à `oubli*`, interdit (`tests/aides/mots-interdits.js`, spec §4). L'app dit « Retirer ces playlists » et « Une seule lecture : Emozio ne garde pas la connexion. ». Le filtre n'a pas changé.
+- **§13, le très grand texte du soir** : le soir entier est contrôlé à 33 px ; à partir de 40 px, seul ce que la v11 y ajoute (voir « Contrôle global »).
+
+### En attente de l'utilisateur
+
+- **Avant d'essayer la connexion à Spotify**, de son côté, une fois :
+  - vérifier l'adresse de retour inscrite dans l'app créée chez Spotify : exactement celle du site de production, `https://<site>.netlify.app/`, **barre finale comprise** (Emozio envoie l'adresse de l'app sans paramètres ni `#`) ;
+  - si Spotify répond 403 (« Spotify refuse cette connexion »), s'ajouter à la liste d'utilisateurs de l'app, chez Spotify : elle reste en mode développement ;
+  - préparer ses playlists dans Spotify ;
+  - **jamais son mot de passe** : la connexion, c'est lui seul qui la fait, sur la page de Spotify.
+- **Le correctif 11.0.1** (spec §8.5), selon ce que l'iPhone montre :
+  - si ni le retour dans l'app ni le code à coller ne marchent, il retire la connexion (la constante vidée), et les liens collés restent ;
+  - si le lien web s'ouvre dans une page Safari au-dessus d'Emozio plutôt que dans l'app de musique, il passe à la forme du Diagnostic qui marche mieux. La v11 sort avec le lien web.
+- **Les limites assumées, à lui dire** (spec §8.5) : si iOS a fermé Emozio pendant l'écoute, il se rouvre sur Aujourd'hui ; lancer un exercice ou un son de fond peut couper la musique ; sans réseau, la connexion et l'ouverture d'une playlist ne marchent pas, mais la liste écrite et les liens notés restent lisibles ; Spotify a changé ces règles trois fois en 2026, et l'app, en mode développement, est à la merci d'un prochain changement.
+- **Le passage à la nouvelle icône** (spec §10), à lui donner après la publication : les 5 étapes, aussi dans Réglages › Aide iPhone. Une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et supprimer l'ancienne efface ses données : rien n'est à supprimer avant d'avoir vérifié la copie dans la nouvelle app. Dans Safari, l'ancien service worker sert encore l'ancienne page tant que l'onglet n'est pas fermé (étape 3).
+- **Le nom Emozio** (entrée du 07/11) : il n'apparaît sous l'icône qu'avec la nouvelle icône (le passage ci-dessus) ; l'ancienne garde « Carnet ». Facultatif, de son côté : renommer son app dans le tableau de bord développeur de Spotify, car ce nom s'affiche sur la page d'autorisation ; renommer son dossier iCloud Drive « Carnet » en « Emozio », le nom que l'app lui donne désormais. Les anciennes sauvegardes (`carnet-sauvegarde-…`) restent importables, quel que soit leur dossier.
+- **Les textes nouveaux** (plus bas) sont des propositions, à relire après la publication.
+- **Les points de la v10 restent ouverts** (spec §3) : le ▶ d'un favori ou de « Reprendre », l'épingle sur les lignes du Programme, les écrans hérités qui débordent en très grand texte (le soir compris, voir plus haut), la fin de « Réveil la nuit » en thème clair, les quatre boutons de Moment difficile en sombre, les exercices et la table « Pour ce moment : » à relire. Ceux de la v7 à la v9 aussi : Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé. Le soir avec les zones sûres et « Durée › » en deux touchers sont clos (voir « Règles levées ou changées »).
+- **Hors de la v11** (spec §3) : les fois semblables, la préparation pour le psy, de nouveaux filtres, le sport en minutes, un « Dit » ou un rappel sur les gratitudes, écouter de la musique dans Emozio, et ce qui a été proposé le 05/11 sans être retenu.
+
+### À essayer sur l'iPhone
+
+Le détail, à cocher, est dans `docs/recette-iphone.md`, « v11 » : le geste de retour au doigt, et le défilement de côté des pages qui débordent en très grand texte ; le glissement de la roue, sa fin, la page qui défile dessous, le doigt posé pendant un recentrage, la taille du texte changée au Centre de contrôle, et les Oui / Non de Contact et de Sport un cran au-dessus du texte par défaut ; le soir encore en moins de 30 s avec ses trois roues ; la connexion à Spotify et son retour ; l'ouverture d'une playlist (Diagnostic) et le retour dans Emozio ; la nouvelle icône et le passage sans perte, et la boîte « Revenir » lue par VoiceOver ; les bulles pâles au soleil et la barre du haut en clair.
+
+### Textes nouveaux à relire après la publication
+
+Écrits pour Emozio, d'après la spec et le plan. Un texte se corrige dans le fichier indiqué ; les identifiants ne changent pas.
+
+- **Le soir** (`ui/ecrans/aujourdhui.js`) : la carte « Mes gratitudes », consigne « Ce pour quoi je suis reconnaissant. À qui je dis merci. ». Les roues, pour VoiceOver : « Durée de la nuit », « Durée du sport », « Comment c'était » ; dans les détails, « Activité 1 : durée », « Contact 1 : comment c'était ». Les valeurs sont celles des listes (« 4 h ou moins », « 4 h 30 », … « 10 h ou plus »).
+- **L'Analyse** (`ui/ecrans/analyse.js`) : la porte « Épisodes », le repli « Tes gratitudes ».
+- **L'épisode rouvert** (`ui/ecrans/parcours-fiche.js`) : « Ce que j'en retiens ».
+- **Mes refuges** (`ui/ecrans/refuges.js`, `ui/composants/refuges.js`) : « Mes refuges », « Mes titres » (« Un titre par ligne. »), « Mes playlists », « Nom », « Lien », « Playlist 2 » pour une playlist sans nom ; « Choisir dans mon compte », « Une seule lecture : Emozio ne garde pas la connexion. », « Code de Spotify », « Finir la connexion », « Spotify », « Aucune playlist dans ce compte. », « Retirer ces playlists », puis « Playlists de Spotify retirées » et « Annuler » ; les échecs « La connexion n'a pas abouti. Tes liens notés restent. » et « Spotify refuse cette connexion. Tes liens notés restent. ».
+- **La page du code** (`ui/ecrans/code-spotify.js`) : « Code de Spotify », « Copie ce code, reviens dans Emozio, puis colle-le dans Mes refuges. », « Copier le code », « Copié. », « La copie n'a pas marché : sélectionne le code. ».
+- **Bien-être et Mon plan** : l'entrée « Mes refuges » ; dans Moment difficile, la rubrique « Mes titres » de Mon plan. L'aperçu de l'import nomme « les refuges ».
+- **Le Diagnostic** (`ui/ecrans/diagnostic.js`) : « Ouvrir une playlist », « Note d'abord une playlist dans Mes refuges. », « Lien web », « Lien web, nouvelle fenêtre », « Lien direct vers l'app », « À noter : où ça s'ouvre, où on revient. ».
+- **Réglages** (`ui/ecrans/reglages.js`, `ui/ecrans/aide-iphone.js`) : la confirmation « Revenir à l'état d'avant l'import ? », « Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du … Les mémos vocaux d'avant l'import ne reviennent pas. », action « Revenir » ; l'Aide iPhone, son introduction et « Changer d'icône sans rien perdre », dont la note « La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser. ».

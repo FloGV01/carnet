@@ -1,4 +1,4 @@
-// Exercices de Bien-être (v7, spec §6.2) : rédigés pour Carnet, relus par l'utilisateur (titres et étapes repris dans
+// Exercices de Bien-être (v7, spec §6.2) : rédigés pour Emozio, relus par l'utilisateur (titres et étapes repris dans
 // docs/decisions.md). Une consigne par écran ; chaque étape a sa durée, en secondes : l'étape passe seule à la suivante à
 // la fin de cette durée (v8 : voix allumée ou non). La somme des durées est proche de la durée annoncée (dureeMin). Règles
 // d'écriture : phrases courtes, tutoiement, ton neutre, aucune promesse d'effet ni conseil de santé. Les identifiants sont

@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { toucher, groupe, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
+import { toucher, viderBase, aller, entreeDuJour, simulerZonesSures } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { addDays } from '../../public/js/domain/dates.js';
 
 // v8 (8/9) · Fiabilité (spec §8 et §12.7) : Q27, le soir avec les zones sûres de l'iPhone (47 px en haut, 34 en bas, en
-// 390 × 844) et le Diagnostic qui les affiche ; Q29, les finitions ; Q31, l'entrée d'un jour qui attend ses données ;
+// 390 × 844) et le Diagnostic qui les affiche (v11 : sans les marges du soir) ; Q29, les finitions ; Q31, l'entrée d'un jour qui attend ses données ;
 // Q26, 5 ans de données inventées et des écrans qui ne relisent la base que si elle a changé. Données inventées.
 // Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const AUJ = '2026-10-15';
@@ -22,30 +22,38 @@ test.beforeEach(async ({ page }) => {
 });
 
 // ---------- Q27 : les zones sûres de l'iPhone, et le Diagnostic ----------
+// v11 (2/11, spec §13) : le soir ne tient plus sans défiler (les roues, les gratitudes). Les zones sûres et la hauteur utile
+// restent, au soir comme au Diagnostic ; la marge du soir et celle de « J'ai fini pour ce soir », qui ne servaient qu'à
+// cette règle, sont retirées : le soir se défile jusqu'à sa dernière carte, au-dessus de la bande.
 
-// Les boîtes du soir, page en haut : l'en-tête, la dernière carte, la bande du bas, les onglets.
+// Les boîtes du soir, page en haut : l'en-tête, la première carte, la bande du bas, les onglets.
 const geometrieSoir = (page) => page.evaluate(() => {
+  window.scrollTo(0, 0);
   const r = (s) => document.querySelector(s).getBoundingClientRect();
   const bande = r('.actions-flottantes');
   return {
-    scrollY: window.scrollY, large: document.documentElement.scrollWidth > window.innerWidth, entete: r('.entete-jour').top,
-    marge: bande.top - r('.carte-champ:has(#points-positifs)').bottom, bande: [bande.top, bande.bottom], onglets: [r('.onglets').top, r('.onglets').bottom],
+    large: document.documentElement.scrollWidth > window.innerWidth, entete: r('.entete-jour').top, premiere: r('main.aujourdhui > .carte-champ').top,
+    bande: [bande.top, bande.bottom], onglets: [r('.onglets').top, r('.onglets').bottom],
     bandeau: document.querySelector('.bandeau') ? [r('.bandeau').bottom, r('.bandeau > span').top] : null,
   };
+});
+// La page défilée jusqu'en bas : la marge de la dernière carte du soir au-dessus de la bande (positive : elle est au-dessus).
+const margeAFondDePage = (page) => page.evaluate(() => {
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  return document.querySelector('.actions-flottantes').getBoundingClientRect().top - document.querySelector('.carte-champ:has(#points-positifs)').getBoundingClientRect().bottom;
 });
 // Ce que le Diagnostic affiche, ligne par ligne : { Fenêtre: '390 × 844', … }.
 async function diagnostic(page) {
   await aller(page, '#/diagnostic');
   const dl = page.locator('main.diag dl').first();
-  await expect(dl.locator('dt', { hasText: 'Marge du soir' })).toBeVisible();
-  // L'écran est lu après le premier rendu (useEffect) : « · » seul veut dire « pas encore lu », jamais une marge (v9, 2/8 :
-  // la lecture immédiate échouait parfois, même au tag v8.0.0).
+  await expect(dl.locator('dt', { hasText: 'Hauteur utile' })).toBeVisible();
+  // L'écran est lu après le premier rendu (useEffect) : « · » seul veut dire « pas encore lu » (v9, 2/8 : la lecture
+  // immédiate échouait parfois, même au tag v8.0.0).
   await expect(dl.locator('dt:has-text("Fenêtre") + dd')).not.toHaveText('·');
   return dl.evaluate((l) => Object.fromEntries([...l.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent])));
 }
-const enPx = (n) => `${String(Math.round(n * 10) / 10).replace('-', '−').replace('.', ',')} px`;
 
-test('Q27 · avec les zones sûres de l\'iPhone (47 en haut, 34 en bas, 390 × 844), le soir tient sans défiler, en clair et en sombre, à 21 h et entre 0 h et 4 h ; le Diagnostic donne la même marge', async ({ page }) => {
+test('Q27 · avec les zones sûres de l\'iPhone (47 en haut, 34 en bas, 390 × 844), en clair et en sombre, à 21 h et entre 0 h et 4 h : l\'en-tête sous l\'encoche, la bande collée aux onglets, le soir défilé jusqu\'à sa dernière carte ; le Diagnostic les donne, sans marge du soir', async ({ page }) => {
   await simulerZonesSures(page);
   for (const [schema] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
@@ -60,21 +68,22 @@ test('Q27 · avec les zones sûres de l\'iPhone (47 en haut, 34 en bas, 390 × 8
       await toucher(page, 'Traitement pris', 'Oui');
       await expect.poll(async () => (await entreeDuJour(page))?.traitementPris, quoi).toBe('traitementPris:oui');
       const g = await geometrieSoir(page);
-      expect(g.scrollY, quoi).toBe(0);
       expect(g.large, quoi).toBe(false);
       // L'en-tête sous l'encoche, la bande du bas collée aux onglets, les onglets au-dessus de la barre d'accueil.
       expect(g.entete, quoi).toBeGreaterThanOrEqual(47);
       expect(Math.abs(g.bande[1] - g.onglets[0]), quoi).toBeLessThanOrEqual(0.5);
       expect(g.onglets[1] - g.onglets[0], quoi).toBe(50 + 34);
-      expect(g.marge, `${quoi} : la dernière carte au-dessus de la bande`).toBeGreaterThanOrEqual(0);
+      expect(await margeAFondDePage(page), `${quoi} : la dernière carte au-dessus de la bande, la page défilée`).toBeGreaterThanOrEqual(0);
       const d = await diagnostic(page);
-      expect(d, quoi).toMatchObject({ Fenêtre: '390 × 844', 'Zones sûres': 'haut 47 · bas 34 · gauche 0 · droite 0', 'Hauteur utile': '763 px', 'Marge du soir': enPx(g.marge) });
-      await expect(page.locator('main.diag pre')).toContainText(`zones sûres haut 47 · bas 34 · gauche 0 · droite 0 · hauteur utile 763 px · marge du soir ${enPx(g.marge)}`);
+      expect(d, quoi).toMatchObject({ Fenêtre: '390 × 844', 'Zones sûres': 'haut 47 · bas 34 · gauche 0 · droite 0', 'Hauteur utile': '763 px' });
+      expect(Object.keys(d).filter((k) => /marge/i.test(k)), quoi).toEqual([]);
+      await expect(page.locator('main.diag pre')).toContainText('zones sûres haut 47 · bas 34 · gauche 0 · droite 0 · hauteur utile 763 px\n');
+      await expect(page.locator('main.diag pre')).not.toContainText('marge');
     }
   }
 });
 
-test('Q27 · le bandeau « Nouvelle version prête » prend la zone sûre du haut, et le soir ne la compte pas une seconde fois ; le Diagnostic dit la marge, même négative', async ({ page }) => {
+test('Q27 · le bandeau « Nouvelle version prête » prend la zone sûre du haut, et le soir ne la compte pas une seconde fois ; le soir se défile encore jusqu\'à sa dernière carte', async ({ page }) => {
   await simulerZonesSures(page);
   await toucher(page, 'Lieu', 'Bureau');
   const sans = await geometrieSoir(page);
@@ -85,91 +94,16 @@ test('Q27 · le bandeau « Nouvelle version prête » prend la zone sûre du hau
   expect(g.bandeau[1]).toBeGreaterThanOrEqual(47);
   expect(g.entete - g.bandeau[0]).toBeGreaterThanOrEqual(0);
   expect(g.entete - g.bandeau[0]).toBeLessThanOrEqual(1);
-  // Le soir descend de la hauteur du bandeau moins la zone du haut, l'espace entre les cartes resserré (6 → 4).
-  expect(g.marge).toBeGreaterThan(sans.marge - (g.bandeau[0] - 47));
-  const d = await diagnostic(page);
-  expect(d['Marge du soir']).toBe(`${enPx(g.marge)}${g.marge < 0 ? ' (le soir défile)' : ''}`);
+  // Le soir descend de la hauteur du bandeau moins la zone du haut, au plus.
+  expect(g.premiere - sans.premiere).toBeLessThanOrEqual(g.bandeau[0] - 47);
+  expect(await margeAFondDePage(page)).toBeGreaterThanOrEqual(0);
 });
 
 test('Q27 · sans simulation (WebKit sans iPhone), le Diagnostic dit des zones sûres nulles et toute la fenêtre comme hauteur utile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   await toucher(page, 'Lieu', 'Bureau');
-  const g = await geometrieSoir(page);
   const d = await diagnostic(page);
-  expect(d).toMatchObject({ Fenêtre: '390 × 797', 'Zones sûres': 'haut 0 · bas 0 · gauche 0 · droite 0', 'Hauteur utile': '797 px', 'Marge du soir': enPx(g.marge) });
-});
-
-// Relecture : la marge était notée à chaque affichage de l'écran, celle d'un autre jour comprise (« Revenir à
-// aujourd'hui » en plus, 36 px d'écart), et le Diagnostic pouvait dire « le soir défile » alors que le soir d'aujourd'hui
-// tient.
-test('Q27 · le Diagnostic garde les marges du soir d\'aujourd\'hui, celle de « J\'ai fini pour ce soir » comprise : un autre jour, glissé ou ouvert depuis l\'Historique, n\'est pas mesuré', async ({ page }) => {
-  await simulerZonesSures(page);
-  const marges = () => page.evaluate(() => {
-    const bande = document.querySelector('main.aujourdhui > .actions-flottantes').getBoundingClientRect().top;
-    const fini = document.querySelector('.fini-bouton');
-    const arrondi = (n) => Math.round(n * 10) / 10;
-    return { soir: arrondi(bande - document.querySelector('.carte-champ:has(#points-positifs)').getBoundingClientRect().bottom),
-      fini: fini ? arrondi(bande - fini.getBoundingClientRect().bottom) : null };
-  });
-  await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { lieu: 'lieu:teletravail' }));
-  await toucher(page, 'Lieu', 'Bureau');
-  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
-  const auj = await marges();
-  const attendu = { 'Marge du soir': `${enPx(auj.soir)}${auj.soir < 0 ? ' (le soir défile)' : ''}`,
-    'Marge de « J\'ai fini »': `${enPx(auj.fini)}${auj.fini < 0 ? ' (sous la bande)' : ''}` };
-  expect(await diagnostic(page)).toMatchObject(attendu);
-  await expect(page.locator('main.diag pre')).toContainText(`marge du soir ${attendu['Marge du soir']} · marge de « J'ai fini » ${attendu['Marge de « J\'ai fini »']}`);
-  // La veille (par le hash, comme après un glissement), puis la veille et aujourd'hui ouverts depuis l'Historique.
-  for (const hash of ['#/jour/2026-10-14', '#/historique/jour/2026-10-14', '#/historique/jour/2026-10-15']) {
-    await aller(page, hash);
-    await expect(page.locator('main.aujourdhui .carte-champ:has(#points-positifs)')).toBeVisible();
-    const autre = await marges();
-    if (hash === '#/jour/2026-10-14') expect(autre.soir, 'la veille a sa propre marge').toBeLessThan(auj.soir - 20);
-    expect(await diagnostic(page), hash).toMatchObject(attendu);
-  }
-  // Revenu sur le soir d'aujourd'hui, la mesure reprend.
-  await aller(page, '#/aujourdhui');
-  await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
-  expect(await diagnostic(page)).toMatchObject(attendu);
-});
-
-// Relecture finale : la marge était reprise au dernier affichage du soir, détails ouverts compris. Or la durée se note
-// chaque soir par « Durée › », et la rangée reste ouverte après le choix : après une saisie ordinaire, le Diagnostic disait
-// « −71,7 px (le soir défile) » d'un soir qui tient fermé. La marge est celle du soir, détails fermés.
-test('Q27 · la marge du soir est celle du soir détails fermés : la Durée ouverte et notée, le détail du Sport ouvert, la fenêtre qui change pendant ce temps ne la changent pas', async ({ page }) => {
-  await simulerZonesSures(page);
-  const lienDuree = page.getByRole('button', { name: /^Durée de la nuit/ });
-  const texteMarge = (m) => `${enPx(m)}${m < 0 ? ' (le soir défile)' : ''}`;
-  await toucher(page, 'Lieu', 'Bureau');
-  const ferme = (await geometrieSoir(page)).marge;
-  expect(ferme, 'le soir fermé tient').toBeGreaterThanOrEqual(0);
-  // La Durée ouverte et 4 h notée, la rangée laissée ouverte : le soir défile alors, mais ce n'est pas sa marge.
-  await lienDuree.click();
-  await groupe(page, 'Durée de la nuit').getByRole('button', { name: '4 h ou moins' }).click();
-  await expect(lienDuree).toHaveText('4 h ou moins');
-  expect((await geometrieSoir(page)).marge, 'la Durée ouverte allonge le soir').toBeLessThan(0);
-  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme));
-  // Revenu sur le soir, la Durée est refermée : la mesure reprend, « 4 h ou moins › » compris.
-  await aller(page, '#/aujourdhui');
-  await expect(groupe(page, 'Durée de la nuit')).toHaveCount(0);
-  await expect(lienDuree).toHaveText('4 h ou moins');
-  const ferme2 = (await geometrieSoir(page)).marge;
-  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
-  // Le détail du Sport ouvert, et la fenêtre qui change de taille pendant ce temps (rotation, clavier) : rien n'est noté.
-  await aller(page, '#/aujourdhui');
-  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
-  await expect(page.locator('#detail-sport')).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 700 });
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
-  // Refermé, le détail rend la mesure.
-  await aller(page, '#/aujourdhui');
-  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
-  await expect(page.locator('#detail-sport')).toBeVisible();
-  await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
-  await expect(page.locator('#detail-sport')).toHaveCount(0);
-  expect((await geometrieSoir(page)).marge).toBe(ferme2);
-  expect((await diagnostic(page))['Marge du soir']).toBe(texteMarge(ferme2));
+  expect(d).toMatchObject({ Fenêtre: '390 × 797', 'Zones sûres': 'haut 0 · bas 0 · gauche 0 · droite 0', 'Hauteur utile': '797 px' });
 });
 
 // ---------- Q29 : les finitions ----------

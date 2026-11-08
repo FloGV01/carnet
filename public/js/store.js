@@ -18,6 +18,9 @@ export const etatApp = creerStore({
   majDisponible: false,
   parcoursOuvert: false,
   toast: null,
+  // Le retour de Spotify (v11, spec §8.3), posé au démarrage (main.js) et pris par Mes refuges : { issue: 'finir', code } ou
+  // { issue: 'echec' }. Un code d'une seule fois, jamais un jeton.
+  retourSpotify: null,
 });
 
 // Enregistrements en attente (texte en cours) à vider avant une fermeture forcée de la base.

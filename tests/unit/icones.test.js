@@ -83,6 +83,15 @@ test('chaque icône du module sert dans l\'app, sauf celles qui attendent leur �
   // v10 (4/9) : l'épingle d'un favori, hors du lot, dans la même famille (au trait, un seul tracé).
   assert.ok(employees.has('epingle'), 'epingle');
   assert.ok(TRACES.epingle, 'epingle : pas dans le module');
+  // v11 (6/11) : la sortie d'un lien de Mes refuges (pas le caractère ↗, compté comme emoji) et la note de musique de l'entrée
+  // de Bien-être, hors du lot, dans la même famille.
+  for (const n of ['sortie', 'musique']) assert.ok(employees.has(n), n);
+});
+
+// v11 (6/11) : les deux tracés décidés au plan (en-tête, « Identifiants »), au trait, sans remplissage.
+test('les icônes de Mes refuges : « sortie » et « musique », avec leurs tracés exacts', () => {
+  assert.equal(TRACES.sortie, 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5');
+  assert.equal(TRACES.musique, 'M9 18V5l11-2v13 M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M14 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0');
 });
 
 test('toute icône nommée dans l\'app existe dans le module', () => {

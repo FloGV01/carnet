@@ -4,6 +4,7 @@ import { exportPsy } from '../../public/js/export/psy.js';
 import { SEED_V1, SEED_V2_AJOUTS, SEED_V4_AJOUTS, seedItems } from '../../public/js/domain/vocabulaire.js';
 import { carteLibelles } from '../../public/js/domain/libelles.js';
 import { trouverInterdits } from '../aides/mots-interdits.js';
+import { nouveauRepo } from '../aides/repo.js';
 
 const carte = carteLibelles(seedItems({ ...SEED_V1, ...SEED_V2_AJOUTS }, 'x'));
 const J = (date, o) => ({ date, lieu: null, sommeilRessenti: null, humeur: null, contactHumain: null, sportMouvement: null, explosions: null,
@@ -316,4 +317,88 @@ test('v8 : la nuit dit sa qualité et ses heures, « nuit Mal · 6 h » ; une nu
   assert.equal(ligne({ reveilsNocturnes: 5 }), 'dim 27/09 · nuit · (5 réveils ou plus)');
   // Une valeur hors bornes (fichier abîmé) ne s'écrit pas.
   assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 12 }), 'dim 27/09 · nuit Mal');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 7.25 }), 'dim 27/09 · nuit Mal');
+});
+
+// v11 (spec §5.5 et §12) : la nuit à la demi-heure s'écrit « 7 h 30 », jamais « 7,5 » ; le reste de l'Export PSY ne change pas.
+test('v11 : la demi-heure dit « nuit 7 h 30 » dans l\'Export PSY', () => {
+  const ligne = (o) => exportPsy({ journal: [J('2026-09-27', o)], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte }).split('\n')[3];
+  assert.equal(ligne({ heuresSommeil: 7.5 }), 'dim 27/09 · nuit 7 h 30');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:mal', heuresSommeil: 4.5 }), 'dim 27/09 · nuit Mal · 4 h 30');
+  assert.equal(ligne({ sommeilRessenti: 'sommeil:bien', heuresSommeil: 9.5 }), 'dim 27/09 · nuit Bien · 9 h 30');
+  const t = exportPsy({ journal: [J('2026-09-27', { heuresSommeil: 7.5 })], episodes: [], symptomes: [] }, { aujourdhui: '2026-09-27', carte });
+  assert.doesNotMatch(t, /7,5|7\.5/);
+});
+
+// v11 · vigilance 3 (spec §6) : les gratitudes ne partent jamais dans l'Export PSY. Une journée qui n'a qu'elles n'y existe
+// pas : ni texte, ni ligne de date, ni JOURS, ni « explosions 0 » dans les COMPTEURS (zeroDepuis posé, elle compterait comme
+// notée le soir). Une journée qui n'a que le traitement pris garde sa ligne : hors des demi-heures, rien ne change (§12).
+test('v11 · vigilance 3 : les gratitudes ne changent rien à l\'Export PSY, pas même une journée qui n\'a qu\'elles', () => {
+  const MERCI = { gratitudes: 'merci à la voisine' };
+  const exp = (j, autres = { episodes: [], symptomes: [], humeurs: [] }) => exportPsy({ journal: j, ...autres }, { aujourdhui: '2026-09-27', carte, zeroDepuis: '2026-01-01' });
+  const textes = [];
+  const pareil = (avec, sans, quoi) => { textes.push(avec); assert.equal(avec, sans, quoi); };
+  // Seule, dans un Carnet vide : rien que l'en-tête et la demande.
+  const seule = J('2026-09-26', MERCI);
+  const vide = exp([]);
+  pareil(exp([seule]), vide, 'seule');
+  assert.doesNotMatch(vide, /JOURS|COMPTEURS|explosions|sam 26\/09/);
+  // Parmi les données de l'exemple : à la place de la journée du samedi 26 (ses relevés gardent sa ligne de date), puis un
+  // jeudi 24 qui n'a rien d'autre.
+  const exemple = { episodes, symptomes, humeurs };
+  const sans26 = journal.filter((j) => j.date !== '2026-09-26');
+  pareil(exp([...sans26, seule], exemple), exp(sans26, exemple), 'à la place du 26');
+  pareil(exp([...journal, J('2026-09-24', MERCI)], exemple), exp(journal, exemple), 'un 24 qui n\'a qu\'elles');
+  // Sur une journée pleine, puis sur toutes.
+  pareil(exp(journal.map((j) => (j.date === '2026-09-26' ? { ...j, ...MERCI } : j)), exemple), exp(journal, exemple), 'sur le 26 plein');
+  pareil(exp(journal.map((j) => ({ ...j, ...MERCI })), exemple), exp(journal, exemple), 'sur toutes');
+  // Une journée qui n'a que le traitement pris garde sa ligne de date, avec ou sans gratitudes.
+  const traitement = J('2026-09-24', { traitementPris: 'traitementPris:oui' });
+  const avecTraitement = exp([traitement]);
+  assert.match(avecTraitement, /\nJOURS\njeu 24\/09\n/);
+  pareil(exp([{ ...traitement, ...MERCI }]), avecTraitement, 'traitement pris et gratitudes');
+  for (const t of textes) assert.doesNotMatch(t, /voisine|merci/i);
+});
+
+// v11 (5/11, spec §7) · La preuve PSY : « Ce que j'en retiens » est rangé à part d'apresCoup. Écrit sur un épisode de plus de
+// 7 jours dont l'Après coup est ancien, il ne touche pas à apresCoup.jour : l'Export PSY reste le même à l'octet, sans bloc
+// « APRÈS COUP (épisodes plus anciens) ». Écrit sur un épisode de la semaine, il n'y apparaît pas non plus. Lu par le dépôt,
+// comme l'écran Export PSY.
+test('v11 : « Ce que j\'en retiens » ne refait pas partir un vieil épisode vers PSY, et n\'apparaît jamais dans l\'Export PSY', async () => {
+  const { repo } = nouveauRepo({ date: new Date(2026, 9, 15, 21, 0) });
+  const aujourdhui = repo.aujourdhui();
+  assert.equal(aujourdhui, '2026-10-15');
+  const vieux = await repo.episodes.creer({ date: '2026-09-20', heure: '18:00', emotion: 'emotion:colere', intensite: 7, declencheur: 'declencheur:conflit',
+    situation: 'Réunion déplacée au dernier moment', apresCoup: { types: ['typeExplosion:colere'], siJe: 'je sens la chaleur monter', alorsJe: 'je sors', jour: '2026-09-21' } });
+  const semaine = await repo.episodes.creer({ date: '2026-10-13', heure: '19:10', emotion: 'emotion:surcharge', intensite: 6, declencheur: 'declencheur:trop_sollicitations',
+    apresCoup: { repereA: 5, jour: '2026-10-14' } });
+  await repo.journal.patch('2026-10-13', { lieu: 'lieu:bureau', explosions: 1, pointsPositifs: 'une marche au parc' });
+  const exporter = async () => {
+    const [items, journal, episodes, symptomes, humeurs] = await Promise.all([repo.listes.items(), repo.journal.tous(), repo.episodes.tous(), repo.symptomes.tous(), repo.humeurs.tous()]);
+    return exportPsy({ journal, episodes, symptomes, humeurs }, { aujourdhui, carte: carteLibelles(items), zeroDepuis: '2026-01-01' });
+  };
+  const avant = await exporter();
+  assert.match(avant, /\nÉPISODES \(1\)\nmar 13\/10 19:10 · Surcharge 6\/10/);
+  assert.doesNotMatch(avant, /APRÈS COUP \(épisodes plus anciens\)|dim 20\/09/);
+  // Le témoin : si son jour bougeait (ce que fait une écriture dans l'Après coup), le vieil épisode repartirait vers PSY.
+  const temoin = exportPsy({ journal: await repo.journal.tous(), episodes: [{ ...vieux, apresCoup: { ...vieux.apresCoup, jour: aujourdhui } }, semaine], symptomes: [], humeurs: [] },
+    { aujourdhui, carte: carteLibelles(await repo.listes.items()), zeroDepuis: '2026-01-01' });
+  assert.match(temoin, /\nAPRÈS COUP \(épisodes plus anciens\)\ndim 20\/09 18:00 · Colère 7\/10/);
+
+  const retenu = await repo.episodes.modifier(vieux.id, { ceQueJeRetiens: 'Demander l\'ordre du jour la veille.' });
+  assert.equal(retenu.ceQueJeRetiens, 'Demander l\'ordre du jour la veille.');
+  assert.equal(retenu.apresCoup.jour, '2026-09-21');
+  assert.deepEqual(retenu.apresCoup, vieux.apresCoup);
+  const apres = await exporter();
+  assert.equal(apres, avant);
+  assert.equal(Buffer.compare(Buffer.from(apres), Buffer.from(avant)), 0);
+  assert.doesNotMatch(apres, /APRÈS COUP \(épisodes plus anciens\)/);
+
+  // Sur l'épisode de la semaine : son Après coup part comme avant, ce qu'on en retient jamais.
+  await repo.episodes.modifier(semaine.id, { ceQueJeRetiens: 'Partir avant que ça monte, le dire au collègue.' });
+  assert.equal((await repo.episodes.lire(semaine.id)).apresCoup.jour, '2026-10-14');
+  const avecSemaine = await exporter();
+  assert.equal(avecSemaine, avant);
+  assert.match(avecSemaine, /remarqué à 5\/10/);
+  assert.doesNotMatch(avecSemaine, /retiens|ordre du jour|Partir avant|collègue/);
 });

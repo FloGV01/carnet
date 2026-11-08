@@ -1,19 +1,19 @@
-// Service worker de Carnet : tout est mis en cache à l'installation, le cache passe
+// Service worker d'Emozio : tout est mis en cache à l'installation, le cache passe
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
 // (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = '14f336f2ff8e';
+const VERSION = '38986d03e9e1';
 const FICHIERS = [
   "./",
   "./css/base.css",
   "./css/composants.css",
   "./css/ecrans.css",
   "./css/tokens.css",
-  "./icons/apple-touch-icon.png",
-  "./icons/icone-192.png",
-  "./icons/icone-512.png",
-  "./icons/icone-maskable-512.png",
   "./icons/icone.svg",
+  "./icons/v11-apple-touch-icon.png",
+  "./icons/v11-icone-192.png",
+  "./icons/v11-icone-512.png",
+  "./icons/v11-icone-maskable-512.png",
   "./index.html",
   "./js/analyse/avant-explosions.js",
   "./js/analyse/classements.js",
@@ -58,6 +58,7 @@ const FICHIERS = [
   "./js/domain/phrase.js",
   "./js/domain/programme.js",
   "./js/domain/propositions.js",
+  "./js/domain/refuges.js",
   "./js/domain/releves.js",
   "./js/domain/respiration.js",
   "./js/domain/ressourcer.js",
@@ -80,6 +81,7 @@ const FICHIERS = [
   "./js/plateforme/partage.js",
   "./js/plateforme/persistance.js",
   "./js/plateforme/presse-papier.js",
+  "./js/plateforme/spotify.js",
   "./js/plateforme/sw-client.js",
   "./js/routeur.js",
   "./js/store.js",
@@ -97,6 +99,7 @@ const FICHIERS = [
   "./js/ui/composants/epingle.js",
   "./js/ui/composants/feuille-element.js",
   "./js/ui/composants/feuille.js",
+  "./js/ui/composants/geste-retour.js",
   "./js/ui/composants/heure.js",
   "./js/ui/composants/interrupteur.js",
   "./js/ui/composants/lecteur.js",
@@ -112,9 +115,11 @@ const FICHIERS = [
   "./js/ui/composants/quatre-bulles.js",
   "./js/ui/composants/questions.js",
   "./js/ui/composants/recherche-emotion.js",
+  "./js/ui/composants/refuges.js",
   "./js/ui/composants/repli.js",
   "./js/ui/composants/respiration.js",
   "./js/ui/composants/ressourcer.js",
+  "./js/ui/composants/roue-choix.js",
   "./js/ui/composants/rubrique.js",
   "./js/ui/composants/segmente.js",
   "./js/ui/composants/signal-sonore.js",
@@ -132,6 +137,7 @@ const FICHIERS = [
   "./js/ui/ecrans/attente.js",
   "./js/ui/ecrans/aujourdhui.js",
   "./js/ui/ecrans/bien-etre.js",
+  "./js/ui/ecrans/code-spotify.js",
   "./js/ui/ecrans/comprendre.js",
   "./js/ui/ecrans/concentration.js",
   "./js/ui/ecrans/consultation.js",
@@ -152,6 +158,7 @@ const FICHIERS = [
   "./js/ui/ecrans/programme.js",
   "./js/ui/ecrans/rappel.js",
   "./js/ui/ecrans/rdv.js",
+  "./js/ui/ecrans/refuges.js",
   "./js/ui/ecrans/reglages-emotions.js",
   "./js/ui/ecrans/reglages-moment-difficile.js",
   "./js/ui/ecrans/reglages-ressourcer.js",

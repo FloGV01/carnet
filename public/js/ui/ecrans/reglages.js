@@ -1,7 +1,7 @@
 // Réglages : sauvegarde (exporter, importer, revenir) en tête, puis « Ma saisie » (le soir, listes, émotions (v8 : le
 // sens des mots de la roue), rappels) et « Moment difficile » (mon plan, respiration et « Une chose à la fois », me
 // ressourcer, aide iPhone), puis à propos et la zone sensible (v6.1). v7 : la section « Analyse » (signal de ressemblance,
-// tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés.
+// tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés. v11 : « Revenir » demande confirmation.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { CarreIcone } from '../composants/rubrique.js';
@@ -12,6 +12,7 @@ import { verifierMaj } from '../../plateforme/sw-client.js';
 import { estModeApp } from '../../plateforme/mode.js';
 import { revenirAvantImport } from '../../db/sauvegarde.js';
 import { afficherToast } from '../composants/toast.js';
+import { Confirmation } from '../composants/confirmation.js';
 import { repo } from '../../donnees.js';
 import { cleLocale, formaterDateLongue } from '../../domain/dates.js';
 import { pourAffichage } from '../../domain/typographie.js';
@@ -54,6 +55,8 @@ export function Reglages() {
     await analyserChoix(choisis);
     location.hash = '#/reglages/sauvegarde';
   };
+  // v11 : « Revenir » remplace tout d'un seul toucher, juste sous « Importer » : il demande d'abord confirmation (spec §10).
+  const [confirmerRetour, setConfirmerRetour] = useState(false);
   const revenir = async () => {
     await revenirAvantImport(repo);
     oublierLectures();
@@ -74,11 +77,11 @@ export function Reglages() {
       <ul class="liste avec-carres">
         <li><button type="button" class="ligne-carte action" disabled=${!fichiers} onClick=${sauvegarde.exporterMaintenant}><${CarreIcone} icone="exporter" />Exporter</button></li>
         <li><button type="button" class="ligne-carte action" onClick=${() => entree.current && entree.current.click()}><${CarreIcone} icone="importer" />Importer</button></li>
-        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${revenir}><${CarreIcone} icone="retour" />Revenir à l'état d'avant l'import</button></li>`}
+        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${() => setConfirmerRetour(true)}><${CarreIcone} icone="retour" />Revenir à l'état d'avant l'import</button></li>`}
       </ul>
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
-    <p class="aide-carte">Enregistrer dans Fichiers, puis iCloud Drive, dossier Carnet.</p>
+    <p class="aide-carte">Enregistrer dans Fichiers, puis iCloud Drive, dossier Emozio.</p>
     <p class="aide-carte">${pourAffichage('Supprimer l\'icône efface tout ce qui est noté ici. Pour une mise à jour, le bandeau « Nouvelle version prête » suffit.')}</p>
     ${sauvegarde.message && html`<p class="aide-carte" role="status">${sauvegarde.message}</p>`}
     ${!estModeApp() && fichiers && html`<p class="aide-carte">${fichiers.map((f) => html`<a class="lien" href=${URL.createObjectURL(f.fichier)} download=${f.nom}>Télécharger ${f.nom}</a>`)}</p>`}
@@ -114,5 +117,8 @@ export function Reglages() {
 
     <h2 class="libelle-section">Zone sensible</h2>
     <ul class="liste carte carte-groupe"><${LigneLien} href="#/reglages/effacer" titre="Tout effacer" /></ul>
+    ${confirmerRetour && s && s.copie && html`<${Confirmation} titre="Revenir à l'état d'avant l'import ?"
+      texte=${`Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du ${dateIso(s.copie.date)}. Les mémos vocaux d'avant l'import ne reviennent pas.`}
+      action="Revenir" surAnnuler=${() => setConfirmerRetour(false)} surConfirmer=${() => { setConfirmerRetour(false); revenir(); }} />`}
   </main>`;
 }

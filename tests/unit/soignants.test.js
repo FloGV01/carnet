@@ -25,7 +25,7 @@ const SEPT = (date) => date >= '2026-09-01' && date <= '2026-09-30';
 // nuits (v8) : le nombre d'heures de chaque nuit, de 4 à 10 h.
 function donnees({ extreme = false, energie = false, trou = false, jours = 180, emotions = false, parJour = 6, nuits = false } = {}) {
   const journal = generer({ jours, seed: 7, scenario: 'bureau', debut: '2026-04-03' })
-    .map((j, i) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée', ...(nuits ? { heuresSommeil: 4 + (i % 7) } : {}) }));
+    .map((j, i) => ({ ...j, pointsPositifs: 'texte privé', notes: 'note privée', gratitudes: 'gratitude privée', ...(nuits ? { heuresSommeil: 4 + (i % 7) } : {}) }));
   const aujourdhui = journal[journal.length - 1].date;
   const long = (n) => 'Une question vraiment longue sur le sommeil et les effets du matin '.repeat(4).slice(0, n);
   const episodes = Array.from({ length: 30 }, (_, i) => ({ id: `e${i}`, date: journal[100 + i].date, heure: '12:00', emotion: 'emotion:sentiment_injustice',
@@ -60,7 +60,7 @@ function cas(options) {
 test('le modèle exclut tout texte libre privé et le signal', () => {
   const m = cas();
   const json = JSON.stringify(m);
-  for (const prive of ['texte privé', 'note privée', 'situation privée', 'aide privée']) assert.ok(!json.includes(prive), prive);
+  for (const prive of ['texte privé', 'note privée', 'gratitude privée', 'situation privée', 'aide privée']) assert.ok(!json.includes(prive), prive);
   assert.ok(!/signal|ressembl/i.test(json));
   assert.equal(m.rdv.questions.length, 6, 'questions non abordées, 6 au plus');
   assert.ok(m.traitement.length <= 4);
@@ -560,4 +560,46 @@ test('v8 · Nuit par nuit : aucun mot interdit, rien sur la régularité ni l\'h
   assert.ok(section.length > 28);
   assert.deepEqual(trouverInterdits(section.join('\n')), []);
   assert.doesNotMatch(section.join(' '), /%|régul|coucher|moyenne|médiane/i);
+});
+
+// v11 · vigilance 3 (spec §6) : les gratitudes ne vont jamais dans la vue soignants. Une journée qui n'a qu'elles n'y existe
+// pas : ni « 0 explosion » (zeroDepuis posé, elle compterait comme notée le soir), ni date de début, ni colonne de la frise.
+test('v11 · vigilance 3 : les gratitudes ne changent rien à la vue soignants, pas même une journée qui n\'a qu\'elles', () => {
+  const MERCI = { gratitudes: 'merci à la voisine' };
+  const zeroDepuis = '2026-01-01';
+  const vue = (data, aujourdhui) => modeleSoignants(data, { aujourdhui, carte, analyse: analyze(data, { aujourdhui, items, zeroDepuis }), professionnel: null, prenom: '', zeroDepuis });
+  const modeles = [];
+  const pareil = (avec, sans, quoi) => { modeles.push(avec); assert.deepEqual(avec, sans, quoi); };
+  // Seule, dans un Carnet vide, cette semaine : ni « 0 (0) » pour les explosions, ni « données depuis le ».
+  const base = { episodes: [], symptomes: [], traitements: [], humeurs: [] };
+  const seule = vue({ ...base, journal: [{ date: '2026-10-12', ...MERCI }] }, '2026-10-14');
+  pareil(seule, vue({ ...base, journal: [] }, '2026-10-14'), 'seule');
+  assert.equal(valeur7j(seule, 'Explosions (jours avec)'), '·');
+  assert.doesNotMatch(seule.entete, /données depuis/);
+  // Le 26/09 seul aussi, dans les 30 jours.
+  pareil(vue({ ...base, journal: [{ date: '2026-09-26', ...MERCI }] }, '2026-10-14'), vue({ ...base, journal: [] }, '2026-10-14'), 'le 26/09 seul');
+  // Avec six mois de données : une journée de gratitudes avant la première ne change pas la date de début ; sur chaque jour
+  // plein, elles ne changent rien.
+  const { data, aujourdhui } = donnees();
+  const sansGratitudes = { ...data, journal: data.journal.map(({ gratitudes, ...j }) => j) };
+  const reference = vue(sansGratitudes, aujourdhui);
+  pareil(vue({ ...sansGratitudes, journal: [{ date: '2026-03-01', ...MERCI }, ...sansGratitudes.journal] }, aujourdhui), reference, 'avant la première date');
+  pareil(vue({ ...sansGratitudes, journal: sansGratitudes.journal.map((j) => ({ ...j, ...MERCI })) }, aujourdhui), reference, 'sur chaque jour');
+  assert.match(reference.entete, /données depuis le 03\/04\/2026/);
+  for (const m of modeles) assert.doesNotMatch(JSON.stringify(m), /voisine|merci/i);
+});
+
+// v11 (5/11, spec §7) : « Ce que j'en retiens » reste dans l'app. Sur tous les épisodes, dont un de la semaine, il ne change
+// rien à la vue soignants, et son texte n'y paraît nulle part.
+test('v11 : « Ce que j\'en retiens » ne change rien à la vue soignants, et n\'y paraît jamais', () => {
+  const { data, aujourdhui, rdvs, traitements, traitementActuel } = donnees();
+  const RETENU = 'Partir avant que ça monte, le dire au collègue.';
+  const vue = (d) => modeleSoignants(d, { aujourdhui, carte, analyse: analyze(d, { aujourdhui, items }), professionnel: 'professionnel:psychiatre', prenom: '', rdvs, traitements, traitementActuel });
+  const semaine = { id: 'e-semaine', date: aujourdhui, heure: '18:40', emotion: 'emotion:sentiment_injustice', declencheur: 'declencheur:surcharge_sensorielle', intensite: 7,
+    apresCoup: { types: ['typeExplosion:colere'], repereA: 6, jour: aujourdhui } };
+  const sans = { ...data, episodes: [...data.episodes, semaine] };
+  const avec = { ...sans, episodes: sans.episodes.map((e) => ({ ...e, ceQueJeRetiens: RETENU })) };
+  const [m, reference] = [vue(avec), vue(sans)];
+  assert.deepEqual(m, reference);
+  assert.doesNotMatch(JSON.stringify(m), /retiens|Partir avant|collègue/);
 });

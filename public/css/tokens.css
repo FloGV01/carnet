@@ -70,6 +70,25 @@
   --c-zone-bleu: #577bd7; --c-zone-bleu-fill: #789fff; --c-zone-bleu-on: #0d111b; --c-zone-bleu-tint: #e7efff; --c-zone-bleu-tint-2: #d2e0ff; --c-zone-bleu-text: #3150a9;
   --c-zone-vert: #009860; --c-zone-vert-fill: #4ce39b; --c-zone-vert-on: #09140e; --c-zone-vert-tint: #dff5e7; --c-zone-vert-tint-2: #c2ebd2; --c-zone-vert-text: #006941;
 
+  /* Les écrans de l'émotion (v11, spec §9) : ils suivent le thème, comme le reste de l'app. En clair, le fond d'Aujourd'hui,
+     des cartes blanches, le verre blanc translucide, les ronds pleins foncés (prototype-clair.css) ; en sombre, le noir de
+     How We Feel, aux valeurs de la v9, inchangées. Les bulles et leur texte noir n'en dépendent pas.
+     --moment-voile se lit en rgba(var(--moment-voile), alpha) : le voile du haut de la carte, à la couleur du fond. */
+  --moment-texte: #181b1f;
+  --moment-gris: var(--text-2);
+  --moment-verre: rgba(255, 255, 255, .78);
+  --moment-verre-carte: rgba(255, 255, 255, .78);
+  --moment-verre-texte: #181b1f;
+  --moment-voile: 231, 234, 238;
+  --moment-carte-bas: #ffffff;
+  /* Le rond « Continuer », « Terminer » et le rond d'« Ajouter mon mot » : le plein, et son texte (ou sa flèche). */
+  --moment-plein: #181b1f;
+  --moment-plein-on: #ffffff;
+  --moment-choix: var(--surface);
+  --moment-contour: #7d8087;
+  --moment-filet: var(--line);
+  --moment-focus: #181b1f;
+
   /* « Effacer définitivement », dernier pas de « Tout effacer » : le seul bouton rouge de l'app, hors du lot 2b, gardé
      (v7, tâche 9) parce qu'il signale une action sans retour, jamais une valeur. AA : 6,7:1 en clair, 8,3:1 en sombre.
      À confirmer par l'utilisateur (docs/decisions.md, « En attente de l'utilisateur »). */
@@ -130,6 +149,10 @@
   --zone-bas: env(safe-area-inset-bottom, 0px);
   --zone-gauche: env(safe-area-inset-left, 0px);
   --zone-droite: env(safe-area-inset-right, 0px);
+  /* La zone du haut pour ce qui couvre tout l'écran, barre d'état comprise (le voile d'une confirmation, rendu dans main) :
+     le bandeau « Nouvelle version prête » remet --zone-haut à 0 dans main, pas celle-ci, résolue ici, sur la racine
+     (contre-relecture de la v11). */
+  --zone-haut-ecran: var(--zone-haut);
 
   /* Durées : 200 ms au plus, supprimées avec « Réduire les animations » */
   --duree: 150ms;
@@ -175,6 +198,20 @@
     --c-zone-bleu: #789fff; --c-zone-bleu-tint: #131d36; --c-zone-bleu-tint-2: #1c2a4c; --c-zone-bleu-text: #a0bcff;
     --c-zone-vert: #4ce39b; --c-zone-vert-tint: #032515; --c-zone-vert-tint-2: #03351f; --c-zone-vert-text: #44dd95;
 
+    --moment-texte: #ffffff;
+    --moment-gris: #909090;
+    --moment-verre: #1b1b1b;
+    --moment-verre-carte: rgba(32, 32, 32, .85);
+    --moment-verre-texte: #f2f2f2;
+    --moment-voile: 0, 0, 0;
+    --moment-carte-bas: #2c2c2e;
+    --moment-plein: #ffffff;
+    --moment-plein-on: #000000;
+    --moment-choix: #2c2c2e;
+    --moment-contour: #6e6e73;
+    --moment-filet: #1f1f1f;
+    --moment-focus: #ffffff;
+
     --danger: #E8A195;
     --danger-texte: #1A1917;
   }
@@ -182,8 +219,9 @@
 @media (prefers-reduced-motion: reduce) {
   :root { --duree: 0ms; --duree-anim: 0ms; --duree-glisse: 0ms; }
 }
-/* Les écrans noirs de l'émotion (v9, spec §4) : fond noir dans les deux thèmes, comme How We Feel. Les jetons de base y
-   prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent (« C'était vers… »). */
+/* Un écran noir dans les deux thèmes : « Réveil la nuit » (v10, spec §5.2), dont le noir sert à ne pas éclairer la chambre.
+   Les jetons de base y prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent.
+   Les écrans de l'émotion, noirs ainsi de la v9 à la v10, suivent le thème depuis la v11 (--moment-*, ci-dessus). */
 .ecran-noir {
   color-scheme: dark;
   --bg: #000000; --surface: #1e1f21; --surface-2: #2d2e30; --line: #47484a; --text: #bfc0c3; --text-2: #97989b;

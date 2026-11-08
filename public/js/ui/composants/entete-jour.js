@@ -8,9 +8,10 @@ const majusculeInitiale = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 // En-tête 2b : « Dimanche 18 octobre ⌄ » (« Aujourd'hui, » en plus pour VoiceOver, sans être affiché), qui ouvre le sélecteur de date d'iOS (bornes vérifiées en JS), puis ‹ › à
 // droite (› atténué sur aujourd'hui). Dessous, sur une seule ligne : « Encore jeudi jusqu'à 4 h. » avant 4 h (`veille`),
 // les zones des émotions du jour en points de couleur (v9 ; leurs familles en v7 et v8, au lieu de l'humeur moyenne), le
-// résumé de la journée et « Enregistré ». Rien de tout cela ne prend de hauteur : la saisie du soir tient sans défiler,
-// après minuit aussi. Un échec d'écriture prend la place de la ligne, sans décaler les champs. Au-dessus, pour un jour
-// ouvert depuis l'Historique (v6.1) : « ‹ Retour ».
+// résumé de la journée et « Enregistré ». Rien de tout cela ne prend de hauteur, après minuit aussi (jusqu'à la v10, le
+// soir tenait ainsi sans défiler). Un échec d'écriture prend la place de la ligne, sans décaler les champs. La ligne laisse
+// passer les touchers (v11) : elle remonte sous « Jour précédent ». Au-dessus, pour un jour ouvert depuis l'Historique
+// (v6.1) : « ‹ Retour ».
 export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, zones = [], surRetour, veille = null }) {
   const estAujourdhui = date === aujourdhui;
   const surDate = (e) => {

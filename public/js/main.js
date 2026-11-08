@@ -9,11 +9,20 @@ import { demanderPersistance } from './plateforme/persistance.js';
 import { survivreAuCycle } from './plateforme/cycle.js';
 import { estLocal } from './plateforme/mode.js';
 import { repo } from './donnees.js';
+import { connexionDisponible, prendreRetour, lireAttente, oublierAttente, issueRetour } from './plateforme/spotify.js';
 
+// Le retour de Spotify (v11, spec §8.3), tout en haut : ?code=, ?state= et ?error= sont lus et retirés de l'adresse avant le
+// guide d'installation et avant le retour sur Aujourd'hui. Hors de l'app installée, un code s'affiche, à copier (page du
+// code) ; dans l'app, la connexion se finit (ou dit son échec) dans Mes refuges. Sans identifiant, rien n'est lu.
+const retourSpotify = connexionDisponible() ? prendreRetour(window) : null;
 const guide = doitAfficherGuide(window);
+const issueSpotify = issueRetour({ retour: retourSpotify, attente: retourSpotify && lireAttente(window), guide });
+if (issueSpotify === 'echec') oublierAttente(window);
+const versRefuges = issueSpotify === 'finir' || issueSpotify === 'echec';
+if (versRefuges) etatApp.maj({ retourSpotify: issueSpotify === 'finir' ? { issue: 'finir', code: retourSpotify.code } : { issue: 'echec' } });
 
-// L'app s'ouvre toujours sur Aujourd'hui, quel que soit le hash de départ.
-history.replaceState(null, '', `${location.pathname}${location.search}#/${ROUTE_ACCUEIL}`);
+// L'app s'ouvre toujours sur Aujourd'hui, quel que soit le hash de départ (au retour de Spotify, sur Mes refuges).
+history.replaceState(null, '', `${location.pathname}${location.search}#/${versRefuges ? 'refuges' : ROUTE_ACCUEIL}`);
 etatApp.maj({ route: lireRoute(location.hash) });
 window.addEventListener('hashchange', (e) => {
   try { etatApp.maj({ routePrecedente: new URL(e.oldURL).hash }); } catch { /* ancienne adresse illisible */ }
@@ -51,7 +60,7 @@ if (!guide) {
 // Accès de test, uniquement en local.
 if (estLocal(location)) window.__carnet = { repo, etatApp };
 
-// Le texte d'attente « Carnet » du HTML est retiré : Preact ne le remplace pas de lui-même.
+// Le texte d'attente « Emozio » du HTML est retiré : Preact ne le remplace pas de lui-même.
 const racine = document.getElementById('app');
 racine.textContent = '';
-render(html`<${App} guide=${guide} />`, racine);
+render(html`<${App} guide=${guide} codeSpotify=${issueSpotify === 'copier' ? retourSpotify.code : null} />`, racine);

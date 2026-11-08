@@ -8,14 +8,19 @@
 // démarre aussitôt un exercice court (#/crise/<id>), dans le lecteur en mode crise, sans choix de durée et sans compte à
 // rebours ; il revient ici à la fin. Le bouton touché n'est pas une donnée : seule la séance est notée, d'origine
 // `moment-difficile`. Les trois cartes restent en dessous : l'écran peut défiler, le pied reste à sa place.
+// v11 (spec §8.4) : ses playlists de Mes refuges, une ligne chacune sous « Une chose à la fois », un toucher sort d'Emozio
+// vers l'app de musique ; ses titres avec le reste de Mon plan. Rien n'est lu que la base : aucune requête d'ici, où l'heure
+// d'une demande dirait celle d'un moment difficile. Sans playlist ni titre, rien n'apparaît.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Lecteur, lancerLecture } from '../composants/lecteur.js';
 import { Respiration } from '../composants/respiration.js';
 import { ContenuPlan, lirePlan } from '../composants/mon-plan.js';
 import { UneChose, lireUneChose } from '../composants/une-chose.js';
+import { LignesPlaylists, lireRefuges } from '../composants/refuges.js';
 import { exerciceDe } from '../../domain/exercices.js';
 import { cartesPlan, planVide } from '../../domain/mon-plan.js';
+import { normaliserRefuges } from '../../domain/refuges.js';
 import { versHash } from '../../routeur.js';
 import { Icones } from '../icones.js';
 
@@ -42,12 +47,18 @@ export function ExerciceCrise({ id }) {
 export function MomentDifficile() {
   const [plan, setPlan] = useState(null);
   const [reglages, setReglages] = useState(null);
+  const [refuges, setRefuges] = useState(null);
   // Les cartes remplacent l'écran (la respiration s'arrête, et avec elle son verrou d'écran).
   const [cartesOuvertes, setCartesOuvertes] = useState(false);
   const retour = useRef(null); // où le focus revient en quittant les cartes : 'acces' ou 'plan'
   const acces = useRef(null);
   const titrePlan = useRef(null);
-  useEffect(() => { lirePlan().then(setPlan); lireUneChose().then(setReglages); }, []);
+  // Des refuges illisibles se lisent vides : ils ne cachent jamais Mon plan.
+  useEffect(() => {
+    lirePlan().then(setPlan);
+    lireUneChose().then(setReglages);
+    lireRefuges().then(setRefuges, () => setRefuges(normaliserRefuges(null)));
+  }, []);
   // Safari ne donne pas le focus à un bouton touché : on le rend nous-mêmes, au bouton ou à Mon plan.
   useEffect(() => {
     if (cartesOuvertes || !retour.current) return;
@@ -58,6 +69,10 @@ export function MomentDifficile() {
     if (cible === titrePlan.current) cible.scrollIntoView({ block: 'start' });
   }, [cartesOuvertes]);
   const cartes = plan && reglages ? cartesPlan(plan, reglages) : [];
+  // Le plan et les titres arrivent ensemble : la carte ne change pas d'« Écrire mon plan » à son contenu sous le doigt.
+  const lu = plan && refuges;
+  const titres = refuges && refuges.titres;
+  const rienDEcrit = lu && planVide(plan) && !titres;
   const quitterCartes = (vers) => () => { retour.current = vers; setCartesOuvertes(false); };
   const fermer = () => { location.hash = '#/aujourdhui'; };
   if (cartesOuvertes && cartes.length > 0) {
@@ -74,15 +89,16 @@ export function MomentDifficile() {
       </div>
       ${cartes.length > 0 && html`<button type="button" class="carte ligne-carte une-chose-acces" ref=${acces} onClick=${() => setCartesOuvertes(true)}>
         <span class="ligne-libelle">Une chose à la fois</span>${Icones.chevron({ trait: 2 })}</button>`}
+      ${refuges && html`<${LignesPlaylists} playlists=${refuges.playlists} />`}
       <section class="carte plan-moment" aria-labelledby="titre-plan-moment">
         <div class="plan-moment-tete">
           <h2 class="titre-plan-moment" id="titre-plan-moment" tabindex="-1" ref=${titrePlan}>
             <span class="carre-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
-          ${plan && !planVide(plan) && html`<a class="btn-lien modifier-plan" href="#/mon-plan" aria-label="Modifier mon plan">Modifier</a>`}
+          ${lu && !rienDEcrit && html`<a class="btn-lien modifier-plan" href="#/mon-plan" aria-label="Modifier mon plan">Modifier</a>`}
         </div>
-        ${plan && (planVide(plan)
+        ${lu && (rienDEcrit
           ? html`<a class="btn-lien action" href="#/mon-plan">Écrire mon plan</a>`
-          : html`<${ContenuPlan} plan=${plan} />`)}
+          : html`<${ContenuPlan} plan=${plan} titres=${titres} />`)}
       </section>
     </div>
   </${CadreParcours}>`;

@@ -108,3 +108,12 @@ test('v8 : « nuit moyen · 6 h » en un segment ; les heures seules disent « n
   assert.deepEqual(nuit({ heureCoucher: '23:00', heureLever: '07:00' }), [], 'le coucher et le lever ne sont pas dans la phrase');
   assert.equal(texte(phraseResume('jour', { date: '2026-10-25', lieu: 'lieu:bureau', heuresSommeil: 7, contactHumain: true }, carte)), 'Bureau · nuit 7 h · contact oui');
 });
+
+// v11 (spec §5.5) : la demi-heure, « nuit 7 h 30 », jamais « 7,5 ».
+test('v11 : « nuit 7 h 30 » à la demi-heure ; hors de la liste, rien', () => {
+  const nuit = (o) => phraseResume('jour', { date: '2026-10-25', ...o }, carte).filter((x) => x.rubrique === 'sommeil');
+  assert.deepEqual(nuit({ heuresSommeil: 7.5 }).map((x) => x.texte), ['nuit 7 h 30']);
+  assert.deepEqual(nuit({ sommeilRessenti: 'sommeil:moyen', heuresSommeil: 4.5 }).map((x) => x.texte), ['nuit moyen · 4 h 30']);
+  assert.deepEqual(nuit({ heuresSommeil: 7.25 }), []);
+  assert.equal(texte(phraseResume('jour', { date: '2026-10-25', lieu: 'lieu:bureau', heuresSommeil: 7.5, contactHumain: true }, carte)), 'Bureau · nuit 7 h 30 · contact oui');
+});

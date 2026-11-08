@@ -1,6 +1,7 @@
 // Export vers le projet Claude « PSY » : texte brut des 7 derniers jours, voix « je ». v7 : les émotions du moment de
 // chaque jour, et leurs comptes par famille dans les COMPTEURS ; les anciennes notes de 1 à 10 restent dites.
-// Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours.
+// Exclus : traitement pris, fiches de traitement, rendez-vous, mémos, tout décompte de jours, et (v11) les gratitudes : une
+// journée qui n'a qu'elles n'existe pas ici (sansGratitudesSeules).
 // Les jours sans saisie ne sont ni listés ni mentionnés. Pur.
 // v9 : `perso`, la méta `motsPerso`, fait connaître les mots à soi (leur nom dans les lignes du jour, leur famille dans les
 // COMPTEURS) ; sans elle, un relevé de mot à soi ne dit que son heure et son énergie. Dans les COMPTEURS, sous chaque
@@ -16,7 +17,7 @@ import { relevesAEmotion, parFamille, parZone, texteFamilles, texteZones } from 
 import { resumeContacts } from '../domain/contacts.js';
 import { libelleEmotion } from '../domain/roue.js';
 import { resumeEmotions } from '../domain/releves.js';
-import { texteHeuresSommeil } from '../domain/champs.js';
+import { texteHeuresSommeil, sansGratitudesSeules } from '../domain/champs.js';
 
 const MAX = SEUILS.export.maxTexteLibre;
 const couper = (t) => {
@@ -143,7 +144,8 @@ function compteurs(f, complet, lib, emotions) {
   return m.join(' · ');
 }
 
-export function exportPsy({ journal, episodes, symptomes, humeurs = [], perso = null }, { aujourdhui, carte, zeroDepuis = null }) {
+export function exportPsy({ journal: saisi, episodes, symptomes, humeurs = [], perso = null }, { aujourdhui, carte, zeroDepuis = null }) {
+  const journal = sansGratitudesSeules(saisi);
   const lib = (id) => carte.get(id) || id;
   const du = addDays(aujourdhui, -6);
   const dans = (d) => d >= du && d <= aujourdhui;

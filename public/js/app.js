@@ -43,6 +43,8 @@ import { Programme, SeanceProgramme } from './ui/ecrans/programme.js';
 import { Minuteur } from './ui/ecrans/minuteur.js';
 import { Concentration } from './ui/ecrans/concentration.js';
 import { Sons } from './ui/ecrans/sons.js';
+import { MesRefuges } from './ui/ecrans/refuges.js';
+import { CodeSpotify } from './ui/ecrans/code-spotify.js';
 
 const ECRANS = {
   aujourdhui: () => html`<${Aujourdhui} />`,
@@ -88,6 +90,7 @@ const ECRANS = {
   minuteur: () => html`<${Minuteur} />`,
   concentration: () => html`<${Concentration} />`,
   sons: () => html`<${Sons} />`,
+  refuges: () => html`<${MesRefuges} />`,
 };
 
 function useEtatApp() {
@@ -96,8 +99,11 @@ function useEtatApp() {
   return etat;
 }
 
-export function App({ guide }) {
+// `codeSpotify` : le code d'un retour de Spotify arrivé hors de l'app installée (main.js), à copier pour finir la connexion
+// dans l'app ; cette page passe avant le guide d'installation.
+export function App({ guide, codeSpotify }) {
   const etat = useEtatApp();
+  if (codeSpotify) return html`<${CodeSpotify} code=${codeSpotify} />`;
   if (guide) return html`<${Guide} />`;
   const { route } = etat;
   const rendu = ECRANS[route.nom] || ECRANS.aujourdhui;

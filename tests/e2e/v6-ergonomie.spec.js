@@ -22,19 +22,19 @@ const lignesDe = (zone) => zone.evaluate((z) => {
 });
 const texteSur = (n) => Array.from({ length: n }, (_, i) => `ligne ${i + 1}`).join('\n');
 
-test('le soir tient sans défilement à 390 × 797, en clair et en sombre ; la bande du bas est pleine et collée aux onglets', async ({ page }) => {
+// v11 (2/11, spec §13) : le soir ne tient plus sans défiler ; tout ce qu'il faut toucher passe au-dessus de la bande, la
+// page défilée.
+test('le soir à 390 × 797, en clair et en sombre : la bande du bas est pleine et collée aux onglets ; la page défile jusqu\'au dernier repli, chaque carte au-dessus de la bande', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     await expect(groupe(page, 'Lieu')).toHaveCount(1);
-    // De Lieu aux points positifs, tout est à l'écran d'un coup, au-dessus de la bande.
+    // Lieu en haut, à l'écran.
     expect((await groupe(page, 'Lieu').boundingBox()).y).toBeGreaterThanOrEqual(0);
-    const positifs = await page.locator('#points-positifs').boundingBox();
     const bande = page.locator('.actions-flottantes');
     const cadre = await bande.boundingBox();
     const onglets = await page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox();
-    expect(positifs.y + positifs.height).toBeLessThanOrEqual(cadre.y);
     // Collée : aucun jour entre la bande et la barre d'onglets.
     expect(Math.abs(cadre.y + cadre.height - onglets.y)).toBeLessThanOrEqual(0.5);
     // Fond plein, celui de la page : le texte ne passe plus entre les boutons, ni à la vue ni au toucher.
@@ -49,9 +49,10 @@ test('le soir tient sans défilement à 390 × 797, en clair et en sombre ; la b
     expect(fond.couleur).toMatch(/^rgb\(/);
     expect(fond.entre).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // La page défile jusqu'au dernier repli : « Notes libres » passe au-dessus de la bande.
+    // La page défile jusqu'au dernier repli : les points positifs et « Notes libres » passent au-dessus de la bande.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    const notes = await page.getByRole('button', { name: /^Notes libres/ }).boundingBox();
+    const [positifs, notes] = await Promise.all([page.locator('#points-positifs').boundingBox(), page.getByRole('button', { name: /^Notes libres/ }).boundingBox()]);
+    expect(positifs.y + positifs.height).toBeLessThanOrEqual((await bande.boundingBox()).y);
     expect(notes.y + notes.height).toBeLessThanOrEqual((await bande.boundingBox()).y);
   }
 });
@@ -96,6 +97,7 @@ test('toutes les zones de texte grandissent jusqu\'à 7 lignes : soir, épisode,
   await page.getByRole('button', { name: /^Notes libres/ }).click();
   expect(await zonesDe(page)).toEqual([
     { id: 'points-positifs', auto: 'content', min: 2, max: 7 },
+    { id: 'gratitudes', auto: 'content', min: 2, max: 7 },
     { id: 'notes', auto: 'content', min: 3, max: 7 },
   ]);
   const id = await creerEpisode(page, COLERE);
@@ -104,6 +106,7 @@ test('toutes les zones de texte grandissent jusqu\'à 7 lignes : soir, épisode,
   expect(await zonesDe(page)).toEqual([
     { id: 'episodes-situation', auto: 'content', min: 2, max: 7 },
     { id: 'episodes-ceQuiAAide', auto: 'content', min: 2, max: 7 },
+    { id: 'episodes-ceQueJeRetiens', auto: 'content', min: 2, max: 7 },
   ]);
   await aller(page, `#/apres-coup/${id}`);
   const vue = page.getByRole('dialog', { name: 'Après coup' });

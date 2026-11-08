@@ -258,7 +258,7 @@ test('Analyse : « Historique › » et trois portes vers Comprendre, plus d\'Ex
   await expect(page.getByRole('heading', { name: 'Les plus fréquents' })).toBeVisible({ timeout: 15000 });
 
   // Les portes, en tête, de 44 pt au moins : l'Historique, puis Comprendre.
-  const historique = page.getByRole('navigation', { name: 'Historique et Comprendre' }).getByRole('link', { name: 'Historique', exact: true });
+  const historique = page.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Historique', exact: true });
   await expect(historique).toHaveAttribute('href', '#/historique');
   await cible(historique);
   await expect(portes(page).getByRole('link')).toHaveText(['Explosions', 'Énergie', 'Rythmes']);

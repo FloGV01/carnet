@@ -23,7 +23,7 @@ export function Rappel() {
       <li>${pourAffichage('Ouvre Raccourcis, onglet Automatisation, puis touche « + ».')}</li>
       <li>${pourAffichage('Choisis « Heure de la journée » : 21:00, chaque jour.')}</li>
       <li>${pourAffichage('Choisis « Exécuter immédiatement » et désactive la notification d\'exécution.')}</li>
-      <li>${pourAffichage('Touche « Nouvelle automatisation vierge », puis ajoute l\'action « Afficher une notification » avec le texte « Carnet du soir, si tu veux. »')}</li>
+      <li>${pourAffichage('Touche « Nouvelle automatisation vierge », puis ajoute l\'action « Afficher une notification » avec le texte « Le soir dans Emozio, si tu veux. »')}</li>
     </ol>
     <h2 class="libelle-section">Émotion du moment</h2>
     <p class="note-import">Les heures où tu veux un rappel.</p>
@@ -35,8 +35,8 @@ export function Rappel() {
           ${coche()}<span class="texte-pastille">${libelleChoix(`${h} h`)}</span></button>`;
       })}
     </div>`}
-    <p class="note-import">${pourAffichage(`${heures.length === 0 ? 'Refais les mêmes étapes pour chaque heure choisie.' : `Refais les mêmes étapes pour chaque heure : ${heures.map(pad).join(', ')}.`} Texte de la notification : « Émotion du moment, si tu veux. » Ensuite, ouvre Carnet et touche « Émotion », en bas.`)}</p>
-    <p class="note-import">${pourAffichage('Pas d\'action « Ouvrir les URL » : elle ouvrirait Safari, où Carnet est vide. Garde plutôt Carnet dans le Dock.')}</p>
+    <p class="note-import">${pourAffichage(`${heures.length === 0 ? 'Refais les mêmes étapes pour chaque heure choisie.' : `Refais les mêmes étapes pour chaque heure : ${heures.map(pad).join(', ')}.`} Texte de la notification : « Émotion du moment, si tu veux. » Ensuite, ouvre Emozio et touche « Émotion », en bas.`)}</p>
+    <p class="note-import">${pourAffichage('Pas d\'action « Ouvrir les URL » : elle ouvrirait Safari, où Emozio est vide. Garde plutôt Emozio dans le Dock.')}</p>
     <p class="note-import">${pourAffichage('Pour couper un rappel : désactive son automatisation dans Raccourcis.')}</p>
   </main>`;
 }

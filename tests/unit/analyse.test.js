@@ -46,6 +46,9 @@ test('dureeNuit : heures saisies, nuit ancienne, valeurs hors bornes', () => {
   assert.equal(dureeNuit({ date: '2026-10-20', heuresSommeil: 6 }), 6);
   assert.equal(dureeNuit({ heuresSommeil: 4 }), 4, '« 4 h ou moins » compte 4');
   assert.equal(dureeNuit({ heuresSommeil: 10 }), 10, '« 10 h ou plus » compte 10');
+  // v11 : la demi-heure compte telle quelle.
+  assert.equal(dureeNuit({ heuresSommeil: 6.5 }), 6.5);
+  assert.equal(dureeNuit({ heuresSommeil: 4.5, heureCoucher: '23:30', heureLever: '07:00' }), 4.5);
   // Les heures notées l'emportent sur le coucher et le lever d'une même nuit.
   assert.equal(dureeNuit({ heuresSommeil: 7, heureCoucher: '23:30', heureLever: '05:00' }), 7);
   // Nuit ancienne : du coucher au lever, en heures.
@@ -55,7 +58,7 @@ test('dureeNuit : heures saisies, nuit ancienne, valeurs hors bornes', () => {
   assert.equal(dureeNuit({ heureCoucher: '05:30', heureLever: '06:00' }), null, 'moins de 2 h : saisie incohérente');
   assert.equal(dureeNuit({ heureCoucher: '12:30', heureLever: '07:00' }), null, 'plus de 16 h : saisie incohérente');
   // Hors bornes ou abîmé : ignoré, et la nuit retombe sur son coucher et son lever s'il y en a.
-  for (const h of [3, 11, 6.5, '6', -1, 0]) assert.equal(dureeNuit({ heuresSommeil: h }), null, String(h));
+  for (const h of [3, 11, 6.25, '6', -1, 0, 3.5, 10.5, true, NaN, Infinity]) assert.equal(dureeNuit({ heuresSommeil: h }), null, String(h));
   assert.equal(dureeNuit({ heuresSommeil: 12, heureCoucher: '23:00', heureLever: '07:00' }), 8);
   assert.equal(dureeNuit({ sommeilRessenti: 'sommeil:mal' }), null);
   assert.equal(dureeNuit({}), null);
@@ -78,6 +81,11 @@ test('durée médiane (v8) : des heures notées, ou du coucher et du lever des n
   assert.equal(melange.nuits.coucher, null, 'moins de 3 couchers : pas de médiane');
   // Moins de 3 durées : pas de médiane.
   assert.equal(indicateurs({ journal: [d('2026-10-01', { heuresSommeil: 6 }), d('2026-10-02', { heuresSommeil: 8 })], ...vide }, '2026-10-01', '2026-10-07').nuits.duree, null);
+  // v11 : deux nuits à 7 h 30 et une à 9 h, notées à la demi-heure : la médiane dit « 7 h 30 », jamais « 7,5 ».
+  const demi = indicateurs({ journal: [d('2026-10-01', { heuresSommeil: 7.5 }), d('2026-10-02', { heuresSommeil: 9 }), d('2026-10-03', { heuresSommeil: 7.5 })], ...vide },
+    '2026-10-01', '2026-10-07');
+  assert.equal(demi.nuits.duree, 450);
+  assert.equal(duree(demi.nuits.duree), '7 h 30');
 });
 
 test('classements : hors classement, égalité, seuils', () => {
@@ -213,4 +221,31 @@ test('v7 · « Pourquoi ? » de Ta journée : la règle couvre ses deux rangées
   const ligne = code.split('\n').find((l) => l.trim().startsWith('emotionsJournee:'));
   assert.ok(ligne, 'règle emotionsJournee introuvable');
   assert.doesNotMatch(ligne.replace(/\$\{[^}]*\}/g, ''), /\d/);
+});
+
+// v11 (spec §6) : « Tes gratitudes », comme « Tes points positifs » : les 2 plus récentes des 7 derniers jours, avec leur
+// jour, coupées à 120 signes ; jamais leur nombre.
+test('v11 : Ma semaine relit les 2 gratitudes les plus récentes des 7 derniers jours, coupées à 120 signes, comme les points positifs', () => {
+  const long = 'Merci à la voisine pour le colis gardé toute la journée, et pour la soupe déposée devant la porte quand je rentrais tard du travail.';
+  assert.ok(long.length > 120);
+  const journal = [
+    { date: '2026-10-07', gratitudes: 'merci au collègue, la semaine d\'avant', pointsPositifs: 'trop ancien' },
+    { date: '2026-10-08', gratitudes: 'merci au facteur', pointsPositifs: 'une marche' },
+    { date: '2026-10-10', gratitudes: long },
+    { date: '2026-10-12', pointsPositifs: 'un bon repas' },
+    { date: '2026-10-13', gratitudes: 'merci au collègue pour le café', pointsPositifs: 'j\'ai tenu' },
+    { date: '2026-10-16', gratitudes: 'après aujourd\'hui : jamais' },
+  ];
+  const r = analyze({ journal, ...vide }, { aujourdhui: '2026-10-14', items });
+  assert.deepEqual(r.semaine.gratitudes, [
+    { date: '2026-10-13', texte: 'merci au collègue pour le café' },
+    { date: '2026-10-10', texte: `${long.slice(0, 119)}…` },
+  ]);
+  assert.equal(r.semaine.gratitudes[1].texte.length, 120);
+  // Les points positifs ne changent pas, et ne se mêlent pas aux gratitudes.
+  assert.deepEqual(r.semaine.positifs, [{ date: '2026-10-13', texte: 'j\'ai tenu' }, { date: '2026-10-12', texte: 'un bon repas' }]);
+  // Sans gratitude dans la semaine : une liste vide, sans nombre.
+  const sans = analyze({ journal: journal.filter((j) => j.date < '2026-10-08'), ...vide }, { aujourdhui: '2026-10-14', items });
+  assert.deepEqual(sans.semaine.gratitudes, []);
+  assert.deepEqual(Object.keys(r.semaine).sort(), ['au', 'du', 'emotions', 'gratitudes', 'positifs']);
 });

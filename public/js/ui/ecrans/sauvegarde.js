@@ -49,7 +49,7 @@ const NOMS_META = {
   reglages: 'les réglages de l\'analyse', prenomSoignants: 'le prénom pour la vue soignants',
   respiration: 'les réglages de la respiration', uneChoseALaFois: 'les réglages de « Une chose à la fois »',
   ressourcer: 'les réglages de « Me ressourcer »', definitionsRoue: 'les définitions des émotions',
-  motsPerso: 'les mots ajoutés à la carte des émotions', favorisBienEtre: 'les exercices épinglés',
+  motsPerso: 'les mots ajoutés à la carte des émotions', favorisBienEtre: 'les exercices épinglés', refuges: 'les refuges',
 };
 // Accord au féminin seulement si tout ce qui est nommé est féminin, comme pour la perte.
 const META_FEMININES = new Set(['definitionsRoue']);
@@ -94,7 +94,7 @@ export function Sauvegarde() {
   return html`<main class="ecran import">
     <${Entete} titre="Importer une sauvegarde" retour=${retour} />
     <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisir} />
-    ${!etat && html`<p class="texte-import">Choisis le fichier de sauvegarde (.json ou .zip), par exemple dans iCloud Drive, dossier Carnet.</p>
+    ${!etat && html`<p class="texte-import">Choisis le fichier de sauvegarde (.json ou .zip), par exemple dans iCloud Drive, dossier Emozio.</p>
       ${boutonFichier('Choisir un fichier')}`}
     ${etat && etat.erreur && html`<p class="texte-import" role="status">${etat.erreur}</p>${boutonFichier('Choisir un autre fichier')}`}
     ${a && html`<section class="apercu-import" aria-label="Aperçu de l'import">

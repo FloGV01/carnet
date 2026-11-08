@@ -1,7 +1,9 @@
-// « Mon plan » (v4) : écrit par l'utilisateur, avec ses mots. Enregistré au fil de la saisie.
+// « Mon plan » (v4) : écrit par l'utilisateur, avec ses mots. Enregistré au fil de la saisie. v11 (spec §8.1) : une ligne
+// « Mes refuges » après les si… alors…, vers l'écran de ses titres et de ses playlists.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
+import { CarreIcone } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
 import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { etatApp } from '../../store.js';
@@ -9,12 +11,20 @@ import { normaliserPlan, RUBRIQUES_PLAN } from '../../domain/mon-plan.js';
 import { lirePlan } from '../composants/mon-plan.js';
 import { Icones } from '../icones.js';
 
-function revenir() {
+// L'écran d'où Mon plan a été ouvert (Réglages, Moment difficile…), retenu tant que l'app reste ouverte. Mes refuges s'ouvre
+// d'ici et y revient : sans cela, les deux écrans se renverraient l'un à l'autre. Une origine inconnue ramène sur Aujourd'hui.
+let origine = null;
+const AUTOUR = /^#\/(mon-plan|refuges)(\/|$)/;
+function retenirOrigine() {
   const precedente = etatApp.lire().routePrecedente;
-  location.hash = precedente && !/#\/mon-plan/.test(precedente) ? precedente : '#/aujourdhui';
+  if (precedente && !AUTOUR.test(precedente)) origine = precedente;
+}
+function revenir() {
+  location.hash = origine || '#/aujourdhui';
 }
 
 export function MonPlan() {
+  useState(retenirOrigine); // une fois, à l'ouverture
   const [plan, setPlan] = useState(null);
   const file = useRef(Promise.resolve());
   const [, signaler] = useIndicateur();
@@ -43,5 +53,8 @@ export function MonPlan() {
             <button type="button" class="effacer" aria-label=${`Retirer « si ${x.si || '…'} »`} onClick=${() => changer((p) => ({ ...p, siAlors: p.siAlors.filter((_, k) => k !== i) })).catch(() => {})}>${Icones.fermer()}</button>
           </li>`)}</ul>`}
     </section>
+    <div class="carte carte-groupe avec-carres">
+      <a class="ligne-carte" href="#/refuges"><${CarreIcone} icone="musique" teinte="difficile" /><span class="ligne-libelle">Mes refuges</span>${Icones.chevron({ trait: 2 })}</a>
+    </div>
   </main>`;
 }

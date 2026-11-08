@@ -1,7 +1,8 @@
-// Écran Analyse (v5 ; v7 en 2b) : en haut, la porte « Historique › » et les trois portes de Comprendre ; Ma semaine en
-// tuiles (dont « Tes émotions ») ; puis, selon la période : Tes zones (v9), Mes jours, ta journée heure par heure, contacts
-// et mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les chiffres. v7 : plus aucune
-// phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de ressemblance).
+// Écran Analyse (v5 ; v7 en 2b) : en haut, les portes « Historique › » et « Épisodes › » (v11), puis les trois de
+// Comprendre ; Ma semaine en tuiles (dont « Tes émotions ») ; puis, selon la période : Tes zones (v9), Mes jours, ta journée
+// heure par heure, contacts et mouvement, tes moments, les plus fréquents (dont les mots de l'émotion du moment), tous les
+// chiffres. v7 : plus aucune phrase calculée sur la note de 1 à 10 (tendances, bonnes journées, sommeil et humeur, signal de
+// ressemblance).
 // Avec peu de données, l'écran le dit au lieu d'affirmer. Le calcul est mis en cache jusqu'à la prochaine écriture, et la
 // base n'est pas relue avant (v8).
 import { html, useEffect, useState } from '../lib.js';
@@ -21,6 +22,7 @@ import { JOURS, jourSemaine, formaterPlage } from '../../domain/dates.js';
 import { MesJours, TaJournee, Barres, ZonesParSemaine } from '../graphes/graphes.js';
 import { QuatreBulles } from '../composants/quatre-bulles.js';
 import { ONGLETS as PORTES_COMPRENDRE } from './comprendre.js';
+import { allerAuxEpisodes } from './historique.js';
 import { versHash } from '../../routeur.js';
 import { pourAffichage } from '../../domain/typographie.js';
 import { lireSiChange, lireBase } from '../lecture.js';
@@ -40,11 +42,18 @@ export const calculerAnalyse = () => lireSiChange('analyse', async () => {
 
 // En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
 // avec le carré de sa couleur (deux touchers pour chaque onglet, v6.1). Elles passent à la ligne en grand texte.
+// v11 (spec §7) : « Épisodes », à côté d'« Historique », ouvre l'Historique sur ce segment, quel que soit le dernier retenu ;
+// un épisode s'ouvre ainsi en 3 touchers depuis l'onglet. Les deux passent l'un sous l'autre en grand texte.
 const COULEURS_PORTES = { explosions: ['explosions', 'expl'], energie: ['energie', 'energie'], rythmes: ['rythmes', 'sommeil'] };
-const Portes = () => html`<nav class="portes-analyse" aria-label="Historique et Comprendre">
-  <a class="porte-historique" href="#/historique">
-    <span class="carre-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
-  </a>
+const Portes = () => html`<nav class="portes-analyse" aria-label="Historique, épisodes et Comprendre">
+  <div class="portes-historique">
+    <a class="porte-historique" href="#/historique">
+      <span class="carre-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
+    </a>
+    <a class="porte-historique teinte-ep" href="#/historique" onClick=${allerAuxEpisodes}>
+      <span class="carre-porte" aria-hidden="true">${Icones.note()}</span><span class="porte-titre">Épisodes</span>${Icones.chevron({ trait: 2 })}
+    </a>
+  </div>
   <div class="portes" role="group" aria-label="Comprendre">${PORTES_COMPRENDRE.map((o) => {
     const [icone, teinte] = COULEURS_PORTES[o.valeur];
     return html`<a class=${`porte teinte-${teinte}`} href=${versHash('comprendre', { onglet: o.valeur })}>
@@ -82,12 +91,13 @@ function TuileEmotions({ compte }) {
 
 // Ma semaine (v5 ; v7 en tuiles 2b) : les 7 derniers jours, quelle que soit la période choisie. Jamais de comparaison
 // avec la semaine d'avant ; « nuits Mal » seules (Mal + Moyen + Bien donnerait le nombre de nuits notées). Les points
-// positifs restent dans un repli fermé.
+// positifs restent dans un repli fermé, et les gratitudes (v11) dans le leur, chacun avec son jour, sans aucun nombre.
+const LignesSemaine = ({ textes }) => html`<ul class="lignes-semaine">${textes.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>`;
 function MaSemaine({ f, frise7, semaine, carte }) {
   const lib = (id) => carte.get(id) || id;
   const nEmotions = nombreDeReleves(semaine.emotions);
   const joursExpl = frise7.colonnes.filter((c) => c.explosions > 0).map((c) => JOURS[jourSemaine(c.cle)]);
-  if (!nEmotions && !f.nuits.n && !f.explosions.n && !f.episodes.nombre && !semaine.positifs.length) return null;
+  if (!nEmotions && !f.nuits.n && !f.explosions.n && !f.episodes.nombre && !semaine.positifs.length && !semaine.gratitudes.length) return null;
   return html`<section class="carte ma-semaine" aria-label="Ma semaine">
     <div class="carte-entete"><h2 class="titre-carte">Ma semaine</h2><span class="note-carte-interne">${formaterPlage(semaine.du, semaine.au)}</span></div>
     <div class="tuiles-semaine">
@@ -98,7 +108,10 @@ function MaSemaine({ f, frise7, semaine, carte }) {
       <${Tuile} rubrique="ep" titre="épisodes" valeur=${String(f.episodes.nombre)} />
     </div>
     ${semaine.positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" icone="positifs" teinte="pos" memoriser=${false}>
-      <ul class="lignes-semaine">${semaine.positifs.map((p) => html`<li>« ${p.texte} » <span class="note-carte-interne">${JOURS[jourSemaine(p.date)]}</span></li>`)}</ul>
+      <${LignesSemaine} textes=${semaine.positifs} />
+    </${Repli}>`}
+    ${semaine.gratitudes.length > 0 && html`<${Repli} cle="gratitudes-semaine" titre="Tes gratitudes" icone="positifs" teinte="pos" memoriser=${false}>
+      <${LignesSemaine} textes=${semaine.gratitudes} />
     </${Repli}>`}
   </section>`;
 }

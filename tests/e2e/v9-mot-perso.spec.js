@@ -62,10 +62,15 @@ test('la loupe de l\'écran 1 : champ actif ; « epuise » trouve Épuisé, à l
   await champLoupe(vue).pressSequentially('epuise');
   await expect(trouves(vue).getByRole('button')).toHaveCount(1);
   await expect(trouve(vue, 'Épuisé')).toHaveText(`Épuisé ${DEFINITIONS['roue:aucune:epuise']}`);
-  // Le mot à la couleur de sa zone (le bleu), lisible sur le noir ; le début de sa définition en gris.
-  const couleurs = await trouve(vue, 'Épuisé').evaluate((b) => [getComputedStyle(b.querySelector('.mot-resultat')).color, getComputedStyle(b.querySelector('.extrait-resultat')).color]);
-  expect(couleurs[0]).toBe('rgb(120, 159, 255)');
-  for (const c of couleurs) expect(contraste(c, 'rgb(0, 0, 0)')).toBeGreaterThanOrEqual(4.5);
+  // Le mot à la couleur de sa zone (le bleu), lisible sur le noir ; le début de sa définition en gris. v11 (8/11) : en clair,
+  // le texte de sa zone (-text), lisible sur le gris clair. Le thème change écran ouvert : rien n'est recalculé.
+  const couleurs = () => trouve(vue, 'Épuisé').evaluate((b) => [getComputedStyle(b.querySelector('.mot-resultat')).color, getComputedStyle(b.querySelector('.extrait-resultat')).color]);
+  for (const [schema, fond, attendu] of [['dark', 'rgb(0, 0, 0)', 'rgb(120, 159, 255)'], ['light', 'rgb(231, 234, 238)', 'rgb(49, 80, 169)']]) {
+    await page.emulateMedia({ colorScheme: schema });
+    const [motTrouve, extrait] = await couleurs();
+    expect(motTrouve, schema).toBe(attendu);
+    for (const c of [motTrouve, extrait]) expect(contraste(c, fond), schema).toBeGreaterThanOrEqual(4.5);
+  }
   // Rien n'est écrit en cherchant.
   expect(await releves(page)()).toEqual([]);
 
@@ -254,7 +259,8 @@ test('à la création, un nom déjà sur la carte est refusé au choix de la cou
   await expect(ajouterMot(vue)).toHaveText('Ajouter mon mot « Nuageux »');
 });
 
-test('plein écran noir, en clair comme en sombre, pour la loupe et le mot à soi : ni barre d\'onglets, ni défilement de côté ; aucune violation de CSP', async ({ page }) => {
+// v11 (8/11) : le fond suit le thème (spec §9) : noir en sombre, comme avant ; le gris clair d'Aujourd'hui en clair.
+test('plein écran, noir en sombre et gris clair en clair, pour la loupe et le mot à soi : ni barre d\'onglets, ni défilement de côté ; aucune violation de CSP', async ({ page }) => {
   await page.addInitScript(() => {
     window.__csp = [];
     document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile || ''}`));
@@ -266,9 +272,10 @@ test('plein écran noir, en clair comme en sombre, pour la loupe et le mot à so
     return { fond: getComputedStyle(ecran).backgroundColor, onglets: document.querySelectorAll('nav.onglets').length,
       deCote: document.documentElement.scrollWidth > innerWidth || scrollX !== 0 };
   });
-  const attendu = { fond: 'rgb(0, 0, 0)', onglets: 0, deCote: false };
+  const FONDS = { dark: 'rgb(0, 0, 0)', light: 'rgb(231, 234, 238)' };
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
+    const attendu = { fond: FONDS[schema], onglets: 0, deCote: false };
     const vue = await ouvrir(page);
     await loupe(vue).click();
     await champLoupe(vue).fill('e');

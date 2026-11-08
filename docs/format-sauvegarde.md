@@ -1,18 +1,19 @@
-# Format de sauvegarde de Carnet
+# Format de sauvegarde d'Emozio
 
 ## Fichiers
 
-- **Sans mémo vocal** : un seul fichier `carnet-sauvegarde-AAAA-MM-JJ-HHMM.json`.
-- **Avec des mémos** : un fichier `carnet-sauvegarde-AAAA-MM-JJ-HHMM.zip`, sans compression, qui contient :
+- **Sans mémo vocal** : un seul fichier `emozio-sauvegarde-AAAA-MM-JJ-HHMM.json`.
+- **Avec des mémos** : un fichier `emozio-sauvegarde-AAAA-MM-JJ-HHMM.zip`, sans compression, qui contient :
   - `sauvegarde.json` ;
   - `audios/<id>.m4a`, un fichier par mémo.
 - **Au-delà de 150 Mo** : plusieurs fichiers `…-partie-N-sur-T.zip`. Chaque partie contient le JSON complet et une tranche des audios, par ordre de date. À l'import, on choisit toutes les parties d'un coup.
+- **Le nom Emozio (v11)** : seul le nom des fichiers change. Avant, ils s'appelaient `carnet-sauvegarde-…` ; l'identifiant `format` reste `carnet-sauvegarde` (plus bas), dans les anciens fichiers comme dans les nouveaux. L'import ne lit jamais le nom d'un fichier : une ancienne sauvegarde, ou un fichier renommé, s'importe tel quel.
 
 ## sauvegarde.json
 
 ```json
-{ "format": "carnet-sauvegarde", "formatVersion": 7, "schemaVersion": 6,
-  "exportedAt": "2026-11-03T19:02:11.412Z", "app": { "version": "10.0.0" },
+{ "format": "carnet-sauvegarde", "formatVersion": 8, "schemaVersion": 6,
+  "exportedAt": "2026-11-12T19:02:11.412Z", "app": { "version": "11.0.0" },
   "partie": { "numero": 1, "total": 2 },
   "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "notes": 1, "seances": 2, "listes": 204, "meta": 2, "audios": 1 },
   "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "notes": [], "seances": [], "listes": [], "meta": [],
@@ -23,6 +24,13 @@
 - **Champ `partie`** : présent seulement dans un export en plusieurs fichiers.
 - **Enregistrements** : ils suivent le schéma du plan (§5.3). Les références de liste sont des identifiants (`liste:slug`), jamais des libellés.
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
+- **formatVersion 8 (v11)** :
+  - champ `heuresSommeil` dans le journal : la durée de la nuit, de 4 à 10 **par demi-heure** (4, 4,5, 5, … 9,5, 10, soit 13 valeurs), où 4 veut dire « 4 h ou moins » et 10 « 10 h ou plus », ou `null`. Les bornes de la v8 ne bougent pas. Un autre nombre, un texte (`"7"`) ou un booléen rend la journée illisible, avec le message « heuresSommeil : de 4 à 10 par demi-heure attendu ». Une demi-heure s'écrit « 7 h 30 » dans l'app et l'Export PSY, jamais « 7,5 » ;
+  - champ `gratitudes` dans le journal (« Mes gratitudes ») : un texte, ou `null`. Il n'entre ni dans l'Export PSY ni dans la vue soignants ;
+  - champ `ceQueJeRetiens` dans les épisodes (« Ce que j'en retiens ») : un texte, ou `null`. Il est rangé sur l'épisode, à part de `apresCoup` : l'écrire ne touche pas à `apresCoup.jour`. Il n'entre ni dans l'Export PSY, ni dans la vue soignants ;
+  - méta `refuges` (« Mes refuges ») : `{ "titres": "Une chanson calme\nUne autre", "playlists": [ { "nom": "Pour souffler", "lien": "https://open.spotify.com/playlist/…", "source": "spotify" } ] }`. `titres` est un texte ou `null` ; `playlists` compte 3 lignes au plus, chacune avec un `nom` (texte ou `null`), un `lien` (`https:`, `spotify:` ou `music:`, ou `null`) et une `source` (`"spotify"` pour une playlist choisie depuis le compte Spotify, sinon `null`). Aucun jeton n'y est jamais écrit. Elle est remplacée à l'import comme toute clé de l'utilisateur, remise d'abord dans cette forme (un fichier abîmé ou écrit à la main peut tout y mettre), sans erreur : une valeur qui n'est pas un objet compte pour des refuges vides ; un lien d'un autre schéma (`javascript:`, `data:`, `http:`…) devient `null`, et « ?si=… » en est retiré ; avec la source `"spotify"`, seul un lien `https:` vers l'hôte exact `open.spotify.com`, sans compte ni port, est gardé, et un lien refusé fait aussi perdre la source (le nom reste) ; une autre source devient `null` ; un nom est coupé à 200 signes (un emoji compte pour un) et reste du texte ; une ligne sans nom ni lien disparaît, et seules les 3 premières restent. Des refuges vides (ni titre ni playlist) ne sont pas gardés.
+
+  Une sauvegarde en formatVersion 7 passe au format 8 à l'import sans aucun changement : ses nuits sont à l'heure ronde, et `gratitudes` et `ceQueJeRetiens` se lisent `null`. Le numéro change pour qu'une app de la v10 refuse proprement un fichier de la v11 (« plus récent que l'app »).
 - **Ce que la v10 ajoute, sans changer de format** : une sauvegarde de la v10 reste en formatVersion 7, et rien n'est à transformer à l'import.
   - méta `favorisBienEtre` : les éléments épinglés dans Bien-être, dans l'ordre où ils l'ont été, `["soupir", "reveil-nuit", "sons-de-fond"]`. Chacun est l'identifiant d'un exercice, ou `coherence`, `minuteur`, `concentration`, `sons-de-fond`. Elle est remplacée à l'import comme toute clé de l'utilisateur. Elle n'est pas validée à l'import, mais à la lecture : un identifiant inconnu, un doublon ou une valeur qui n'est pas une liste sont ignorés, sans erreur ni ligne vide. Une épingle touchée ne compte pas comme une saisie : `derniereEcriture` ne bouge pas ;
   - méta `respiration` : champ `voix` (booléen, « Lire les consignes à voix haute »), faux s'il est absent ;
@@ -35,7 +43,7 @@
 
   Une sauvegarde en formatVersion 6 passe au format 7 à l'import sans aucun changement : elle ne cite aucun mot à soi, et ses relevés gardent leur mot et leur énergie. Le numéro change pour qu'une app de la v8, qui ne connaît pas les mots à soi, refuse proprement un fichier de la v9 (« plus récent que l'app »).
 - **formatVersion 6 (v8)** :
-  - champ `heuresSommeil` dans le journal : la durée de la nuit qui précède le jour, un entier de 4 à 10, où 4 veut dire « 4 h ou moins » et 10 « 10 h ou plus », ou `null`. Un autre nombre rend la journée illisible. `heureCoucher`, `heureLever` et `reveilsNocturnes` restent pour les nuits déjà notées ;
+  - champ `heuresSommeil` dans le journal : la durée de la nuit qui précède le jour, un entier de 4 à 10, où 4 veut dire « 4 h ou moins » et 10 « 10 h ou plus », ou `null` (à la demi-heure depuis le format 8). Un autre nombre rend la journée illisible. `heureCoucher`, `heureLever` et `reveilsNocturnes` restent pour les nuits déjà notées ;
   - champs `fin` et `programme` dans les séances : `fin` vaut `true` pour une séance menée jusqu'au bout, sinon `null` (une séance de la v7 n'en a pas) ; `programme` est l'identifiant de la séance du Programme d'où elle a été lancée, sinon `null` ;
   - liste `sujetRdv` (sujets d'un rendez-vous : Sommeil, Traitement, Explosions, Fatigue, Travail, Émotions, Autre chose), comme les autres listes ;
   - méta `definitionsRoue` : les définitions des émotions corrigées par l'utilisateur, `{ "roue:<famille>:<mot>": "texte" }`. Elle est remplacée à l'import comme toute clé de l'utilisateur.
@@ -73,13 +81,14 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
    - `counts` correspond à la longueur des tableaux ;
    - les ZIP sont intègres (CRC).
 2. **Normalisation** : chaque enregistrement passe par `normaliser` en mode import. Les éléments illisibles sont listés puis ignorés.
-3. **Identifiant de liste inconnu** : il recrée un élément archivé « Élément sans libellé (id) », pour qu'aucun enregistrement ne soit perdu. De même, un mot à soi cité par un relevé et absent de `motsPerso` est recréé mis de côté, « Mot sans libellé » (v9).
+3. **Identifiant de liste inconnu** : il recrée un élément archivé « Élément sans libellé (id) », pour qu'aucun enregistrement ne soit perdu. De même, un mot à soi cité par un relevé et absent de `motsPerso` est recréé mis de côté, « Mot sans libellé » (v9). Les méta `motsPerso` et `refuges` (v11) sont remises dans la forme que l'app écrit, sans erreur.
 4. **Aperçu** : contenu du fichier, ce qui serait effacé (notes et séances comprises), mémos absents des fichiers choisis, et les deux dates si le fichier est plus ancien que la dernière saisie.
 5. **Application** :
    - copie de secours `avant-import`, 3 au maximum, sans les audios ;
+   - sauf sur une base vide (v11, `estBaseVide`) : aucune fiche (mémos et humeurs du moment compris), aucune méta de l'utilisateur, même vidée, et des listes telles que l'app les verse, sans élément créé par l'utilisateur ou recréé par un import, ni élément par défaut renommé, rangé ou déplacé. Il n'y a alors rien à garder : aucune copie n'est prise, et « Revenir à l'état d'avant l'import » n'apparaît pas après ce premier import (passage à une nouvelle icône) ;
    - puis une seule transaction qui vide et réécrit tout.
-6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions, mots ajoutés à la carte, exercices épinglés…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
-7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant.
+6. **Méta** : les clés de l'utilisateur (Mon plan, Ma journée, traitement actuel, réglages, définitions des émotions, mots ajoutés à la carte, exercices épinglés, Mes refuges…) sont remplacées par celles du fichier ; une clé absente du fichier est retirée. `explosionsDepuis` est gardée si le fichier ne l'a pas.
+7. **Retour arrière** : « Revenir à l'état d'avant l'import » restaure la dernière copie, méta de l'utilisateur comprise. L'état courant est lui-même copié avant. Depuis la v11, il demande d'abord confirmation et dit ce qui sera remplacé ; les mémos vocaux d'avant l'import ne reviennent pas (la copie ne les contient pas).
    - Une copie prise avant la v4 n'a pas d'humeurs du moment, une copie prise avant la v6 n'a pas de notes, une copie prise avant la v7 n'a pas de séances : elles restent alors telles quelles.
    - Les listes par défaut absentes de la copie (v4, v6, v8) sont ajoutées.
    - Dans une copie prise avant la v6, `'humeur'` rejoint les champs masqués de `journee`, comme à l'import d'un fichier au format 3. Une copie de la v6 garde le choix qu'elle contient.

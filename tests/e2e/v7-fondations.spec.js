@@ -110,7 +110,8 @@ test('sélection commune 2b, en clair et en sombre : -fill, -on, 600 (700 pour u
     const teletravail = groupe(page, 'Lieu').getByRole('button', { name: 'Télétravail' });
     verifierNonChoisi(await styleDe(teletravail), rgb(t['surface-2']), `${schema} Télétravail`);
     expect(await teletravail.evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('0px');
-    // 44 de haut au moins : la cible (sur Aujourd'hui, les choix des cartes font 44 pour que le soir tienne sans défiler).
+    // 44 de haut au moins : la cible (sur Aujourd'hui, les choix des cartes font 44 ; jusqu'à la v10, le soir tenait ainsi
+    // sans défiler).
     expect((await teletravail.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await toucher(page, 'Lieu', 'Bureau');
     await toucher(page, 'Sommeil', 'Moyen');
@@ -287,7 +288,8 @@ test('boutons à coche faits à la main, en clair et en sombre : « C\'était ve
     const t = schema === 'dark' ? sombre : clair;
     await page.emulateMedia({ colorScheme: schema });
     // « C'était vers… », en couleur Humeur ; « Maintenant » est choisi tant qu'aucune heure ne l'est. v9 : sur l'écran noir
-    // de l'émotion, dans les deux thèmes, un choix non fait a le --surface du thème sombre (tokens.css, .ecran-noir).
+    // de l'émotion, dans les deux thèmes, un choix non fait avait le --surface du thème sombre ; v11 (8/11) : l'écran suit
+    // le thème, et un choix non fait a le --surface du thème (blanc en clair, le même qu'avant en sombre).
     await aller(page, '#/moment');
     const vue = page.getByRole('dialog', { name: 'Émotion du moment' });
     const bouton = vue.locator('.ligne-date > .btn-lien');
@@ -296,7 +298,7 @@ test('boutons à coche faits à la main, en clair et en sombre : « C\'était ve
     verifierChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), attendu(t, 'humeur'), `${schema} vers Maintenant`);
     await vers.getByRole('button', { name: '12 h', exact: true }).click();
     verifierChoisi(await styleDe(vers.getByRole('button', { name: '12 h', exact: true })), attendu(t, 'humeur'), `${schema} vers 12 h`);
-    verifierNonChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), rgb(sombre.surface), `${schema} vers Maintenant non choisi`);
+    verifierNonChoisi(await styleDe(vers.getByRole('button', { name: 'Maintenant', exact: true })), rgb(t.surface), `${schema} vers Maintenant non choisi`);
     await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
 
     // Rappels : sans teinte, couleur action.

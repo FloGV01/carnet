@@ -3,9 +3,10 @@ import { toucher, groupe, entreeDuJour, viderBase } from '../aides/saisie.js';
 
 test.beforeEach(async ({ page }) => { await page.goto('/'); await viderBase(page); });
 
-// Les champs tiennent au-dessus de la bande flottante, la bande au-dessus des onglets, sur une ligne.
-async function sansDefilement(page, dernier = '#points-positifs') {
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+// La bande flottante au-dessus des onglets, sur une ligne ; les champs passent au-dessus d'elle, la page défilée jusqu'en
+// bas (v11, spec §13 : le soir ne tient plus sans défiler), jusqu'à la dernière carte, « Mes gratitudes » (v11).
+async function atteignable(page, dernier = '#gratitudes') {
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const zone = await page.locator(dernier).boundingBox();
   const flottants = await page.locator('.actions-flottantes').boundingBox();
   const onglets = await page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox();
@@ -24,7 +25,7 @@ async function sansDefilement(page, dernier = '#points-positifs') {
   }
 }
 
-test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bouton Enregistrer', async ({ page }) => {
+test('les 5 champs du soir en 5 touchers, sans frappe, sans bouton Enregistrer ; la page défile jusqu\'aux points positifs et aux gratitudes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 797 });
   await toucher(page, 'Lieu', 'Bureau');
   await toucher(page, 'Sommeil', 'Moyen');
@@ -35,7 +36,7 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bo
   // soir aussi (v6) : l'humeur du jour est la moyenne des humeurs du moment.
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
   await expect(groupe(page, 'Humeur')).toHaveCount(0);
-  await sansDefilement(page);
+  await atteignable(page);
   // À 390 px : « Moment difficile » et « Émotion » en toutes lettres, chacun avec son carré.
   await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
   await expect(page.locator('.actions-flottantes .moment .libelle-action')).toBeVisible();
@@ -52,11 +53,12 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans défilement, sans bo
 });
 
 // Exigence v4 (docs/v4-specification.md) : ce pire cas tenait sans défiler à 390 et 375 × 797. En v7, chaque rubrique est
-// une carte 2b : même resserrées (choix de 44, marges de 8), les 8 rubriques dépassent d'environ 270 px, et aucune mise en
-// page en cartes ne les fait tenir avec des cibles de 44. Cette exigence est EN ATTENTE de l'arbitrage de l'utilisateur
-// (docs/decisions.md, « v7 : en attente de l'utilisateur ») ; en attendant, la page défile et chaque champ peut passer
-// au-dessus de la bande du bas.
-test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
+// une carte 2b : même resserrées (choix de 44, marges de 8), les 8 rubriques (9 depuis les gratitudes de la v11)
+// dépassent d'environ 270 px, et aucune mise en page en cartes ne les fait tenir avec des cibles de 44. Cette exigence est
+// EN ATTENTE de l'arbitrage de l'utilisateur (docs/decisions.md, « v7 : en attente de l'utilisateur ») ; en attendant, la
+// page défile et chaque champ peut passer au-dessus de la bande du bas. L'ordre écrit ci-dessous n'a que 8 champs :
+// normaliserJournee y ajoute « Mes gratitudes » juste après les points positifs.
+test('pire cas : 9 champs (v11 : Mes gratitudes, ajoutée par normaliserJournee), Contact et Sport séparés : la page défile, rien ne reste sous la bande (390 et 375)', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.meta.ecrire('journee', {
     ordre: ['lieu', 'contact', 'sommeil', 'humeur', 'sport', 'explosions', 'traitement', 'positifs'], masques: [],
   }));
@@ -76,6 +78,7 @@ test('pire cas : 8 champs, Contact et Sport séparés : la page défile, rien ne
       expect(await auDessus(`[role="group"][aria-label="${nom}"]`), nom).toBe(true);
     }
     expect(await auDessus('#points-positifs')).toBe(true);
+    expect(await auDessus('#gratitudes')).toBe(true);
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }

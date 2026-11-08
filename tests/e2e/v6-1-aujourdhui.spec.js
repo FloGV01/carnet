@@ -26,11 +26,11 @@ test('ordre : les champs, « Mémo vocal » et « J\'ai fini » sur une ligne, A
   await expect(page.getByRole('button', { name: 'J\'ai fini pour ce soir' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Après coup \(TCC\) · tes épisodes récents/ })).toBeVisible();
   const ordre = await page.evaluate(() => {
-    const reperes = [['#points-positifs', 'positifs'], ['.btn-memo', 'memo'], ['.fini-bouton', 'fini'], ['.ligne-apres-coup-jour', 'apres-coup'],
+    const reperes = [['#points-positifs', 'positifs'], ['#gratitudes', 'gratitudes'], ['.btn-memo', 'memo'], ['.fini-bouton', 'fini'], ['.ligne-apres-coup-jour', 'apres-coup'],
       ['.replis', 'replis'], ['.evenements-jour > h2', 'ma-journee'], ['.ajout-symptome', 'symptome'], ['.pied-jour', 'pied']];
     return [...document.querySelectorAll(reperes.map(([s]) => s).join(', '))].map((e) => reperes.find(([s]) => e.matches(s))[1]);
   });
-  expect(ordre).toEqual(['positifs', 'memo', 'fini', 'apres-coup', 'replis', 'ma-journee', 'symptome', 'pied']);
+  expect(ordre).toEqual(['positifs', 'gratitudes', 'memo', 'fini', 'apres-coup', 'replis', 'ma-journee', 'symptome', 'pied']);
   await expect(page.locator('.evenements-jour > h2')).toHaveText('Ma journée');
 
   // À l'écran : « J'ai fini » à droite de « Mémo vocal », à la même hauteur ; Après coup juste dessous, avant les replis.
@@ -51,9 +51,9 @@ test('ordre : les champs, « Mémo vocal » et « J\'ai fini » sur une ligne, A
   await expect(page.getByRole('heading', { name: 'Ma journée' })).toBeVisible();
 });
 
-// Au-dessus de la bande du bas, sans défiler, avec les zones sûres de l'iPhone : P3 dans tests/e2e/v7-aujourdhui.spec.js
-// (v8, relecture de la tâche 8 : décision ouverte, docs/decisions.md). Ici, aux tailles de la v6 sans zones sûres, il ne
-// reste que sa présence et sa place.
+// Au-dessus de la bande du bas, avec les zones sûres de l'iPhone : P3 dans tests/e2e/v7-aujourdhui.spec.js (v11 : la page
+// défilée, le soir ne tenant plus sans défiler). Ici, aux tailles de la v6 sans zones sûres, il ne reste que sa présence et
+// sa place.
 test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis présent, en clair et en sombre', async ({ page }) => {
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
   for (const schema of ['light', 'dark']) {
@@ -76,6 +76,8 @@ test('« J\'ai fini pour ce soir » : absent avant un premier choix, puis prése
   const [memo, bouton, puce] = await Promise.all(['.btn-memo', '.fini-bouton', '.puce-memo'].map((s) => boite(page, s)));
   expect(Math.abs((memo.y + memo.height / 2) - (bouton.y + bouton.height / 2))).toBeLessThanOrEqual(1);
   expect(memo.y).toBeGreaterThanOrEqual(puce.y + puce.height);
+  // v11 (spec §13) : sous les gratitudes, « J'ai fini » finit vers 888 px à 390 × 844 ; la page défile jusqu'à lui.
+  await fini.scrollIntoViewIfNeeded();
   await expect(fini).toBeInViewport({ ratio: 1 });
 });
 
@@ -84,6 +86,7 @@ test('sans micro ni mémo, « J\'ai fini pour ce soir » reste là, à droite', 
   await page.reload();
   await toucher(page, 'Lieu', 'Bureau');
   const fini = page.getByRole('button', { name: 'J\'ai fini pour ce soir' });
+  await fini.scrollIntoViewIfNeeded();
   await expect(fini).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole('button', { name: 'Mémo vocal' })).toHaveCount(0);
   // Son bord droit est celui des cartes (2b), comme celui de la carte des points positifs.

@@ -153,7 +153,7 @@ export function ouvrirBase({
     };
     r.onerror = () => {
       const err = r.error;
-      if (err && err.name === 'VersionError') ko(new DataError('VERSION_FUTURE', 'Cette base vient d\'une version plus récente de Carnet.'));
+      if (err && err.name === 'VersionError') ko(new DataError('VERSION_FUTURE', 'Cette base vient d\'une version plus récente d\'Emozio.'));
       else if (err && err.name === 'AbortError') ko(new DataError('MIGRATION_ECHOUEE', 'La mise à jour des données n\'a pas pu se faire. Elles sont intactes.'));
       else ko(err);
     };

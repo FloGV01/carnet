@@ -37,7 +37,7 @@ test('vue soignants : aperçu dessiné, PDF d\'une page partagé', async ({ page
   await bouton.click();
   await expect.poll(async () => (await fichiersPartages(page)).length, { timeout: 30000 }).toBe(1);
   const [f] = await fichiersPartages(page);
-  expect(f.nom).toBe('carnet-consultation-2026-09-29.pdf');
+  expect(f.nom).toBe('emozio-consultation-2026-09-29.pdf');
   expect(f.type).toBe('application/pdf');
   const debut = Buffer.from(f.octets.slice(0, 8)).toString('latin1');
   expect(debut).toBe('%PDF-1.4');

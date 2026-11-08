@@ -791,7 +791,7 @@ test('mesNuits : les nuits notées de la période, dans l\'ordre des jours ; les
     soir('2026-10-04', { sommeilRessenti: 'sommeil:moyen', heureCoucher: '23:30', heureLever: '07:10' }), // une nuit d'avant la v8
     soir('2026-10-05', { heureCoucher: '23:30', heureLever: '00:30' }), // une heure : hors de la règle des 2 à 16 h
     soir('2026-10-06', { lieu: 'lieu:bureau', reveilsNocturnes: 2 }), // rien sur la nuit qui compte
-    soir('2026-10-08', { heuresSommeil: 12 }), soir('2026-10-09', { heuresSommeil: 6.5 }), // hors de la liste
+    soir('2026-10-08', { heuresSommeil: 12 }), soir('2026-10-09', { heuresSommeil: 6.25 }), // hors de la liste
     soir('2026-10-10', { sommeilRessenti: 'sommeil:inconnu', heuresSommeil: 7 }),
     soir('2026-10-29', { heuresSommeil: 8 }), // après aujourd'hui
   ];
@@ -817,6 +817,19 @@ test('mesNuits : le texte d\'une nuit, la qualité d\'abord, les heures comme le
   assert.equal(texteNuit({ heures: 13, qualite: null }, lib), '13 h', 'une nuit ancienne à l\'heure ronde, comme les heures du soir');
   assert.equal(texteNuit({ heures: 3.5, qualite: MAL }, lib), 'Mal · 3 h 30');
   assert.equal(texteHeuresNuit(null), null);
+});
+
+test('v11 : Mes nuits garde les demi-heures notées le soir et les dit « Mal · 7 h 30 », jamais « 7,5 »', () => {
+  const lib = (id) => ({ [MAL]: 'Mal', [BIEN]: 'Bien' }[id] || id);
+  const journal = [soir('2026-10-20', { sommeilRessenti: MAL, heuresSommeil: 7.5 }), soir('2026-10-21', { heuresSommeil: 4.5 }), soir('2026-10-22', { heuresSommeil: 9.5 })];
+  const nuits = mesNuits(journal, periodeMesNuits('2026-10-28'));
+  assert.deepEqual(nuits, [
+    { date: '2026-10-20', heures: 7.5, qualite: MAL },
+    { date: '2026-10-21', heures: 4.5, qualite: null },
+    { date: '2026-10-22', heures: 9.5, qualite: null },
+  ]);
+  assert.deepEqual(nuits.map((n) => texteNuit(n, lib)), ['Mal · 7 h 30', '4 h 30', '9 h 30']);
+  for (const n of nuits) assert.doesNotMatch(texteNuit(n, lib), /7,5|,/);
 });
 
 test('vigilance 1 · une sauvegarde v7 (format 5) importée : Mes nuits compte les heures du coucher au lever, garde la qualité seule', async () => {

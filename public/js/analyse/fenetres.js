@@ -3,7 +3,7 @@
 import { SEUILS } from './seuils.js';
 import { moyenne, mediane } from './stats.js';
 import { addDays, jourEvenement } from '../domain/dates.js';
-import { HEURES_SOMMEIL } from '../domain/champs.js';
+import { estHeuresSommeil } from '../domain/champs.js';
 
 // Première date connue, toutes sources confondues (jusqu'à aujourd'hui).
 export function premiereDate({ journal = [], episodes = [], symptomes = [], traitements = [] }, aujourdhui) {
@@ -28,12 +28,13 @@ export function minutesCoucherLever(coucher, lever) {
   const d = enMinutes(lever) + 1440 - coucherAjuste(coucher);
   return d >= SEUILS.horaires.dureeMin && d <= SEUILS.horaires.dureeMax ? d : null;
 }
-// Durée d'une nuit (v8), en heures : le nombre d'heures noté le soir (4 pour « 4 h ou moins », 10 pour « 10 h ou plus »),
-// sinon, pour une nuit ancienne, le temps du coucher au lever avec la même règle (2 h à 16 h) ; null sans durée.
+// Durée d'une nuit (v8), en heures : le nombre d'heures noté le soir (4 pour « 4 h ou moins », 10 pour « 10 h ou plus »,
+// à la demi-heure depuis la v11), sinon, pour une nuit ancienne, le temps du coucher au lever avec la même règle (2 h à
+// 16 h) ; null sans durée.
 export function dureeNuit(entree) {
   if (!entree) return null;
   const h = entree.heuresSommeil;
-  if (Number.isInteger(h) && h >= HEURES_SOMMEIL.min && h <= HEURES_SOMMEIL.max) return h;
+  if (estHeuresSommeil(h)) return h;
   const m = minutesCoucherLever(entree.heureCoucher, entree.heureLever);
   return m == null ? null : m / 60;
 }
