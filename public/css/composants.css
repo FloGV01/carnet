@@ -187,7 +187,8 @@
 }
 /* Zones de texte (v6) : de leur taille au repos (data-lignes) à 7 lignes, puis elles défilent. field-sizing
    quand il est pris en charge ; sinon ChampTexte ajuste l'attribut rows. Vide, la zone garde sa taille, même
-   quand le texte d'aide est plus long : le soir tient sans défiler. --cadre-texte : marges et filets en hauteur. */
+   quand le texte d'aide est plus long (le soir tenait ainsi sans défiler, jusqu'à la v10). --cadre-texte : marges et
+   filets en hauteur. */
 textarea.champ-texte {
   --lignes: 2; --cadre-texte: 20px;
   field-sizing: content; overflow-y: auto;

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
-import { viderBase, aller, appPrete } from '../aides/saisie.js';
+import { viderBase, aller, appPrete, groupe } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { vueMoment, toucherMot, noter, continuer, terminer } from '../aides/emotion.js';
 import { installerParole, cacher, montrer } from '../aides/lecteur.js';
@@ -34,6 +34,13 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // sur le gris clair d'Aujourd'hui en clair ; le parcours les contrôle déjà dans les deux thèmes (contraste, anneau de la
 // couleur d'un mot à soi à 3:1, largeur et grand texte). En plus, en très grand texte (33 à 53), la capsule où le mot choisi
 // s'écrit en clair, pour le plus long mot de la carte. « Tes zones », qui suivait déjà le thème, est contrôlée sans changer.
+// v11 (11/11) : les écrans nouveaux (ECRANS_V11 : le soir et ses trois roues, vides puis notées, Sport et Contact en détail,
+// Mes gratitudes ; l'Analyse et « Tes gratitudes » ouvert, l'Historique par la porte Épisodes, l'épisode rouvert et « Ce que
+// j'en retiens » ; Mes refuges vide et plein, Moment difficile avec ses playlists et ses titres, Bien-être et ses cinq
+// entrées, le Diagnostic et « Ouvrir une playlist » ; la confirmation de « Revenir » et l'Aide iPhone), dans ce parcours et,
+// en plus, dans le leur, comme ceux de la v10. Le soir y gagne le contrôle des 44 pt, qui échouait déjà en v10 sous
+// « Jour précédent » (corrigé : `.sous-jour`, ecrans.css). En très grand texte (33 à 53), Mes refuges, les roues et Mes
+// gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v11-spotify.spec.js), à cause de sa garde réseau.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -100,8 +107,9 @@ async function verser(page) {
 // Ce qui sort de l'écran de côté : la page qui défile horizontalement, un élément visible hors des 390 px, ou une ligne
 // de texte qui dépasse de sa boîte jusque hors de l'écran. N'est pas compté ce qui est dans une zone qui défile de côté,
 // ou coupé exprès par une ellipse (un résumé sur une ligne) ; un parent qui masque seulement son débordement ne suffit
-// pas : ce qu'il coupe serait perdu.
-const debordements = (page) => page.evaluate(() => {
+// pas : ce qu'il coupe serait perdu. `dans` (v11) : ces éléments seuls et ce qu'ils contiennent, sans la largeur de la page,
+// qu'un voisin peut élargir.
+const debordements = (page, dans = null) => page.evaluate((sel) => {
   const fautes = [];
   const dedans = (r) => r.left >= -0.5 && r.right <= innerWidth + 0.5;
   const coupe = (el) => {
@@ -113,9 +121,11 @@ const debordements = (page) => page.evaluate(() => {
     return false;
   };
   const nom = (el) => `${el.tagName.toLowerCase()}.${String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className).split(' ').join('.')}`;
-  if (document.documentElement.scrollWidth > innerWidth + 0.5) fautes.push(`page : ${document.documentElement.scrollWidth} px de large`);
+  if (!sel && document.documentElement.scrollWidth > innerWidth + 0.5) fautes.push(`page : ${document.documentElement.scrollWidth} px de large`);
   const plage = document.createRange();
-  for (const el of document.querySelectorAll('main *, .parcours *, .moment-plein *, .bandeau *, .voile *, .feuille *')) {
+  const elements = sel ? [...document.querySelectorAll(sel)].flatMap((e) => [e, ...e.querySelectorAll('*')])
+    : document.querySelectorAll('main *, .parcours *, .moment-plein *, .bandeau *, .voile *, .feuille *');
+  for (const el of elements) {
     if (el.closest('.visuellement-cache') || getComputedStyle(el).visibility === 'hidden') continue;
     const r = el.getBoundingClientRect();
     if (r.width >= 1 && r.height >= 1 && !dedans(r) && !coupe(el.parentElement)) {
@@ -128,7 +138,7 @@ const debordements = (page) => page.evaluate(() => {
     }
   }
   return [...new Set(fautes)].slice(0, 12);
-});
+}, dans);
 
 // Les cadres et filets en tirets ou en pointillés des éléments visibles (2b : aucun).
 const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body *')].filter((el) => {
@@ -274,6 +284,116 @@ const ECRANS_V10 = [
   ['Réglages › Moment difficile, la voix', (p) => aller(p, '#/reglages/moment-difficile'), '.reglages-moment-difficile .interrupteur[aria-label="Lire les consignes à voix haute"]'],
 ];
 
+// Les écrans nouveaux de la v11, sur le même modèle : chacun part de son adresse, ou de l'écran qui le précède ici, et pose
+// ce qu'il lui faut. Mes refuges, inventés : deux titres, une playlist venue de Spotify (nommé à côté) et une collée.
+const REFUGES = {
+  titres: 'Pluie lente\nLe matin calme',
+  playlists: [
+    { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc', source: 'spotify' },
+    { nom: 'Pour marcher', lien: 'https://music.apple.com/fr/playlist/marcher/pl.u-abc', source: null },
+  ],
+};
+// Les trois roues du soir, avec la valeur qu'un toucher y note.
+const ROUES = [['Durée de la nuit', '7 h 30'], ['Durée du sport', '30 à 60 min'], ['Comment c\'était', 'Ressourçant']];
+// Une valeur au milieu de sa bande, à 1 px près, la bande arrêtée.
+const auMilieu = (b) => expect.poll(() => b.evaluate((x) => {
+  const [d, r] = [x.closest('.roue-defile').getBoundingClientRect(), x.getBoundingClientRect()];
+  return Math.abs(r.left + r.width / 2 - (d.left + d.width / 2));
+})).toBeLessThanOrEqual(1);
+// Un écran remonté : en passant par Réglages, il relit la base.
+const remonter = async (p, adresse) => { await aller(p, '#/reglages'); await expect(p.locator('.reglages .a-propos')).toBeVisible(); await aller(p, adresse); };
+const ECRANS_V11 = [
+  // v11 (2/11, 3/11) : le soir et ses trois roues, toujours visibles. Vides : rien de marqué, la bande centrée, une teinte neutre ;
+  // puis notées d'un toucher (Oui mis avec la durée du sport et l'effet du contact), la valeur au milieu, en 700, sans coche.
+  ['Le soir, trois roues vides', async (p) => {
+    await p.evaluate(() => window.__carnet.repo.journal.patch('2026-10-15', { heuresSommeil: null, sportMouvement: null, activites: null, contactHumain: null, contacts: null }));
+    await remonter(p, '#/aujourdhui');
+    await expect(p.locator('.aujourdhui .roue-choix')).toHaveCount(3);
+    await expect(p.locator('.aujourdhui .roue-choix [aria-pressed="true"]')).toHaveCount(0);
+  }, '.aujourdhui .roue-choix'],
+  ['Le soir, trois roues notées', async (p) => {
+    for (const [nom, v] of ROUES) {
+      const b = groupe(p, nom).getByRole('button', { name: v, exact: true });
+      await b.click();
+      await expect(b).toHaveAttribute('aria-pressed', 'true');
+      await auMilieu(b);
+    }
+    await expect(p.locator('.aujourdhui .roue-choix.notee')).toHaveCount(3);
+  }, '.aujourdhui .roue-choix.notee'],
+  // v11 (3/11) : Sport et Contact en détail, la durée et l'effet sur la même roue, qui suit la carte.
+  ['Le soir, Sport et Contact en détail', async (p) => {
+    await bouton(p, 'Sport en détail').click();
+    await bouton(p, 'Contact en détail').click();
+    for (const [nom, v] of [['Activité 1 : durée', '30 à 60 min'], ['Contact 1 : comment c\'était', 'Ressourçant']]) {
+      const b = groupe(p, nom).getByRole('button', { name: v, exact: true });
+      await expect(b).toHaveAttribute('aria-pressed', 'true');
+      await auMilieu(b);
+    }
+  }, '.aujourdhui [role="group"][aria-label="Contact 1 : comment c\'était"] .roue-valeur[aria-pressed="true"]'],
+  // v11 (4/11) : Mes gratitudes, écrites, juste sous Mes points positifs.
+  ['Le soir, Mes gratitudes', async (p) => {
+    await p.getByRole('textbox', { name: 'Mes gratitudes', exact: true }).fill('Merci à la voisine pour le colis.');
+    await expect.poll(() => p.evaluate(() => window.__carnet.repo.journal.lire('2026-10-15').then((e) => e && e.gratitudes))).toBe('Merci à la voisine pour le colis.');
+  }, '.aujourdhui #gratitudes'],
+  // v11 (4/11, 5/11) : l'Analyse, ses deux portes Historique et Épisodes, et « Tes gratitudes » ouvert.
+  ['Analyse, Tes gratitudes ouvert', async (p) => {
+    await aller(p, '#/analyse');
+    await expect(p.locator('main')).not.toContainText('Calcul…', { timeout: 30000 });
+    await p.getByRole('button', { name: /^Tes gratitudes/ }).click();
+  }, '.analyse .repli-tete[aria-expanded="true"]:has-text("Tes gratitudes")'],
+  // v11 (5/11) : l'Historique par la porte Épisodes, forcé sur ce segment.
+  ['Historique, par la porte Épisodes', async (p) => {
+    await p.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Épisodes', exact: true }).click();
+    await expect(p.getByRole('group', { name: 'Afficher' }).getByRole('button', { name: /Épisodes/ })).toHaveAttribute('aria-pressed', 'true');
+  }, '.historique a.ligne-hist[href^="#/episode/"]'],
+  // v11 (5/11) : l'épisode rouvert et « Ce que j'en retiens », écrit, sous la carte Après coup.
+  ['Épisode rouvert, Ce que j\'en retiens', async (p) => {
+    await p.locator('.historique a.ligne-hist[href^="#/episode/"]').first().click();
+    const zone = p.getByRole('textbox', { name: 'Ce que j\'en retiens', exact: true });
+    await zone.fill('Partir avant que ça monte.');
+    await expect.poll(() => p.evaluate(() => window.__carnet.repo.episodes.tous().then((l) => l.map((e) => e.ceQueJeRetiens)))).toContain('Partir avant que ça monte.');
+  }, '.recap ~ .champ-recap #episodes-ceQueJeRetiens'],
+  // v11 (6/11, 7/11) : Mes refuges vide (le bouton « Choisir dans mon compte », jamais touché ici), puis plein : ses titres, une
+  // playlist de Spotify, nommé à côté, et « Retirer ces playlists », une collée ; chacune s'écoute d'un toucher.
+  ['Mes refuges, vide', async (p) => {
+    await p.evaluate(() => window.__carnet.repo.meta.ecrire('refuges', null));
+    await remonter(p, '#/refuges');
+  }, 'main.refuges #refuges-nom-0'],
+  ['Mes refuges, plein', async (p) => {
+    await p.evaluate((r) => window.__carnet.repo.meta.ecrire('refuges', r), REFUGES);
+    await remonter(p, '#/refuges');
+    await expect(p.locator('main.refuges a.lien-refuge')).toHaveCount(2);
+  }, 'main.refuges a.lien-refuge'],
+  // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan.
+  ['Moment difficile, playlists et titres', async (p) => {
+    await remonter(p, '#/moment-difficile');
+    await expect(p.locator('.plan-moment')).toContainText('Pluie lente');
+  }, '.moment-difficile a.lien-refuge'],
+  // v11 (6/11) : Bien-être et ses cinq entrées, Mes refuges après le Programme.
+  ['Bien-être, cinq entrées', async (p) => {
+    await aller(p, '#/bien-etre');
+    await expect(p.getByRole('list', { name: 'Entrées' }).getByRole('link')).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
+  }, '.bien-etre .entrees .ligne-carte'],
+  // v11 (6/11) : le Diagnostic, « Ouvrir une playlist » et ses trois formes du lien, jamais suivies.
+  ['Diagnostic, Ouvrir une playlist', (p) => aller(p, '#/diagnostic'), '.diag section[aria-labelledby="titre-ouvrir-playlist"] a.btn'],
+  // v11 (10/11) : « Revenir à l'état d'avant l'import » demande confirmation : une copie posée en base, comme après un import.
+  ['Confirmation « Revenir »', async (p) => {
+    await p.evaluate(() => window.__carnet.repo.tx(['snapshots'], 'readwrite', (t) => {
+      t.objectStore('snapshots').put({ id: 'avant-import-2026-10-12T19:00:00.000Z', type: 'avant-import', date: '2026-10-12T19:00:00.000Z', schemaVersion: 6, data: {} });
+    }));
+    await aller(p, '#/bien-etre');
+    await expect(p.locator('.bien-etre .entrees')).toBeVisible();
+    await aller(p, '#/reglages');
+    await p.getByRole('button', { name: 'Revenir à l\'état d\'avant l\'import', exact: true }).click();
+  }, '.boite-confirmation'],
+  // v11 (10/11) : Aide iPhone et sa septième rubrique, « Changer d'icône sans rien perdre ».
+  ['Aide iPhone, changer d\'icône', async (p) => {
+    await p.getByRole('button', { name: 'Annuler', exact: true }).click();
+    await aller(p, '#/reglages/aide-iphone');
+    await expect(p.locator('.aide-rubrique h2')).toHaveCount(7);
+  }, '.aide-rubrique h2:has-text("Changer d\'icône sans rien perdre")'],
+];
+
 // Les écrans parcourus : [nom, préparation]. `ids` : les identifiants versés.
 const ECRANS = (ids) => [
   ['Aujourd\'hui', (p) => aller(p, '#/aujourdhui'), '.aujourdhui .evenements-jour'],
@@ -352,6 +472,7 @@ const ECRANS = (ids) => [
   ['Historique, filtres', (p) => p.getByRole('button', { name: /Filtrer/ }).click(), '.filtres'],
   ['Bien-être', (p) => aller(p, '#/bien-etre'), '.bien-etre .entrees .ligne-carte'],
   ...ECRANS_V10,
+  ...ECRANS_V11,
   // v8 : le Programme (une séance faite porte « Faite le »), puis le lecteur, avant de commencer, sur une étape rythmée
   // (le disque et « Inspire »), puis en pause (ses réglages, sous l'écran de lecture).
   ['Programme', (p) => aller(p, '#/bien-etre/programme'), '.programme .seance-faite'],
@@ -432,7 +553,7 @@ for (const schema of ['light', 'dark']) {
   test(`contraste ${schema === 'light' ? 'en clair' : 'en sombre'} : tout texte visible des écrans principaux a au moins 4,5:1 sur son fond ; ni tirets, ni choix fait sans coche`, async ({ page }) => {
     test.setTimeout(180000);
     const fautes = await parcourir(page, schema, async (nom) => [
-      ...await contrastesFaibles(page, nom === 'Confirmation' ? '.boite-confirmation' : 'body'),
+      ...await contrastesFaibles(page, nom.startsWith('Confirmation') ? '.boite-confirmation' : 'body'),
       ...await epinglesFaibles(page),
       ...(await tirets(page)).map((x) => `tirets : ${x}`),
       ...(await sansCoche(page)).map((x) => `choix fait sans coche : ${x}`),
@@ -473,6 +594,26 @@ for (const schema of ['light', 'dark']) {
       ...telecharges(demandes.splice(0)).map((x) => `téléchargé : ${x}`),
       ...(await mouvements(page)).map((x) => `mouvement : ${x}`),
     ], () => ECRANS_V10);
+    expect(fautes).toEqual({});
+  });
+}
+
+// v11 (11/11) : les écrans de la v11, de même, en clair et en sombre, avec « Réduire les animations » allumé. Le contraste, les
+// tirets, les coches, la CSP et le débordement à 390 px sont vérifiés plus haut, sur le parcours entier, qui passe par eux.
+for (const schema of ['light', 'dark']) {
+  test(`écrans de la v11 ${schema === 'light' ? 'en clair' : 'en sombre'} : cibles de 44 pt, aucun mot interdit, aucune police à empattements, rien de téléchargé, aucune requête sortante ni violation de la CSP, rien qui bouge en mouvement réduit`, async ({ page }) => {
+    test.setTimeout(120000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await ecouterMouvements(page);
+    const demandes = [];
+    page.on('request', (r) => { if (!['blob:', 'data:'].includes(new URL(r.url()).protocol)) demandes.push(r.url()); });
+    const fautes = await parcourir(page, schema, async (nom) => [
+      ...(await ciblesPetites(page, nom.startsWith('Confirmation') ? '.boite-confirmation' : null)).map((x) => `cible : ${x}`),
+      ...(await motsInterdits(page)).map((x) => `mot interdit : ${x}`),
+      ...(await empattements(page)).map((x) => `police : ${x}`),
+      ...telecharges(demandes.splice(0)).map((x) => `téléchargé : ${x}`),
+      ...(await mouvements(page)).map((x) => `mouvement : ${x}`),
+    ], () => ECRANS_V11);
     expect(fautes).toEqual({});
   });
 }
@@ -622,6 +763,40 @@ test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableau
       f.push(...await page.locator('main figure.graphe').evaluateAll((gs) => gs.filter((g) => g.scrollHeight > g.clientHeight + 0.5).map((g) => `défile en hauteur : ${g.textContent.slice(0, 30)}`)));
       if (f.length) fautes[`${route}, ${taille} px`] = f;
     }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect(fautes).toEqual({});
+});
+
+// v11 (11/11) : en très grand texte (33 à 53), Mes refuges plein ne sort pas de l'écran de côté, page comprise ; sur le soir, ce
+// que la v11 y ajoute non plus : les trois roues notées et la carte Mes gratitudes, écrite. Le reste du soir déborde encore dès
+// 40 px (« nuit dernière », « Télétravail », le résumé d'un relevé), comme en v10, à l'identique (page de 395, 449 puis 496 px) :
+// un écran hérité, hors de la v11 (spec v11 §3 ; docs/decisions.md, v10, « En attente de l'utilisateur »).
+test('très grand texte (33 à 53) : Mes refuges plein, et sur le soir ses trois roues notées et Mes gratitudes écrites, ne sortent pas de l\'écran de côté', async ({ page }) => {
+  test.setTimeout(180000);
+  await verser(page);
+  await page.evaluate(async (r) => {
+    await window.__carnet.repo.meta.ecrire('refuges', r);
+    await window.__carnet.repo.journal.patch('2026-10-15', { heuresSommeil: 7.5, sportMouvement: true, activites: [{ duree: 'dureeSport:de_30_a_60' }],
+      contactHumain: true, contacts: [{ effet: 'contactEffet:ressourcant' }], gratitudes: 'Merci à la voisine pour le colis.' });
+  }, REFUGES);
+  await page.reload();
+  await appPrete(page);
+  const nouveauDuSoir = '.aujourdhui .roue-choix, .aujourdhui .carte-champ:has(#gratitudes)';
+  const fautes = {};
+  for (const taille of [33, 40, 47, 53]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+    await remonter(page, '#/aujourdhui');
+    await expect(page.locator('.aujourdhui .roue-choix.notee')).toHaveCount(3);
+    await expect(page.locator(nouveauDuSoir)).toHaveCount(4);
+    await stabiliser(page);
+    const soir = await debordements(page, nouveauDuSoir);
+    if (soir.length) fautes[`le soir, ${taille} px`] = soir;
+    await remonter(page, '#/refuges');
+    await expect(page.locator('main.refuges a.lien-refuge')).toHaveCount(2);
+    await stabiliser(page);
+    const refuges = await debordements(page);
+    if (refuges.length) fautes[`Mes refuges, ${taille} px`] = refuges;
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});

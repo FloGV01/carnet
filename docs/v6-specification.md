@@ -653,3 +653,15 @@ Version 10.0.0, construite du 30/10 au 03/11 en 9 tâches sur la branche `dev`. 
 - la base reste en `DB_VERSION` 6 et la sauvegarde au format 7 : la méta `favorisBienEtre` et la clé `voix` de `respiration` s'y ajoutent sans changer le format.
 
 Le détail, les appels du concepteur, ce qui attend l'utilisateur et les exercices à relire sont dans `docs/decisions.md`, à l'entrée du 03/11.
+
+## 19. v11 (08/11)
+
+Version 11.0.0, construite du 05 au 08/11 en 11 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-11-05-carnet-v11-design.md`, qui fait foi là où elle s'écarte de celle-ci et de celles des v7 à v10 :
+- la **durée de la nuit** se note à la demi-heure sur une roue couchée, toujours visible dans la carte Sommeil ; le sport et le contact humain ont la même roue ; le soir ne tient plus sans défiler ;
+- une carte **« Mes gratitudes »** sous les points positifs, jamais dans l'Export PSY ni la vue soignants ; une porte **« Épisodes »** dans l'Analyse, et **« Ce que j'en retiens »** sur l'épisode rouvert ;
+- **« Mes refuges »** : ses titres et trois playlists, dans Moment difficile et dans Bien-être, avec la connexion à son compte Spotify, au seul toucher : la seule exception à « zéro réseau », sans jeton gardé ;
+- les **écrans de l'émotion suivent désormais le thème** : clairs en thème clair, le mot choisi sur une capsule de sa couleur, inchangés en sombre ; « Réveil la nuit » reste noir ;
+- un **geste de retour** (le doigt vers la droite) sur les écrans à « Retour », une nouvelle icône, et « Revenir à l'état d'avant l'import » qui demande confirmation ;
+- la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 8 ; l'Export PSY ne change que par le texte des demi-heures.
+
+Le détail, les appels du concepteur, l'exception réseau, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 08/11.

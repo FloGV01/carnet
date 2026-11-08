@@ -110,7 +110,8 @@ test('sélection commune 2b, en clair et en sombre : -fill, -on, 600 (700 pour u
     const teletravail = groupe(page, 'Lieu').getByRole('button', { name: 'Télétravail' });
     verifierNonChoisi(await styleDe(teletravail), rgb(t['surface-2']), `${schema} Télétravail`);
     expect(await teletravail.evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('0px');
-    // 44 de haut au moins : la cible (sur Aujourd'hui, les choix des cartes font 44 pour que le soir tienne sans défiler).
+    // 44 de haut au moins : la cible (sur Aujourd'hui, les choix des cartes font 44 ; jusqu'à la v10, le soir tenait ainsi
+    // sans défiler).
     expect((await teletravail.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await toucher(page, 'Lieu', 'Bureau');
     await toucher(page, 'Sommeil', 'Moyen');

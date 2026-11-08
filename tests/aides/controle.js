@@ -66,11 +66,13 @@ export const contrastesFaibles = (page, racine = 'body') => page.evaluate((sel) 
 // interrupteur de 31 de haut touche sur 47), et un voisin ou un élément posé dessus ne compte pas. L'élément vient au milieu de
 // l'écran d'abord : ce qui est plus bas s'atteint en défilant. Les points tombent sur un pixel entier, du côté du centre : WebKit donne
 // un point fractionnaire au pixel d'après, et deux flèches de 44 collées (de 213 à 257, de 257 à 301) se volaient 256,5 sans raison.
-export const ciblesPetites = (page) => page.evaluate(() => {
+// `racine` (v11) : sous une boîte modale, seule la boîte se touche ; l'écran du dessous, sous son voile, n'est pas compté.
+export const ciblesPetites = (page, racine = null) => page.evaluate((sel) => {
   const nom = (el) => (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30);
   const COTE = 21.5;
   const fautes = [];
-  for (const el of document.querySelectorAll('a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="slider"]')) {
+  const dans = (sel && document.querySelector(sel)) || document;
+  for (const el of dans.querySelectorAll('a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="slider"]')) {
     if (el.disabled || el.closest('.visuellement-cache, [hidden]') || !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
     el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
     const r = el.getBoundingClientRect();
@@ -84,7 +86,7 @@ export const ciblesPetites = (page) => page.evaluate(() => {
     if (manques.length) fautes.push(`${el.tagName.toLowerCase()}.${el.className} « ${nom(el)} » : ${Math.round(r.width)} × ${Math.round(r.height)}, centre (${Math.round(x)}, ${Math.round(y)})`);
   }
   return fautes;
-});
+}, racine);
 
 // Tout ce que l'écran dit, à voir ou à entendre : son texte et les noms donnés aux lecteurs d'écran.
 export const motsInterdits = (page) => page.evaluate(() => {

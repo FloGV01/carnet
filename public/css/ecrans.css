@@ -405,7 +405,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .nav-jour svg { width: 22px; height: 22px; }
 .nav-jour[disabled] { opacity: .4; cursor: default; }
 .entete-jour > .barre-retour { margin: 0 -8px; }
-.sous-jour { display: flex; align-items: center; gap: 8px; margin-top: -6px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; }
+/* Sa marge de −6 remonte sous « Jour précédent » : sans pointer-events, le bas de sa cible de 44 tombait sur le résumé (puis
+   sur « Enregistré », après un toucher) et ne faisait rien (v11, contrôle des 44 pt). Elle n'a que du texte, et le message
+   d'échec reste lisible. */
+.sous-jour { display: flex; align-items: center; gap: 8px; margin-top: -6px; font-size: var(--t-note); line-height: 17px; color: var(--text-2); min-height: 17px; pointer-events: none; }
 /* Avant 4 h : en entier, avant les points et le résumé (qui se coupe) ; en grand texte, sur deux lignes au besoin. */
 .veille-jour { flex: 0 1 auto; min-width: 0; color: var(--text-2); }
 /* Les zones des émotions du jour (v9 ; leurs familles en v7 et v8) : un point par zone présente, à sa couleur (.zone-*) :

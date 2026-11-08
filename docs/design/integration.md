@@ -124,3 +124,13 @@ Aucun écran de la v10 n'est dessiné par Claude Design ; tous sont déduits du 
 - **Écrans déduits du lecteur de la v8** : les listes des entrées, les deux minuteurs, les sons de fond et la ligne « Pour ce moment : », à la couleur de Bien-être. Les réglages restent en liste groupée, sous le bouton lecture.
 - **« Réveil la nuit »** : le fond noir des écrans du relevé, dans les deux thèmes, mais avec ses propres jetons : texte gris, à 4,5:1 au moins, et teinte éteinte, pour ne pas éclairer la chambre (`.parcours.ecran-noir`).
 - **Vérification** : captures (WebKit, 390 × 844, zones sûres simulées, clair et sombre, jusqu'à 53 px de texte), hors dépôt, et le test de contrôle étendu aux écrans de la v10. Le détail est dans `docs/decisions.md`, à l'entrée du 03/11.
+
+## v11 : les écrans de l'émotion selon le thème, et les écrans nouveaux dans le système 2b (08/11)
+
+Aucun écran de la v11 n'est dessiné par Claude Design. Spécification : `docs/superpowers/specs/2026-11-05-carnet-v11-design.md` ; le détail est dans `docs/decisions.md`, à l'entrée du 08/11.
+
+- **Les écrans de l'émotion suivent désormais le thème** (les quatre bulles, la carte, « Ce que je faisais », la loupe, le mot à soi, un relevé rouvert) : en clair, le gris d'Aujourd'hui, des cartes blanches, des boutons en verre blanc translucide et un rond « Continuer » foncé, d'après le prototype de la v11 ; le mot choisi s'écrit en noir sur une capsule de sa couleur. En sombre, rien ne change. Les couleurs passent par les jetons `--moment-*` (`tokens.css`) ; les bulles et leur texte noir ne bougent pas. « Réveil la nuit » garde son fond noir dans les deux thèmes.
+- **La roue** : une bande de vrais boutons sur le fond des choix, dans la carte de sa rubrique, avec une fenêtre au milieu (`--surface`, neutre, à vide ; la teinte de la carte une fois notée, la valeur en 700 et `-text`) ; les bords s'effacent en fondu sans toucher aux deux voisines de la valeur du milieu.
+- **Mes gratitudes** : la forme de « Mes points positifs », à sa couleur. **Mes refuges** : un écran de Bien-être en champs et cartes groupées, une ligne par playlist avec l'icône `musique` et l'icône de sortie au trait. **La porte « Épisodes »** : le carré des épisodes, à côté d'« Historique ».
+- **L'icône** : la piste B, « Les quatre zones », sur fond noir ; `theme-color` `#e7eaee` en clair, `#000000` en sombre.
+- **Vérification** : captures (WebKit, 390 × 844, clair et sombre, jusqu'à 53 px de texte), hors dépôt, et le test de contrôle étendu aux écrans de la v11.

@@ -1554,3 +1554,154 @@ Une expiration longue, puis le corps, des pieds à la mâchoire. Posture : allon
 6. Sens tes épaules, là où elles touchent le lit. *(20 s)*
 7. Sens ta mâchoire. Les dents peuvent se séparer un peu. *(20 s)*
 8. Reste là. Il n'y a rien à attendre. *(20 s)*
+
+## 2026-11-08 : v11.0.0, six retours après la v10
+
+Source : les premiers retours d'usage après la v10 (04/11), puis ses réponses aux formulaires (04 et 05/11). Spec : `docs/superpowers/specs/2026-11-05-carnet-v11-design.md`, qui fait foi. Plan : `docs/superpowers/plans/2026-11-05-carnet-v11.md`, en 11 tâches, une par commit, chacune relue puis corrigée. Version 11.0.0, à publier en une fois, avec l'accord de l'utilisateur.
+
+La sauvegarde passe au `FORMAT_VERSION` 8 (`docs/format-sauvegarde.md`). La base reste en `DB_VERSION` 6, confirmé : aucun magasin ni transformation, `gratitudes` arrive par `normaliserJournee`, et `migrations.lock.json` ne change pas. Les vocabulaires figés (roue, `declencheur`, `dessous`, clés d'`APRES_COUP`) et les 144 couleurs de la carte ne changent pas.
+
+### Décisions de l'utilisateur (spec §2, 04 et 05/11)
+
+- **La roue** : la durée de la nuit sur une roue couchée, dans la carte Sommeil, **toujours visible**, à la demi-heure. Il a vu le coût : le soir défile davantage. Le sport (4 tranches) et le contact humain (« Comment c'était ») ont la même roue, dans leur carte.
+- **Mes gratitudes** : « les deux », ce pour quoi il est reconnaissant et à qui il dit merci, dans une carte sous « Mes points positifs », toujours visible.
+- **Les épisodes** : « Relire et compléter » et « Écrire ce que j'en retiens », depuis l'Analyse. Ni « Voir les fois semblables », ni « Préparer pour le psy ».
+- **Mes refuges** : sa liste de titres **et** ses playlists, dans Moment difficile et dans Bien-être, avec la **connexion à son compte Spotify**, coût affiché (une app à créer chez Spotify, la règle « zéro réseau » levée pour cela). Informé de Premium, de la reconnexion et du retour incertain sur iPhone : « Ca peut fonctionner en 5G si besoin. Et j'ai un compte premium ».
+- **Les écrans de l'émotion en thème clair** : le fond passe en clair comme le reste de l'app, le mot choisi sur une capsule de sa couleur. « Réveil la nuit » reste noir dans les deux thèmes.
+- **L'icône** : la piste B, « Les quatre zones ».
+- **Le geste de retour** : sur les écrans à « Retour », le doigt vers la droite revient en arrière ; l'onglet des jours garde son sens ; Analyse, Bien-être, Soins et Réglages : rien. Par-dessus l'app, seulement là où l'on relit.
+- **« Revenir à l'état d'avant l'import »** demande confirmation.
+- **L'Export PSY** : ni les gratitudes, ni « ce que j'en retiens ».
+
+### Appels du concepteur, à vérifier (spec §5 à §11)
+
+1. **Les gratitudes** sont citées sous « J'ai fini pour ce soir », visibles dans l'Historique et sa recherche, et relues dans un repli fermé « Tes gratitudes » de l'Analyse : les 2 plus récentes de la semaine, avec leur jour, sans nombre. Jamais dans la vue soignants (spec §6).
+2. **« Ce que j'en retiens »** reste dans l'app : ni Export PSY, ni vue soignants, ni feuille « Voir » d'En consultation, pour rester cohérent (spec §7).
+3. **Trois playlists au plus** dans Mes refuges (spec §8.1).
+4. **Aucun jeton gardé** : on se connecte, Carnet lit la liste des playlists, il en choisit jusqu'à 3, et le jeton est jeté. Rien à voler ni à renouveler ; chaque mise à jour repasse par la page de Spotify (spec §8.3).
+5. **Le passage d'icône en pas-à-pas fixe** dans Réglages › Aide iPhone (spec §10).
+
+### Règles levées ou changées (spec §13)
+
+- **Le soir ne tient plus sans défiler** à 390 × 844 (P2 et P3) : les roues ajoutent environ 54 px au Sommeil et à la rangée Contact et Sport, la carte des gratitudes environ 111 px. C'est son choix. Les tests qui l'exigeaient disent maintenant « atteignable », sans être affaiblis ailleurs, et « J'ai fini pour ce soir » passe au-dessus de la bande en défilant. Les 4 `test.fail()` de la v8 sont retirés, et le Diagnostic n'a plus « Marge du soir » ni « Marge de « J'ai fini » » : **la décision ouverte de la v8 sur le soir avec les zones sûres est close**. « Durée › » en deux touchers disparaît avec la roue. Contrôlé à la tâche 11 : aucun `test.fail`, aucun « tient sans défiler » exigé du soir, aucune « Marge du soir » ne reste.
+- **« Une seule zone, pas trois »** pour le texte du soir (cahier §4) : levée pour les gratitudes.
+- **« Quatre entrées » de Bien-être** (v10) : cinq. **Dérogation** : Mes refuges vient après le Programme.
+- **Les écrans de l'émotion noirs dans les deux thèmes** (appel du concepteur en v9) : levé. Ils suivent le thème ; en sombre, rien ne change.
+- **« Zéro réseau, aucun appel sortant »** (`CLAUDE.md`, cahier §2 et §8) : levée pour la seule connexion à Spotify, à son toucher (plus bas). « Hors ligne : obligatoire » reste vrai pour tout le reste.
+
+### L'exception réseau : la connexion à Spotify (spec §8.3)
+
+- **Ce qui s'ouvre** : `connect-src` gagne exactement `https://accounts.spotify.com` et `https://api.spotify.com` (`netlify.toml`). `script-src`, `img-src` et le reste ne bougent pas : ni pochette, ni script de Spotify, ni lecture dans Carnet.
+- **Quand** : uniquement au toucher sur « Choisir dans mon compte », dans Mes refuges. Jamais à l'ouverture de l'app ni dans Moment difficile, où l'heure d'une demande dirait à Spotify l'heure d'un moment difficile. La garde réseau des tests reste active partout ailleurs (`tests/aides/gardes.js`).
+- **Comment** : la connexion PKCE de Spotify, sans secret, avec le seul droit `playlist-read-private`. Le Client ID (qui n'est pas un secret, donné le 05/11) est écrit dans `public/js/plateforme/spotify.js`, seul fichier réseau hors de `sw.js` ; `tests/unit/architecture.test.js` a une exception étroite pour ce fichier et ces deux hôtes. Un jeton n'entre jamais dans `meta` ni dans une sauvegarde, et un test le vérifie.
+- **Ce que Spotify apprend** : l'usage de cette app par son compte, l'adresse de Carnet, son adresse IP et l'heure de ces demandes. Aucune requête ne contient de donnée du journal, des émotions ou des épisodes.
+- **Le risque accepté** : jusqu'ici, un script malveillant ne pouvait rien envoyer en silence. Avec cette ouverture, il pourrait écrire vers un compte Spotify. Cela suppose qu'un script hostile tourne déjà dans Carnet : `script-src` reste `'self'`, et l'app ne charge aucun script tiers.
+- **`CLAUDE.md`**, ligne « Zéro réseau » : elle dit l'exception (au seul toucher, `plateforme/spotify.js` seul fichier réseau hors de `sw.js`, aucun jeton gardé, deux hôtes dans `connect-src`). Le reste de la règle ne change pas.
+
+### Identifiants (plan)
+
+- **Journal** : `heuresSommeil` de 4 à 10 par demi-heure (13 valeurs, bornes de la v8), `gratitudes` (texte), juste après `positifs` dans l'ordre du soir. **Épisode** : `ceQueJeRetiens` (texte, hors d'`APRES_COUP`).
+- **Méta `refuges`** : `{ titres, playlists: [{ nom, lien, source }] }`, 3 playlists au plus, `source` vaut `'spotify'` ou `null`.
+- **Route** : `#/refuges`, onglet Bien-être. **État d'app** : `retourSpotify`.
+- **Sur l'appareil** : `carnet:spotify:attente` (`{ verifier, state, creeLe }`, jamais de jeton, oubliée après une heure), `carnet:brouillon:refuges:<champ>`.
+- **Composants et classes** : `ui/composants/roue-choix.js` (`.roue-choix`, `.roue-valeur`), `.relecture` (là où le geste fait comme « Fermer »), jetons `--moment-*` (`tokens.css`). Icônes `sortie` et `musique` (`ui/icones.js`).
+- **Icônes de l'app** : `icons/v11-apple-touch-icon.png`, `v11-icone-192.png`, `v11-icone-512.png`, `v11-icone-maskable-512.png`.
+
+### Données (tâche 1)
+
+- Le témoin `tests/fixtures/temoins/format-7.json`, écrit par la v10.0.0 avant tout changement de format ; les témoins 1 à 6 restent identiques à l'octet. Une sauvegarde v10 s'importe en v11 sans transformation ; une sauvegarde v11 est refusée par une app plus ancienne.
+- Une demi-heure s'écrit « 7 h 30 », jamais « 7,5 », partout où la durée s'affiche, l'Export PSY compris : c'est son seul changement.
+- `domain/refuges.js`, pur : liens `https:`, `spotify:` et `music:` seuls, à la saisie et à la lecture d'une sauvegarde ; « ?si=… » retiré ; un lien reçu de Spotify n'est gardé que s'il vient de `open.spotify.com`, sinon il perd aussi sa source. Un nom est coupé à 200 signes, un emoji comptant pour un. Une méta abîmée ou écrite à la main est remise en forme sans erreur (point de vigilance 4).
+
+### La roue (tâches 2 et 3)
+
+- **Une bande de vrais boutons** (`aria-pressed`, 44 × 44 au moins), sans curseur ARIA fait main. Vide : rien de marqué, centrée sur 7 h (le milieu de la liste pour le sport et le contact), en teinte neutre, jamais la valeur de la veille. Toucher note et centre, retoucher efface. Un glissement du doigt note la valeur au centre 150 ms après l'arrêt, sans dépendre de `scrollend`.
+- **Ce qui n'est pas un glissement n'écrit rien** (point de vigilance 1) : un toucher sans défilement, la page qui défile le doigt posé sur la bande, un défilement sans doigt (centrage, VoiceOver), la valeur déjà notée. Jamais de bascule. Une valeur en attente s'écrit tout de suite sur son jour, au changement de jour ou au passage en arrière-plan.
+- **Le fondu des bords** épargne les deux voisines de la valeur du milieu, cibles visibles, qui gardent 4,5:1 (relecture de la tâche 2).
+- **Sport et Contact** : sous Oui / Non, la durée de la première activité et l'effet du premier contact (`changerPremiereLigne`, pur). Une valeur notée sur rien de noté met Oui, un Non reste un Non. Le détail règle la durée et l'effet sur la même roue. Côte à côte, chaque valeur prend toute la bande, et la marge grise vise la valeur du milieu, celle qui se voit (relecture de la tâche 3 : elle écrivait une voisine invisible).
+
+### Mes gratitudes (tâche 4)
+
+- La carte, sa consigne, la dictée et l'enregistrement seul, juste sous « Mes points positifs » ; `normaliserJournee` la place juste après eux dans un ordre réglé sans elle (une app déjà installée). Réglages › Le soir : son carré à la couleur des points positifs.
+- **Point de vigilance 3** : une journée qui n'a que des gratitudes n'existe pas pour l'Export PSY et la vue soignants (`sansGratitudesSeules`) : ni texte, ni ligne, ni « explosions 0 », ni date de début. Une journée qui n'a que le traitement pris garde sa ligne.
+- **Correctif hérité** : « Effacer cette journée » puis « Annuler » perdait les textes du soir (points positifs, notes) : la zone vidée enregistrait ce vide en partant. L'entrée est désormais posée avec la génération.
+
+### Revenir sur ses épisodes (tâche 5)
+
+- Une porte « Épisodes » à côté d'« Historique », en haut de l'Analyse, qui passe dessous en grand texte. Elle ouvre l'Historique forcé sur le segment « Épisodes » : aucune liste nouvelle, un épisode en 3 touchers depuis l'onglet ; filtres et position remis à zéro venant d'un autre segment, gardés sinon.
+- « Ce que j'en retiens » sous la carte Après coup de l'épisode rouvert, même ancien, même sans Après coup : sans consigne ni « facultatif », rien d'écrit à côté quand il est vide. L'écrire ne touche pas à `apresCoup.jour` : un vieil épisode ne repart pas vers l'Export PSY (prouvé à l'octet).
+
+### Mes refuges et la connexion à Spotify (tâches 6 et 7)
+
+- L'écran, ouvert depuis la cinquième entrée de Bien-être et depuis Réglages › Mon plan : ses titres, un par ligne, et trois playlists, chacune un nom et un lien, écrits seuls au fil de la frappe. Un lien refusé n'est pas gardé, sans message.
+- Une playlist qui a un lien s'écoute d'un toucher, dans Mes refuges et dans Moment difficile, sous « Une chose à la fois » : un lien qui sort de Carnet, avec l'icône de sortie au trait (pas le caractère ↗, compté comme emoji). Les titres rejoignent Mon plan dans Moment difficile seulement. Sans playlist ni titre, rien n'apparaît.
+- Le Diagnostic, « Ouvrir une playlist », essaie trois formes du lien (`formesDuLien`) : lien web, lien web dans une nouvelle fenêtre, lien direct vers l'app, sans lien dans le rapport.
+- **Le retour de Spotify** (`?code=`, `?state=`, `?error=`) est lu et retiré de l'adresse tout en haut de `main.js`, avant le guide d'installation et le retour sur Aujourd'hui. Dans l'app, la connexion se finit dans Mes refuges ; hors de l'app installée, une page montre le code à coller dans Mes refuges.
+- **Point de vigilance 5** : un `state` qui ne correspond pas, un refus, un retour sans demande, 401 et 403, réseau coupé, une réponse d'une autre forme, un nom piégé, un élément `null`, un lien d'un autre hôte : aucun plantage, aucun jeton, les refuges déjà notés intacts. Réseau coupé au retour : le code est gardé dans le champ, et « Finir la connexion » le relance.
+- « Retirer ces playlists » a son « Annuler », qui ne défait que le retrait : une écriture venue d'ailleurs entre-temps n'est pas remplacée.
+- **Constante vide** (`SPOTIFY_CLIENT_ID`) : ni bouton ni champ de code. Le correctif 11.0.1 qui retirerait la connexion tient en ce changement.
+
+### Les écrans de l'émotion en clair (tâche 8)
+
+- Les écrans 1, 2 et 3, la loupe, Mon mot et un relevé rouvert passent par les jetons `--moment-*` : en clair, le gris d'Aujourd'hui et des cartes blanches, comme le prototype ; en sombre, les valeurs d'avant, et le style calculé de chaque élément est identique à celui de la v10. Les bulles ne bougent pas.
+- En clair, le mot choisi s'écrit en noir sur une capsule de sa couleur, à la carte du bas et à l'écran 3. Rien n'est recalculé si le thème change, écran ouvert.
+- « Réveil la nuit » garde `.ecran-noir`, seul.
+
+### Le geste de retour (tâche 9)
+
+- Sur un écran à « Retour », le doigt vers la droite fait comme ce bouton, au lâcher, aux seuils du changement de jour (`ecouterGlissement`). Là où l'on relit (`.relecture` : un épisode ou un symptôme rouvert, le récapitulatif de l'Après coup, un relevé rouvert), il fait comme « Fermer ». Une saisie, un exercice, un minuteur, les écrans de l'émotion et En consultation n'en ont pas.
+- **Point de vigilance 2** : `touch-action: pan-y pinch-zoom` sur ces écrans et sur leurs zones qui défilent (corps des parcours, graphes de Comprendre, aperçu de l'Export PSY), sans quoi WebKit repart de `auto` à chaque zone qui défile et iOS prendrait le geste. Un graphe montré en tableau garde son défilement de côté. Le geste au doigt reste à vérifier sur l'iPhone.
+
+### L'icône et « Revenir » (tâche 10)
+
+- `icone.svg` reprend la piste B ; `npm run icones` rend les PNG sous des noms `v11-`, sur fond noir : plus de cadre bleu sur l'icône masquable. **Le rouge et le vert des émotions sortent ici de leurs écrans** : c'est son choix (spec §10).
+- `theme-color` : `#e7eaee` en clair, `#000000` en sombre ; le manifest prend les couleurs du clair. Pas d'activation d'office d'une nouvelle version dans `sw.js`.
+- Aide iPhone : « Changer d'icône sans rien perdre », les 5 étapes de la spec mot pour mot, et ce que la copie ne garde pas. Aucune étape ne fait supprimer quoi que ce soit avant la dernière.
+- « Revenir à l'état d'avant l'import » passe par une confirmation qui dit ce qui sera remplacé, lue par VoiceOver. Un import sur un Carnet vide (`estBaseVide`) ne prend plus de copie : la ligne n'apparaît pas après le passage à la nouvelle icône.
+
+### Contrôle global (tâche 11)
+
+- **Le test de contrôle** (`v7-controle.spec.js`) passe aussi par 14 écrans de la v11 (`ECRANS_V11`) : le soir et ses trois roues, vides puis notées, Sport et Contact en détail, Mes gratitudes écrites ; l'Analyse et « Tes gratitudes » ouvert ; l'Historique par la porte Épisodes ; l'épisode rouvert et « Ce que j'en retiens » ; Mes refuges vide et plein ; Moment difficile avec ses playlists et ses titres ; Bien-être et ses cinq entrées ; le Diagnostic et « Ouvrir une playlist » ; la confirmation de « Revenir » ; l'Aide iPhone : 97 écrans en tout, contre 83 en v10. En clair et en sombre : contraste 4,5:1, ni tirets, aucun choix fait sans coche, aucune violation de la CSP ; rien ne sort de l'écran à 390 px, au texte par défaut et à 23 px.
+- **Sur ces 14 écrans, en plus**, en clair et en sombre, avec « Réduire les animations » : cibles de 44 pt au doigt, aucun mot interdit, aucune police à empattements, rien de téléchargé ni aucune requête sortante, rien qui bouge. Sous la boîte de confirmation, seule la boîte se touche : l'écran du dessous, sous son voile, n'est pas compté (`ciblesPetites`, paramètre `racine`). Les écrans de la connexion à Spotify ont leur propre contrôle (`v11-spotify.spec.js`), à cause de sa garde réseau.
+- **Le correctif que ce contrôle exigeait** (hérité de la v10) : sur le soir, la cible de « Jour précédent » perdait son bas. `.sous-jour` et sa marge de −6 px remontaient dessous : le point visé tombait sur le résumé au repos, sur « Enregistré » après un toucher. `.sous-jour` laisse passer les touchers (`pointer-events: none`), car elle n'a que du texte ; le message d'échec reste lisible.
+- **Très grand texte (33 à 53)** : Mes refuges plein ne sort pas de l'écran de côté, page comprise ; sur le soir, les trois roues notées et la carte Mes gratitudes non plus. Le reste du soir déborde encore dès 40 px (« nuit dernière », « Télétravail », le résumé d'un relevé), à l'identique de la v10 (page de 395, 449 puis 496 px) : un écran hérité, hors de la v11 (spec §3), que le test ne contrôle pas.
+- **Captures**, dans WebKit à 390 × 844, en clair et en sombre, gardées hors du dépôt : le soir (roues vides et notées, gratitudes), l'Analyse, Mes refuges, Moment difficile, Bien-être, le Diagnostic, la confirmation, l'Aide iPhone, et le soir et Mes refuges à 40 px. Rien à corriger.
+- **Version 11.0.0** (package.json, precache).
+
+### Écarts au texte de la spec
+
+- **§8.3, « Oublier »** : le mot répond à `oubli*`, interdit (`tests/aides/mots-interdits.js`, spec §4). L'app dit « Retirer ces playlists » et « Une seule lecture : Carnet ne garde pas la connexion. ». Le filtre n'a pas changé.
+- **§13, le très grand texte du soir** : seul ce que la v11 y ajoute est contrôlé (voir « Contrôle global »).
+
+### En attente de l'utilisateur
+
+- **Avant d'essayer la connexion à Spotify**, de son côté, une fois :
+  - vérifier l'adresse de retour inscrite dans l'app créée chez Spotify : exactement celle du site de production, `https://<site>.netlify.app/`, **barre finale comprise** (Carnet envoie l'adresse de l'app sans paramètres ni `#`) ;
+  - si Spotify répond 403 (« Spotify refuse cette connexion »), s'ajouter à la liste d'utilisateurs de l'app, chez Spotify : elle reste en mode développement ;
+  - préparer ses playlists dans Spotify ;
+  - **jamais son mot de passe** : la connexion, c'est lui seul qui la fait, sur la page de Spotify.
+- **Le correctif 11.0.1** (spec §8.5), selon ce que l'iPhone montre :
+  - si ni le retour dans l'app ni le code à coller ne marchent, il retire la connexion (la constante vidée), et les liens collés restent ;
+  - si le lien web s'ouvre dans une page Safari au-dessus de Carnet plutôt que dans l'app de musique, il passe à la forme du Diagnostic qui marche mieux. La v11 sort avec le lien web.
+- **Les limites assumées, à lui dire** (spec §8.5) : si iOS a fermé Carnet pendant l'écoute, il se rouvre sur Aujourd'hui ; lancer un exercice ou un son de fond peut couper la musique ; sans réseau, la connexion et l'ouverture d'une playlist ne marchent pas, mais la liste écrite et les liens notés restent lisibles ; Spotify a changé ces règles trois fois en 2026, et l'app, en mode développement, est à la merci d'un prochain changement.
+- **Le passage à la nouvelle icône** (spec §10), à lui donner après la publication : les 5 étapes, aussi dans Réglages › Aide iPhone. Une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et supprimer l'ancienne efface ses données : rien n'est à supprimer avant d'avoir vérifié la copie dans le nouveau Carnet. Dans Safari, l'ancien service worker sert encore l'ancienne page tant que l'onglet n'est pas fermé (étape 3).
+- **Les textes nouveaux** (plus bas) sont des propositions, à relire après la publication.
+- **Les points de la v10 restent ouverts** (spec §3) : le ▶ d'un favori ou de « Reprendre », l'épingle sur les lignes du Programme, les écrans hérités qui débordent en très grand texte (le soir compris, voir plus haut), la fin de « Réveil la nuit » en thème clair, les quatre boutons de Moment difficile en sombre, les exercices et la table « Pour ce moment : » à relire. Ceux de la v7 à la v9 aussi : Nuit par nuit sur l'A4, les deux titres voisins de Comprendre › Énergie, l'énergie déduite du rang du mot, le relevé « vers » dont le mot est effacé. Le soir avec les zones sûres et « Durée › » en deux touchers sont clos (voir « Règles levées ou changées »).
+- **Hors de la v11** (spec §3) : les fois semblables, la préparation pour le psy, de nouveaux filtres, le sport en minutes, un « Dit » ou un rappel sur les gratitudes, écouter de la musique dans Carnet, et ce qui a été proposé le 05/11 sans être retenu.
+
+### À essayer sur l'iPhone
+
+Le détail, à cocher, est dans `docs/recette-iphone.md`, « v11 » : le geste de retour au doigt ; le glissement de la roue, sa fin et la page qui défile dessous ; le soir encore en moins de 30 s avec ses trois roues ; la connexion à Spotify et son retour ; l'ouverture d'une playlist (Diagnostic) et le retour dans Carnet ; la nouvelle icône et le passage sans perte ; les bulles pâles au soleil et la barre du haut en clair.
+
+### Textes nouveaux à relire après la publication
+
+Écrits pour Carnet, d'après la spec et le plan. Un texte se corrige dans le fichier indiqué ; les identifiants ne changent pas.
+
+- **Le soir** (`ui/ecrans/aujourdhui.js`) : la carte « Mes gratitudes », consigne « Ce pour quoi je suis reconnaissant. À qui je dis merci. ». Les roues, pour VoiceOver : « Durée de la nuit », « Durée du sport », « Comment c'était » ; dans les détails, « Activité 1 : durée », « Contact 1 : comment c'était ». Les valeurs sont celles des listes (« 4 h ou moins », « 4 h 30 », … « 10 h ou plus »).
+- **L'Analyse** (`ui/ecrans/analyse.js`) : la porte « Épisodes », le repli « Tes gratitudes ».
+- **L'épisode rouvert** (`ui/ecrans/parcours-fiche.js`) : « Ce que j'en retiens ».
+- **Mes refuges** (`ui/ecrans/refuges.js`, `ui/composants/refuges.js`) : « Mes refuges », « Mes titres » (« Un titre par ligne. »), « Mes playlists », « Nom », « Lien », « Playlist 2 » pour une playlist sans nom ; « Choisir dans mon compte », « Une seule lecture : Carnet ne garde pas la connexion. », « Code de Spotify », « Finir la connexion », « Spotify », « Aucune playlist dans ce compte. », « Retirer ces playlists », puis « Playlists de Spotify retirées » et « Annuler » ; les échecs « La connexion n'a pas abouti. Tes liens notés restent. » et « Spotify refuse cette connexion. Tes liens notés restent. ».
+- **La page du code** (`ui/ecrans/code-spotify.js`) : « Code de Spotify », « Copie ce code, reviens dans Carnet, puis colle-le dans Mes refuges. », « Copier le code », « Copié. », « La copie n'a pas marché : sélectionne le code. ».
+- **Bien-être et Mon plan** : l'entrée « Mes refuges » ; dans Moment difficile, la rubrique « Mes titres » de Mon plan. L'aperçu de l'import nomme « les refuges ».
+- **Le Diagnostic** (`ui/ecrans/diagnostic.js`) : « Ouvrir une playlist », « Note d'abord une playlist dans Mes refuges. », « Lien web », « Lien web, nouvelle fenêtre », « Lien direct vers l'app », « À noter : où ça s'ouvre, où on revient. ».
+- **Réglages** (`ui/ecrans/reglages.js`, `ui/ecrans/aide-iphone.js`) : la confirmation « Revenir à l'état d'avant l'import ? », « Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du … Les mémos vocaux d'avant l'import ne reviennent pas. », action « Revenir » ; l'Aide iPhone, son introduction et « Changer d'icône sans rien perdre », dont la note « La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser. ».
