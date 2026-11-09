@@ -6,6 +6,7 @@ import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
 import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub.js';
 import { RACINE } from '../aides/fichiers.js';
+import { FORMAT_VERSION } from '../../public/js/db/sauvegarde.js';
 
 test.beforeEach(async ({ page }) => {
   await installerPartageFactice(page);
@@ -38,7 +39,7 @@ test('depuis le format 7 : les mots à soi vont dans la sauvegarde, l\'aperçu d
   }, { mots: MOTS, id: FLOTTANT });
   const f = await exporterVers(page);
   const contenu = JSON.parse(Buffer.from(f.octets).toString('utf8'));
-  expect(contenu).toMatchObject({ formatVersion: 8, schemaVersion: 6, counts: { humeurs: 1 } });
+  expect(contenu).toMatchObject({ formatVersion: FORMAT_VERSION, schemaVersion: 6, counts: { humeurs: 1 } });
   expect(contenu.data.meta.find((m) => m.cle === 'motsPerso')).toEqual({ cle: 'motsPerso', valeur: MOTS });
   expect(contenu.data.humeurs[0]).toMatchObject({ emotion: FLOTTANT, energie: 'energie:basse' });
 
