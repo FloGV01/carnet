@@ -81,8 +81,10 @@ export function MesRefuges() {
   const finir = (code) => {
     setEchec(null);
     setEnCours(true);
+    // v12 (2/9) : finirConnexion rend { but, liste, lireMorceaux } ; cet écran ne lit pas encore les morceaux (tâche 6) et
+    // n'ouvre jamais de mise à jour : il ne garde que la liste, et la fermeture qui détient le jeton est oubliée ici.
     finirConnexion({ code, win: window })
-      .then((l) => { setListe(l); setCodeGarde(null); }, (e) => {
+      .then((r) => { setListe(r.but === 'choisir' ? r.liste : null); setCodeGarde(null); }, (e) => {
         setEchec(e && e.raison === 'refus' ? 'refus' : 'autre');
         setCodeGarde(e && e.raison === 'reseau' ? code : null);
       })

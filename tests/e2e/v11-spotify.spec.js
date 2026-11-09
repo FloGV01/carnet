@@ -286,12 +286,13 @@ test.describe('avec Spotify simulé', () => {
     const demandes = await simulerSpotify(page);
     await ecrireMeta(page, 'monPlan', { quandCaMonte: 'je sors marcher' });
     await ouvrirRefuges(page);
-    // Le toucher : la demande notée, puis la page de Spotify, avec le seul droit de lire ses playlists.
+    // Le toucher : la demande notée, puis la page de Spotify, avec les seuls droits de lire ses playlists (v12 : les siennes et
+    // celles où il collabore).
     await choisirDansMonCompte(page).click();
     await expect.poll(() => demandes.autoriser.length).toBe(1);
     const autoriser = Object.fromEntries(demandes.autoriser[0].searchParams);
     expect(Object.keys(autoriser).sort()).toEqual(['client_id', 'code_challenge', 'code_challenge_method', 'redirect_uri', 'response_type', 'scope', 'state']);
-    expect(autoriser).toMatchObject({ client_id: FACTICE, response_type: 'code', redirect_uri: 'http://127.0.0.1:5174/', scope: 'playlist-read-private', code_challenge_method: 'S256' });
+    expect(autoriser).toMatchObject({ client_id: FACTICE, response_type: 'code', redirect_uri: 'http://127.0.0.1:5174/', scope: 'playlist-read-private playlist-read-collaborative', code_challenge_method: 'S256' });
     expect(autoriser.state).toMatch(/^[A-Za-z0-9_-]{32}$/);
     await expect(page).toHaveTitle('Spotify simulé');
 
