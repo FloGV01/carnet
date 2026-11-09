@@ -33,10 +33,10 @@ const JETON_MAX_MS = 10 * 60 * 1000;
 // 4 pages de 50 au plus : 200 playlists.
 const PAR_PAGE = 50;
 const PAGES_MAX = 4;
-// v12 : les seuls champs lus d'une page de morceaux (référence Spotify « Get Playlist Items », vérifiée le 09/11/2026 : les
-// parenthèses choisissent les champs d'un objet ; chaque entrée porte `item`, `track` est déprécié). La lecture reste
-// tolérante (listeMorceaux lit `item`, sinon `track`).
-const CHAMPS_MORCEAUX = 'total,items(is_local,item(type,id,name,is_local,artists(name)))';
+// v12 : une page de morceaux est demandée sans `fields`. La référence Spotify « Get Playlist Items », relue le 09/11/2026,
+// dit que chaque entrée porte `item` (`track` y est déprécié), mais aucun de ses exemples de `fields` ne montre `item(…)` :
+// dans le doute, le plan dit de ne pas filtrer (relecture de la tâche 2). La page est plus lourde, rien de plus n'est gardé :
+// listeMorceaux ne retient que l'identifiant, le titre et l'artiste, et lit `item`, sinon `track`.
 // Le but d'une connexion : choisir une playlist dans la liste du compte, ou mettre à jour les morceaux de la playlist suivie.
 const BUTS = new Set(['choisir', 'maj']);
 // Ni cookie, ni cache, ni redirection suivie : une redirection fait échouer la demande.
@@ -46,7 +46,8 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 
 // `raison` : 'refus' (Spotify répond 401, ou 403 hors des morceaux), 'reseau' (la demande n'est pas partie ou n'a pas abouti), 'reponse' (le
-// reste : réponse d'une autre forme, code refusé, demande oubliée, identifiant de playlist invalide).
+// reste : réponse d'une autre forme, dont une page de morceaux sans `item` ni `track`, code refusé, demande oubliée,
+// identifiant de playlist invalide).
 // v12 : 'morceaux' (Spotify ne donne pas les morceaux d'une playlist qui n'est pas à lui : 403, ou 200 sans tableau `items`),
 // 'expiree' (`lireMorceaux` a déjà servi, ou plus de 10 minutes ont passé).
 export class ErreurSpotify extends Error {
@@ -153,14 +154,19 @@ async function lireJson(demander, url, options, interdit = 'refus') {
 // suivi), PAGES_MORCEAUX_MAX pages au plus. L'identifiant est vérifié avant d'écrire l'adresse. Arrêt sur une page courte ou
 // le total atteint. `suite` : il reste des morceaux au-delà de MAX_MORCEAUX (le total le dit ; sans total, la dernière page
 // lue était pleine). Une page sans tableau `items` : la playlist n'est pas à lui ('morceaux').
+// Une page qui a des entrées, mais dont aucune ne porte la clé `item` ou `track`, est d'une forme inconnue ('reponse') :
+// jamais une liste vide, qui remplacerait sans un mot les morceaux notés (point de vigilance 1). Un fichier local ou un
+// `item: null` gardent leur clé : ils sont écartés par listeMorceaux, sans erreur.
+const sansMorceau = (e) => e === null || typeof e !== 'object' || (!('item' in e) && !('track' in e));
 async function lirePagesMorceaux(demander, jeton, id) {
   if (!idValide(id)) throw new ErreurSpotify('reponse');
   const morceaux = [];
   let suite = false;
   for (let page = 0; page < PAGES_MORCEAUX_MAX; page += 1) {
-    const adresse = `${MORCEAUX}/${encodeURIComponent(id)}/items?limit=${PAR_PAGE}&offset=${page * PAR_PAGE}&fields=${encodeURIComponent(CHAMPS_MORCEAUX)}`;
+    const adresse = `${MORCEAUX}/${encodeURIComponent(id)}/items?limit=${PAR_PAGE}&offset=${page * PAR_PAGE}`;
     const json = await lireJson(demander, adresse, { headers: { Authorization: `Bearer ${jeton}` } }, 'morceaux');
     if (!json || typeof json !== 'object' || !Array.isArray(json.items)) throw new ErreurSpotify('morceaux');
+    if (json.items.length > 0 && json.items.every(sansMorceau)) throw new ErreurSpotify('reponse');
     morceaux.push(...listeMorceaux(json));
     const nombre = json.items.length;
     const total = Number.isFinite(json.total) ? json.total : null;
@@ -171,13 +177,16 @@ async function lirePagesMorceaux(demander, jeton, id) {
 }
 
 // v12 (spec v12 §6.4) : la fermeture qui détient le jeton d'un choix dans le compte, le temps de toucher une playlist de la
-// liste. Elle ne sert qu'une fois : une réponse avec des morceaux, ou l'erreur 'morceaux', un refus ou une autre réponse la
-// consomment ; une coupure du réseau ('reseau') non, et un nouveau toucher peut relire. Pendant une lecture, un second appel
-// est refusé. Après 10 minutes (`maintenant`, injectable), elle est 'expiree'. Un appel refusé ne demande rien. Un
-// identifiant invalide est refusé ('reponse') sans demande, et sans la consommer.
+// liste. Elle ne sert qu'une fois : une réponse avec des morceaux, l'erreur 'morceaux' ou un refus la consomment. Une coupure
+// du réseau ('reseau') ou une réponse passagère ou d'une autre forme ('reponse' : 429, 5xx…) non : rien n'est écrit, et un
+// nouveau toucher peut relire jusqu'à l'expiration (relecture de la tâche 2). Les appels passent un par un : un second
+// toucher pendant une lecture attend sa fin, puis suit les mêmes règles ; il n'est jamais dit 'expiree' tant que la
+// fermeture vaut encore. Après 10 minutes (`maintenant`, injectable ; sinon l'heure à son tour), elle est 'expiree'. Un
+// appel refusé ne demande rien. Un identifiant invalide est refusé ('reponse') sans demande, et sans la consommer.
 function fermetureMorceaux(demander, jeton, debut) {
   let garde = jeton;
-  return async function lireMorceaux(id, maintenant = Date.now()) {
+  let precedent = Promise.resolve();
+  const lireUneFois = async (id, maintenant) => {
     if (garde === null) throw new ErreurSpotify('expiree');
     if (!(Math.abs(maintenant - debut) <= JETON_MAX_MS)) { garde = null; throw new ErreurSpotify('expiree'); }
     if (!idValide(id)) throw new ErreurSpotify('reponse');
@@ -187,9 +196,14 @@ function fermetureMorceaux(demander, jeton, debut) {
       return await lirePagesMorceaux(demander, pris, id);
     } catch (e) {
       const erreur = e instanceof ErreurSpotify ? e : new ErreurSpotify('reponse');
-      if (erreur.raison === 'reseau') garde = pris;
+      if (erreur.raison === 'reseau' || erreur.raison === 'reponse') garde = pris;
       throw erreur;
     }
+  };
+  return function lireMorceaux(id, maintenant) {
+    const tour = precedent.then(() => lireUneFois(id, maintenant ?? Date.now()));
+    precedent = tour.catch(() => {});
+    return tour;
   };
 }
 

@@ -2,7 +2,7 @@
 // l'adresse, ce que l'app en fait, et la fin de la connexion avec un faux `fetch` : aucune requête réelle ici. Point de
 // vigilance 5 : un retour hors du chemin prévu ne plante rien et ne garde aucun jeton.
 // v12 (2/9, spec v12 §6.3 et §6.4) : le but de la demande (choisir ou mettre à jour la liste) noté avec elle, la lecture des
-// morceaux d'une playlist (adresse et `fields` exacts, pages de 50, 4 au plus, `suite`), et `lireMorceaux`, à usage unique et
+// morceaux d'une playlist (adresse exacte, sans `fields`, pages de 50, 4 au plus, `suite`), et `lireMorceaux`, à usage unique et
 // à durée limitée. Point de vigilance 1, côté plateforme : une playlist qui n'est pas à lui, 300 morceaux, une page piégée,
 // un identifiant de 21 ou de 23 signes, deux appels, un appel après 10 minutes, le réseau coupé : rien ne plante, aucun jeton
 // n'est écrit. Identifiants factices de 22 signes, titres inventés.
@@ -195,8 +195,8 @@ const pageMorceaux = (n, debut, total) => ({
   next: `https://api.spotify.com/v1/playlists/${PID}/items?offset=999&limit=50`,
 });
 const JETON_URL = 'https://accounts.spotify.com/api/token';
-const CHAMPS = 'total,items(is_local,item(type,id,name,is_local,artists(name)))';
-const adresseMorceaux = (o, id = PID) => `https://api.spotify.com/v1/playlists/${id}/items?limit=50&offset=${o}&fields=total%2Citems(is_local%2Citem(type%2Cid%2Cname%2Cis_local%2Cartists(name)))`;
+// Relecture de la tâche 2 : sans `fields`, la référence de Spotify ne montrant aucun exemple de `item(…)` (le repli du plan).
+const adresseMorceaux = (o, id = PID) => `https://api.spotify.com/v1/playlists/${id}/items?limit=50&offset=${o}`;
 function fauxFetch({ jeton = reponse(200, { access_token: 'jeton-de-test', token_type: 'Bearer', expires_in: 3600 }), pages = [], morceaux = [] } = {}) {
   const appels = [];
   const f = async (url, options) => {
@@ -311,7 +311,7 @@ test('finirConnexion : sans demande en attente, sans code ou sans identifiant, r
 
 // ---------- v12 : les morceaux (spec v12 §6.3 et §6.4) ----------
 
-test('finirConnexion, « Mettre à jour la liste » : le jeton, puis les pages des morceaux (adresse et fields exacts), sans relire la liste du compte', async () => {
+test('finirConnexion, « Mettre à jour la liste » : le jeton, puis les pages des morceaux (adresse exacte, sans fields), sans relire la liste du compte', async () => {
   const win = pourMaj();
   const fetch = fauxFetch({ morceaux: [reponse(200, pageMorceaux(50, 0, 62)), reponse(200, pageMorceaux(12, 50, 62))] });
   const fini = await finirConnexion({ code: 'code-de-test', win, clientId: 'client-de-test', fetch, maintenant: MAINTENANT });
@@ -324,7 +324,7 @@ test('finirConnexion, « Mettre à jour la liste » : le jeton, puis les pages d
   assert.deepEqual(fini.morceaux[61], { id: idMorceau(61), titre: 'Titre 61', artiste: 'Groupe inventé, Invité' });
   // Le jeton puis deux pages : 3 appels, jamais /v1/me/playlists, jamais le `next` de la réponse.
   assert.deepEqual(fetch.appels.map((a) => a.url), [JETON_URL, adresseMorceaux(0), adresseMorceaux(50)]);
-  assert.equal(new URL(adresseMorceaux(0)).searchParams.get('fields'), CHAMPS);
+  for (const a of versMorceaux(fetch.appels)) assert.deepEqual([...new URL(a.url).searchParams.keys()], ['limit', 'offset']);
   for (const a of fetch.appels) {
     assert.equal(a.options.credentials, 'omit');
     assert.equal(a.options.cache, 'no-store');
@@ -417,6 +417,34 @@ test('finirConnexion, mise à jour : 403 ou 200 sans items → morceaux, 401 →
   }
 });
 
+// Relecture de la tâche 2 : une page dont aucune entrée ne porte `item` ou `track` (un filtre mal compris, une forme qui
+// change encore) donnerait une liste vide sans un mot, et « Mettre à jour la liste » effacerait les morceaux notés.
+const sansCle = (n, debut) => ({ items: Array.from({ length: n }, () => ({ added_at: '2026-01-01T00:00:00Z', is_local: false })), total: debut + n });
+const autreCle = (n, debut) => ({ items: Array.from({ length: n }, (_, i) => ({ is_local: false, element: { type: 'track', id: idMorceau(debut + i), name: `Titre ${debut + i}`, artists: [] } })), total: 62 });
+test('finirConnexion, mise à jour : une page dont aucune entrée ne porte `item` ni `track` → réponse (la demande est retirée), jamais une liste vide', async () => {
+  const cas = [
+    ['sans item ni track', [reponse(200, sansCle(50, 0)), reponse(200, sansCle(12, 50))]],
+    ['le morceau sous une autre clé', [reponse(200, autreCle(50, 0)), reponse(200, autreCle(12, 50))]],
+    ['une première page lisible, la seconde non', [reponse(200, pageMorceaux(50, 0, 62)), reponse(200, sansCle(12, 50))]],
+    ['des entrées qui ne sont pas des objets', [reponse(200, { items: [null, 'x', 3, [], ['item']], total: 5 })]],
+  ];
+  for (const [nom, morceaux] of cas) {
+    const win = pourMaj();
+    const fetch = fauxFetch({ morceaux });
+    await assert.rejects(finirConnexion({ code: 'c', win, clientId: 'client-de-test', fetch, maintenant: MAINTENANT }), raison('reponse'), nom);
+    assert.equal(win.valeurs.has(CLE), false, `${nom} : demande retirée`);
+    assert.doesNotMatch(JSON.stringify([...win.valeurs]), /jeton-de-test/);
+  }
+  // Un fichier local, un `item: null` ou un épisode gardent leur clé : écartés sans erreur, même seuls sur la page. Une
+  // playlist vide n'a aucune entrée : aucun morceau, sans erreur.
+  const ecartes = { items: [{ is_local: true, item: { type: 'track', id: null, name: 'Fichier local', is_local: true } }, { is_local: false, item: null },
+    { is_local: false, track: null }, { is_local: false, item: { type: 'episode', id: idMorceau(1), name: 'Un épisode' } }], total: 4 };
+  for (const corps of [ecartes, { items: [], total: 0 }]) {
+    const fini = await finirConnexion({ code: 'c', win: pourMaj(), clientId: 'client-de-test', fetch: fauxFetch({ morceaux: [reponse(200, corps)] }), maintenant: MAINTENANT });
+    assert.deepEqual([fini.morceaux, fini.suite], [[], false], JSON.stringify(corps));
+  }
+});
+
 test('finirConnexion, choisir : lireMorceaux lit les morceaux d\'une playlist touchée avec le même jeton, puis ne sert plus', async () => {
   const win = avecAttente();
   const fetch = fauxFetch({ pages: [reponse(200, page(3, 0, 3))], morceaux: [reponse(200, pageMorceaux(50, 0, 62)), reponse(200, pageMorceaux(12, 50, 62))] });
@@ -457,14 +485,14 @@ test('lireMorceaux : 10 minutes au plus ; après, « expiree » sans demande, et
   assert.equal(versMorceaux(recule.appels).length, 0);
 });
 
-test('lireMorceaux : un identifiant invalide est refusé sans demande, et elle sert encore ; deux appels à la fois, le second est refusé', async () => {
+test('lireMorceaux : un identifiant invalide est refusé sans demande, et elle sert encore ; deux appels à la fois, le second attend la fin du premier', async () => {
   const fetch = fauxFetch({ pages: [reponse(200, page(1, 0, 1))], morceaux: [reponse(200, pageMorceaux(2, 0, 2))] });
   const { lireMorceaux } = await finirConnexion({ code: 'c', win: avecAttente(), clientId: 'client-de-test', fetch, maintenant: MAINTENANT });
   for (const id of [PID.slice(1), `${PID}x`, '../../me/playlists', `${PID.slice(0, 21)}/`, `${PID.slice(0, 21)}é`, '', null, undefined, 12, [PID], { id: PID }]) {
     await assert.rejects(lireMorceaux(id, MAINTENANT), raison('reponse'), String(id));
   }
   assert.equal(versMorceaux(fetch.appels).length, 0);
-  // Deux touchers rapprochés : le premier lit, le second est refusé sans demande.
+  // Deux touchers rapprochés : le premier lit ; le second attend sa fin, et la trouve consommée, sans demande.
   const [premier, second] = await Promise.allSettled([lireMorceaux(PID, MAINTENANT), lireMorceaux(PID, MAINTENANT)]);
   assert.equal(premier.status, 'fulfilled');
   assert.equal(premier.value.morceaux.length, 2);
@@ -473,7 +501,38 @@ test('lireMorceaux : un identifiant invalide est refusé sans demande, et elle s
   assert.equal(versMorceaux(fetch.appels).length, 1);
 });
 
-test('lireMorceaux : coupure → réseau, et un nouveau toucher marche ; « morceaux », refus ou autre réponse la consomment', async () => {
+// Relecture de la tâche 2 : un second toucher pendant une lecture ne reçoit jamais « expiree » tant que la fermeture vaut
+// encore (l'écran dirait à tort que la connexion a expiré).
+test('lireMorceaux : deux touchers rapprochés, le premier coupé (réseau) ou passager (429) : le second relit, avec sa playlist', async () => {
+  const AUTRE = 'AutrePlaylistDeTest001';
+  for (const premiere of [new TypeError('Load failed'), reponse(429, {}), reponse(503, {})]) {
+    const appels = [];
+    let lus = 0;
+    const fetch = async (url, options) => {
+      appels.push({ url, options });
+      if (url === JETON_URL) return reponse(200, { access_token: 'jeton-de-test' });
+      if (url.includes('/me/playlists')) return reponse(200, page(1, 0, 1));
+      lus += 1;
+      // Le premier toucher reste en route un moment, puis échoue ; le second lit 3 morceaux de sa playlist.
+      if (lus === 1) { await new Promise((r) => { setTimeout(r, 20); }); if (premiere instanceof Error) throw premiere; return premiere; }
+      return reponse(200, { items: [entree(1), entree(2), entree(3)], total: 3 });
+    };
+    const { lireMorceaux } = await finirConnexion({ code: 'c', win: avecAttente(), clientId: 'client-de-test', fetch, maintenant: MAINTENANT });
+    const [a, b] = await Promise.allSettled([lireMorceaux(PID, MAINTENANT), lireMorceaux(AUTRE, MAINTENANT)]);
+    const attendue = premiere instanceof Error ? 'reseau' : 'reponse';
+    assert.deepEqual([a.status, a.reason && a.reason.raison], ['rejected', attendue]);
+    assert.equal(b.status, 'fulfilled', `${attendue} : le second toucher relit`);
+    assert.equal(b.value.morceaux.length, 3);
+    const lectures = appels.filter((x) => x.url.includes('/v1/playlists/'));
+    assert.deepEqual(lectures.map((x) => x.url), [adresseMorceaux(0), adresseMorceaux(0, AUTRE)]);
+    assert.ok(lectures.every((x) => x.options.headers.Authorization === 'Bearer jeton-de-test'));
+    // Le second a lu des morceaux : consommée.
+    await assert.rejects(lireMorceaux(PID, MAINTENANT + 1000), raison('expiree'));
+    assert.equal(appels.filter((x) => x.url.includes('/v1/playlists/')).length, 2);
+  }
+});
+
+test('lireMorceaux : coupure → réseau, et un nouveau toucher marche ; « morceaux » ou un refus la consomment, une autre réponse non', async () => {
   // Coupée sur la deuxième page : réseau ; le toucher suivant relit tout, avec le même jeton.
   let coupe = true;
   const fetch = fauxFetch({ pages: [reponse(200, page(1, 0, 1))], morceaux: (o) => {
@@ -492,15 +551,34 @@ test('lireMorceaux : coupure → réseau, et un nouveau toucher marche ; « morc
   await assert.rejects(t.lireMorceaux(PID, MAINTENANT), raison('reseau'));
   await assert.rejects(t.lireMorceaux(PID, MAINTENANT + DIX_MINUTES + 1), raison('expiree'));
   assert.equal(versMorceaux(tard.appels).length, 1);
-  // La playlist n'est pas à lui (403, ou 200 sans items), un refus ou une autre réponse : consommée, le toucher suivant ne
-  // demande plus rien.
-  for (const [r, attendue] of [[reponse(403, {}), 'morceaux'], [reponse(200, { name: 'Pas à lui' }), 'morceaux'], [reponse(401, {}), 'refus'], [reponse(500, {}), 'reponse']]) {
+  // La playlist n'est pas à lui (403, ou 200 sans items) ou un refus : consommée, le toucher suivant ne demande plus rien.
+  for (const [r, attendue] of [[reponse(403, {}), 'morceaux'], [reponse(200, { name: 'Pas à lui' }), 'morceaux'], [reponse(401, {}), 'refus']]) {
     const f = fauxFetch({ pages: [reponse(200, page(1, 0, 1))], morceaux: [r] });
     const fini = await finirConnexion({ code: 'c', win: avecAttente(), clientId: 'client-de-test', fetch: f, maintenant: MAINTENANT });
     await assert.rejects(fini.lireMorceaux(PID, MAINTENANT), raison(attendue), attendue);
     await assert.rejects(fini.lireMorceaux(PID, MAINTENANT), raison('expiree'), `${attendue} puis un second toucher`);
     assert.equal(versMorceaux(f.appels).length, 1, attendue);
   }
+  // Relecture de la tâche 2 : une réponse passagère (429, 5xx), illisible ou d'une forme inconnue (aucune entrée avec `item`
+  // ni `track`) ne la consomme pas : rien n'est écrit, et un nouveau toucher relit avec le même jeton, jusqu'à l'expiration.
+  const passageres = [reponse(429, {}), reponse(500, {}), reponse(503, {}), reponse(404, {}),
+    { ok: true, status: 200, json: async () => { throw new SyntaxError('JSON'); } }, reponse(200, sansCle(50, 0)), reponse(200, autreCle(50, 0))];
+  for (const [i, r] of passageres.entries()) {
+    const nom = `cas ${i} (${r.status})`;
+    const f = fauxFetch({ pages: [reponse(200, page(1, 0, 1))], morceaux: (o) => (versMorceaux(f.appels).length === 1 ? r : reponse(200, pageMorceaux(3, o, 3))) });
+    const fini = await finirConnexion({ code: 'c', win: avecAttente(), clientId: 'client-de-test', fetch: f, maintenant: MAINTENANT });
+    await assert.rejects(fini.lireMorceaux(PID, MAINTENANT), raison('reponse'), nom);
+    assert.equal((await fini.lireMorceaux(PID, MAINTENANT + 1000)).morceaux.length, 3, `${nom} puis un second toucher`);
+    assert.equal(versMorceaux(f.appels).length, 2, nom);
+    assert.ok(versMorceaux(f.appels).every((a) => a.options.headers.Authorization === 'Bearer jeton-de-test'), nom);
+    await assert.rejects(fini.lireMorceaux(PID, MAINTENANT + 2000), raison('expiree'), `${nom} : consommée après des morceaux`);
+  }
+  // Une réponse passagère, puis plus de 10 minutes : expirée, sans demande.
+  const tardive = fauxFetch({ pages: [reponse(200, page(1, 0, 1))], morceaux: [reponse(429, {})] });
+  const t2 = await finirConnexion({ code: 'c', win: avecAttente(), clientId: 'client-de-test', fetch: tardive, maintenant: MAINTENANT });
+  await assert.rejects(t2.lireMorceaux(PID, MAINTENANT), raison('reponse'));
+  await assert.rejects(t2.lireMorceaux(PID, MAINTENANT + DIX_MINUTES + 1), raison('expiree'));
+  assert.equal(versMorceaux(tardive.appels).length, 1);
 });
 
 test('lireMorceaux : 300 morceaux donnent 200 morceaux et la suite, en 4 pages', async () => {
