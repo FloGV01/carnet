@@ -125,9 +125,10 @@ export function controlerTemoin(octets) {
     exiger((d.humeurs || []).some((h) => h.emotion === null && h.humeur === null && typeof h.energie === 'string'), 'un relevé à énergie seule');
     exiger((d.humeurs || []).some((h) => h.emotion === 'roue:peur:accable'), 'un relevé Accablé');
   }
+  // Une méta de la sauvegarde, par sa clé (formats 7 et suivants).
+  const meta = (cle) => ((d.meta || []).find((m) => m.cle === cle) || {}).valeur;
   // Format 7 (v9 et v10) : un mot à soi et un relevé qui le cite, un mot sans famille, une séance du minuteur, des
   // exercices épinglés et la voix des consignes.
-  const meta = (cle) => ((d.meta || []).find((m) => m.cle === cle) || {}).valeur;
   if (f >= 7) {
     const perso = meta('motsPerso');
     const mots = perso && typeof perso === 'object' ? Object.keys(perso).filter((id) => id.startsWith('roue:perso:u-')) : [];

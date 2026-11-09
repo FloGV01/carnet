@@ -180,7 +180,8 @@ export function avecPlaylist(r, i, changement) {
 // Les trois formes d'un lien que le Diagnostic essaie sur l'iPhone (spec §8.5) : le lien web, le même dans une nouvelle
 // fenêtre, et le lien direct vers l'app pour une playlist du lecteur public de Spotify (spotify:playlist:<id>) ou un lien de
 // Musique (music://…). Un lien qui va déjà vers l'app n'a que cette forme ; un lien refusé n'en a aucune. Rien n'est suivi ici.
-// v12 : remplacée par formesDuMorceau ; elle part avec le Diagnostic de la v11 qui s'en sert encore.
+// v12 : remplacée par formesDuMorceau ; elle part, avec PLAYLIST_SPOTIFY et son test, avec le Diagnostic de la v11 qui s'en
+// sert encore (tâche 7 ; code-mort.test.js échoue quand plus rien ne l'appelle).
 const PLAYLIST_SPOTIFY = /^\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?playlist\/([A-Za-z0-9]+)\/?$/;
 export function formesDuLien(lien) {
   const propre = lienAccepte(lien);
@@ -264,12 +265,13 @@ export function choisirSpotify(r, choix) {
   return normaliserRefuges({ ...n, playlists: [...n.playlists, ligne] });
 }
 
-// Choisie dans le compte : une ligne de source Spotify a ce lien.
+// Choisie dans le compte : une ligne de source Spotify a ce lien. v12 : elle part avec basculerSpotify, si plus rien ne s'en sert.
 export const choisieDeSpotify = (r, lien) => normaliserRefuges(r).playlists.some((p) => p.source === 'spotify' && p.lien === lien);
 
 // Un toucher sur une playlist de son compte : ajoutée à la fin avec la source Spotify, ou retirée si elle y est déjà. Avec
 // trois playlists notées, rien ne s'ajoute. Une ligne collée à la main, même avec ce lien, n'est jamais touchée.
-// v12 : remplacée par choisirSpotify ; elle part avec l'écran de la v11 qui s'en sert encore.
+// v12 : remplacée par choisirSpotify ; elle part, avec ses tests, avec l'écran de la v11 qui s'en sert encore (tâche 6 ;
+// code-mort.test.js échoue quand plus rien ne l'appelle).
 export function basculerSpotify(r, playlist) {
   const n = normaliserRefuges(r);
   const lien = lienDeSpotify(estObjet(playlist) ? playlist.lien : null);
