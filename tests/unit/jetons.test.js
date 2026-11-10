@@ -99,6 +99,21 @@ test('v12 : le contour (choix non faits, champs, roues) à 3:1 au moins sur le f
   }
 });
 
+// Relecture de la tâche 3 : « Réveil la nuit » (.parcours.ecran-noir) redéclare son contour, sa carte et --surface-2. Son
+// contour (champs, rail et bouton de l'interrupteur éteint) suit la même règle, sur ses propres fonds (il était à 2,81:1 sur
+// la carte et 2,60:1 sur --surface-2), et reste plus sombre que son texte : la nuit n'éclaire pas la chambre.
+test('v12 : la nuit aussi, le contour de .parcours.ecran-noir à 3:1 au moins sur son fond, sa carte et son --surface-2, plus sombre que son texte', () => {
+  const declare = (selecteur) => Object.fromEntries(REGLES.filter(([sel]) => sel === selecteur)
+    .flatMap(([, d]) => [...d.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()])));
+  const nuit = { ...declare('.ecran-noir'), ...declare('.parcours.ecran-noir') };
+  for (const n of ['bg', 'surface', 'surface-2', 'contour', 'text']) assert.match(nuit[n] || '', /^#[0-9a-f]{6}$/, `--${n} de la nuit`);
+  assert.equal(nuit.contour, declare('.parcours.ecran-noir').contour, 'le contour est redéclaré par .parcours.ecran-noir');
+  for (const fond of ['bg', 'surface', 'surface-2']) {
+    assert.ok(contraste(nuit.contour, nuit[fond]) >= 3, `nuit : contour sur ${fond} (${contraste(nuit.contour, nuit[fond]).toFixed(2)})`);
+  }
+  assert.ok(contraste(nuit.contour, nuit.bg) < contraste(nuit.text, nuit.bg), 'nuit : le contour moins clair que le texte');
+});
+
 test('v12 : l\'accent clair est loin de la menthe des zones (ΔE OKLab ≥ 0,12) ; l\'encre des graphiques, sans teinte, se voit sur la carte', () => {
   // La menthe : le plein de la zone verte (bulles, points, cases), son accent et son texte en sombre.
   const menthe = [clair['c-zone-vert-fill'], sombre['c-zone-vert'], sombre['c-zone-vert-text']];

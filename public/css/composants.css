@@ -454,10 +454,11 @@ button.effacer svg { width: 18px; height: 18px; }
 /* À venir (v8, Q29) : un contour de 1,5 en --text-2, sans fond (README 2b : « contour (2a) »), au moins 3:1 sur le fond
    (5,6:1 en clair, 7,3:1 en sombre) ; --surface-2 ne se voyait pas sur le fond clair (1:1), et --line restait sous 3:1
    (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille ; à l'encre (v12, spec §5.3), jamais
-   en vert : un point vert, et un « fait » vert. */
+   en vert : un point vert, et un « fait » vert. L'étape en cours a en plus un anneau --contour (3:1 sur le fond), qui seul la
+   distingue des étapes faites. */
 .reperes i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-2); background: none; }
 .reperes i.fait, .reperes i.en-cours { background: var(--c, var(--text)); border-color: var(--c, var(--text)); }
-.reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
+.reperes i.en-cours { box-shadow: 0 0 0 3px var(--contour); }
 /* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
 .reperes:has(i:nth-child(8)) { gap: 6px; }
 .reperes:has(i:nth-child(10)) { gap: 5px; }

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
+import { vueMoment, noter, continuer, faisais } from '../aides/emotion.js';
 
 // v12 · Le design simple façon Apple (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5).
 // Tâche 3 : les jetons, l'accent vert B et les choix. Un choix fait est un aplat d'accent, son texte et sa coche ✓ en
@@ -146,5 +147,50 @@ test('v12 (3/9) · pas d\'accent sur les écrans de l\'émotion ni sur « Révei
     await expect(nuit).toBeVisible();
     expect(await lire(nuit), schema).toEqual(['#8e8f92', '#000000', '#8e8f92', '#8e8f92', '#000000']);
     await nuit.getByRole('button', { name: 'Fermer', exact: true }).click();
+  }
+});
+
+// Relecture de la tâche 3 : en annulant --contour dans les écrans de l'émotion, la carte « Pour récupérer, je… » de l'écran 3
+// perdait le cercle de sa respiration (un rond pâle sur la carte, à 1,16:1) et la forme de « Arrêter » (fond de la carte, sans
+// contour : un mot seul). Comme en v11, sans accent : le cercle est cerclé à l'encre, et « Arrêter » a le fond --surface-2.
+test('v12 (3/9) · l\'écran 3 de l\'émotion, carte « Pour récupérer, je… » : le cercle de la respiration cerclé à l\'encre (3:1 au moins sur la carte, jamais vert), « Arrêter » garde sa forme, en clair et en sombre', async ({ page }) => {
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await viderBase(page);
+    await page.evaluate(async () => {
+      const m = window.__carnet.repo.meta;
+      await m.ecrire('monPlan', { quandCaMonte: 'je sors marcher', pourRecuperer: 'je m\'allonge\nje ferme les yeux', siAlors: [] });
+      await m.ecrire('ressourcer', { energieBasse: true });
+    });
+    await aller(page, '#/moment');
+    const vue = vueMoment(page);
+    await noter(vue, 'bleu', 'Vide');
+    await continuer(vue).click();
+    await expect(faisais(vue)).toBeVisible();
+    const carte = vue.getByRole('region', { name: 'Pour récupérer, je…' });
+    await carte.getByRole('button', { name: 'Respirer', exact: true }).click();
+    const arreter = carte.getByRole('button', { name: 'Arrêter', exact: true });
+    await expect(arreter).toBeVisible();
+    const mesure = () => carte.evaluate((c) => {
+      const s = (e) => getComputedStyle(e);
+      const cercle = c.querySelector('.cercle-respiration span');
+      const b = [...c.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Arrêter');
+      return { carte: s(c).backgroundColor, bord: [s(cercle).borderTopWidth, s(cercle).borderTopStyle, s(cercle).borderTopColor],
+        arreter: b && { fond: s(b).backgroundColor, contour: s(b).boxShadow } };
+    });
+    const m = await mesure();
+    const quoi = `${schema} · respiration en cours`;
+    expect(m.carte, quoi).toBe(rgb(t.surface));
+    // Le cercle : un bord opaque, à l'encre des écrans de l'émotion (le plein des ronds, comme en v11), lisible sur la carte.
+    expect(m.bord, quoi).toEqual(['2px', 'solid', rgb(t['moment-plein'])]);
+    expect(contraste(m.bord[2], m.carte), quoi).toBeGreaterThanOrEqual(3);
+    expect(m.bord[2], `${quoi} : jamais l'accent`).not.toBe(rgb(t.accent));
+    // « Arrêter » : un bouton neutre, au fond --surface-2 dans la carte (sans contour dans ces écrans), comme en v11.
+    expect(m.arreter.fond, quoi).not.toBe(m.carte);
+    expect(m.arreter.fond, quoi).toBe(rgb(t['surface-2']));
+    // Arrêtée : le cercle reste cerclé.
+    await arreter.click();
+    await expect(carte.getByRole('button', { name: 'Commencer', exact: true })).toBeVisible();
+    expect((await mesure()).bord, `${schema} · arrêtée`).toEqual(['2px', 'solid', rgb(t['moment-plein'])]);
   }
 });

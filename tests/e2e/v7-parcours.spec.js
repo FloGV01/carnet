@@ -153,7 +153,12 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à l\'e
       expect(p[0].fond, `${quoi} : faite`).toBe(rgb(t.text));
       expect(p[0].anneau, `${quoi} : faite, sans anneau`).toBe('none');
       expect(p[1].fond, `${quoi} : en cours`).toBe(rgb(t.text));
-      expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t['surface-2'])} 0px 0px 0px 3px`);
+      // L'anneau de l'étape en cours, en --contour (spec §5.3), seul à la distinguer des étapes faites : à 3:1 au moins sur
+      // le fond (relecture de la tâche 3 : en --surface-2, 1,03:1 en clair, il ne se voyait pas).
+      expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t.contour)} 0px 0px 0px 3px`);
+      const fond = await vue.evaluate((v) => getComputedStyle(v).backgroundColor);
+      expect(fond, quoi).toBe(rgb(t.bg));
+      expect(contraste(rgb(t.contour), fond), `${quoi} : l'anneau sur le fond`).toBeGreaterThanOrEqual(3);
       expect(p[2].fond, `${quoi} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
       expect(p[2].contour, `${quoi} : à venir, en contour`).toBe(rgb(t['text-2']));
       expect(p[0].contour, `${quoi} : faite, pleine`).toBe(p[0].fond);

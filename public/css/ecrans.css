@@ -755,12 +755,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: var(--bg); color: var(--moment-texte); --anneau: var(--moment-focus); }
 /* Pas d'accent sur ces écrans (v12, spec §5.6) : leurs actions restent à l'encre, comme en v11. Sinon, un mot sans zone
    peindrait ses activités choisies en vert à l'écran 3, et on lirait « zone verte » à tort. --action et --action-on sont
-   redéclarés : sur la racine, ils valent déjà le vert. Leurs choix et leurs champs gardent un fond plein, sans contour. */
+   redéclarés : sur la racine, ils valent déjà le vert. Leurs choix et leurs champs gardent un fond plein, sans contour.
+   Dans une carte (« Pour récupérer, je… », à l'écran 3), ce fond plein est --surface-2, comme en v11 : sur --surface,
+   « Arrêter », sans contour, ne serait plus qu'un mot sur la carte (relecture de la tâche 3). */
 .moment-plein {
   --accent: var(--moment-plein); --sur-accent: var(--moment-plein-on); --accent-texte: var(--moment-plein);
   --action: var(--moment-plein); --action-on: var(--moment-plein-on);
   --fond-choix: var(--surface); --contour: transparent;
 }
+.moment-plein .carte { --fond-choix: var(--surface-2); }
 /* Les boutons en verre, en haut (visuel §1.2 et §2.9) : capsules de 48 × 44, à 16 du bord, juste sous la barre d'état ;
    « verre » sombre, un liseré clair et une ombre intérieure (blanc translucide en clair, plus bas). Sur la carte,
    translucide et flouté. */
@@ -1078,8 +1081,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 .respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
 .cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
-/* Le cercle de la respiration est neutre (v12, spec §5.3) : jamais un disque vert. */
+/* Le cercle de la respiration est neutre (v12, spec §5.3) : jamais un disque vert. Dans les écrans de l'émotion, où --contour
+   est transparent, il reste cerclé à l'encre, comme en v11 (relecture de la tâche 3 : sinon, un rond pâle sur la carte). */
 .cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--contour); transform: scale(.55); }
+.moment-plein .cercle-respiration span { border-color: var(--moment-plein); }
 .cercle-respiration.en-cours span { animation: respirer 10s ease-in-out infinite; }
 .cercle-respiration.en-cours.rythme-4-6 span { animation-name: respirer-4-6; }
 @keyframes respirer { 0% { transform: scale(.55); } 50% { transform: scale(1); } 100% { transform: scale(.55); } }
@@ -1279,11 +1284,12 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 /* « Réveil la nuit » (v10, spec §5.2) : le fond noir (.ecran-noir, tokens.css), dans les deux thèmes, qu'avaient aussi les écrans
    de l'émotion jusqu'à la v10 (ils suivent le thème depuis la v11), mais rien n'y éclaire la chambre : texte gris (4,5:1 au
-   moins), teinte éteinte, et sans accent (v12 : un gris, ni vert ni blanc). */
+   moins), teinte éteinte, et sans accent (v12 : un gris, ni vert ni blanc). Le contour (champs, interrupteur éteint) reste à
+   3:1 sur la carte et --surface-2 (spec §5.2 ; 3,47:1 et 3,21:1), plus sombre que le texte : la nuit n'éclaire pas. */
 .parcours.ecran-noir {
   color: var(--text);
   --text: #8e8f92; --text-2: #87888b; --action: #8e8f92; --accent: #8e8f92; --accent-texte: #8e8f92;
-  --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d; --contour: #5c5e62;
+  --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d; --contour: #6a6c70;
   --c: #5c5e62; --c-fill: #303235; --c-on: #c4c5c8; --c-tint: #0e0f10; --c-tint-2: #16171a; --c-text: #8e8f92;
 }
 .reglages-lecteur { margin-top: 4px; }
