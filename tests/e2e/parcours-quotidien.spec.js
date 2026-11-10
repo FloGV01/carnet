@@ -87,16 +87,18 @@ test('pire cas : 9 champs (v11 : Mes gratitudes, ajoutée par normaliserJournee)
 });
 
 // 21 px (xxxLarge), 28 (AX1) et 33 (AX2) : d'abord « Moment difficile » ne garde que son icône, puis « + Épisode » que son
-// « + ». « Émotion » garde son nom en entier et reste le plus large (P5) ; rien ne sort de son bouton.
-test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » puis « + Épisode » réduits', async ({ page }) => {
+// « + ». « Émotion » garde son nom en entier et reste le plus large (P5) ; rien ne sort de son bouton. À 375, « Moment
+// difficile » n'a que son icône dès le texte par défaut. Réduite à son icône, chaque action garde 44 de large au moins
+// (relecture de la tâche 4 : l'icône de 20 et ses marges ne faisaient que 40).
+test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » puis « + Épisode » réduits, chacune de 44 de large au moins', async ({ page }) => {
   for (const largeur of [390, 375]) {
     await page.setViewportSize({ width: largeur, height: 797 });
-    for (const px of [21, 28, 33]) {
+    for (const px of largeur === 375 ? [17, 21, 28, 33] : [21, 28, 33]) {
       const quoi = `${largeur} · ${px} px`;
       await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; document.body.style.fontSize = `${t}px`; }, px);
       const bande = page.locator('.actions-flottantes');
       await expect(bande.locator('.moment-difficile .libelle-action'), quoi).toBeHidden();
-      if (px === 21) await expect(bande.locator('.fab .libelle-action'), quoi).toBeVisible();
+      if (px <= 21) await expect(bande.locator('.fab .libelle-action'), quoi).toBeVisible();
       else await expect(bande.locator('.fab .libelle-action'), quoi).toBeHidden();
       await expect(page.getByRole('link', { name: 'Moment difficile' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Émotion du moment' })).toBeVisible();
@@ -110,9 +112,10 @@ test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Momen
           debords: [...b.children].filter((k) => k.scrollWidth > k.clientWidth).map((k) => k.className),
           emotionEntier: libelle.scrollWidth <= libelle.clientWidth && libelle.getBoundingClientRect().width > 0,
           emotionPlusLarge: [...b.children].every((k) => k === emotion || k.getBoundingClientRect().width < emotion.getBoundingClientRect().width),
+          etroites: [...b.children].filter((k) => k.getBoundingClientRect().width < 44).map((k) => `${k.className} : ${Math.round(k.getBoundingClientRect().width)}`),
         };
       });
-      expect(m, quoi).toEqual({ dedans: true, debords: [], emotionEntier: true, emotionPlusLarge: true });
+      expect(m, quoi).toEqual({ dedans: true, debords: [], emotionEntier: true, emotionPlusLarge: true, etroites: [] });
     }
   }
 });

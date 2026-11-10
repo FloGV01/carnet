@@ -302,7 +302,8 @@ test('nouvel épisode : la date à gauche et « Mon plan » à droite, sur une l
   const [d, p] = await Promise.all([date.boundingBox(), plan.boundingBox()]);
   expect(Math.abs((d.y + d.height / 2) - (p.y + p.height / 2))).toBeLessThanOrEqual(1);
   expect(p.x).toBeGreaterThanOrEqual(d.x + d.width);
-  expect(Math.round(p.x + p.width)).toBe(390 - 14);
+  // La marge de l'écran : 16 depuis la v12 (spec §5.2 ; 14 jusqu'à la v11).
+  expect(Math.round(p.x + p.width)).toBe(390 - 16);
   expect(await plan.evaluate((b) => [getComputedStyle(b).fontWeight, b.querySelector('svg').getBoundingClientRect().width])).toEqual(['600', 16]);
   // La date s'ouvre dessous, sur toute la largeur.
   await date.click();
@@ -318,7 +319,7 @@ test('nouvel épisode : la date à gauche et « Mon plan » à droite, sur une l
   await expect(fiche.getByRole('heading', { name: 'Récapitulatif' })).toBeVisible();
   const [d2, p2] = await Promise.all([date.boundingBox(), plan.boundingBox()]);
   expect(p2.y).toBeGreaterThanOrEqual(d2.y + d2.height - 1);
-  expect(Math.round(p2.x)).toBe(14);
+  expect(Math.round(p2.x)).toBe(16);
   await expect(fiche.locator('.ligne-plan')).toHaveText(/^Mon plan\s*·\s*Après coup\s*·\s*En parler$/);
 });
 

@@ -137,7 +137,7 @@
   --r-carte: 16px;
   --r-feuille: 24px;
 
-  /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 14 (2b) */
+  /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 16 (v12, spec §5.2 ; 14 jusqu'à la v11) */
   --esp-1: 4px;
   --esp-2: 8px;
   --esp-3: 12px;
@@ -145,7 +145,7 @@
   --esp-5: 24px;
   --esp-6: 32px;
   --ecart: 6px;
-  --marge: 14px;
+  --marge: 16px;
 
   /* Cibles et hauteurs : toute cible fait 44 au moins */
   --cible: 44px;

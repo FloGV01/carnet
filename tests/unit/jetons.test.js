@@ -70,6 +70,13 @@ test('v12 : la base et l\'accent B, aux valeurs exactes de la spec, en clair et 
   assert.deepEqual([manifest.background_color, manifest.theme_color], ['#f2f2f7', '#f2f2f7']);
 });
 
+// Relecture de la tâche 4 : la marge était restée à 14, celle du lot 2b, au lieu des 16 de la spec.
+test('v12 : les formes de la spec §5.2 : rayon des cartes 16, marge 16, grand titre 34/41 (plafonné à 48), titre de section 22/28, libellé d\'onglet 10', () => {
+  assert.deepEqual(['r-carte', 'marge', 't-grand-titre', 'l-grand-titre', 't-titre-section', 'l-titre-section', 't-onglet'].map((n) => clair[n]),
+    ['16px', '16px', 'min(2rem, 48px)', 'min(2.412rem, 58px)', '1.294rem', '1.647rem', '10px']);
+  for (const n of ['r-carte', 'marge']) assert.equal(sombreSeul[n], undefined, n);
+});
+
 test('v12 : AA du texte et du texte secondaire sur le fond, la carte et --surface-2 ; l\'accent et le texte posé dessus à 4,5:1 au moins', () => {
   for (const [theme, t] of THEMES) {
     for (const fond of ['bg', 'surface', 'surface-2']) {

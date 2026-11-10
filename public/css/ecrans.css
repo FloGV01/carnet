@@ -407,7 +407,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    jusqu'à 4 h. » avant 4 h, les zones du jour en points et le résumé. */
 .entete-jour { display: flex; flex-direction: column; }
 /* En très grand texte, quand le grand titre et ‹ › ne tiennent plus sur une ligne (« Aujourd'hui » à 48 px sur 375), ‹ ›
-   passent dessous, à droite, plutôt que de couper le mot. */
+   passent dessous, à droite, plutôt que de couper le mot : ensemble, dans un même bloc (.navs-jour). */
 .ligne-jour { display: flex; flex-wrap: wrap; align-items: flex-end; margin-right: -4px; }
 .titre-jour { position: relative; flex: 0 1 auto; max-width: 100%; padding-top: 6px; }
 .titre-jour h1 { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 2px; min-width: 0; color: var(--text); }
@@ -419,11 +419,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .fin-titre { white-space: nowrap; }
 .fin-titre svg { display: inline-block; vertical-align: -.12em; width: 1em; height: 1em; margin-left: 4px; }
 .choix-date { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; }
+/* ‹ et › dans un même bloc (relecture de la tâche 4) : chacun à part dans la ligne, › passait seul à la ligne, à gauche
+   sous le titre, quand il ne restait la place que d'un rond (« Mercredi 14 » sous OCTOBRE de 25 à 53 px sur 375). */
+.navs-jour { display: flex; flex: none; margin-left: auto; align-self: flex-end; margin-bottom: calc((var(--l-grand-titre) - var(--cible)) / 2); }
 .nav-jour {
   position: relative; width: var(--cible); height: var(--cible); flex: none; border: 0; background: none; color: var(--text);
-  display: grid; place-items: center; padding: 0; margin-bottom: calc((var(--l-grand-titre) - var(--cible)) / 2);
+  display: grid; place-items: center; padding: 0;
 }
-.titre-jour + .nav-jour { margin-left: auto; }
 .nav-jour::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--rond); box-shadow: var(--rond-ombre); }
 .nav-jour svg { position: relative; width: 18px; height: 18px; }
 .nav-jour[disabled] { color: var(--desactive); cursor: default; }
@@ -459,7 +461,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    ligne : le titre passe dessous au besoin (« Contact / humain » dans une demi-carte), sans hauteur de plus. */
 .tete-textes { flex: 1 1 auto; min-width: 0; font: 600 var(--t-bloc)/var(--h-ligne) var(--police); color: var(--text); }
 .titre-rubrique { color: var(--text); }
-.tete-rubrique .rubrique-sous { margin-left: 8px; font-size: var(--t-sous); font-weight: 400; line-height: 1; color: var(--text-2); white-space: nowrap; }
+/* « nuit dernière » en 15, comme dans la maquette v12 (13 en v11) ; d'un seul tenant, mais en bloc en ligne : la ligne peut
+   se couper avant lui. En simple span, collé à « Sommeil » sans blanc entre eux, il ne passait jamais à la ligne et sortait
+   de la carte et de l'écran en très grand texte (relecture de la tâche 4 ; déjà en v11 : la page défilait de côté dès
+   40 px). */
+.tete-rubrique .rubrique-sous { display: inline-block; margin-left: 8px; font-size: var(--t-sous); font-weight: 400; line-height: 1; color: var(--text-2); white-space: nowrap; }
 /* « Détail › » (v8, Q5) : en accent, 13/600, sur la première ligne du titre, assez court pour que
    « Contact » et « Sport / » tiennent à sa gauche dans une demi-carte. Sa cible fait 44 de haut au moins : des marges
    intérieures que des marges négatives rendent, sans hauteur pour la ligne ; elle déborde sur les marges de la carte,
@@ -482,12 +488,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .carte-champ .pastille { padding-top: 2px; padding-bottom: 2px; }
 /* Contact et Sport côte à côte : deux demi-cartes de même hauteur, leurs Oui / Non alignés en bas. Le titre y passe
    en 15 px et sur deux lignes au besoin (« Sport / mouvement »), d'un interligne qui suit sa taille. En grand texte,
-   quand une demi-carte n'a plus 8,4 em (son titre ou ses Oui / Non n'y tiendraient plus), elles passent l'une sous
-   l'autre, en pleine largeur. */
+   quand une demi-carte n'a plus 8,3 em (son titre ou ses Oui / Non n'y tiendraient plus), elles passent l'une sous
+   l'autre, en pleine largeur. 8,3 em et non plus 8,4 depuis la marge de 16 (v12, relecture de la tâche 4) : la paire
+   change de disposition aux mêmes tailles de texte qu'en v11 (côte à côte à 21 px sur 390, v7-aujourdhui). */
 .aujourdhui .deux-colonnes { display: flex; flex-wrap: wrap; gap: 6px 8px; }
 /* Côte à côte, 12 sur les côtés (la maquette v12) : la roue y garde la largeur mesurée en v11 (« Ressourçant » sur une
    ligne, 6 px au moins jusqu'au bord de la fenêtre). */
-.deux-colonnes > .carte-champ { flex: 1 1 8.4em; min-width: 0; padding-inline: 12px; }
+.deux-colonnes > .carte-champ { flex: 1 1 8.3em; min-width: 0; padding-inline: 12px; }
 .deux-colonnes .carte-champ > .segmente { margin-top: auto; }
 .deux-colonnes .tete-rubrique { --h-ligne: calc(var(--t-sous) * 1.15); }
 .deux-colonnes .tete-textes { font-size: var(--t-sous); }
@@ -516,7 +523,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    « 15 min »), « Ressourçant » tient sur une ligne tant
    que les cartes sont côte à côte (jusqu'à 22 px de texte à 390, 21 px à 375, mesuré dans WebKit). Rien ne change dans
    le détail ni dans une carte seule, en pleine largeur.
-   Côte à côte (la paire a la place de deux demi-cartes de 8,4 em et de leur écart), les deux roues ont deux lignes de haut
+   Côte à côte (la paire a la place de deux demi-cartes de 8,3 em et de leur écart), les deux roues ont deux lignes de haut
    (l'interligne de 1,15 de la roue, et ses marges de 4 px) : « Moins de 15 min » y passe à la ligne, et une roue plus
    haute que sa voisine décalerait les Oui / Non, alignés depuis la v7. Au texte par défaut, cela fait 44,8 px au lieu de
    44. L'une sous l'autre, chacune garde sa hauteur. */
@@ -524,7 +531,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .deux-colonnes .roue-choix { --l-roue: 100%; }
 .deux-colonnes .roue-choix::before { width: calc(100% - 16px); }
 .deux-colonnes .roue-valeur { padding-inline: 14px; text-wrap: balance; }
-@container paire (min-width: calc(16.8em + 8px)) {
+@container paire (min-width: calc(16.6em + 8px)) {
   .deux-colonnes .roue-valeur { min-height: max(var(--cible), calc(2 * 1.15em + 8px)); }
 }
 /* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. */
@@ -705,9 +712,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .actions-flottantes .action-bande.moment .libelle-action { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .actions-flottantes .fab { flex: 1 1 0; justify-content: center; gap: .3em; padding: 0 8px; }
 .actions-flottantes .fab svg { width: 1.2em; height: 1.2em; flex: none; }
-/* Palier mesuré dans WebKit (e2e « grand texte ») : « Moment difficile » ne garde que son icône. */
+/* Palier mesuré dans WebKit (e2e « grand texte ») : « Moment difficile » ne garde que son icône, dans un carré de 48, comme
+   en v11 (l'icône seule et ses marges ne faisaient que 40 de large, sous la cible de 44 : relecture de la tâche 4). */
 @container bande (max-width: 20.9em) {
-  .actions-flottantes .action-bande.moment-difficile { width: auto; padding: 0 10px; }
+  .actions-flottantes .action-bande.moment-difficile { width: auto; min-width: var(--cible-grille); padding: 0 10px; justify-content: center; }
   .actions-flottantes .moment-difficile .libelle-action { display: none; }
 }
 @container bande (max-width: 14.5em) {
@@ -1100,8 +1108,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .moment-difficile { gap: 10px; padding-top: 8px; }
 /* Les quatre exercices courts (v10) : 2 × 2, de même taille, neutres (v12 : surface, contour, texte en 600), en tête de l'écran. En très
    grand texte, ils passent l'un sous l'autre quand « Panique », le mot le plus long d'un seul tenant, ne tient plus dans sa
-   colonne : aucun mot n'est coupé, sauf « Trop-plein » à son trait d'union. */
-.exercices-courts { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.6rem), 1fr)); grid-auto-rows: 1fr; gap: 10px; }
+   colonne : aucun mot n'est coupé, sauf « Trop-plein » à son trait d'union. 4,55 rem et non plus 4,6 depuis la marge de 16
+   (v12, relecture de la tâche 4) : la grille passe à une colonne aux mêmes tailles qu'en v11 (entre 38 et 39 px à 390),
+   « Panique » gardant 8 px de jeu dans sa colonne à 38 px. */
+.exercices-courts { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.55rem), 1fr)); grid-auto-rows: 1fr; gap: 10px; }
 .exercice-court {
   min-width: 0; min-height: 64px; padding: 8px 10px; border: 0; border-radius: var(--r-carte); background: var(--surface); color: var(--text);
   box-shadow: inset 0 0 0 1px var(--contour);

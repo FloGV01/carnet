@@ -8,8 +8,11 @@ const majusculeInitiale = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 // En-tête façon App Store (v12, spec §5.4) : un sur-titre en petites capitales grises, « JEUDI 15 OCTOBRE ⌄ », au-dessus
 // d'un grand titre, « Aujourd'hui » ; un autre jour, le grand titre dit le jour et le quantième (« Mercredi 14 ») et le
 // sur-titre le mois (« OCTOBRE »). Le titre ouvre le sélecteur de date d'iOS (bornes vérifiées en JS) ; ‹ › sont à droite
-// du grand titre, dans des ronds neutres (› grisé sur aujourd'hui). Le nom accessible ne change pas (« Aujourd'hui, Jeudi
-// 15 octobre », « Mercredi 14 octobre ») : dans le h1, le DOM met le grand titre avant le sur-titre (ecrans.css les
+// du grand titre, dans des ronds neutres (› grisé sur aujourd'hui), et toujours ensemble : un seul bloc, qui passe à la
+// ligne entier en très grand texte, jamais › seul (relecture de la tâche 4). Le nom accessible ne change pas
+// (« Aujourd'hui, Jeudi 15 octobre », « Mercredi 14 octobre ») : l'aria-label du h1 le donne en toutes lettres, car le nom
+// tiré du texte peut prendre les capitales du sur-titre (Chromium lit « Aujourd'hui, JEUDI 15 OCTOBRE », et VoiceOver
+// peut épeler des capitales). Le texte suit le même ordre : le DOM met le grand titre avant le sur-titre (ecrans.css les
 // inverse à l'écran), et la virgule d'aujourd'hui, lue mais sans taille, reste collée au grand titre. Dessous, sur une
 // seule ligne : « Encore jeudi jusqu'à 4 h. » avant 4 h (`veille`), les zones des émotions du jour en points de couleur
 // (v9), le résumé de la journée et « Enregistré ». Un échec d'écriture prend la place de la ligne, sans décaler les
@@ -22,7 +25,8 @@ export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, zon
     else e.target.value = date;
   };
   const echec = indicateur === 'echec';
-  const mots = majusculeInitiale(formaterJourComplet(date)).split(' ');
+  const jour = majusculeInitiale(formaterJourComplet(date));
+  const mots = jour.split(' ');
   // Aujourd'hui : le grand titre, et la date entière en sur-titre ; un autre jour : « Mercredi 14 », puis le mois.
   const sur = estAujourdhui ? mots : mots.slice(-1);
   const grand = estAujourdhui ? "Aujourd'hui" : mots.slice(0, -1).join(' ');
@@ -34,11 +38,13 @@ export function EnteteJour({ date, aujourdhui, surAller, indicateur, resume, zon
     </div>`}
     <div class="ligne-jour">
       <div class="titre-jour">
-        <h1><span class="grand-titre">${grand}${estAujourdhui && html`<span class="virgule-lue">, </span>`}</span><span class="sur-titre">${sur.slice(0, -1).map((m) => `${m} `)}<span class="fin-titre">${dernier}${Icones.chevronBas({ trait: 2.6 })}</span></span></h1>
+        <h1 aria-label=${estAujourdhui ? `Aujourd'hui, ${jour}` : jour}><span class="grand-titre">${grand}${estAujourdhui && html`<span class="virgule-lue">, </span>`}</span><span class="sur-titre">${sur.slice(0, -1).map((m) => `${m} `)}<span class="fin-titre">${dernier}${Icones.chevronBas({ trait: 2.6 })}</span></span></h1>
         <input type="date" class="choix-date" aria-label="Choisir une date" value=${date} max=${aujourdhui} onChange=${surDate} />
       </div>
-      <button type="button" class="nav-jour" aria-label="Jour précédent" onClick=${() => surAller('precedent')}>${Icones.retour({ trait: 2.2 })}</button>
-      <button type="button" class="nav-jour" aria-label="Jour suivant" disabled=${estAujourdhui} onClick=${() => surAller('suivant')}>${Icones.chevron({ trait: 2.2 })}</button>
+      <div class="navs-jour">
+        <button type="button" class="nav-jour" aria-label="Jour précédent" onClick=${() => surAller('precedent')}>${Icones.retour({ trait: 2.2 })}</button>
+        <button type="button" class="nav-jour" aria-label="Jour suivant" disabled=${estAujourdhui} onClick=${() => surAller('suivant')}>${Icones.chevron({ trait: 2.2 })}</button>
+      </div>
     </div>
     <p class=${echec ? 'sous-jour echec' : 'sous-jour'}>
       ${!echec && veille && html`<span class="veille-jour">${veille}</span>`}

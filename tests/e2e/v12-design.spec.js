@@ -3,7 +3,7 @@ import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons, oklch } from '../aides/couleurs.js';
 import { vueMoment, noter, continuer, faisais } from '../aides/emotion.js';
-import { stabiliser, verserControle } from '../aides/controle.js';
+import { stabiliser, verserControle, ciblesPetites } from '../aides/controle.js';
 
 // v12 · Le design simple façon Apple (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5).
 // Tâche 3 : les jetons, l'accent vert B et les choix. Un choix fait est un aplat d'accent, son texte et sa coche ✓ en
@@ -218,25 +218,37 @@ test('v12 (4/9) · la page du soir, remplie comme le contrôle, grandit de 120 p
   }
 });
 
-test('v12 (4/9) · le nom accessible de l\'en-tête ne change pas : « Aujourd\'hui, Jeudi 15 octobre », après minuit aussi, et « Mercredi 14 octobre » un autre jour, ouvert aussi depuis l\'Historique', async ({ page }) => {
+// toHaveAccessibleName calcule le nom à la façon de Playwright, sans text-transform : il lirait « Jeudi 15 octobre » même si
+// le navigateur exposait les capitales du sur-titre, comme Chromium (« Aujourd'hui, JEUDI 15 OCTOBRE », relecture de la
+// tâche 4). Le nom est donc posé en toutes lettres par l'aria-label du h1, et le test le lit aussi : il est en casse normale,
+// alors que le sur-titre s'affiche en capitales.
+test('v12 (4/9) · le nom accessible de l\'en-tête ne change pas : « Aujourd\'hui, Jeudi 15 octobre », après minuit aussi, et « Mercredi 14 octobre » un autre jour, ouvert aussi depuis l\'Historique ; l\'aria-label du h1 le donne, en casse normale', async ({ page }) => {
   const titre = page.getByRole('heading', { level: 1 });
-  await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
+  const nomPose = async (nom) => {
+    await expect(titre).toHaveAccessibleName(nom);
+    await expect(titre).toHaveAttribute('aria-label', nom);
+    expect(await titre.locator('.sur-titre').evaluate((e) => getComputedStyle(e).textTransform), nom).toBe('uppercase');
+  };
+  await nomPose('Aujourd\'hui, Jeudi 15 octobre');
   await expect(titre.locator('.grand-titre')).toHaveText('Aujourd\'hui, ');
   await expect(titre.locator('.sur-titre')).toHaveText('Jeudi 15 octobre');
-  // Le grand titre est dessous à l'écran, mais d'abord dans le DOM : VoiceOver le lit en premier.
+  // Le grand titre est dessous à l'écran, mais d'abord dans le DOM : le texte se lit dans l'ordre du nom.
   expect(await titre.evaluate((h) => [...h.children].map((e) => e.className))).toEqual(['grand-titre', 'sur-titre']);
   await aller(page, '#/jour/2026-10-14');
-  await expect(titre).toHaveAccessibleName('Mercredi 14 octobre');
+  await nomPose('Mercredi 14 octobre');
   await expect(titre.locator('.grand-titre')).toHaveText('Mercredi 14');
   await expect(titre.locator('.sur-titre')).toHaveText('octobre');
+  // Le 1er du mois.
+  await aller(page, '#/jour/2026-10-01');
+  await nomPose('Jeudi 1er octobre');
   await aller(page, '#/historique/jour/2026-10-14');
   await expect(page.getByRole('button', { name: 'Retour' })).toBeVisible();
-  await expect(titre).toHaveAccessibleName('Mercredi 14 octobre');
+  await nomPose('Mercredi 14 octobre');
   // Entre 0 h et 4 h, c'est encore jeudi.
   await page.clock.setSystemTime(new Date(2026, 9, 16, 1, 30));
   await aller(page, '#/aujourdhui');
   await page.reload();
-  await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
+  await nomPose('Aujourd\'hui, Jeudi 15 octobre');
 });
 
 // La couleur ne dit qu'une émotion (spec §5.1 et §5.6) : sur Aujourd'hui, bande du bas et onglets compris, chaque couleur
@@ -289,39 +301,66 @@ test('v12 (4/9) · aucune couleur de rubrique sur Aujourd\'hui : hors des zones 
 
 // Le point de vigilance 4, pour Aujourd'hui : en très grand texte, le grand titre est plafonné à 48 px ; l'en-tête, la bande
 // du bas et « Congé / repos » choisi, avec sa coche, ne débordent pas de côté (rien hors de l'écran, aucun texte hors de sa
-// boîte, sauf l'ellipse voulue d'« Émotion » et du résumé).
-test('v12 (4/9) · point de vigilance 4 : en très grand texte (28 à 53, 390 et 375), le grand titre plafonné à 48 px ; l\'en-tête, la bande et « Congé / repos » avec sa coche ne débordent pas de côté', async ({ page }) => {
-  await toucher(page, 'Lieu', 'Congé / repos');
-  await expect(groupe(page, 'Lieu').getByRole('button', { name: /Congé \/ repos/ })).toHaveAttribute('aria-pressed', 'true');
-  for (const largeur of [390, 375]) {
-    await page.setViewportSize({ width: largeur, height: 844 });
-    for (const px of [17, 28, 40, 53]) {
-      await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; document.body.style.fontSize = `${x}px`; window.scrollTo(0, 0); }, px);
-      const quoi = `${largeur} · ${px} px`;
-      const m = await page.evaluate(() => {
-        const fautes = [];
-        const coupe = (el) => getComputedStyle(el).textOverflow === 'ellipsis';
-        const verifier = (el, boite) => {
-          const r = el.getBoundingClientRect();
-          if (!r.width) return;
-          if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`${el.className || el.tagName} hors de l'écran`);
-          if (boite && (r.left < boite.left - 0.5 || r.right > boite.right + 0.5)) fautes.push(`${el.className || el.tagName} hors de sa boîte`);
-          // Un texte qui dépasse de sa boîte (un élément qui porte du texte ; la cible de ‹ ›, qui déborde exprès de 4 px sur la
-          // marge, n'en est pas un).
-          const texte = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-          if (texte && el.scrollWidth > el.clientWidth + 1 && !coupe(el)) fautes.push(`${el.className || el.tagName} : texte qui déborde`);
-        };
-        for (const el of document.querySelectorAll('.entete-jour, .entete-jour *, .actions-flottantes, .actions-flottantes *')) if ((!(el instanceof SVGElement) || el.tagName === 'svg') && el.tagName !== 'INPUT') verifier(el);
-        const conge = [...document.querySelectorAll('[aria-label="Lieu"] button')].find((b) => b.textContent.includes('Congé'));
-        const carte = conge.closest('.carte-champ').getBoundingClientRect();
-        for (const el of [conge, ...conge.querySelectorAll('*')]) if (!(el instanceof SVGElement) || el.tagName === 'svg') verifier(el, carte);
-        const coche = conge.querySelector('.coche');
-        return { fautes, grand: Number.parseFloat(getComputedStyle(document.querySelector('.grand-titre')).fontSize),
-          coche: Boolean(coche) && getComputedStyle(coche).display !== 'none' };
-      });
-      expect(m.fautes, quoi).toEqual([]);
-      expect(m.grand, quoi).toBe(Math.min(2 * px, 48));
-      expect(m.coche, `${quoi} : la coche de « Congé / repos »`).toBe(true);
+// boîte, sauf l'ellipse voulue d'« Émotion » et du résumé). Relecture de la tâche 4 : aujourd'hui et deux jours passés
+// (« Mercredi 14 » sous OCTOBRE, « Mercredi 30 » sous SEPTEMBRE, les plus longs), de 17 à 53 px, AX2 (33) et AX4 (47)
+// compris : ‹ et › restent ensemble, sur la même rangée, › à droite de ‹ et contre le bord droit (chacun à part, › passait
+// seul à la ligne, à gauche sous le titre) ; chaque action de la bande garde une cible de 44 sur 44 (« Moment difficile »
+// réduit à son icône ne faisait que 40 de large) ; « nuit dernière » ne sort pas de sa carte, et la page ne défile pas de
+// côté jusqu'à 40 px (au-delà, « Télétravail », d'un seul mot, déborde déjà en v11).
+test('v12 (4/9) · point de vigilance 4 : en très grand texte (17 à 53, 390 et 375, aujourd\'hui et deux jours passés), le grand titre plafonné à 48 px ; l\'en-tête, la bande et « Congé / repos » avec sa coche ne débordent pas de côté ; ‹ et › restent ensemble à droite ; les actions de la bande gardent 44 de large', async ({ page }) => {
+  const titre = page.getByRole('heading', { level: 1 });
+  for (const [jour, nom] of [[null, 'Aujourd\'hui, Jeudi 15 octobre'], ['2026-10-14', 'Mercredi 14 octobre'], ['2026-09-30', 'Mercredi 30 septembre']]) {
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; document.body.style.fontSize = ''; });
+    await page.setViewportSize({ width: 390, height: 844 });
+    if (jour) await aller(page, `#/jour/${jour}`);
+    await expect(titre).toHaveAccessibleName(nom);
+    await toucher(page, 'Lieu', 'Congé / repos');
+    await expect(groupe(page, 'Lieu').getByRole('button', { name: /Congé \/ repos/ })).toHaveAttribute('aria-pressed', 'true');
+    for (const largeur of [390, 375]) {
+      await page.setViewportSize({ width: largeur, height: 844 });
+      for (const px of [17, 23, 25, 28, 33, 36, 40, 47, 53]) {
+        await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; document.body.style.fontSize = `${x}px`; window.scrollTo(0, 0); }, px);
+        const quoi = `${jour || 'aujourd\'hui'} · ${largeur} · ${px} px`;
+        const m = await page.evaluate(() => {
+          const fautes = [];
+          const coupe = (el) => getComputedStyle(el).textOverflow === 'ellipsis';
+          const verifier = (el, boite) => {
+            const r = el.getBoundingClientRect();
+            if (!r.width) return;
+            if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`${el.className || el.tagName} hors de l'écran`);
+            if (boite && (r.left < boite.left - 0.5 || r.right > boite.right + 0.5)) fautes.push(`${el.className || el.tagName} hors de sa boîte`);
+            // Un texte qui dépasse de sa boîte (un élément qui porte du texte ; la cible de ‹ ›, qui déborde exprès de 4 px sur la
+            // marge, n'en est pas un).
+            const texte = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+            if (texte && el.scrollWidth > el.clientWidth + 1 && !coupe(el)) fautes.push(`${el.className || el.tagName} : texte qui déborde`);
+          };
+          for (const el of document.querySelectorAll('.entete-jour, .entete-jour *, .actions-flottantes, .actions-flottantes *')) if ((!(el instanceof SVGElement) || el.tagName === 'svg') && el.tagName !== 'INPUT') verifier(el);
+          const conge = [...document.querySelectorAll('[aria-label="Lieu"] button')].find((b) => b.textContent.includes('Congé'));
+          const carte = conge.closest('.carte-champ').getBoundingClientRect();
+          for (const el of [conge, ...conge.querySelectorAll('*')]) if (!(el instanceof SVGElement) || el.tagName === 'svg') verifier(el, carte);
+          const sous = document.querySelector('.rubrique-sous');
+          verifier(sous, sous.closest('.carte-champ').getBoundingClientRect());
+          const coche = conge.querySelector('.coche');
+          const [prec, suiv] = [...document.querySelectorAll('.nav-jour')].map((b) => b.getBoundingClientRect());
+          const ligne = document.querySelector('.ligne-jour').getBoundingClientRect();
+          return { fautes, grand: Number.parseFloat(getComputedStyle(document.querySelector('.grand-titre')).fontSize),
+            coche: Boolean(coche) && getComputedStyle(coche).display !== 'none',
+            navs: { rangee: Math.abs(prec.top - suiv.top) < 0.5, ordre: suiv.left >= prec.right - 0.5, bord: Math.abs(suiv.right - ligne.right) < 0.5 },
+            actions: [...document.querySelectorAll('.actions-flottantes > a')].map((a) => [a.getAttribute('aria-label') || a.textContent.trim(),
+              Math.round(a.getBoundingClientRect().width), Math.round(a.getBoundingClientRect().height)]),
+            deCote: document.documentElement.scrollWidth > innerWidth };
+        });
+        expect(m.fautes, quoi).toEqual([]);
+        expect(m.grand, quoi).toBe(Math.min(2 * px, 48));
+        expect(m.coche, `${quoi} : la coche de « Congé / repos »`).toBe(true);
+        expect(m.navs, `${quoi} : ‹ et › ensemble, à droite`).toEqual({ rangee: true, ordre: true, bord: true });
+        // Un jour passé n'a pas d'Émotion : « Moment difficile » et « + Épisode ».
+        expect(m.actions.length, quoi).toBe(jour ? 2 : 3);
+        for (const [action, large, haut] of m.actions) expect(large >= 44 && haut >= 44, `${quoi} : « ${action} », ${large} × ${haut}, une cible de 44 sur 44`).toBe(true);
+        // Ce qu'un doigt de 44 pt touche vraiment : chaque action de la bande, tout entière.
+        expect(await ciblesPetites(page, '.actions-flottantes'), quoi).toEqual([]);
+        if (px <= 40) expect(m.deCote, `${quoi} : la page ne défile pas de côté`).toBe(false);
+      }
     }
   }
 });
