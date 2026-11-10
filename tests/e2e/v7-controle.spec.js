@@ -154,7 +154,8 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 // sur son gris clair en clair depuis la v11, couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
 // d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
 // L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`. La valeur
-// notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près) et sa graisse de 700.
+// notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près), sur la fenêtre (v12 : un aplat d'accent,
+// .notee) et sa graisse de 600 au moins (700 jusqu'à la v11).
 const sansCoche = (page) => page.evaluate(() => {
   const rgba = (c) => {
     const m = /rgba?\(([^)]+)\)/.exec(c || '');
@@ -186,7 +187,7 @@ const sansCoche = (page) => page.evaluate(() => {
     if (b.classList.contains('epingle') && getComputedStyle(b.querySelector('svg')).fill !== 'none') return false;
     if (b.classList.contains('roue-valeur')) {
       const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
-      if (Math.abs(r.left + r.width / 2 - (d.left + d.width / 2)) <= 1 && Number(getComputedStyle(b).fontWeight) >= 700) return false;
+      if (Math.abs(r.left + r.width / 2 - (d.left + d.width / 2)) <= 1 && b.closest('.roue-choix.notee') && Number(getComputedStyle(b).fontWeight) >= 600) return false;
     }
     const svg = b.querySelector(':scope > .coche svg');
     return !svg || svg.getBoundingClientRect().width < 10;
@@ -817,17 +818,16 @@ const carres = (page, liste) => page.locator(liste).evaluate((ul) => [...ul.quer
   };
 }));
 
-test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neutres ou à la couleur du parcours, filets décalés après le carré, en clair et en sombre', async ({ page }) => {
+test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neutres (v12 : plus de couleur de rubrique ni de parcours), filets décalés après le carré, en clair et en sombre', async ({ page }) => {
   for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/reglages');
     await expect(page.locator('#titre-moment-difficile')).toBeVisible();
     const md = await carres(page, 'ul[aria-labelledby="titre-moment-difficile"]');
     expect(md.map((x) => x.texte)).toEqual(['Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone']);
-    const attendus = [['c-difficile', 'c-difficile-on'], ['c-difficile', 'c-difficile-on'], ['c-energie', 'c-energie-on'], ['surface-2', 'text']];
     md.forEach((x, i) => {
-      expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[attendus[i][0]]));
-      expect(x.icone, `${schema} ${x.texte}`).toBe(rgb(t[attendus[i][1]]));
+      expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
+      expect(x.icone, `${schema} ${x.texte}`).toBe(rgb(t.text));
       expect(contraste(x.fond, x.icone), `${schema} ${x.texte} : icône`).toBeGreaterThanOrEqual(3);
       expect(x.taille).toEqual([28, 28]);
       expect(x.rayon).toBe('7px');
@@ -838,18 +838,18 @@ test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neu
     });
     const saisie = await carres(page, 'ul[aria-labelledby="titre-ma-saisie"]');
     for (const x of saisie) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
-    // Le soir : chaque champ a le carré de sa rubrique, comme sa carte sur Aujourd'hui.
+    // Le soir : chaque champ a le carré de sa rubrique, neutre comme sa carte sur Aujourd'hui (v12).
     await aller(page, '#/reglages/journee');
     await expect(page.locator('.ma-journee .avec-carres')).toBeVisible();
     const soir = await carres(page, '.ma-journee .avec-carres');
-    const couleurs = { Lieu: 'lieu', Sommeil: 'sommeil', Humeur: 'humeur', 'Contact humain': 'contact', 'Sport / mouvement': 'sport',
-      'Explosions (compteur du soir)': 'explosions', 'Traitement pris': 'traitement', 'Mes points positifs': 'positifs',
-      // v11 : Mes gratitudes, juste après, à la couleur des points positifs.
-      'Mes gratitudes': 'positifs',
+    const champs = ['Lieu', 'Sommeil', 'Humeur', 'Contact humain', 'Sport / mouvement', 'Explosions (compteur du soir)', 'Traitement pris',
+      'Mes points positifs',
+      // v11 : Mes gratitudes, juste après les points positifs.
+      'Mes gratitudes',
       // v8 : « Nuit en détail », masqué par défaut, avec ce qu'il contient en secondaire.
-      'Nuit en détailcoucher, lever, réveils': 'sommeil', 'Ce qui a pesé · ce qui a rechargé': 'energie' };
-    expect(soir.map((x) => x.texte)).toEqual(Object.keys(couleurs));
-    for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[`c-${couleurs[x.texte]}`]));
+      'Nuit en détailcoucher, lever, réveils', 'Ce qui a pesé · ce qui a rechargé'];
+    expect(soir.map((x) => x.texte)).toEqual(champs);
+    for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
   }
 });
 
@@ -918,7 +918,7 @@ test('Réglages, Rappels et guide d\'installation : chaque guillemet tient à so
   expect(await guillemetsSeuls(page)).toEqual([]);
 });
 
-test('Historique 2b : « Semaine du… » en libellé de section, puces neutres avec l\'icône de leur rubrique à sa couleur, en clair et en sombre', async ({ page }) => {
+test('Historique 2b : « Semaine du… » en libellé de section, puces neutres avec l\'icône de leur rubrique en --text-2 (v12), en clair et en sombre', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:mal', contactHumain: true }));
   for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
@@ -931,11 +931,11 @@ test('Historique 2b : « Semaine du… » en libellé de section, puces neutres 
       icone: p.querySelector('svg') && getComputedStyle(p.querySelector('svg')).color,
     })));
     expect(puces.map((p) => p.texte)).toEqual(['Bureau', 'nuit mal', 'contact oui']);
-    puces.forEach((p, i) => {
+    puces.forEach((p) => {
       expect(p.fond).toBe(rgb(t['surface-2']));
       expect(p.couleur).toBe(rgb(t.text));
       expect(contraste(p.fond, p.couleur)).toBeGreaterThanOrEqual(4.5);
-      expect(p.icone).toBe(rgb(t[`c-${['lieu', 'sommeil', 'contact'][i]}`]));
+      expect(p.icone).toBe(rgb(t['text-2']));
     });
   }
 });

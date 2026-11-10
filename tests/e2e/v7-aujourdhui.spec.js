@@ -63,17 +63,18 @@ test('le soir avec les zones sûres de l\'iPhone, en clair et en sombre : six ru
     // au-dessus de la bande.
     atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
-    // Chaque rubrique : une carte --surface de rayon 14, un carré de 28 (rayon 7) à sa couleur, l'icône en -on, le titre en 600.
-    for (const [nom, couleur, libelle] of [['Lieu', 'lieu', 'Lieu'], ['Sommeil', 'sommeil', 'Sommeil'], ['Contact humain', 'contact', 'Contact humain'],
-      ['Sport / mouvement', 'sport', 'Sport / mouvement'], ['Traitement pris', 'traitement', 'Traitement pris']]) {
+    // Chaque rubrique : une carte --surface de rayon 14, un carré de 28 (rayon 7), neutre (v12 : plus de couleur de
+    // rubrique), l'icône en --text-2, le titre en 600.
+    for (const [nom, libelle] of [['Lieu', 'Lieu'], ['Sommeil', 'Sommeil'], ['Contact humain', 'Contact humain'],
+      ['Sport / mouvement', 'Sport / mouvement'], ['Traitement pris', 'Traitement pris']]) {
       const c = await carteDe(page, nom);
       const quoi = `${schema} · ${nom}`;
       expect(c.fond, quoi).toBe(rgb(t.surface));
       expect(c.rayon, quoi).toBe('14px');
       expect(c.carre, quoi).toEqual([28, 28]);
       expect(c.rayonCarre, quoi).toBe('7px');
-      expect(c.fondCarre, quoi).toBe(rgb(t[`c-${couleur}`]));
-      expect(c.icone, quoi).toBe(rgb(t[`c-${couleur}-on`]));
+      expect(c.fondCarre, quoi).toBe(rgb(t['surface-2']));
+      expect(c.icone, quoi).toBe(rgb(t['text-2']));
       expect(c.titre, quoi).toBe(libelle);
       expect(c.graisse, quoi).toBe('600');
       expect(contraste(c.couleurTitre, c.fond), quoi).toBeGreaterThanOrEqual(4.5);
@@ -102,8 +103,8 @@ test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son ic�
     expect(s.fond, schema).toBe('rgba(0, 0, 0, 0)');
     expect(s.graisse).toBe('600');
     expect(s.icone).toBe(true);
-    const memo = await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => getComputedStyle(b).backgroundColor);
-    expect(memo, `${schema} · Mémo vocal neutre`).toBe(rgb(t.surface));
+    const memo = await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).boxShadow]);
+    expect(memo, `${schema} · Mémo vocal neutre : transparent, avec son contour (v12)`).toEqual(['rgba(0, 0, 0, 0)', `${rgb(t.contour)} 0px 0px 0px 1px inset`]);
   }
 });
 
@@ -326,11 +327,12 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
         point: s.backgroundColor === 'rgba(0, 0, 0, 0)' ? `creux ${s.borderTopColor}` : s.backgroundColor,
       };
     }));
-    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent.
+    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent. Un
+    // épisode, neutre (v12) : en --text-2.
     expect(lignes, schema).toEqual([
       { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, point: `creux ${rgb(t['text-2'])}` },
-      { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['c-episode']) },
+      { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['text-2']) },
       { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '18:30', texte: 'Sérénité', lien: true, point: `creux ${rgb(t['text-2'])}` },
       { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge-fill']) },
@@ -408,7 +410,7 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 
 // v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
 // reste là pour une nuit déjà notée.
-test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré à la couleur de la rubrique, le résumé sous le libellé', async ({ page }) => {
+test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré neutre (v12), le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
     pese: ['pese:bruit', 'pese:lumiere', 'pese:monde', 'pese:changement', 'pese:attente'], recharge: ['recharge:seul', 'recharge:calme'],
@@ -442,7 +444,6 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
     const quoi = (i) => `${schema} · rangée ${i + 1}`;
     expect(m.fond).toBe(rgb(t.surface));
     expect(m.rayon).toBe('14px');
-    const couleurs = ['sommeil', 'energie'];
     m.rangees.forEach((r, i) => {
       expect(r.hauteur, quoi(i)).toBeGreaterThanOrEqual(58);
       expect(r.taille, quoi(i)).toBe(28);
@@ -450,10 +451,8 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
       expect(r.graisse, quoi(i)).toBe('500');
       expect(r.chevron, quoi(i)).toBe(true);
       if (i > 0) expect(r.filet, `${quoi(i)} : filet décalé de 52`).toBe(52);
-      if (couleurs[i]) {
-        expect(r.carre, quoi(i)).toBe(rgb(t[`c-${couleurs[i]}`]));
-        expect(r.icone, quoi(i)).toBe(rgb(t[`c-${couleurs[i]}-on`]));
-      } else expect(r.carre, `${quoi(i)} : Notes libres, neutre`).toBe(rgb(t['surface-2']));
+      // v12 : neutre, comme Notes libres (plus de couleur de rubrique).
+      expect([r.carre, r.icone], quoi(i)).toEqual([rgb(t['surface-2']), rgb(t.text)]);
     });
     // Résumés : sous le libellé, en 14 px --text-2, une ligne coupée par une ellipse ; AA sur la carte.
     for (const i of [0, 1]) {
@@ -498,9 +497,10 @@ test('bande du bas : « Émotion » est le plus large et ouvre Émotion du momen
     expect(difficile.largeur).toBeLessThanOrEqual(114);
     expect(difficile.lignes, 'Moment difficile sur deux lignes').toBe(2);
     expect([difficile.taille, difficile.graisse]).toEqual([13, '600']);
-    for (const [x, couleur] of [[difficile, 'difficile'], [emotion, 'humeur']]) {
+    // v12 (3/9) : leurs carrés sont neutres (plus de couleur de rubrique).
+    for (const x of [difficile, emotion]) {
       expect(x.fond, `${schema} · ${x.nom}`).toBe(rgb(t.surface));
-      expect(x.carre, `${schema} · ${x.nom}`).toEqual([28, rgb(t[`c-${couleur}`]), rgb(t[`c-${couleur}-on`])]);
+      expect(x.carre, `${schema} · ${x.nom}`).toEqual([28, rgb(t['surface-2']), rgb(t.text)]);
       expect(contraste(x.texte, x.fond)).toBeGreaterThanOrEqual(4.5);
     }
     expect([episode.fond, episode.texte], schema).toEqual([rgb(t.action), rgb(t['action-on'])]);

@@ -127,14 +127,14 @@ const points = (vue) => vue.locator('.reperes').evaluate((r) => [...r.children].
 
 // v8 (8/9, Q29) : les étapes à venir passent de --surface-2 (invisible sur le fond clair) à un contour en --text-2, sans
 // fond (README 2b : « contour (2a) »), à 3:1 au moins sur le fond (relecture : --line restait sous 3:1).
-test('repère d\'étape en points, jamais une barre : faites et en cours à la couleur du parcours, l\'étape en cours cerclée de -tint-2, à venir en contour', async ({ page }) => {
+test('repère d\'étape en points, jamais une barre : faites et en cours à l\'encre (v12, jamais en vert), l\'étape en cours cerclée, à venir en contour', async ({ page }) => {
   const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     await appPrete(page);
-    for (const [route, nom, couleur, n] of [['#/episode/nouveau', 'Épisode', 'episode', 5], ['#/symptome/nouveau', 'Symptôme', 'symptome', 3]]) {
+    for (const [route, nom, n] of [['#/episode/nouveau', 'Épisode', 5], ['#/symptome/nouveau', 'Symptôme', 3]]) {
       await aller(page, '#/aujourdhui');
       await aller(page, route);
       const vue = page.getByRole('dialog', { name: nom });
@@ -149,21 +149,22 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à la c
         expect(x.taille, quoi).toBe('9×9');
         expect(x.rond, quoi).toBe(true);
       }
-      expect(p[0].fond, `${quoi} : faite`).toBe(rgb(t[`c-${couleur}`]));
+      // v12 (3/9, spec §5.3) : les repères faits et en cours sont à l'encre ; un point vert dirait « fait ».
+      expect(p[0].fond, `${quoi} : faite`).toBe(rgb(t.text));
       expect(p[0].anneau, `${quoi} : faite, sans anneau`).toBe('none');
-      expect(p[1].fond, `${quoi} : en cours`).toBe(rgb(t[`c-${couleur}`]));
-      expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t[`c-${couleur}-tint-2`])} 0px 0px 0px 3px`);
+      expect(p[1].fond, `${quoi} : en cours`).toBe(rgb(t.text));
+      expect(p[1].anneau, `${quoi} : en cours, anneau de 3 px`).toBe(`${rgb(t['surface-2'])} 0px 0px 0px 3px`);
       expect(p[2].fond, `${quoi} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
       expect(p[2].contour, `${quoi} : à venir, en contour`).toBe(rgb(t['text-2']));
       expect(p[0].contour, `${quoi} : faite, pleine`).toBe(p[0].fond);
-      // En-tête : « Fermer » (600, action), puis le nom derrière un petit carré à la couleur du parcours, sans « · ».
+      // En-tête : « Fermer » (600, action), puis le nom derrière un petit carré neutre (v12), sans « · ».
       const tete = await vue.locator('.parcours-tete').evaluate((h) => {
         const f = h.querySelector('.fermer');
         const carre = h.querySelector('.nom .point-teinte');
         return { fermer: [getComputedStyle(f).fontWeight, getComputedStyle(f).color], nom: h.querySelector('.nom').textContent,
           carre: carre && [getComputedStyle(carre).backgroundColor, getComputedStyle(carre).borderTopLeftRadius, carre.getBoundingClientRect().width] };
       });
-      expect(tete, quoi).toEqual({ fermer: ['600', rgb(t.action)], nom, carre: [rgb(t[`c-${couleur}`]), '3px', 11] });
+      expect(tete, quoi).toEqual({ fermer: ['600', rgb(t.action)], nom, carre: [rgb(t['text-2']), '3px', 11] });
       await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
     }
     // Rouvert : le récapitulatif, toutes les étapes faites, aucune en cours.
@@ -228,7 +229,7 @@ test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne 
     [28, { repere: 'dessous' }], [33, { repere: 'dessous' }]], true);
 });
 
-// Style d'un choix fait (après son petit rebond) : fond, texte, graisse, coche.
+// Style d'un choix fait (après son fondu) : fond, texte, graisse, coche.
 const styleChoix = (loc) => loc.evaluate(async (e) => {
   await Promise.all(e.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})));
   const s = getComputedStyle(e);
@@ -236,51 +237,51 @@ const styleChoix = (loc) => loc.evaluate(async (e) => {
   return [s.backgroundColor, s.color, s.fontWeight, Boolean(coche) && getComputedStyle(coche).display !== 'none'];
 });
 
-test('couleurs de parcours sur les choix et dans le rappel : épisode et Après coup en magenta, symptôme en menthe ; AA en clair et en sombre', async ({ page }) => {
+test('v12 : les parcours n\'ont plus de couleur : leurs choix faits en accent, les termes du rappel en --text 600 ; AA en clair et en sombre', async ({ page }) => {
   const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
   const idSymptome = await page.evaluate(async () => (await window.__carnet.repo.symptomes.creer({ date: '2026-10-14', symptome: 'symptome:ruminations', intensite: 4 })).id);
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
-    const choisi = (c, graisse = '600') => [rgb(t[`c-${c}-fill`]), rgb(t[`c-${c}-on`]), graisse, true];
+    const choisi = (graisse = '600') => [rgb(t.accent), rgb(t['sur-accent']), graisse, true];
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     await appPrete(page);
-    // Épisode : un choix de liste, puis un chiffre ; le rappel des réponses dans une carte, ses termes en -text, 600.
+    // Épisode : un choix de liste, puis un chiffre ; le rappel des réponses dans une carte, ses termes en --text, 600.
     await aller(page, `#/episode/${id}`);
     const fiche = page.getByRole('dialog', { name: 'Épisode' });
     await fiche.getByRole('button', { name: /^Intensité/ }).click();
     const sept = fiche.getByRole('button', { name: 'Intensité 7' });
     await expect(sept).toHaveAttribute('aria-pressed', 'true');
-    expect(await styleChoix(sept), `${schema} · Intensité 7`).toEqual(choisi('episode', '700'));
+    expect(await styleChoix(sept), `${schema} · Intensité 7`).toEqual(choisi('700'));
     const rappel = await fiche.locator('.phrase-resume').evaluate((p) => {
       const v = p.querySelector('.valeur');
       const s = getComputedStyle(p);
       return { fond: s.backgroundColor, rayon: s.borderTopLeftRadius, texte: s.color, terme: [getComputedStyle(v).color, getComputedStyle(v).fontWeight], mots: p.textContent };
     });
     expect(rappel.mots).toBe('Ça a démarré avec Conflit, ça ressemblait à colère, intensité 7.');
-    expect([rappel.fond, rappel.rayon, rappel.terme], schema).toEqual([rgb(t.surface), '14px', [rgb(t['c-episode-text']), '600']]);
+    expect([rappel.fond, rappel.rayon, rappel.terme], schema).toEqual([rgb(t.surface), '14px', [rgb(t.text), '600']]);
     expect(contraste(rappel.terme[0], rappel.fond), `${schema} · terme`).toBeGreaterThanOrEqual(4.5);
     expect(contraste(rappel.texte, rappel.fond), `${schema} · rappel`).toBeGreaterThanOrEqual(4.5);
     await fiche.getByRole('button', { name: 'Fermer', exact: true }).click();
 
-    // Après coup : la couleur de l'épisode.
+    // Après coup : l'accent.
     await aller(page, `#/apres-coup/${id}`);
     const ac = page.getByRole('dialog', { name: 'Après coup' });
     const colere = ac.getByRole('group', { name: 'C\'était plutôt…' }).getByRole('button', { name: 'Colère' });
     await colere.click();
     await expect(colere).toHaveAttribute('aria-pressed', 'true');
-    expect(await styleChoix(colere), `${schema} · Après coup`).toEqual(choisi('episode'));
+    expect(await styleChoix(colere), `${schema} · Après coup`).toEqual(choisi());
     await colere.click();
     await ac.getByRole('button', { name: 'Fermer', exact: true }).click();
 
-    // Symptôme : la sienne.
+    // Symptôme : l'accent aussi.
     await aller(page, `#/symptome/${idSymptome}`);
     const sy = page.getByRole('dialog', { name: 'Symptôme' });
     await sy.getByRole('button', { name: /^Symptôme/ }).click();
     const ruminations = sy.getByRole('button', { name: 'Ruminations', exact: true });
     await expect(ruminations).toHaveAttribute('aria-pressed', 'true');
-    expect(await styleChoix(ruminations), `${schema} · Ruminations`).toEqual(choisi('symptome'));
-    for (const [a, b] of [['c-episode-fill', 'c-episode-on'], ['c-symptome-fill', 'c-symptome-on']]) expect(contraste(rgb(t[a]), rgb(t[b]))).toBeGreaterThanOrEqual(4.5);
+    expect(await styleChoix(ruminations), `${schema} · Ruminations`).toEqual(choisi());
+    expect(contraste(rgb(t.accent), rgb(t['sur-accent']))).toBeGreaterThanOrEqual(4.5);
     await sy.getByRole('button', { name: 'Fermer', exact: true }).click();
     await expect(sy).toHaveCount(0);
   }
@@ -359,7 +360,7 @@ const ouvrirDifficile = async (page) => {
 };
 const puce = (vue, nom) => vue.getByRole('combobox', { name: nom, exact: true });
 
-test('Moment difficile 2b : les exercices courts en tête (v10), la respiration dans une carte (cercle bleu brume, « Commencer » en -fill / -on, AA), « Une chose à la fois › », Mon plan ; le corps défile, le pied reste', async ({ page }) => {
+test('Moment difficile : les exercices courts en tête (v10), la respiration dans une carte (cercle neutre, « Commencer » en accent, AA ; v12), « Une chose à la fois › », Mon plan ; le corps défile, le pied reste', async ({ page }) => {
   await ecrireMeta(page, 'monPlan', PLAN);
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
@@ -393,12 +394,12 @@ test('Moment difficile 2b : les exercices courts en tête (v10), la respiration 
     for (const c of s.cartes) expect(c, schema).toEqual([rgb(t.surface), '14px']);
     expect(s.cercle.taille).toBeGreaterThanOrEqual(140);
     expect(s.cercle.taille).toBeLessThanOrEqual(164);
-    expect(s.cercle, schema).toMatchObject({ fond: rgb(t['c-difficile-tint-2']), bord: '2px', couleurBord: rgb(t['c-difficile']), disque: rgb(t['c-difficile-tint']) });
-    expect([s.commencer.fond, s.commencer.texte, s.commencer.graisse], schema).toEqual([rgb(t['c-difficile-fill']), rgb(t['c-difficile-on']), '600']);
+    expect(s.cercle, schema).toMatchObject({ fond: rgb(t['surface-2']), bord: '2px', couleurBord: rgb(t.contour), disque: rgb(t.surface) });
+    expect([s.commencer.fond, s.commencer.texte, s.commencer.graisse], schema).toEqual([rgb(t.accent), rgb(t['sur-accent']), '600']);
     expect(s.commencer.hauteur).toBeGreaterThanOrEqual(52);
     expect(s.commencer.hauteur).toBeLessThanOrEqual(56);
     expect(contraste(s.commencer.fond, s.commencer.texte), `${schema} · Commencer`).toBeGreaterThanOrEqual(4.5);
-    expect(s.nom, schema).toEqual(['Moment difficile', rgb(t['c-difficile'])]);
+    expect(s.nom, schema).toEqual(['Moment difficile', rgb(t['text-2'])]);
     // v10 : à l'ouverture, les exercices courts et « Commencer » sont à l'écran, au-dessus de « Noter un épisode », qui reste à
     // sa place ; la suite vient en défilant, et le bas de Mon plan s'arrête au-dessus du pied, rien n'est caché.
     await expect(vue.getByRole('button', { name: 'Commencer' })).toBeInViewport({ ratio: 1 });
@@ -418,15 +419,16 @@ test('Moment difficile 2b : les exercices courts en tête (v10), la respiration 
     for (const [nom, texte] of [['Durée', '5 minutes'], ['Rythme', '5 s · 5 s']]) {
       const p = await puce(vue, nom).evaluate((x) => ({ texte: x.selectedOptions[0].textContent.replace(/ /g, ' '), hauteur: x.getBoundingClientRect().height,
         fond: getComputedStyle(x).backgroundColor, couleur: getComputedStyle(x).color, chevron: Boolean(x.parentElement.querySelector('svg')) }));
-      expect(p, `${schema} · ${nom}`).toEqual({ texte, hauteur: 44, fond: rgb(t['surface-2']), couleur: rgb(t.text), chevron: true });
-      expect(contraste(p.couleur, p.fond)).toBeGreaterThanOrEqual(4.5);
+      // v12 : transparente sur la carte, avec son contour.
+      expect(p, `${schema} · ${nom}`).toEqual({ texte, hauteur: 44, fond: 'rgba(0, 0, 0, 0)', couleur: rgb(t.text), chevron: true });
+      expect(contraste(p.couleur, rgb(t.surface))).toBeGreaterThanOrEqual(4.5);
     }
-    // « Une chose à la fois › » et « Modifier » (couleur action, 600), le carré de Mon plan à la couleur du parcours.
+    // « Une chose à la fois › » et « Modifier » (couleur action, 600), le carré de Mon plan neutre (v12).
     const acces = vue.getByRole('button', { name: 'Une chose à la fois', exact: true });
     expect(await acces.evaluate((b) => [getComputedStyle(b).fontWeight, Boolean(b.querySelector('svg')), b.getBoundingClientRect().height >= 44])).toEqual(['600', true, true]);
     const modifier = vue.getByRole('link', { name: 'Modifier mon plan', exact: true });
     expect(await modifier.evaluate((a) => [a.textContent, getComputedStyle(a).fontWeight, getComputedStyle(a).color])).toEqual(['Modifier', '600', rgb(t.action)]);
-    expect(await vue.locator('.carre-plan').evaluate((c) => [getComputedStyle(c).backgroundColor, c.getBoundingClientRect().width])).toEqual([rgb(t['c-difficile']), 28]);
+    expect(await vue.locator('.carre-plan').evaluate((c) => [getComputedStyle(c).backgroundColor, c.getBoundingClientRect().width])).toEqual([rgb(t['surface-2']), 28]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   }
 });

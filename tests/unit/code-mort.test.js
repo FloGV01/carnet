@@ -52,7 +52,8 @@ test('aucune classe CSS sans usage : chaque classe d\'une feuille est écrite ou
 
 test('le contrôle des classes repère bien une classe sans usage', () => {
   assert.equal(sert('aujourdhui'), true);
-  assert.equal(sert('teinte-sommeil'), true, 'fabriquée : teinte-${…}');
+  assert.equal(present('zone-vert'), false, 'jamais écrite telle quelle');
+  assert.equal(sert('zone-vert'), true, 'fabriquée : zone-${…}');
   assert.equal(sert('g-rampe-4'), true, 'fabriquée deux fois : g-${…} puis rampe-${…}');
   assert.deepEqual([...classesDe('.a .b-c:hover, .d > .e { x: 1 } @media (x) { .f { y: .5 } }')], ['a', 'b-c', 'd', 'e', 'f']);
   for (const c of ['lien-ligne', 'lien-bouton', 'profil-journee', 'note-carte', 'classe-inventee-sans-usage']) assert.equal(sert(c), false, c);

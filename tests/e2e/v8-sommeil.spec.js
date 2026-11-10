@@ -181,9 +181,23 @@ const planSommeil = (page) => duree(page).evaluate((roue) => {
     valeurs: [...roue.querySelectorAll('.roue-valeur')].map((b) => r(b).slice(2)) };
 });
 
+// La taille du texte ou la largeur changée, la roue reprend sa largeur commune à l'image suivante (ResizeObserver, puis
+// requestAnimationFrame : roue-choix.js). La mise en page de référence est prise une fois ce recalage fait, quand elle ne
+// bouge plus entre deux relevés à 300 ms d'écart (v12 (3/9) : sous charge, la référence précédait parfois le recalage, et
+// le choix qui suivait semblait changer la largeur des valeurs, de 136,1 à 137,5 px).
+const planStable = async (page) => {
+  for (let i = 0; i < 10; i++) {
+    const a = await planSommeil(page);
+    await page.waitForTimeout(300);
+    const b = await planSommeil(page);
+    if (JSON.stringify(a) === JSON.stringify(b)) return b;
+  }
+  throw new Error('la mise en page de la carte Sommeil ne se stabilise pas');
+};
+
 test('Durée : un choix ne change pas la mise en page (valeurs, roue, tête, carte), « 4 h ou moins » puis « 10 h ou plus », en clair et en sombre, à 390 et 375, au texte par défaut et en grand texte', async ({ page }) => {
   const d = duree(page);
-  // Notée : en 700, à la couleur du texte de la rubrique ; non notée : en 400, à la couleur du texte.
+  // Notée : en 600, en --sur-accent, sur l'aplat d'accent (v12) ; non notée : en 400, à la couleur du texte.
   const style = (nom) => d.getByRole('button', { name: nom, exact: true }).evaluate((b) => [getComputedStyle(b).fontWeight, getComputedStyle(b).color]);
   for (const [schema, largeur, px] of [['light', 390, null], ['dark', 390, null], ['light', 375, null], ['dark', 375, null], ['light', 390, 21], ['light', 390, 23], ['light', 375, 21], ['light', 375, 23]]) {
     await page.emulateMedia({ colorScheme: schema });
@@ -192,15 +206,15 @@ test('Durée : un choix ne change pas la mise en page (valeurs, roue, tête, car
     const quoi = `${schema} · ${largeur} · ${px ? `${px} px` : 'texte par défaut'}`;
     const t = schema === 'light' ? clair : sombre;
     await expect(d.locator('[aria-pressed="true"]')).toHaveCount(0);
-    const avant = await planSommeil(page);
-    // Toutes les valeurs de la même largeur, la plus longue en 700 comprise.
+    const avant = await planStable(page);
+    // Toutes les valeurs de la même largeur, la plus longue en 600 comprise.
     for (const [l] of avant.valeurs) expect(Math.abs(l - avant.valeurs[0][0]), quoi).toBeLessThanOrEqual(0.5);
     for (const nom of ['4 h ou moins', '10 h ou plus']) {
       expect(await style(nom), `${quoi} · ${nom}`).toEqual(['400', rgb(t.text)]);
       await d.getByRole('button', { name: nom, exact: true }).click();
       await expect(d.getByRole('button', { name: nom, exact: true })).toHaveAttribute('aria-pressed', 'true');
       expect(await planSommeil(page), `${quoi} · ${nom} choisi`).toEqual(avant);
-      expect(await style(nom), `${quoi} · ${nom} choisi`).toEqual(['700', rgb(t['c-sommeil-text'])]);
+      expect(await style(nom), `${quoi} · ${nom} choisi`).toEqual(['600', rgb(t['sur-accent'])]);
     }
     await d.getByRole('button', { name: '10 h ou plus', exact: true }).click();
     await expect(d.locator('[aria-pressed="true"]')).toHaveCount(0);
@@ -210,7 +224,7 @@ test('Durée : un choix ne change pas la mise en page (valeurs, roue, tête, car
 
 test('Durée en grand texte (21 à 28 px, 390 et 375), notée : rien ne déborde, la roue reste dans sa carte, ses valeurs gardent une même largeur et leur texte entier ; les liens gardent toute leur cible', async ({ page }) => {
   await toucher(page, 'Sommeil', 'Moyen');
-  // La valeur la plus longue, notée : en 700.
+  // La valeur la plus longue, notée : en 600.
   await duree(page).getByRole('button', { name: '4 h ou moins' }).click();
   await expect(duree(page).locator('[aria-pressed="true"]')).toHaveText(['4 h ou moins']);
   for (const largeur of [390, 375]) {

@@ -82,11 +82,11 @@ test('en haut de l\'Analyse, « Épisodes › » à côté d\'« Historique › 
   expect(Math.abs((e.x + e.width) - (c.x + c.width))).toBeLessThanOrEqual(0.5);
   expect(e.y + e.height).toBeLessThanOrEqual(c.y);
   expect(e.height).toBeGreaterThanOrEqual(44);
-  // Le carré de la porte, à la couleur des épisodes ; celui de l'Historique ne change pas.
+  // Le carré de la porte, neutre comme celui de l'Historique (v12 : les épisodes n'ont plus de couleur).
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     const [carreEp, carreHist] = await Promise.all([porteEpisodes(page), porteHistorique(page)].map((p) => p.locator('.carre-porte').evaluate((x) => getComputedStyle(x).backgroundColor)));
-    expect(carreEp, `${schema} : carré d'Épisodes`).toBe(rgb(t['c-episode']));
+    expect(carreEp, `${schema} : carré d'Épisodes`).toBe(rgb(t['surface-2']));
     expect(carreHist, `${schema} : carré d'Historique`).toBe(rgb(t['surface-2']));
   }
   // En grand texte : « Épisodes » passe sous « Historique », sur toute la largeur ; la page ne défile pas de côté.

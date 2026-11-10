@@ -29,14 +29,14 @@
 .bouton-loupe svg { width: 20px; height: 20px; }
 .champ-recherche {
   flex: 1; min-width: 0; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-moyen);
-  border: 1px solid transparent; background: var(--fond-choix);
+  border: 1px solid transparent; background: var(--fond-choix); box-shadow: inset 0 0 0 1px var(--contour);
 }
 .champ-recherche:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 1px var(--action); }
 .bouton-filtrer { margin-left: auto; padding: 0 4px 0 8px; gap: 2px; }
 .bouton-filtrer svg { width: 16px; height: 16px; stroke-width: 2; transition: transform var(--duree); }
 .bouton-filtrer[aria-expanded="true"] svg { transform: rotate(180deg); }
 .resume-filtres { font-size: var(--t-note); color: var(--text-2); margin-top: 2px; }
-.filtres { display: flex; flex-direction: column; gap: 12px; margin-top: var(--esp-2); padding: 12px; border-radius: var(--r-carte); background: var(--surface); --fond-choix: var(--surface-2); }
+.filtres { display: flex; flex-direction: column; gap: 12px; margin-top: var(--esp-2); padding: 12px; border-radius: var(--r-carte); background: var(--surface); }
 .groupe-filtre { display: flex; flex-direction: column; gap: 6px; }
 .titre-filtre { font-size: var(--t-note); color: var(--text-2); }
 .semaine { display: flex; flex-direction: column; gap: 6px; margin-top: var(--esp-3); }
@@ -50,14 +50,15 @@
 /* v7 : les émotions du jour, deux mots au plus, avec les points de leurs familles. */
 .hist-emotions { display: flex; align-items: center; gap: 6px; font-size: var(--t-sous); line-height: 1.3; min-width: 0; }
 .mots-jour { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Puces d'un jour (2b, comme les pastilles du lot) : neutres, l'icône de la rubrique à sa couleur, le texte en --text. */
+/* Puces d'un jour (2b, comme les pastilles du lot) : neutres, l'icône de la rubrique en --text-2 (v12 : les rubriques n'ont
+   plus de couleur), le texte en --text. */
 .puces { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 0 1px; }
 .puce {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: var(--t-legende); line-height: 20px; padding: 0 7px 0 5px; border-radius: var(--r-icone);
+  font-size: var(--t-legende); line-height: 20px; padding: 0 7px 0 5px; border-radius: 7px;
   background: var(--surface-2); color: var(--text); font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.puce svg { flex: none; width: 13px; height: 13px; color: var(--c); }
+.puce svg { flex: none; width: 13px; height: 13px; color: var(--c, var(--text-2)); }
 .icone-memo { display: inline-flex; width: 15px; height: 15px; color: var(--text-2); }
 .icone-memo svg { width: 15px; height: 15px; }
 .extrait mark { background: var(--surface-2); color: var(--text); border-radius: 3px; padding: 0 2px; font-weight: 600; }
@@ -120,16 +121,17 @@
   border: 0; background: none; text-align: left; color: var(--text); font-size: var(--t-corps); line-height: 1.35;
 }
 .case-question {
-  width: 22px; height: 22px; flex: none; border-radius: var(--r-icone); border: 1.5px solid var(--text-2);
-  display: grid; place-items: center; color: var(--action-on);
+  width: 22px; height: 22px; flex: none; border-radius: 7px; border: 1.5px solid var(--text-2);
+  display: grid; place-items: center; color: var(--surface);
 }
 .case-question svg { width: 14px; height: 14px; }
-.question-case[aria-pressed="true"] .case-question { background: var(--action); border-color: var(--action); }
+/* Une question abordée est à l'encre, jamais en vert (v12, spec §5.3) : un « fait » vert sonnerait comme une récompense. */
+.question-case[aria-pressed="true"] .case-question { background: var(--text); border-color: var(--text); }
 .question-case[aria-pressed="true"] .texte-question { color: var(--text-2); }
 .questions-grandes .question-case { min-height: 56px; padding: 8px 0; gap: 14px; font-size: 1.118rem; }
 .questions-grandes .case-question { width: 28px; height: 28px; border-radius: 8px; border-width: 2px; }
 .questions-grandes .case-question svg { width: 16px; height: 16px; }
-.carte-questions { background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-bouton); padding: 0 4px 0 12px; }
+.carte-questions { background: var(--surface); border-radius: var(--r-bouton); padding: 0 4px 0 12px; }
 .voir-question { flex: none; padding: 0 4px 0 12px; font-weight: 600; }
 /* Fiche d'un rendez-vous (v8) : la case seule coche (cible de 44, le carré à sa place), le texte se modifie sur place,
    dans une zone à sa taille ; « Parler de… » et ses sujets sous le champ des questions. */
@@ -196,7 +198,7 @@
 .grille-chiffres { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
 .emotions-consultation { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .cellule-chiffre { display: flex; flex-direction: column; gap: 4px; }
-.valeur-chiffre { font-size: var(--t-chiffre); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--c-text); }
+.valeur-chiffre { font-size: var(--t-chiffre); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--c-text, var(--text)); }
 .valeur-chiffre.vide-chiffre { color: var(--text-2); }
 .libelle-chiffre { font-size: var(--t-legende); line-height: 1.25; color: var(--text-2); }
 .bloc-consultation { display: flex; flex-direction: column; gap: 6px; }
@@ -207,7 +209,7 @@
 .analyse { gap: 12px; padding-bottom: calc(100px + var(--zone-bas)); }
 .analyse > .entete-onglet { margin-bottom: 2px; }
 .portes-analyse { display: flex; flex-direction: column; gap: 8px; }
-.carre-porte { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
+.carre-porte { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .carre-porte svg { width: 17px; height: 17px; }
 /* v11 : « Historique » et « Épisodes » côte à côte, de même largeur ; en grand texte, quand l'un des deux ne tient plus sur
    sa moitié, ils passent l'un sous l'autre, chacun sur toute la largeur. */
@@ -254,15 +256,15 @@
 .compte-famille { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 /* Tous les chiffres : deux colonnes ; à 40 px et plus, une seule, « mouvement » ne tenant plus dans une demi-largeur. */
 .tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.9em), 1fr)); gap: 8px; }
-.tuile { background: var(--surface); --fond-choix: var(--surface-2); border: 0; border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
+.tuile { background: var(--surface); border: 0; border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
 .tuile-titre { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
-.tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--c-text); }
+.tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--c-text, var(--text)); }
 .tuile-detail { font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
 .vide-chiffre { color: var(--text-2) !important; }
-.point-rubrique { width: 10px; height: 10px; border-radius: 5px; background: var(--c); flex: none; }
+.point-rubrique { width: 10px; height: 10px; border-radius: 5px; background: var(--c, var(--text-2)); flex: none; }
 .point-rubrique.petit { width: 8px; height: 8px; border-radius: 4px; }
 /* En très grand texte, un tableau plus large que sa carte y défile, plutôt que de faire défiler la page de côté. */
-.graphe { margin: 0; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
+.graphe { margin: 0; background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
 .graphe figcaption { display: flex; flex-direction: column; gap: 2px; }
 .graphe-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .graphe-titre { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--t-bloc); }
@@ -276,14 +278,15 @@
 .g-etiquette { font-size: 12.5px; fill: var(--text); dominant-baseline: middle; }
 .g-tete { font-size: 12px; font-weight: 600; }
 .g-filet { stroke: var(--line); stroke-width: 1; }
-.g-point { fill: var(--c); stroke: var(--c); stroke-width: 2; }
-.g-anneau { fill: var(--surface); stroke: var(--c); stroke-width: 2; }
-.g-plein { fill: var(--c); }
-.g-barre { fill: var(--c); }
+/* v12 (spec §5.5) : hors des familles et des zones, un graphique est à l'encre (--donnee), sans accent. */
+.g-point { fill: var(--c, var(--donnee)); stroke: var(--c, var(--donnee)); stroke-width: 2; }
+.g-anneau { fill: var(--surface); stroke: var(--c, var(--donnee)); stroke-width: 2; }
+.g-plein { fill: var(--c, var(--donnee)); }
+.g-barre { fill: var(--c, var(--donnee)); }
 /* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques ; un point
    de Mes jours en mode jour, celle de la zone de son mot (.zone-*, v9). Un relevé sans zone (famille seule de la v7) :
    un point creux, neutre, comme dans Ma journée. */
-.g-emo { fill: var(--c); }
+.g-emo { fill: var(--c, var(--donnee)); }
 /* Une marque de zone (v9, relecture finale) : les points de Mes jours, les barres de Tes zones et les ronds de leur
    légende ont la couleur des bulles (-fill, celle de How We Feel), dans les deux thèmes, comme les bulles de la même
    carte ; un liseré à l'accent porte le 3:1 sur le fond clair. En sombre, l'accent est la couleur de la bulle : le
@@ -292,12 +295,13 @@
 :is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert) > svg > .g-emo { fill: var(--c-fill); stroke: var(--c); stroke-width: 1; }
 .g-creux { fill: var(--surface); stroke: var(--text-2); stroke-width: 1.5; }
 .g-zone { fill: transparent; cursor: pointer; }
-.g-sommeil-1 { fill: var(--chart-sommeil-1); background: var(--chart-sommeil-1); }
-.g-sommeil-2 { fill: var(--chart-sommeil-2); background: var(--chart-sommeil-2); }
-.g-sommeil-3 { fill: var(--chart-sommeil-3); background: var(--chart-sommeil-3); }
-/* Mes nuits (v8) : le pas « Mal » n'a que 1,5:1 sur la carte en clair (1,8:1 en sombre). Un contour au pas « Moyen »
-   (2,9:1 et 3,8:1) dessine sa barre et sa case de légende, sans toucher aux jetons 2b. */
-.g-mes-nuits rect.g-sommeil-1 { stroke: var(--chart-sommeil-2); stroke-width: 1; }
+/* Les nuits Mal · Moyen · Bien : la rampe de l'encre à 3 pas (v12, --donnee-1 à 3). */
+.g-sommeil-1 { fill: var(--donnee-1); background: var(--donnee-1); }
+.g-sommeil-2 { fill: var(--donnee-2); background: var(--donnee-2); }
+.g-sommeil-3 { fill: var(--donnee-3); background: var(--donnee-3); }
+/* Mes nuits (v8) : le pas « Mal » se voit à peine sur la carte. Un contour au pas « Moyen » (--donnee-2, 3:1 au moins sur
+   la carte) dessine sa barre et sa case de légende. */
+.g-mes-nuits rect.g-sommeil-1 { stroke: var(--donnee-2); stroke-width: 1; }
 .legende-graphe { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); }
 .legende-graphe svg { width: 12px; height: 12px; flex: none; }
 .tableau-lignes { border-collapse: collapse; width: 100%; font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
@@ -422,12 +426,12 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .sous-jour.echec .indicateur { flex: 1; white-space: normal; font-weight: 400; }
 .revenir { align-self: flex-start; margin: -8px 0 -6px; }
 
-/* Rubriques du soir : une carte --surface, rayon 14 ; en tête, un carré de 28 (rayon 7) à la couleur de la rubrique,
-   l'icône en -on, et le titre en --text 17/600 ; puis les choix, en grille de 3 et de 44 de haut. */
+/* Rubriques du soir : une carte --surface, rayon 14 ; en tête, un carré de 28 (rayon 7), neutre (v12 : les rubriques n'ont
+   plus de couleur), et le titre en --text 17/600 ; puis les choix, en grille de 3 et de 44 de haut. */
 .champ-jour { display: flex; flex-direction: column; gap: 4px; }
-.carte-champ { background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); padding: 8px 12px; gap: 4px; container: carte / inline-size; }
+.carte-champ { background: var(--surface); border-radius: var(--r-carte); padding: 8px 12px; gap: 4px; container: carte / inline-size; }
 .tete-rubrique { display: flex; align-items: center; gap: 10px; min-height: 28px; min-width: 0; }
-.carre-rubrique { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-rubrique { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text-2)); display: grid; place-items: center; }
 .carre-rubrique svg { width: 17px; height: 17px; }
 /* Le titre et « nuit dernière » dans un même bloc de texte, où le lien d'un détail (v8) flotte à droite de la première
    ligne : le titre passe dessous au besoin (« Contact / humain » dans une demi-carte), sans hauteur de plus. */
@@ -542,7 +546,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-evenement .heure { width: max(70px, 4.6em); flex: none; white-space: nowrap; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
 .ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
-.point-evenement { width: 10px; height: 10px; border-radius: 5px; background: var(--c); flex: none; }
+.point-evenement { width: 10px; height: 10px; border-radius: 5px; background: var(--c, var(--text-2)); flex: none; }
 /* Un épisode ou un symptôme : un petit carré, pour ne pas le confondre avec le rond d'un relevé de couleur voisine. */
 .point-evenement.point-parcours { border-radius: 2px; }
 .point-releve.point-creux { background: none; border: 1.5px solid var(--text-2); }
@@ -585,9 +589,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-carte.action svg { width: 20px; height: 20px; }
 .ligne-carte.action[disabled] { color: var(--text-2); }
 /* Listes groupées 2b à carrés d'icônes (Réglages, Le soir), comme les réglages de l'iPhone : le carré de 28 (rayon 7),
-   neutre ou à la couleur de sa teinte, puis le libellé ; rangées de 52 au moins, filets décalés après le carré
+   neutre (v12), puis le libellé ; rangées de 52 au moins, filets décalés après le carré
    (12 + 28 + 12 = 52), comme les replis d'Aujourd'hui. */
-.carre-ligne { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
+.carre-ligne { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .ligne-carte .carre-ligne svg, .carre-ligne svg { width: 17px; height: 17px; color: inherit; }
 .liste.avec-carres > li + li { border-top: 0; position: relative; }
 .liste.avec-carres > li + li::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--line); }
@@ -636,7 +640,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .tableau-traitement thead th { border-top: 0; font-size: var(--t-note); font-weight: 600; color: var(--text-2); }
 .tableau-traitement tbody th { text-align: left; font-weight: 600; padding-left: 0; }
 .nom-medicament { border: 0; background: none; padding: 0; min-height: var(--cible); font: inherit; font-weight: 600; color: var(--action); text-align: left; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
-.edition-traitement { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: var(--r-moyen); background: var(--surface-2); --fond-choix: var(--surface); }
+/* Le panneau d'édition, posé dans la carte : sur le fond de l'écran (v12), et non sur --surface-2, où son lien vert
+   « Fermer » passerait sous 4,5:1 en clair (spec §5.3). */
+.edition-traitement { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: var(--r-moyen); background: var(--bg); }
 .doses-moments { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 4px; }
 .doses-moments { align-items: end; }
 .dose-moment { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: var(--t-legende); line-height: 1.15; color: var(--text-2); }
@@ -664,7 +670,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   display: flex; align-items: center; text-decoration: none; white-space: nowrap;
 }
 .actions-flottantes .action-bande { gap: 8px; padding: 0 .6em 0 10px; background: var(--surface); color: var(--text); font-weight: 600; }
-.carre-action { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-action { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .carre-action svg { width: 17px; height: 17px; }
 .actions-flottantes .action-bande.moment-difficile { flex: none; width: 6.65rem; font-size: var(--t-note); line-height: 1.15; white-space: normal; }
 .actions-flottantes .action-bande.moment { flex: 1.2 1 0; font-size: var(--t-bloc); }
@@ -714,7 +720,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .separateur-plan { color: var(--text-2); font-size: var(--t-sous); }
 .voile-feuille { align-items: end; place-items: end center; padding: 0; }
 .feuille {
-  width: 100%; max-width: 34rem; max-height: 85dvh; overflow-y: auto; background: var(--surface); --fond-choix: var(--surface-2);
+  width: 100%; max-width: 34rem; max-height: 85dvh; overflow-y: auto; background: var(--surface);
   border-radius: var(--r-feuille) var(--r-feuille) 0 0; padding: 18px var(--marge) calc(20px + var(--zone-bas));
   display: flex; flex-direction: column; gap: 12px;
 }
@@ -729,8 +735,8 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lien-apres-coup { padding: 10px 10px 10px 16px; min-height: 56px; }
 .lien-apres-coup .ligne-libelle { display: flex; flex-direction: column; gap: 2px; }
 .titre-apres-coup { font-weight: 600; }
-/* Carte « Après coup · TCC » des épisodes : un cadre de bouton, teinté comme les épisodes (--c et --t viennent du parcours). */
-.ligne-carte.bouton-apres-coup { border: 1px solid var(--c); border-radius: var(--r-bouton); background: var(--c-tint); color: var(--c-text); }
+/* Carte « Après coup · TCC » des épisodes : un cadre de bouton, neutre, son texte en accent (v12). */
+.ligne-carte.bouton-apres-coup { border: 1px solid var(--c, var(--contour)); border-radius: var(--r-bouton); background: var(--c-tint, var(--surface)); color: var(--c-text, var(--accent-texte)); }
 .bouton-apres-coup .note-carte-interne, .ligne-carte.bouton-apres-coup svg { color: inherit; }
 /* Aujourd'hui et sa liste : une ligne ordinaire, toujours de la même forme (aucun état). */
 .ligne-apres-coup-jour {
@@ -747,6 +753,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    blanches. Leurs couleurs passent par les jetons --moment-* (tokens.css), et par le CSS seul : rien n'est recalculé quand
    le thème change, écran ouvert. Les bulles (fond, texte noir, halos) n'en dépendent pas. */
 .moment-plein { position: fixed; inset: 0; z-index: 40; overflow: hidden; background: var(--bg); color: var(--moment-texte); --anneau: var(--moment-focus); }
+/* Pas d'accent sur ces écrans (v12, spec §5.6) : leurs actions restent à l'encre, comme en v11. Sinon, un mot sans zone
+   peindrait ses activités choisies en vert à l'écran 3, et on lirait « zone verte » à tort. --action et --action-on sont
+   redéclarés : sur la racine, ils valent déjà le vert. Leurs choix et leurs champs gardent un fond plein, sans contour. */
+.moment-plein {
+  --accent: var(--moment-plein); --sur-accent: var(--moment-plein-on); --accent-texte: var(--moment-plein);
+  --action: var(--moment-plein); --action-on: var(--moment-plein-on);
+  --fond-choix: var(--surface); --contour: transparent;
+}
 /* Les boutons en verre, en haut (visuel §1.2 et §2.9) : capsules de 48 × 44, à 16 du bord, juste sous la barre d'état ;
    « verre » sombre, un liseré clair et une ombre intérieure (blanc translucide en clair, plus bas). Sur la carte,
    translucide et flouté. */
@@ -1053,23 +1067,25 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    à l'expiration), en plus des mots. */
 /* En 2b (v7) : trois cartes à la couleur du parcours (bleu brume), serrées. */
 .moment-difficile { gap: 10px; padding-top: 8px; }
-/* Les quatre exercices courts (v10) : 2 × 2, de même taille, à la couleur du parcours (-fill / -on), en tête de l'écran. En très
+/* Les quatre exercices courts (v10) : 2 × 2, de même taille, neutres (v12 : surface, contour, texte en 600), en tête de l'écran. En très
    grand texte, ils passent l'un sous l'autre quand « Panique », le mot le plus long d'un seul tenant, ne tient plus dans sa
    colonne : aucun mot n'est coupé, sauf « Trop-plein » à son trait d'union. */
 .exercices-courts { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.6rem), 1fr)); grid-auto-rows: 1fr; gap: 10px; }
 .exercice-court {
-  min-width: 0; min-height: 64px; padding: 8px 10px; border: 0; border-radius: var(--r-carte); background: var(--c-fill); color: var(--c-on);
+  min-width: 0; min-height: 64px; padding: 8px 10px; border: 0; border-radius: var(--r-carte); background: var(--surface); color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--contour);
   font: 600 1.059rem/1.25 var(--police); text-wrap: balance;
 }
 .respiration { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
 .cercle-respiration { width: min(200px, 52vw); aspect-ratio: 1; display: grid; place-items: center; }
-.cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--action); transform: scale(.55); }
+/* Le cercle de la respiration est neutre (v12, spec §5.3) : jamais un disque vert. */
+.cercle-respiration span { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--contour); transform: scale(.55); }
 .cercle-respiration.en-cours span { animation: respirer 10s ease-in-out infinite; }
 .cercle-respiration.en-cours.rythme-4-6 span { animation-name: respirer-4-6; }
 @keyframes respirer { 0% { transform: scale(.55); } 50% { transform: scale(1); } 100% { transform: scale(.55); } }
 @keyframes respirer-4-6 { 0% { transform: scale(.55); } 40% { transform: scale(1); } 100% { transform: scale(.55); } }
 @media (prefers-reduced-motion: reduce) {
-  .cercle-respiration.phase-inspire span { background: var(--action); }
+  .cercle-respiration.phase-inspire span { background: var(--text-2); }
 }
 .phase-respiration { font: 600 1.35rem/1.3 var(--police); min-height: 1.8em; text-align: center; color: var(--text); }
 /* Dans une carte (Bien-être, « Pour récupérer, je… »), la durée sur sa propre ligne, sous « Cohérence cardiaque » (v7). */
@@ -1089,7 +1105,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .puce-reglage { position: relative; display: inline-flex; align-items: center; min-width: 0; max-width: 100%; }
 .puce-reglage select {
   -webkit-appearance: none; appearance: none; min-height: var(--cible); max-width: 100%; padding: 0 36px 0 16px; margin: 0;
-  border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text);
+  border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: max(16px, var(--t-corps)); font-weight: 500; font-variant-numeric: tabular-nums; text-overflow: ellipsis;
 }
 .puce-reglage svg { position: absolute; right: 12px; width: 16px; height: 16px; color: var(--text-2); pointer-events: none; }
@@ -1113,7 +1129,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .plan-moment > .btn-lien { align-self: flex-start; }
 .plan-moment-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); }
 .titre-plan-moment { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 1.235rem/1.3 var(--police); color: var(--text); }
-.carre-plan { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-plan { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .carre-plan svg { width: 17px; height: 17px; }
 .modifier-plan { flex: none; min-width: var(--cible); justify-content: flex-end; font-weight: 600; }
 /* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
@@ -1133,14 +1149,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .entrees .ligne-libelle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
-/* Dans une carte (Moment difficile), la respiration prend la couleur du parcours, comme dans le rendu 2b :
-   un cercle de 152 en -tint-2, cerclé de 2 px à la couleur, et dedans le disque qui respire, en -tint ; « Commencer » en
-   -fill / -on. Sans mouvement, le disque reste figé et, à l'inspiration, se remplit de la couleur. */
-.carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--c-tint-2); border: 2px solid var(--c); }
-.carte-respiration .cercle-respiration span { background: var(--c-tint); border: 0; }
-.carte-respiration .respiration .btn-plein { background: var(--c-fill); color: var(--c-on); }
+/* Dans une carte (Moment difficile), comme dans le rendu 2b : un cercle de 152, cerclé de 2 px, et dedans le disque qui
+   respire ; neutres (v12, spec §5.3), « Commencer » en accent. Sans mouvement, le disque reste figé et, à l'inspiration, se
+   remplit. */
+.carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--c-tint-2, var(--surface-2)); border: 2px solid var(--c, var(--contour)); }
+.carte-respiration .cercle-respiration span { background: var(--c-tint, var(--surface)); border: 0; }
+.carte-respiration .respiration .btn-plein { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); }
 @media (prefers-reduced-motion: reduce) {
-  .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c); }
+  .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c, var(--text-2)); }
 }
 /* La carte « Reprendre » (v10) : à gauche, un lien vers l'écran de départ (le titre de la carte en 17/600, puis celui de l'élément
    en 16) ; à droite, le bouton lecture rond, qui le relance. En très grand texte, le bouton passe sous le lien. */
@@ -1173,18 +1189,18 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .rangee-seance > .ligne-seance { flex: 1 1 11rem; min-width: 0; overflow-wrap: anywhere; }
 .rangee-seance > .epingle { margin-block: 4px; }
 .seance-faite { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); }
-.seance-faite svg { flex: none; width: 14px; height: 14px; color: var(--c); }
+.seance-faite svg { flex: none; width: 14px; height: 14px; color: var(--c, var(--text)); }
 .ligne-exercice { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 9px 12px 9px 16px; color: var(--text); text-decoration: none; }
 .ligne-exercice-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .exercice-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.25; }
 .exercice-description { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-wrap: pretty; }
 .ligne-exercice > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); }
 .ligne-fixe { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-align: center; padding: 2px 0 8px; }
-/* Le bouton lecture rond (v8) : -fill et -on de la teinte, comme « Commencer » en 2b ; 64 dans une carte, 84 au centre de
-   l'anneau avant de commencer. */
+/* Le bouton lecture rond (v8) : l'accent (v12 : une icône dit que c'est une commande, pas une émotion), comme « Commencer » ;
+   64 dans une carte, 84 au centre de l'anneau avant de commencer. */
 .bouton-lecture {
   position: relative; flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%;
-  background: var(--c-fill); color: var(--c-on); display: grid; place-items: center;
+  background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); display: grid; place-items: center;
 }
 .bouton-lecture svg { width: 28px; height: 28px; stroke-width: 2.2; }
 .bouton-lecture.grand { width: 84px; height: 84px; }
@@ -1203,7 +1219,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lecteur-duree { min-width: 0; font-size: var(--t-sous); color: var(--text-2); }
 .epingle { flex: none; width: var(--cible); height: var(--cible); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); display: grid; place-items: center; }
 .epingle svg { width: 22px; height: 22px; }
-.epingle[aria-pressed="true"] { background: var(--c-tint); color: var(--c-text); }
+.epingle[aria-pressed="true"] { background: var(--c-tint, var(--surface-2)); color: var(--c-text, var(--text)); }
 .epingle[aria-pressed="true"] svg { fill: currentColor; }
 .epingle[disabled] { opacity: .45; cursor: default; }
 .lecteur-description { font-size: var(--t-corps); line-height: 1.4; color: var(--text); text-wrap: pretty; }
@@ -1222,11 +1238,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   min-width: 0; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-moyen); background: var(--fond-choix);
   color: var(--text); font: 600 var(--t-corps)/1.25 var(--police); overflow-wrap: anywhere;
 }
-.etiquette-noting.brille { background: var(--c-tint-2); }
+.etiquette-noting.brille { background: var(--c-tint-2, var(--surface-2)); }
 @media (prefers-reduced-motion: no-preference) {
   .etiquette-noting.brille { animation: etiquette-brille 600ms ease-out; }
 }
-@keyframes etiquette-brille { from { box-shadow: 0 0 0 0 var(--c); } to { box-shadow: 0 0 0 10px transparent; } }
+@keyframes etiquette-brille { from { box-shadow: 0 0 0 0 var(--c, var(--contour)); } to { box-shadow: 0 0 0 10px transparent; } }
 /* L'anneau : la piste en --line (un filet), le temps passé à la couleur (accent, 3:1 sur le fond) ; dedans, le disque du souffle
    (-tint-2, cerclé de 2 px à la couleur, comme le cercle de la respiration en 2b) et le bouton. */
 .lecteur-anneau { position: relative; width: min(232px, 60vw); aspect-ratio: 1; display: grid; place-items: center; }
@@ -1234,12 +1250,12 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lecteur-anneau > .bouton-lecture { z-index: 1; }
 .anneau-temps { width: 100%; height: 100%; }
 .anneau-piste { fill: none; stroke: var(--line); stroke-width: 5; }
-.anneau-plein { fill: none; stroke: var(--c); stroke-width: 5; stroke-linecap: round; }
+.anneau-plein { fill: none; stroke: var(--c, var(--text-2)); stroke-width: 5; stroke-linecap: round; }
 /* Le disque grandit à l'inspiration et rétrécit à l'expiration, sur la durée du temps (une classe par durée, de 1 à
    12 s) ; il reste immobile pendant « Retiens », et en pause. Avec « Réduire les animations », il ne bouge pas : poumons
    pleins (inspiration, « Retiens » qui la suit), il est cerclé de la couleur. */
 .disque-souffle {
-  width: 84%; height: 84%; border-radius: 50%; background: var(--c-tint-2); border: 2px solid var(--c); transform: scale(.55);
+  width: 84%; height: 84%; border-radius: 50%; background: var(--c-tint-2, var(--surface-2)); border: 2px solid var(--c, var(--contour)); transform: scale(.55);
   animation-timing-function: ease-in-out; animation-fill-mode: both;
 }
 .disque-souffle.phase-inspire { transform: scale(1); animation-name: souffle-inspire; }
@@ -1259,14 +1275,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .duree-souffle-10 { animation-duration: 10s; } .duree-souffle-11 { animation-duration: 11s; } .duree-souffle-12 { animation-duration: 12s; }
 @media (prefers-reduced-motion: reduce) {
   .disque-souffle[class] { transform: scale(.8); }
-  .disque-souffle.phase-inspire, .disque-souffle.phase-inspire-encore, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c); }
+  .disque-souffle.phase-inspire, .disque-souffle.phase-inspire-encore, .disque-souffle.phase-retiens-plein { box-shadow: inset 0 0 0 4px var(--c, var(--text-2)); }
 }
 /* « Réveil la nuit » (v10, spec §5.2) : le fond noir (.ecran-noir, tokens.css), dans les deux thèmes, qu'avaient aussi les écrans
    de l'émotion jusqu'à la v10 (ils suivent le thème depuis la v11), mais rien n'y éclaire la chambre : texte gris (4,5:1 au
-   moins), teinte éteinte. */
+   moins), teinte éteinte, et sans accent (v12 : un gris, ni vert ni blanc). */
 .parcours.ecran-noir {
   color: var(--text);
-  --text: #8e8f92; --text-2: #87888b; --action: #8e8f92; --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d;
+  --text: #8e8f92; --text-2: #87888b; --action: #8e8f92; --accent: #8e8f92; --accent-texte: #8e8f92;
+  --surface: #141517; --surface-2: #1c1d1f; --line: #2a2b2d; --contour: #5c5e62;
   --c: #5c5e62; --c-fill: #303235; --c-on: #c4c5c8; --c-tint: #0e0f10; --c-tint-2: #16171a; --c-text: #8e8f92;
 }
 .reglages-lecteur { margin-top: 4px; }
@@ -1283,7 +1300,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .reglage-volume { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: var(--t-sous); color: var(--text-2); }
 .reglage-volume input { flex: 1 1 10rem; min-width: 0; min-height: var(--cible); margin: 0; background: none; -webkit-appearance: none; appearance: none; }
 .reglage-volume input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--text-2); }
-.reglage-volume input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0; background: var(--c-fill); box-shadow: 0 0 0 1.5px var(--c); }
+.reglage-volume input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0; background: var(--c-fill, #ffffff); box-shadow: 0 0 0 1.5px var(--c, var(--contour)); }
 .temps-restant { font: 600 min(20vw, 4.5rem)/1.1 var(--police); color: var(--text); font-variant-numeric: tabular-nums; text-align: center; }
 .parcours-pied .bouton-arreter { flex: 1; margin: 4px 6px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
@@ -1325,21 +1342,21 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
 /* v6 : du plus bas au plus haut des anciennes notes d'un jour, sous le point de la note du jour */
-.g-trait { stroke: var(--c); stroke-width: 2; stroke-linecap: round; opacity: .7; }
+.g-trait { stroke: var(--c, var(--donnee)); stroke-width: 2; stroke-linecap: round; opacity: .7; }
 .g-choix { fill: var(--surface-2); }
-.g-energie-1 { fill: var(--c); opacity: .3; }
-.g-energie-2 { fill: var(--c); opacity: .6; }
-.g-energie-3 { fill: var(--c); }
+.g-energie-1 { fill: var(--c, var(--donnee)); opacity: .3; }
+.g-energie-2 { fill: var(--c, var(--donnee)); opacity: .6; }
+.g-energie-3 { fill: var(--c, var(--donnee)); }
 /* v8 (Q29) : en sombre, l'énergie basse passe à 0,2 pour se distinguer de la moyenne (2,5:1 entre elles, au lieu de 2:1) ;
    elle reste aussi visible sur la carte qu'en clair (1,5:1). Une valeur change, jamais la teinte. */
 @media (prefers-color-scheme: dark) {
   .g-energie-1 { opacity: .2; }
 }
 .g-rampe-0 { fill: var(--line); }
-.g-rampe-1 { fill: var(--c); opacity: .3; }
-.g-rampe-2 { fill: var(--c); opacity: .55; }
-.g-rampe-3 { fill: var(--c); opacity: .8; }
-.g-rampe-4 { fill: var(--c); }
+.g-rampe-1 { fill: var(--c, var(--donnee)); opacity: .3; }
+.g-rampe-2 { fill: var(--c, var(--donnee)); opacity: .55; }
+.g-rampe-3 { fill: var(--c, var(--donnee)); opacity: .8; }
+.g-rampe-4 { fill: var(--c, var(--donnee)); }
 .legende-frise { flex-wrap: wrap; gap: 4px 12px; }
 .legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
 .legende-frise svg { width: 14px; height: 12px; }
@@ -1361,9 +1378,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .g-titre-bloc { font-size: 11px; font-weight: 600; fill: var(--text); }
 .g-nom { font-size: 11px; fill: var(--text); }
 .g-compte { fill: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.g-piste { fill: var(--c-tint); }
+.g-piste { fill: var(--c-tint, var(--surface-2)); }
 .g-peu { opacity: .45; }
-.g-barre-creuse { fill: var(--surface); stroke: var(--c); stroke-width: 1.5; }
+.g-barre-creuse { fill: var(--surface); stroke: var(--c, var(--donnee)); stroke-width: 1.5; }
 .g-repere { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .g-repere-fond { stroke: var(--surface); stroke-width: 4; }
 .tableau-comprendre tbody th { text-align: left; font-size: var(--t-sous); font-weight: 600; padding: 12px 0 4px; }

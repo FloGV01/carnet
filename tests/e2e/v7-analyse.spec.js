@@ -260,11 +260,10 @@ test('AA des textes de l\'Analyse (2b), en clair et en sombre : portes, tuiles, 
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/analyse');
     await expect(page.getByRole('region', { name: 'Ma semaine' })).toBeVisible();
-    // « Tes points positifs » : le carré prend la couleur de sa rubrique hors de la liste groupée d'Aujourd'hui aussi
-    // (rendu 2b-analyse), et l'icône s'y lit (3:1 au moins).
+    // « Tes points positifs » : le carré est neutre (v12 : plus de couleur de rubrique), et l'icône s'y lit (3:1 au moins).
     const carre = await page.getByRole('region', { name: 'Ma semaine' }).locator('.repli-icone')
       .evaluate((e) => ({ fond: getComputedStyle(e).backgroundColor, icone: getComputedStyle(e).color }));
-    expect(carre.fond, `${schema} : carré des points positifs`).toBe(rgb(t['c-positifs']));
+    expect(carre.fond, `${schema} : carré des points positifs`).toBe(rgb(t['surface-2']));
     expect(contraste(carre.icone, carre.fond), `${schema} : icône des points positifs`).toBeGreaterThanOrEqual(3);
     const selecteurs = ['.porte-titre', '.tuile-titre', '.tuile-valeur', '.nom-famille', '.compte-famille', '.carte-entete .note-carte-interne',
       'text.g-etiquette', 'text.g-tete', '.legende-graphe > span', '.titre-section', '.graphe-titre'];

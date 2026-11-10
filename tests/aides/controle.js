@@ -21,8 +21,14 @@ export const contrastesFaibles = (page, racine = 'body') => page.evaluate((sel) 
   const lin = (v) => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
   const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-  // Le fond : la couleur du premier ancêtre opaque (le fond de la page à défaut).
+  // Le fond : la couleur du premier ancêtre opaque (le fond de la page à défaut). La valeur notée d'une roue (v12) se lit sur
+  // la fenêtre du milieu, le ::before de sa roue (un aplat d'accent), et non sur la piste.
   const fond = (el) => {
+    const roue = el.matches && el.matches('.roue-valeur[aria-pressed="true"]') && el.closest('.roue-choix.notee');
+    if (roue) {
+      const c = rgba(getComputedStyle(roue, '::before').backgroundColor);
+      if (c && c[3] >= 0.99) return c;
+    }
     for (let e = el; e; e = e.parentElement) {
       const c = rgba(getComputedStyle(e).backgroundColor);
       if (c && c[3] >= 0.99) return c;

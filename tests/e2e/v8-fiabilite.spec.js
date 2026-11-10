@@ -127,8 +127,9 @@ test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journé
       const s = getComputedStyle(f.querySelector(`.pas-rampe rect.g-energie-${n}`));
       return { fill: s.fill, opacite: Number(s.opacity) };
     }));
-    for (const p of pas) expect(p.fill, schema).toBe(rgb(t['c-energie']));
-    const [basse, moyenne, haute] = pas.map((p) => vue(t['c-energie'], t.surface, p.opacite));
+    // v12 (3/9) : à l'encre des graphiques (--donnee), sans teinte.
+    for (const p of pas) expect(p.fill, schema).toBe(rgb(t.donnee));
+    const [basse, moyenne, haute] = pas.map((p) => vue(t.donnee, t.surface, p.opacite));
     if (schema === 'light') expect(pas.map((p) => p.opacite)).toEqual([0.3, 0.6, 1]);
     else {
       expect(contraste(basse, moyenne), 'basse et moyenne distinctes').toBeGreaterThanOrEqual(2.4);
@@ -169,14 +170,15 @@ test('Q29 · le repère Bien-être de Mes jours est un losange plein, distinct d
       await page.emulateMedia({ colorScheme: schema });
       const [bienEtre, nuit] = await Promise.all(['polygon.g-bien-etre', 'svg[role="img"] rect.g-sommeil-3'].map((x) => mesJours.locator(x).first()
         .evaluate((e) => { const s = getComputedStyle(e); return { fill: s.fill, stroke: s.stroke }; })));
-      expect(bienEtre.fill, schema).toBe(rgb(t['c-difficile']));
+      // v12 (3/9) : l'un et l'autre à l'encre des graphiques (--donnee, --donnee-3), sans teinte.
+      expect(bienEtre.fill, schema).toBe(rgb(t.donnee));
       expect(bienEtre.stroke, schema).toBe('none');
-      expect(contraste(t['c-difficile'], t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
-      expect(nuit.fill, schema).toBe(rgb(t['chart-sommeil-3']));
+      expect(contraste(t.donnee, t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
+      expect(nuit.fill, schema).toBe(rgb(t['donnee-3']));
     }
   }
-  // En sombre, les deux bleus sont les mêmes à l'œil (1:1) : seule la forme les distingue.
-  expect(contraste(sombre['c-difficile'], sombre['chart-sommeil-3'])).toBeLessThan(1.2);
+  // Les deux encres sont proches à l'œil (moins de 2:1), dans les deux thèmes : seule la forme les distingue.
+  for (const t of [clair, sombre]) expect(contraste(t.donnee, t['donnee-3'])).toBeLessThan(2);
 });
 
 test('Q29 · dans un parcours, les étapes à venir se voient, en clair comme en sombre : un contour à 3:1 au moins, sans fond, distinct des points pleins', async ({ page }) => {

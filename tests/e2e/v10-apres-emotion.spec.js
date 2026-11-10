@@ -186,7 +186,7 @@ test('pas de section : un relevé rouvert, même après « Changer le mot » ; �
 test('discret, dans les deux thèmes et pour toutes les zones : du texte et un contour, aucun fond, aucune couleur de zone ; contrastes AA ; des cibles de 44', async ({ page }) => {
   test.setTimeout(60000);
   const vus = { light: new Set(), dark: new Set() };
-  const FONDS = { light: '#e7eaee', dark: '#000000' };
+  const FONDS = { light: '#f2f2f7', dark: '#000000' };
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     const fondEcran = FONDS[colorScheme];
@@ -198,7 +198,7 @@ test('discret, dans les deux thèmes et pour toutes les zones : du texte et un c
       });
       expect(style.fond, libelle).toBe('rgba(0, 0, 0, 0)');
       expect(style.trait).toBe('1px');
-      expect(await page.locator('.moment-plein').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(colorScheme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(231, 234, 238)');
+      expect(await page.locator('.moment-plein').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(colorScheme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(242, 242, 247)');
       expect(contraste(style.texte, fondEcran)).toBeGreaterThanOrEqual(4.5);
       expect(contraste(style.contour, fondEcran)).toBeGreaterThanOrEqual(3);
       expect(style.hauteur).toBeGreaterThanOrEqual(44);

@@ -1,11 +1,15 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { viderBase, aller } from '../aides/saisie.js';
+import { canaux, jetons } from '../aides/couleurs.js';
 
 // v6 · Après coup (spec §4) : deux accès, depuis la fiche d'un épisode rouvert et depuis
 // Aujourd'hui. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (sept jours : du 9 au 15).
 const creer = (page, e) => page.evaluate(async (x) => (await window.__carnet.repo.episodes.creer(x)).id, e);
 const relire = (page, id) => page.evaluate((i) => window.__carnet.repo.episodes.lire(i), id);
 const COLERE = { emotion: 'emotion:colere', declencheur: 'declencheur:conflit' };
+const { clair } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
+const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
@@ -38,7 +42,7 @@ test('fiche rouverte : « Mon plan · Après coup » visible sans défiler à 39
   await expect(page.getByRole('dialog', { name: 'Mon plan' })).toBeVisible();
 });
 
-test('fiche rouverte : la carte du bas a son cadre, teinté comme les épisodes ; vide, elle dit comment y venir ; remplie, elle garde son résumé', async ({ page }) => {
+test('fiche rouverte : la carte du bas a son cadre, neutre au texte d\'accent (v12) ; vide, elle dit comment y venir ; remplie, elle garde son résumé', async ({ page }) => {
   const vide = await creer(page, { date: '2026-10-10', heure: '18:42', ...COLERE });
   const remplie = await creer(page, { date: '2026-10-11', heure: '19:00', ...COLERE, apresCoup: { types: ['typeExplosion:colere'], repereA: 6, jour: '2026-10-15' } });
   await aller(page, `#/episode/${vide}`);
@@ -49,13 +53,13 @@ test('fiche rouverte : la carte du bas a son cadre, teinté comme les épisodes 
   await expect(carte).toContainText('Retour à froid, quand tu veux : le soir, un autre jour, ou avant une séance.');
   const cadre = await carte.evaluate((el) => {
     const s = getComputedStyle(el);
-    return { bord: s.borderTopWidth, couleurBord: s.borderTopColor, fond: s.backgroundColor, rayon: s.borderTopLeftRadius,
-      point: getComputedStyle(document.querySelector('.point-teinte')).backgroundColor };
+    return { bord: s.borderTopWidth, couleurBord: s.borderTopColor, fond: s.backgroundColor, rayon: s.borderTopLeftRadius, texte: s.color };
   });
   expect(cadre.bord).toBe('1px');
   expect(cadre.fond).not.toBe('rgba(0, 0, 0, 0)');
   expect(cadre.rayon).not.toBe('0px');
-  expect(cadre.couleurBord, 'même teinte que le point des épisodes').toBe(cadre.point);
+  // v12 (3/9) : les épisodes n'ont plus de couleur ; le cadre est au contour, le texte en accent (la carte ouvre l'Après coup).
+  expect([cadre.couleurBord, cadre.fond, cadre.texte]).toEqual([rgb(clair.contour), rgb(clair.surface), rgb(clair['accent-texte'])]);
 
   await aller(page, `#/episode/${remplie}`);
   const carteRemplie = fiche.getByRole('link', { name: /Après coup · TCC/ });

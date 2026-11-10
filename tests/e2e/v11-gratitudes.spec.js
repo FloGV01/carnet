@@ -57,7 +57,7 @@ test('la carte « Mes gratitudes » est juste sous les points positifs, de même
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     const carre = await gr.locator('.carre-rubrique, .carre-icone').first().evaluate((e) => getComputedStyle(e).backgroundColor);
-    expect(carre, `${schema} : carré de la carte`).toBe(rgb(t['c-positifs']));
+    expect(carre, `${schema} : carré de la carte, neutre (v12)`).toBe(rgb(t['surface-2']));
   }
   // Rien n'est noté sans frappe.
   expect(await entreeDuJour(page)).toBeFalsy();
@@ -101,7 +101,7 @@ test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points po
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     const [gr, pos] = await Promise.all(['Mes gratitudes', 'Mes points positifs'].map((n) => ligne(n).locator('.carre-ligne').evaluate((e) => getComputedStyle(e).backgroundColor)));
-    expect(gr, `${schema} : carré de Mes gratitudes`).toBe(rgb(t['c-positifs']));
+    expect(gr, `${schema} : carré de Mes gratitudes, neutre (v12)`).toBe(rgb(t['surface-2']));
     expect(gr).toBe(pos);
   }
   // Montée d'un cran : avant les points positifs, ici et sur Aujourd'hui.

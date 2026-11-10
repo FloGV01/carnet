@@ -29,8 +29,8 @@
 .temoin-texte { position: absolute; width: 1em; height: 0; visibility: hidden; pointer-events: none; }
 
 /* ---------- Cartes et listes ---------- */
-/* Carte 2b : --surface sans bordure, rayon 14 ; dedans, un choix non fait est en --surface-2. */
-.carte { background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; --fond-choix: var(--surface-2); }
+/* Carte : --surface sans bordure, rayon 14 ; un choix non fait y est transparent, avec son contour (v12), comme sur le fond. */
+.carte { background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; }
 .carte-groupe { padding: 0; overflow: hidden; }
 .carte-entete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); margin-bottom: 8px; }
 .ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); min-height: var(--cible); }
@@ -54,17 +54,17 @@
 .ligne-info > span:last-child { color: var(--text-2); }
 
 /* ---------- Boutons ---------- */
-/* Bouton neutre 2b : sans bordure, rayon 12, --surface sur le fond, --surface-2 dans une carte. L'action (Terminer,
-   + Épisode, Commencer…) est en --action : encre neutre, jamais une couleur de rubrique. */
+/* Bouton neutre (v12) : rayon 12, transparent avec son contour (--contour, sans bordure : box-shadow), comme un choix non
+   fait. L'action (Terminer, Commencer…) est en --action, l'accent : jamais une couleur de rubrique. */
 .btn {
   min-height: var(--cible-bouton); padding: 0 16px; border-radius: var(--r-bouton);
-  border: 0; background: var(--fond-choix); color: var(--text);
+  border: 0; background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: var(--t-corps); font-weight: 400;
   display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
 }
 .btn svg { width: 20px; height: 20px; }
-.btn-plein { background: var(--action); color: var(--action-on); border: 0; font-weight: 600; }
-.btn-effacer { background: var(--danger); color: var(--danger-texte); border: 0; font-weight: 600; width: 100%; }
+.btn-plein { background: var(--action); color: var(--action-on); border: 0; box-shadow: none; font-weight: 600; }
+.btn-effacer { background: var(--danger); color: var(--danger-texte); border: 0; box-shadow: none; font-weight: 600; width: 100%; }
 .btn-effacer[disabled] { background: var(--surface-2); color: var(--text-2); opacity: 1; }
 .btn[disabled] { opacity: 0.45; cursor: default; }
 .btn-lien {
@@ -78,28 +78,30 @@
 .lien { color: var(--action); text-decoration: none; min-height: var(--cible); display: inline-flex; align-items: center; font-weight: 600; font-size: var(--t-sous); }
 .pilule {
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--cible); padding: 0 16px 0 12px;
-  border-radius: var(--r-bouton); border: 0; background: var(--fond-choix); color: var(--text);
+  border-radius: var(--r-bouton); border: 0; background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: var(--t-sous); font-weight: 600; text-decoration: none;
 }
 .pilule svg { width: 18px; height: 18px; }
-/* Une pilule à carré (2b, « En consultation ») : neutre, l'icône dans un petit carré à la couleur de sa teinte, comme les
-   boutons de la bande du bas d'Aujourd'hui. */
+/* Une pilule à carré (2b, « En consultation ») : neutre, l'icône dans un petit carré neutre (v12 : les rubriques n'ont plus
+   de couleur), comme les boutons de la bande du bas d'Aujourd'hui. */
 .pilule.teintee { padding-left: 8px; gap: 8px; }
-.carre-pilule { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-pilule { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .pilule .carre-pilule svg { width: 17px; height: 17px; }
 .actions-col { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 
-/* Interrupteur (role=switch) : éteint, rail --surface-2 et bouton --text-2 ; allumé, couleur action. */
+/* Interrupteur (role=switch), comme sur iOS (v12) : éteint, un rail --surface-2 au contour (3:1) et un bouton --contour ;
+   allumé, un rail d'accent et un bouton blanc. La nuit (.ecran-noir), le bouton reste sombre : rien n'éclaire la chambre. */
 .interrupteur {
   position: relative; flex: none; width: 51px; height: 31px; padding: 0; border-radius: 16px;
-  border: 1px solid var(--line); background: var(--surface-2); transition: background var(--duree), border-color var(--duree);
+  border: 1px solid var(--contour); background: var(--surface-2); transition: background var(--duree), border-color var(--duree);
 }
 .interrupteur-bouton {
-  position: absolute; top: 2px; left: 2px; width: 25px; height: 25px; border-radius: 13px; background: var(--text-2);
+  position: absolute; top: 2px; left: 2px; width: 25px; height: 25px; border-radius: 13px; background: var(--contour);
   transition: left var(--duree), background var(--duree);
 }
 .interrupteur[aria-checked="true"] { background: var(--action); border-color: var(--action); }
-.interrupteur[aria-checked="true"] .interrupteur-bouton { left: 22px; background: var(--action-on); }
+.interrupteur[aria-checked="true"] .interrupteur-bouton { left: 22px; background: #ffffff; }
+.ecran-noir .interrupteur[aria-checked="true"] .interrupteur-bouton { background: var(--action-on); }
 /* Il fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans ses rangées de 52 (.ligne-interrupteur, .ligne-champ-reglage). */
 .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 
@@ -176,7 +178,7 @@
   padding: max(24px, var(--zone-haut-ecran)) 24px 0;
 }
 .voile-boite::after { content: ""; height: max(24px, var(--zone-bas)); }
-.boite-confirmation { width: min(290px, 100%); margin-block: auto; background: var(--surface); --fond-choix: var(--surface-2); border-radius: var(--r-carte); text-align: center; overflow: hidden; }
+.boite-confirmation { width: min(290px, 100%); margin-block: auto; background: var(--surface); border-radius: var(--r-carte); text-align: center; overflow: hidden; }
 .boite-corps { padding: 20px 18px 16px; display: grid; gap: 6px; }
 .boite-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.3; text-wrap: pretty; }
 .boite-texte { font-size: var(--t-note); line-height: 1.4; color: var(--text-2); }
@@ -200,11 +202,10 @@
 .etiquette-icone svg { width: 18px; height: 18px; color: var(--text-2); flex: none; }
 .facultatif { color: var(--text-2); font-size: var(--t-note); }
 .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); }
-/* Champs 2b : un fond plein (--surface sur l'écran, --surface-2 dans une carte), sans filet visible ; au focus,
-   un filet en couleur action. */
+/* Champs (v12) : transparents, avec le contour (--contour, sans bordure : box-shadow) ; au focus, un anneau d'accent. */
 .champ-texte {
   width: 100%; min-height: 46px; padding: 9px 14px; border-radius: var(--r-moyen);
-  border: 1px solid transparent; background: var(--fond-choix); resize: none; line-height: 1.35; display: block;
+  border: 1px solid transparent; background: var(--fond-choix); box-shadow: inset 0 0 0 1px var(--contour); resize: none; line-height: 1.35; display: block;
 }
 /* Zones de texte (v6) : de leur taille au repos (data-lignes) à 7 lignes, puis elles défilent. field-sizing
    quand il est pris en charge ; sinon ChampTexte ajuste l'attribut rows. Vide, la zone garde sa taille, même
@@ -221,7 +222,7 @@ textarea.champ-texte[data-lignes="3"] { --lignes: 3; }
 textarea.champ-texte[data-lignes="4"] { --lignes: 4; }
 /* Une ligne (v11, le nom et le lien d'une playlist de Mes refuges) : elle grandit aussi avec le texte, et garde une cible de 44. */
 textarea.champ-texte[data-lignes="1"] { --lignes: 1; min-height: max(var(--cible), calc(1lh + var(--cadre-texte))); }
-.champ-ligne { width: 100%; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-petit); border: 1px solid transparent; background: var(--fond-choix); }
+.champ-ligne { width: 100%; min-height: var(--cible); padding: 0 12px; border-radius: var(--r-petit); border: 1px solid transparent; background: var(--fond-choix); box-shadow: inset 0 0 0 1px var(--contour); }
 .case { display: flex; align-items: center; gap: var(--esp-2); min-height: var(--cible); }
 .case input { width: 22px; height: 22px; accent-color: var(--action); }
 .champ-texte:focus, .champ-ligne:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 1px var(--action); }
@@ -229,10 +230,11 @@ textarea.champ-texte[data-lignes="1"] { --lignes: 1; min-height: max(var(--cible
    que 2:1 environ sur --surface-2). */
 input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 
-/* Sélection commune (2b) à tous les choix : pastilles, grilles, choix multiples, segmentés, Oui / Non, période.
-   Non choisi : --fond-choix (--surface sur l'écran, --surface-2 dans une carte), rayon 12, sans bordure.
-   Choisi : fond --c-fill, texte --c-on, graisse 600 (700 pour un chiffre) et une coche devant le libellé, jamais
-   la couleur seule. La couleur vient de la rubrique ou du parcours (.teinte-*, .emo-*) ; sans teinte, couleur action. */
+/* Sélection commune à tous les choix : pastilles, grilles, choix multiples, segmentés, Oui / Non, période (v12, spec §5.4).
+   Non choisi : transparent (--fond-choix), avec le contour (--contour, en box-shadow : sans bordure), rayon 12, en 400.
+   Choisi : un aplat d'accent, le texte en --sur-accent, graisse 600 (700 pour un chiffre) et une coche ✓ devant le libellé,
+   jamais la couleur seule. Dans une famille d'émotions ou une zone (.emo-*, .zone-*), l'aplat prend leur couleur (-fill,
+   -on). Rien ne change de taille au toucher. */
 .coche { display: none; flex: none; }
 .coche svg { width: 16px; height: 16px; }
 [aria-pressed="true"] > .coche { display: inline-flex; }
@@ -261,21 +263,21 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 .pastilles.souples .pastille { min-height: var(--cible); padding: 4px 12px; font-size: var(--t-sous); }
 .pastille {
   min-height: var(--cible-grille); padding: 4px 6px; border-radius: var(--r-moyen);
-  border: 0; background: var(--fond-choix); color: var(--text);
+  border: 0; background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   display: flex; align-items: center; justify-content: center; gap: 6px;
   font-size: var(--t-corps); line-height: 1.15; text-align: center;
   transition: background var(--duree), color var(--duree);
 }
 .texte-pastille { display: grid; gap: 1px; min-width: 0; }
 .pastille small { font-size: var(--t-legende); color: var(--text-2); }
-.pastille[aria-pressed="true"] { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); font-weight: 600; }
+.pastille[aria-pressed="true"] { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); box-shadow: none; font-weight: 600; }
 .pastille[aria-pressed="true"] small { color: inherit; }
 .pastilles.chiffres .pastille[aria-pressed="true"] { font-weight: 700; }
 /* Grilles des parcours : alignées à gauche. */
 .pastilles.grille-choix .pastille { min-height: 52px; justify-content: flex-start; text-align: left; gap: 8px; padding: 8px 12px; }
 .pastilles.grille-choix.chiffres .pastille { justify-content: center; }
 /* « + Ajouter » à la suite des choix : une action (couleur action, 600), sans fond ni tirets (2b). */
-.pastille-ajout { color: var(--action); background: none; border: 0; font-weight: 600; }
+.pastille-ajout { color: var(--action); background: none; border: 0; box-shadow: none; font-weight: 600; }
 .ajout-pastille { grid-column: 1 / -1; display: flex; gap: var(--esp-2); }
 .ajout-pastille input { flex: 1; }
 
@@ -285,17 +287,17 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 .segmente button {
   flex: 1; min-height: var(--cible-grille); min-width: 56px; padding: 0 var(--esp-3);
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  border: 0; border-radius: var(--r-moyen); background: var(--fond-choix); color: var(--text);
+  border: 0; border-radius: var(--r-moyen); background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: var(--t-corps); transition: background var(--duree), color var(--duree);
 }
-.segmente button[aria-pressed="true"] { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); font-weight: 600; }
+.segmente button[aria-pressed="true"] { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); box-shadow: none; font-weight: 600; }
 /* « large » : jamais plus étroit que son libellé et sa coche (min-content, et non 56 px, qui laissait le choix fait
    déborder dès un cran de grand texte) ; en très grand texte, les boutons passent à la ligne. */
 .segmente.large { width: 100%; flex-wrap: wrap; }
 .segmente.large button { --demi-coche: 9.5px; min-width: min-content; min-height: var(--cible); padding: 0 6px; gap: 4px; font-size: var(--t-sous); }
 .segmente.large .coche svg { width: 15px; height: 15px; }
 /* « petit » (v7, Comprendre : période, mesure, avant ou après) : de petites pastilles à la largeur de leur libellé, qui
-   passent à la ligne, en couleur action une fois choisies ; cibles de 44. */
+   passent à la ligne, en accent une fois choisies ; cibles de 44. */
 .segmente.petit { flex-wrap: wrap; }
 .segmente.petit button { --demi-coche: 9.5px; flex: 0 0 auto; min-width: 0; min-height: var(--cible); padding: 0 12px; gap: 4px; border-radius: var(--r-petit); font-size: var(--t-petit); }
 .segmente.petit .coche svg { width: 15px; height: 15px; }
@@ -305,9 +307,8 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 .champ-avec-dicter .champ-texte { padding-right: 46px; }
 .dicter {
   position: absolute; top: 1px; right: 1px; width: var(--cible); height: var(--cible);
-  display: grid; place-items: center; border: 0; border-radius: var(--r-petit); background: none; color: var(--text-2);
+  display: grid; place-items: center; border: 0; border-radius: var(--r-petit); background: none; color: var(--accent-texte);
 }
-.champ-avec-dicter:focus-within .dicter { color: var(--action); }
 .dicter svg { width: 22px; height: 22px; }
 .aide-dicter { margin-top: 6px; padding-left: 2px; font-size: var(--t-note); line-height: 1.3; }
 
@@ -321,27 +322,27 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: 1; }
 button.effacer { min-width: var(--cible); min-height: var(--cible); border: 0; background: none; color: var(--text-2); display: grid; place-items: center; }
 button.effacer svg { width: 18px; height: 18px; }
 
-/* La roue (v11, spec §5, composants/roue-choix.js ; maquette « règle » du 05/11) : une bande de 44 sur --fond-choix, qui
-   défile de côté sans barre, ses bords en fondu. Au milieu, une fenêtre à la largeur d'une valeur, fixe sous la bande
-   (::before) : --surface, neutre, quand rien n'est noté ; la teinte de la carte (--c-tint) quand une valeur l'est, en 700
-   et --c-text. Toutes les valeurs ont la largeur de la plus longue (--l-valeur, mesurée par le composant, qui la pose par
-   CSSOM ; 4em avant la mesure), jamais plus que la bande, et 44 au moins : la plus longue passe alors à la ligne. Des
-   espaceurs (flex), et non des marges intérieures, laissent centrer la première et la dernière : le padding de fin d'une
-   zone qui défile n'est pas fiable. Le fondu (masque) ne touche ni la valeur du milieu ni ses deux voisines, cibles
+/* La roue (v11, spec §5, composants/roue-choix.js ; maquette « règle » du 05/11) : une bande de 44, une piste (--piste) au
+   contour (v12), qui défile de côté sans barre, ses bords en fondu. Au milieu, une fenêtre à la largeur d'une valeur, fixe
+   sous la bande (::before), à 3 px de ses bords : --fenetre, neutre, quand rien n'est noté ; un aplat d'accent quand une
+   valeur l'est, la valeur en --sur-accent et en 600 (v12, spec §5.4). Toutes les valeurs ont la largeur de la plus longue
+   (--l-valeur, mesurée par le composant, qui la pose par CSSOM ; 4em avant la mesure), jamais plus que la bande, et 44 au
+   moins : la plus longue passe alors à la ligne. Des espaceurs (flex), et non des marges intérieures, laissent centrer la
+   première et la dernière : le padding de fin d'une zone qui défile n'est pas fiable. Le fondu (masque) ne touche ni la valeur du milieu ni ses deux voisines, cibles
    visibles d'un toucher, qui gardent leurs 4,5:1 (comme la maquette, où seules les secondes voisines s'effaçaient) : il
    finit au bord extérieur des voisines (50 % moins une valeur et demie), sur 25 % de la bande au plus. Avec des valeurs
    larges (119 px à 390 et à 375), il n'y en a pas ; en paysage, il n'efface que les valeurs lointaines. La bande garde
    son fond. */
 .roue-choix {
   --l-valeur: 4em; --l-roue: min(var(--l-valeur), 100%);
-  position: relative; min-width: 0; border-radius: var(--r-moyen); background: var(--fond-choix);
+  position: relative; min-width: 0; border-radius: var(--r-moyen); background: var(--piste); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: var(--t-corps); line-height: 1.15;
 }
 .roue-choix::before {
-  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--l-roue); transform: translateX(-50%);
-  border-radius: var(--r-petit); background: var(--surface);
+  content: ""; position: absolute; top: 3px; bottom: 3px; left: 50%; width: calc(var(--l-roue) - 6px); transform: translateX(-50%);
+  border-radius: 9px; background: var(--fenetre); box-shadow: var(--fenetre-ombre);
 }
-.roue-choix.notee::before { background: var(--c-tint, var(--surface-2)); }
+.roue-choix.notee::before { background: var(--accent); box-shadow: none; }
 .roue-defile {
   --plein: min(25%, max(0px, calc(50% - 1.5 * var(--l-roue))));
   position: relative; display: flex; overflow-x: auto; overflow-y: hidden; border-radius: inherit;
@@ -356,10 +357,10 @@ button.effacer svg { width: 18px; height: 18px; }
   display: flex; align-items: center; justify-content: center; text-align: center; scroll-snap-align: center;
   border: 0; border-radius: var(--r-petit); background: none; color: var(--text);
 }
-.roue-valeur[aria-pressed="true"] { font-weight: 700; color: var(--c-text, var(--text)); }
+.roue-valeur[aria-pressed="true"] { font-weight: 600; color: var(--sur-accent); }
 .roue-valeur:focus-visible { outline-offset: -2px; }
-/* La mesure de la largeur commune (un instant, sans rendu) : chaque valeur à sa largeur naturelle, en 700. */
-.roue-mesure .roue-valeur { width: auto; min-width: 0; white-space: nowrap; font-weight: 700; }
+/* La mesure de la largeur commune (un instant, sans rendu) : chaque valeur à sa largeur naturelle, en 600. */
+.roue-mesure .roue-valeur { width: auto; min-width: 0; white-space: nowrap; font-weight: 600; }
 
 /* Replis */
 /* Un filet plein au-dessus (2b : pas de tirets). */
@@ -374,14 +375,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .repli.resume-sous .repli-tete { flex-wrap: wrap; align-content: center; gap: 0 var(--esp-2); padding: 6px 0; }
 .repli.resume-sous .repli-resume { flex: 1 1 calc(100% - 24px); margin: 0 0 0 24px; }
 .repli-corps { padding: 0 0 14px 24px; display: flex; flex-direction: column; gap: 10px; }
-/* Repli en carte (2b, v7) : l'icône dans un carré à gauche (neutre, ou à la couleur de la rubrique), le chevron à droite, des rangées de 52. */
-.repli.repli-carte { border-top: 0; background: var(--surface); border-radius: var(--r-carte); padding: 0 12px; --fond-choix: var(--surface-2); }
+/* Repli en carte (2b, v7) : l'icône dans un carré neutre à gauche (v12 : plus de couleur de rubrique), le chevron à droite, des rangées de 52. */
+.repli.repli-carte { border-top: 0; background: var(--surface); border-radius: var(--r-carte); padding: 0 12px; }
 .repli-carte .repli-tete { min-height: 52px; gap: 12px; }
-.repli-icone { flex: none; width: 28px; height: 28px; border-radius: var(--r-icone); background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
+.repli-icone { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
 .repli-icone svg { width: 17px; height: 17px; }
-/* Avec une teinte (`teinte` de Repli), le carré prend la couleur de la rubrique, où que soit le repli : liste groupée
-   d'Aujourd'hui, « Tes points positifs » de Ma semaine. Sans teinte (Notes libres, Ce que je faisais), il reste neutre. */
-.repli.repli-carte[class*="teinte-"] .repli-icone { background: var(--c); color: var(--c-on); }
 .repli-carte .repli-titre { font-weight: 500; }
 .repli-carte .repli-titre + .repli-fleche { margin-left: auto; }
 .repli-carte .repli-corps { padding: 0 0 14px; }
@@ -392,7 +390,7 @@ button.effacer svg { width: 18px; height: 18px; }
 .memo-ligne { align-self: stretch; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .btn-memo {
   display: inline-flex; align-items: center; gap: 8px; min-height: var(--cible); padding: 0 18px 0 14px;
-  border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text);
+  border: 0; border-radius: var(--r-bouton); background: var(--fond-choix); color: var(--text); box-shadow: inset 0 0 0 1px var(--contour);
   font-size: var(--t-corps); font-weight: 400;
 }
 .btn-memo svg { width: 20px; height: 20px; }
@@ -451,13 +449,14 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-tete .fermer { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; min-height: var(--cible); border: 0; background: none; color: var(--action); font-size: var(--t-corps); font-weight: 600; }
 .parcours-tete .fermer svg { width: 20px; height: 20px; }
 .parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
-.point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--action)); flex: none; }
+.point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--text-2)); flex: none; }
 .reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
 /* À venir (v8, Q29) : un contour de 1,5 en --text-2, sans fond (README 2b : « contour (2a) »), au moins 3:1 sur le fond
    (5,6:1 en clair, 7,3:1 en sombre) ; --surface-2 ne se voyait pas sur le fond clair (1:1), et --line restait sous 3:1
-   (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille. */
+   (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille ; à l'encre (v12, spec §5.3), jamais
+   en vert : un point vert, et un « fait » vert. */
 .reperes i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-2); background: none; }
-.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--action)); border-color: var(--c, var(--action)); }
+.reperes i.fait, .reperes i.en-cours { background: var(--c, var(--text)); border-color: var(--c, var(--text)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--c-tint-2, var(--surface-2)); }
 /* Beaucoup d'étapes (un Après coup en a jusqu'à 11) : des points plus serrés, l'anneau compris. */
 .reperes:has(i:nth-child(8)) { gap: 6px; }
@@ -485,7 +484,7 @@ button.effacer svg { width: 18px; height: 18px; }
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
   font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty; overflow-wrap: anywhere;
 }
-.carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c); color: var(--c-on); display: grid; place-items: center; }
+.carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
 .carre-titre svg { width: 20px; height: 20px; }
 
 .ligne-date { padding: 0 var(--marge); flex: none; }
@@ -518,19 +517,17 @@ button.effacer svg { width: 18px; height: 18px; }
 .sous-question { font-size: var(--t-sous); color: var(--text-2); margin-top: 2px; }
 .phrase-resume { font-size: var(--t-corps); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding: 14px 16px; border-radius: var(--r-carte); background: var(--surface); }
 .phrase-recap { font-size: 1.059rem; line-height: 1.45; color: var(--text); text-wrap: pretty; margin-top: -6px; }
-.phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text); }
+.phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text, var(--text)); }
 /* « Ce jour-là » (v7) : les zones des émotions du jour en points (v9 ; leurs familles avant), devant leurs mots. */
 .emotions-jour .zones-jour { margin-right: 5px; vertical-align: 1px; }
 /* Intensité et échelles de 1 à 10 : 2 × 5 boutons de 64, chiffres en 21 (500, choisi 700). */
 .pastilles.grille-choix.chiffres .pastille { min-height: var(--h-grille-intensite); font-size: var(--t-grille-lg); font-weight: 500; }
 .pastilles.grille-choix.chiffres .pastille[aria-pressed="true"] { font-weight: 700; }
 .pastilles.grille-choix.chiffres { gap: var(--ecart); }
-.etape .pastille[aria-pressed="true"] { animation: rebond 130ms ease-out; }
-@keyframes rebond { 50% { transform: scale(1.07); } }
 
 /* Récapitulatif */
 .etape-recap { padding: 8px var(--marge) 24px; display: flex; flex-direction: column; gap: 20px; }
-.recap { background: var(--surface); border-radius: var(--r-carte); overflow: hidden; --fond-choix: var(--surface-2); }
+.recap { background: var(--surface); border-radius: var(--r-carte); overflow: hidden; }
 .recap > li + li { border-top: 1px solid var(--line); }
 .recap .ligne-recap {
   width: 100%; display: flex; align-items: center; gap: var(--esp-3); min-height: 52px; border: 0; background: none;

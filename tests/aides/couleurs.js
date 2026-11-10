@@ -24,6 +24,13 @@ export function oklch(couleur) {
   return { L, C: Math.hypot(A, B), H: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 };
 }
 export const ecartTeinte = (a, b) => { const d = Math.abs(oklch(a).H - oklch(b).H) % 360; return d > 180 ? 360 - d : d; };
+// L'écart ΔE en OKLab (v12) : la distance entre deux couleurs, teinte, clarté et saturation comprises.
+export const ecartOklab = (a, b) => {
+  const [x, y] = [oklch(a), oklch(b)];
+  const ab = (c) => [c.C * Math.cos((c.H * Math.PI) / 180), c.C * Math.sin((c.H * Math.PI) / 180)];
+  const [[a1, b1], [a2, b2]] = [ab(x), ab(y)];
+  return Math.hypot(x.L - y.L, a1 - a2, b1 - b2);
+};
 
 // Jetons d'un bloc de déclarations : { nom: valeur }, sans le « -- ».
 const declarations = (bloc) => Object.fromEntries([...bloc.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
@@ -46,9 +53,8 @@ export function jetons(css) {
   return { clair: resoudre(clair), sombre: resoudre(sombre), sombreSeul: declarations(sansCom.match(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([\s\S]*?)\}\s*\}/)[1]) };
 }
 
-// Les couleurs du système : les 12 du lot 2b, puis les 7 familles de la roue des émotions (v7), puis les 4 zones de la
-// carte des émotions (v9), dans leur ordre.
-export const COULEURS_LOT = ['lieu', 'sommeil', 'contact', 'sport', 'traitement', 'positifs', 'humeur', 'episode', 'symptome', 'difficile', 'energie', 'explosions'];
+// Les couleurs du système : les 7 familles de la roue des émotions (v7), puis les 4 zones de la carte des émotions (v9),
+// dans leur ordre. Les 12 couleurs de rubrique du lot 2b sont retirées en v12 (spec §5.2) : la couleur ne dit qu'une émotion.
 export const FAMILLES_ROUE = ['colere', 'degout', 'tristesse', 'joie', 'surprise', 'peur', 'serenite'];
 export const ZONES_ROUE = ['rouge', 'jaune', 'bleu', 'vert'];
 export const ROLES = ['', '-fill', '-on', '-tint', '-tint-2', '-text'];
