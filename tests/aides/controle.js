@@ -127,3 +127,64 @@ export const mouvements = (page) => page.evaluate(() => {
   if (disque && getComputedStyle(disque).transform !== 'matrix(0.8, 0, 0, 0.8, 0, 0)') fautes.push(`disque du souffle : ${getComputedStyle(disque).transform}`);
   return fautes;
 });
+
+// Le plan et les données du contrôle global (v7-controle.spec.js, déplacés ici en v12 : la hauteur de la page du soir,
+// v12-design.spec.js, se mesure sur les mêmes).
+export const PLAN_CONTROLE = {
+  premiersSignes: 'Mâchoire serrée, je parle plus vite.', quandCaMonte: 'Je m\'éloigne cinq minutes.',
+  siSurcharge: 'Casque antibruit.', pourRecuperer: 'Marcher dehors.', prevenir: 'Un proche, par message.',
+  siAlors: [{ si: 'le bruit monte', alors: 'je mets le casque' }],
+};
+
+// Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
+// deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
+// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »).
+// Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
+// la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
+// une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
+// bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
+// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. v9 (8/8) : un mot à soi (Flottant, vert,
+// sans famille) et Fatigué, chacun dans un relevé. Renvoie les identifiants utiles.
+export async function verserControle(page) {
+  return page.evaluate(async (plan) => {
+    const r = window.__carnet.repo;
+    const jours = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15'];
+    for (const [i, d] of jours.entries()) {
+      await r.journal.patch(d, {
+        lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: i === 5 ? null : ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
+        heuresSommeil: i % 4 === 3 ? null : 4 + (i % 7),
+        contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
+        pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
+        gratitudes: i % 3 ? null : 'Merci au collègue.',
+      });
+    }
+    await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
+    await r.humeurs.creer({ date: '2026-10-09', heure: '18:00', humeur: 4, energie: 'energie:basse' });
+    const emotions = ['roue:colere:irrite', 'roue:serenite:calme', 'roue:joie:curieux', 'roue:tristesse', 'roue:peur:preoccupe', 'roue:surprise:perplexe', 'roue:degout:hesitant'];
+    const faisais = [['activiteMoment:travail'], ['activiteMoment:repos'], ['activiteMoment:trajet', 'activiteMoment:travail']];
+    for (const [i, d] of jours.slice(2).entries()) {
+      await r.humeurs.creer({ date: d, heure: '12:00', emotion: emotions[i % emotions.length], energie: 'energie:moyenne', faisais: faisais[i % 3] });
+      await r.humeurs.creer({ date: d, heure: '19:30', emotion: emotions[(i + 3) % emotions.length], energie: i % 2 ? 'energie:basse' : 'energie:haute',
+        faisais: faisais[(i + 1) % 3] });
+    }
+    const ep = await r.episodes.creer({ date: '2026-10-14', heure: '18:40', declencheur: 'declencheur:surcharge_sensorielle', emotion: 'emotion:colere',
+      intensite: 7, dessous: 'dessous:fatigue_debordement', reaction: 'reaction:explosion', situation: 'Open space bruyant.' });
+    await r.symptomes.creer({ date: '2026-10-13', symptome: 'symptome:ruminations', intensite: 5, duree: 'duree:moins_une_heure' });
+    const rdv = await r.rdv.creer({ date: '2026-10-22', heure: '14:00', professionnel: 'professionnel:psychiatre',
+      questions: [{ texte: 'Le sommeil du week-end est plus décalé.', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }] });
+    await r.rdv.creer({ date: '2026-10-07', heure: '10:30', professionnel: 'professionnel:psychologue', compteRendu: 'Travail sur les premiers signes.' });
+    const tr = await r.traitements.creer({ date: '2026-09-28', changement: 'Comprimé A : matin 1 → 1½', effetsSecondaires: ['effetSecondaire:aucun'], effetRessenti: 'effetRessenti:mieux' });
+    await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });
+    await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
+    await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
+    await r.seances.creer({ date: '2026-10-11', heure: '09:30', exercice: 'respiration-abdominale', origine: 'bien-etre', dureeS: 180, fin: true, programme: 'respiration-abdominale' });
+    await r.meta.ecrire('motsPerso', { 'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'vert', famille: null,
+      definition: 'Un peu ailleurs, sans attache.', archive: false, createdAt: '2026-10-01T08:00:00.000Z' } });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '20:00', emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' });
+    await r.humeurs.creer({ date: '2026-10-14', heure: '20:00', emotion: 'roue:aucune:fatigue', energie: 'energie:basse' });
+    await r.meta.ecrire('monPlan', plan);
+    await r.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par ce qui se répète, et ça dure.' });
+    await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
+    return { ep: ep.id, rdv: rdv.id, tr: tr.id };
+  }, PLAN_CONTROLE);
+}

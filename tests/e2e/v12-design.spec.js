@@ -1,15 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js';
-import { canaux, contraste, jetons } from '../aides/couleurs.js';
+import { canaux, contraste, jetons, oklch } from '../aides/couleurs.js';
 import { vueMoment, noter, continuer, faisais } from '../aides/emotion.js';
+import { stabiliser, verserControle } from '../aides/controle.js';
 
 // v12 · Le design simple façon Apple (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5).
 // Tâche 3 : les jetons, l'accent vert B et les choix. Un choix fait est un aplat d'accent, son texte et sa coche ✓ en
 // --sur-accent, en 600 : la coche reste, dans les deux thèmes (jamais la couleur seule). Un choix non fait est transparent,
 // avec son contour. Rien ne change de taille au toucher. La roue, l'interrupteur et les champs passent au même système. Les
-// écrans de l'émotion et « Réveil la nuit » n'ont pas d'accent. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00
-// (390 × 844).
+// écrans de l'émotion et « Réveil la nuit » n'ont pas d'accent. Tâche 4 : Aujourd'hui façon Apple (l'en-tête, les cartes sans
+// carré coloré, la bande du bas, les onglets), sans couleur de rubrique, et la page du soir qui ne grandit pas de plus de
+// 120 px. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const THEMES = [['light', clair], ['dark', sombre]];
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -194,3 +196,133 @@ test('v12 (3/9) · l\'écran 3 de l\'émotion, carte « Pour récupérer, je… 
     expect((await mesure()).bord, `${schema} · arrêtée`).toEqual(['2px', 'solid', rgb(t['moment-plein'])]);
   }
 });
+
+// ---------- Tâche 4 : Aujourd'hui façon Apple ----------
+
+// La hauteur de la page du soir en v11 (b9870dd, mesurée le 10/11/2026 dans WebKit) : remplie comme le contrôle global
+// (verserControle), à 390 × 844, au texte par défaut, sans zones sûres, document.documentElement.scrollHeight.
+const HAUTEUR_SOIR_V11 = 1611;
+
+test('v12 (4/9) · la page du soir, remplie comme le contrôle, grandit de 120 px au plus depuis la v11 (390 × 844, texte par défaut), en clair et en sombre', async ({ page }) => {
+  await verserControle(page);
+  for (const [schema] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.reload();
+    // Tout ce que la page montre ce soir-là : les trois relevés, la ligne Après coup et le prochain rendez-vous.
+    await expect(page.locator('.liste-evenements > li')).toHaveCount(3);
+    await expect(page.locator('.ligne-apres-coup-jour')).toBeVisible();
+    await expect(page.locator('.ligne-rdv')).toBeVisible();
+    await stabiliser(page);
+    const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(hauteur - HAUTEUR_SOIR_V11, `${schema} : ${hauteur} px, contre ${HAUTEUR_SOIR_V11} en v11`).toBeLessThanOrEqual(120);
+  }
+});
+
+test('v12 (4/9) · le nom accessible de l\'en-tête ne change pas : « Aujourd\'hui, Jeudi 15 octobre », après minuit aussi, et « Mercredi 14 octobre » un autre jour, ouvert aussi depuis l\'Historique', async ({ page }) => {
+  const titre = page.getByRole('heading', { level: 1 });
+  await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
+  await expect(titre.locator('.grand-titre')).toHaveText('Aujourd\'hui, ');
+  await expect(titre.locator('.sur-titre')).toHaveText('Jeudi 15 octobre');
+  // Le grand titre est dessous à l'écran, mais d'abord dans le DOM : VoiceOver le lit en premier.
+  expect(await titre.evaluate((h) => [...h.children].map((e) => e.className))).toEqual(['grand-titre', 'sur-titre']);
+  await aller(page, '#/jour/2026-10-14');
+  await expect(titre).toHaveAccessibleName('Mercredi 14 octobre');
+  await expect(titre.locator('.grand-titre')).toHaveText('Mercredi 14');
+  await expect(titre.locator('.sur-titre')).toHaveText('octobre');
+  await aller(page, '#/historique/jour/2026-10-14');
+  await expect(page.getByRole('button', { name: 'Retour' })).toBeVisible();
+  await expect(titre).toHaveAccessibleName('Mercredi 14 octobre');
+  // Entre 0 h et 4 h, c'est encore jeudi.
+  await page.clock.setSystemTime(new Date(2026, 9, 16, 1, 30));
+  await aller(page, '#/aujourdhui');
+  await page.reload();
+  await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
+});
+
+// La couleur ne dit qu'une émotion (spec §5.1 et §5.6) : sur Aujourd'hui, bande du bas et onglets compris, chaque couleur
+// peinte (texte, fond, bord, ombre, remplissage et trait d'une icône) est un gris, ou l'accent (choisi, agir, onglet actif,
+// liens). Seuls les repères des émotions (.zone-*, les points du jour) ont leur couleur.
+test('v12 (4/9) · aucune couleur de rubrique sur Aujourd\'hui : hors des zones des émotions, chaque couleur peinte est un gris ou l\'accent, en clair et en sombre', async ({ page }) => {
+  await verserControle(page);
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.episodes.creer({ date: '2026-10-15', heure: '18:40', emotion: 'emotion:colere', intensite: 6 });
+    await r.symptomes.creer({ date: '2026-10-15', symptome: 'symptome:ruminations', intensite: 4 });
+  });
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.reload();
+    await expect(page.locator('.liste-evenements > li')).toHaveCount(5);
+    // Des choix faits (Lieu, Sommeil, Traitement, la roue de la nuit), un détail ouvert, un repli ouvert.
+    await toucher(page, 'Contact humain', 'Oui');
+    await page.getByRole('button', { name: 'Sport en détail' }).click();
+    await page.getByRole('button', { name: /^Ce qui a pesé/ }).click();
+    await stabiliser(page);
+    const peintes = await page.evaluate(() => {
+      const res = [];
+      const nom = (el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? `.${el.className.trim().split(/\s+/).join('.')}` : ''}`;
+      for (const racine of [document.querySelector('main.aujourdhui'), document.querySelector('nav.onglets')]) {
+        for (const el of [racine, ...racine.querySelectorAll('*')]) {
+          if (el.closest('.zones-jour, .zone-rouge, .zone-jaune, .zone-bleu, .zone-vert')) continue;
+          const s = getComputedStyle(el);
+          if (s.display === 'none' || s.visibility === 'hidden') continue;
+          const r = el.getBoundingClientRect();
+          if (!r.width && !r.height) continue;
+          const couleurs = [['color', s.color], ['background', s.backgroundColor], ['fill', s.fill], ['stroke', s.stroke],
+            ...['Top', 'Right', 'Bottom', 'Left'].filter((c) => s[`border${c}Width`] !== '0px' && s[`border${c}Style`] !== 'none').map((c) => [`border-${c}`, s[`border${c}Color`]]),
+            ...(s.boxShadow.match(/rgba?\([^)]*\)/g) || []).map((c) => ['box-shadow', c])];
+          for (const [prop, c] of couleurs) if (/^rgba?\(/.test(c)) res.push([nom(el), prop, c]);
+        }
+      }
+      return res;
+    });
+    const accent = new Set([rgb(t.accent), rgb(t['sur-accent']), rgb(t['accent-texte'])]);
+    const alpha = (c) => { const m = c.match(/[\d.]+/g); return m.length > 3 ? Number(m[3]) : 1; };
+    const fautes = peintes.filter(([, , c]) => alpha(c) > 0 && oklch(c).C >= 0.02 && !accent.has(`rgb(${canaux(c).join(', ')})`));
+    expect(fautes, schema).toEqual([]);
+    // L'accent sert bien : un choix fait, l'onglet actif, Émotion.
+    expect(peintes.some(([n, p, c]) => n.startsWith('a.action-bande.moment') && p === 'background' && c === rgb(t.accent)), schema).toBe(true);
+    expect(peintes.some(([n, p, c]) => n === 'a.onglet' && p === 'color' && c === rgb(t['accent-texte'])), schema).toBe(true);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
+});
+
+// Le point de vigilance 4, pour Aujourd'hui : en très grand texte, le grand titre est plafonné à 48 px ; l'en-tête, la bande
+// du bas et « Congé / repos » choisi, avec sa coche, ne débordent pas de côté (rien hors de l'écran, aucun texte hors de sa
+// boîte, sauf l'ellipse voulue d'« Émotion » et du résumé).
+test('v12 (4/9) · point de vigilance 4 : en très grand texte (28 à 53, 390 et 375), le grand titre plafonné à 48 px ; l\'en-tête, la bande et « Congé / repos » avec sa coche ne débordent pas de côté', async ({ page }) => {
+  await toucher(page, 'Lieu', 'Congé / repos');
+  await expect(groupe(page, 'Lieu').getByRole('button', { name: /Congé \/ repos/ })).toHaveAttribute('aria-pressed', 'true');
+  for (const largeur of [390, 375]) {
+    await page.setViewportSize({ width: largeur, height: 844 });
+    for (const px of [17, 28, 40, 53]) {
+      await page.evaluate((x) => { document.documentElement.style.fontSize = `${x}px`; document.body.style.fontSize = `${x}px`; window.scrollTo(0, 0); }, px);
+      const quoi = `${largeur} · ${px} px`;
+      const m = await page.evaluate(() => {
+        const fautes = [];
+        const coupe = (el) => getComputedStyle(el).textOverflow === 'ellipsis';
+        const verifier = (el, boite) => {
+          const r = el.getBoundingClientRect();
+          if (!r.width) return;
+          if (r.left < -0.5 || r.right > innerWidth + 0.5) fautes.push(`${el.className || el.tagName} hors de l'écran`);
+          if (boite && (r.left < boite.left - 0.5 || r.right > boite.right + 0.5)) fautes.push(`${el.className || el.tagName} hors de sa boîte`);
+          // Un texte qui dépasse de sa boîte (un élément qui porte du texte ; la cible de ‹ ›, qui déborde exprès de 4 px sur la
+          // marge, n'en est pas un).
+          const texte = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+          if (texte && el.scrollWidth > el.clientWidth + 1 && !coupe(el)) fautes.push(`${el.className || el.tagName} : texte qui déborde`);
+        };
+        for (const el of document.querySelectorAll('.entete-jour, .entete-jour *, .actions-flottantes, .actions-flottantes *')) if ((!(el instanceof SVGElement) || el.tagName === 'svg') && el.tagName !== 'INPUT') verifier(el);
+        const conge = [...document.querySelectorAll('[aria-label="Lieu"] button')].find((b) => b.textContent.includes('Congé'));
+        const carte = conge.closest('.carte-champ').getBoundingClientRect();
+        for (const el of [conge, ...conge.querySelectorAll('*')]) if (!(el instanceof SVGElement) || el.tagName === 'svg') verifier(el, carte);
+        const coche = conge.querySelector('.coche');
+        return { fautes, grand: Number.parseFloat(getComputedStyle(document.querySelector('.grand-titre')).fontSize),
+          coche: Boolean(coche) && getComputedStyle(coche).display !== 'none' };
+      });
+      expect(m.fautes, quoi).toEqual([]);
+      expect(m.grand, quoi).toBe(Math.min(2 * px, 48));
+      expect(m.coche, `${quoi} : la coche de « Congé / repos »`).toBe(true);
+    }
+  }
+});
+

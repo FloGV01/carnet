@@ -37,15 +37,16 @@ test('le soir à 390 × 797, en clair et en sombre : la bande du bas est pleine 
     const onglets = await page.getByRole('navigation', { name: 'Navigation principale' }).boundingBox();
     // Collée : aucun jour entre la bande et la barre d'onglets.
     expect(Math.abs(cadre.y + cadre.height - onglets.y)).toBeLessThanOrEqual(0.5);
-    // Fond plein, celui de la page : le texte ne passe plus entre les boutons, ni à la vue ni au toucher.
+    // Fond plein, celui des onglets (v12, spec §5.4 : une seule matière en bas, --barre ; celui de la page jusqu'à la v11) : le
+    // texte ne passe plus entre les boutons, ni à la vue ni au toucher.
     const fond = await bande.evaluate((b) => {
       const s = getComputedStyle(b);
       const premier = b.firstElementChild.getBoundingClientRect();
       const entre = document.elementFromPoint(premier.right + 2, premier.top + premier.height / 2);
-      return { couleur: s.backgroundColor, image: s.backgroundImage, page: getComputedStyle(document.documentElement).backgroundColor, entre: Boolean(entre && entre.closest('.actions-flottantes')) };
+      return { couleur: s.backgroundColor, image: s.backgroundImage, onglets: getComputedStyle(document.querySelector('nav.onglets')).backgroundColor, entre: Boolean(entre && entre.closest('.actions-flottantes')) };
     });
     expect(fond.image).toBe('none');
-    expect(fond.couleur).toBe(fond.page);
+    expect(fond.couleur).toBe(fond.onglets);
     expect(fond.couleur).toMatch(/^rgb\(/);
     expect(fond.entre).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

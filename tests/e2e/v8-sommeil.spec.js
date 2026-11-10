@@ -128,7 +128,8 @@ test('la Durée, sur la roue sous Mal · Moyen · Bien : un toucher enregistre l
   const g = await d.evaluate((r) => {
     const carte = r.closest('.carte-champ');
     const [q, b] = [carte.querySelector('.segmente').getBoundingClientRect(), r.getBoundingClientRect()];
-    return { sommeil: carte.classList.contains('teinte-sommeil'), sous: b.top >= q.bottom, bords: [Math.abs(b.left - q.left), Math.abs(b.right - q.right)], h: b.height };
+    // v12 : la carte n'a plus de teinte ; c'est la carte Sommeil, par son titre.
+    return { sommeil: carte.querySelector('.titre-rubrique').textContent === 'Sommeil', sous: b.top >= q.bottom, bords: [Math.abs(b.left - q.left), Math.abs(b.right - q.right)], h: b.height };
   });
   expect(g.sommeil).toBe(true);
   expect(g.sous).toBe(true);

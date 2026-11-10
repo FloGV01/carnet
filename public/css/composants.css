@@ -105,24 +105,26 @@
 /* Il fait 31 de haut : sa zone de toucher est portée à 47 (cible de 44 pt), dans ses rangées de 52 (.ligne-interrupteur, .ligne-champ-reglage). */
 .interrupteur::after { content: ""; position: absolute; inset: -8px -4px; }
 
-/* ---------- Barre d'onglets (2b) ---------- */
-/* Neutre : fond --bg et filet en haut ; icônes de 22. L'onglet actif a une pilule de 56 × 30 en --surface-2
-   et un libellé en 700 ; les autres sont en --text-2, en 400. Hauteur : 1 + 4 + 45 = --hauteur-onglets. */
+/* ---------- Barre d'onglets (v12, spec §5.4) ---------- */
+/* Façon iOS : fond --barre et filet de 0,5 en haut (une ombre intérieure, sans hauteur) ; icônes de 25 au trait, libellés
+   de 10 en 500, en --text-2. L'onglet actif est en --accent-texte, avec son icône pleine (barre-onglets.js) et son libellé en
+   600, sans pilule. Hauteur : 5 + 45 = --hauteur-onglets. Sur Aujourd'hui, la bande du bas, de la même matière, porte le
+   filet au-dessus d'elle (ecrans.css). */
 .onglets {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex;
-  background: var(--bg); border-top: 1px solid var(--line);
-  padding: 4px calc(2px + var(--zone-droite)) var(--zone-bas) calc(2px + var(--zone-gauche));
+  background: var(--barre); box-shadow: inset 0 .5px 0 var(--line);
+  padding: 5px calc(2px + var(--zone-droite)) var(--zone-bas) calc(2px + var(--zone-gauche));
 }
+html:has(.actions-flottantes) .onglets { box-shadow: none; }
 .onglet {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   min-height: 45px; color: var(--text-2); text-decoration: none;
 }
-.onglet-icone { display: flex; align-items: center; justify-content: center; width: 56px; height: 30px; border-radius: var(--r-petit); }
-.onglet svg { width: 22px; height: 22px; }
-.onglet-libelle { font-size: var(--t-onglet); line-height: 13px; font-weight: 400; white-space: nowrap; }
-.onglet[aria-current="page"] { color: var(--text); }
-.onglet[aria-current="page"] .onglet-icone { background: var(--surface-2); }
-.onglet[aria-current="page"] .onglet-libelle { font-weight: 700; }
+.onglet-icone { display: flex; align-items: center; justify-content: center; }
+.onglet svg { width: 25px; height: 25px; }
+.onglet-libelle { font-size: var(--t-onglet); line-height: 12px; font-weight: 500; letter-spacing: .01em; white-space: nowrap; }
+.onglet[aria-current="page"] { color: var(--accent-texte); }
+.onglet[aria-current="page"] .onglet-libelle { font-weight: 600; }
 
 /* ---------- Bandeau de mise à jour, bandeau TEST ---------- */
 .bandeau {

@@ -67,7 +67,8 @@ test('vide : 13 valeurs dans l\'ordre, rien de marqué, 7 h au milieu sur un fon
   // Sous Mal · Moyen · Bien, dans la carte Sommeil ; le lien « Durée › » de la v8 est parti.
   const g = await roue(page).evaluate((r) => {
     const carte = r.closest('.carte-champ');
-    return { sommeil: carte.classList.contains('teinte-sommeil'), sous: r.getBoundingClientRect().top >= carte.querySelector('.segmente').getBoundingClientRect().bottom,
+    // v12 : la carte n'a plus de teinte ; c'est la carte Sommeil, par son titre.
+    return { sommeil: carte.querySelector('.titre-rubrique').textContent === 'Sommeil', sous: r.getBoundingClientRect().top >= carte.querySelector('.segmente').getBoundingClientRect().bottom,
       liens: carte.querySelectorAll('.lien-rubrique').length };
   });
   expect(g).toEqual({ sommeil: true, sous: true, liens: 0 });

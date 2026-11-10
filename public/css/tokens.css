@@ -34,6 +34,10 @@
   --piste: #eeeef0;
   --fenetre: #ffffff;
   --fenetre-ombre: 0 1px 3px rgba(0, 0, 0, .16), 0 0 0 .5px rgba(0, 0, 0, .08);
+  /* Un rond neutre autour d'une icône (‹ › de l'en-tête d'Aujourd'hui, v12) : la carte, détachée par une ombre légère en
+     clair, par un filet en sombre. Jamais l'accent : un rond appartient aux émotions (spec §5.3). */
+  --rond: #ffffff;
+  --rond-ombre: 0 1px 3px rgba(0, 0, 0, .10), 0 0 0 .5px rgba(0, 0, 0, .10);
   /* L'accent, le rendu B (spec §5.3) : l'aplat d'un choix fait ou d'une action, le texte et la coche posés dessus, et le
      texte d'un lien ou d'une icône qui ouvre quelque chose (AA sur le fond, la carte et la barre). Jamais un rond ni un
      point : ronds et bulles appartiennent aux émotions. */
@@ -109,7 +113,9 @@
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
   --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
-  --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
+  /* Le grand titre d'Aujourd'hui (v12, spec §5.2 et §5.4) : 34 / 41 en 700, plafonné à 48 px en très grand texte. */
+  --t-grand-titre: min(2rem, 48px); --l-grand-titre: min(2.412rem, 58px);
+  --t-titre-section: 1.294rem; --l-titre-section: 1.647rem; /* 22 / 28 : titre de section (Ma journée, v12) */
   --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */
   --t-bloc: 1rem; --l-bloc: 1.294rem;             /* 17 / 22 : titre de bloc ou de rubrique */
   --t-section: 0.735rem; --ls-section: .07em;     /* 12,5 : libellé de section, en capitales */
@@ -118,17 +124,17 @@
   --t-petit: 0.824rem;                            /* 14 : résumé d'un repli, pastille */
   --t-note: 0.765rem;                             /* 13 */
   --t-legende: 0.706rem;                          /* 12 */
-  --t-onglet: 11px;                               /* comme les onglets d'iOS, sans grandir */
+  --t-onglet: 10px;                               /* comme les onglets d'iOS, sans grandir (v12 : 10, spec §5.2) */
   --t-grille: 1.176rem;                           /* 20 : grille de 1 à 10 */
   --t-grille-lg: 1.235rem;                        /* 21 : intensité */
   --t-tuile: 1.882rem;                            /* 32 : tuile chiffrée (2b) */
   --t-chiffre: 1.647rem;
 
-  /* Formes : bouton 12, pastille 10, carte 14, feuille du bas 24 */
+  /* Formes : bouton 12, pastille 10, carte 16 (v12, spec §5.2 ; 14 jusqu'à la v11), feuille du bas 24 */
   --r-petit: 10px;
   --r-moyen: 12px;
   --r-bouton: 12px;
-  --r-carte: 14px;
+  --r-carte: 16px;
   --r-feuille: 24px;
 
   /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 14 (2b) */
@@ -182,6 +188,8 @@
     --piste: #111113;
     --fenetre: #48484c;
     --fenetre-ombre: inset 0 0 0 .5px rgba(255, 255, 255, .10);
+    --rond: #2c2c2e;
+    --rond-ombre: inset 0 0 0 .5px rgba(255, 255, 255, .10);
     --accent: #30d158;
     --sur-accent: #000000;
     --accent-texte: #30d158;

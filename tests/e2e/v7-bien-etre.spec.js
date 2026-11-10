@@ -44,10 +44,14 @@ test('onglets : Aujourd\'hui · Analyse · Bien-être · Soins · Réglages ; l\
   await expect(page).toHaveURL(/#\/bien-etre$/);
   await expect(page.getByRole('heading', { name: 'Bien-être', level: 1 })).toBeVisible();
   await expect(nav(page).getByRole('link', { name: 'Bien-être' })).toHaveAttribute('aria-current', 'page');
-  // La feuille : une icône au trait, comme les autres.
-  await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path')).toHaveCount(1);
+  // La feuille, sur l'onglet actif : pleine (v12, spec §5.4), la nervure en creux et la tige au trait.
+  await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path')).toHaveCount(2);
+  await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path[fill="currentColor"]')).toHaveCount(1);
 
   await nav(page).getByRole('link', { name: 'Analyse' }).click();
+  // Sur un onglet inactif : une icône au trait, comme les autres.
+  await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path')).toHaveCount(1);
+  await expect(nav(page).getByRole('link', { name: 'Bien-être' }).locator('svg path[fill]')).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Historique, épisodes et Comprendre' }).getByRole('link', { name: 'Historique', exact: true }).click();
   await expect(page).toHaveURL(/#\/historique$/);
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();

@@ -42,9 +42,11 @@ test('la carte « Mes gratitudes » est juste sous les points positifs, de même
   expect(Math.abs(bg.x - bp.x)).toBeLessThanOrEqual(0.5);
   expect(Math.abs(bg.width - bp.width)).toBeLessThanOrEqual(0.5);
   expect(Math.abs((bg.y - (bp.y + bp.height)) - (bp.y - avant.bas))).toBeLessThanOrEqual(1);
-  // De même forme : même hauteur au repos, même teinte, une zone de deux lignes avec sa consigne et la dictée.
+  // De même forme : même hauteur au repos, la même carte (sans teinte depuis la v12), une zone de deux lignes avec sa consigne
+  // et la dictée.
   expect(Math.abs(bg.height - bp.height)).toBeLessThanOrEqual(1);
-  await expect(gr).toHaveClass(/teinte-pos/);
+  expect(await gr.getAttribute('class')).toBe(await pos.getAttribute('class'));
+  await expect(gr).toHaveClass('champ-jour carte-champ');
   await expect(gr).toContainText('Mes gratitudes');
   await expect(zone(page)).toHaveAttribute('placeholder', CONSIGNE);
   await expect(zone(page)).toHaveAttribute('aria-label', 'Mes gratitudes');
@@ -56,8 +58,11 @@ test('la carte « Mes gratitudes » est juste sous les points positifs, de même
   expect((await gr.textContent()).trim()).toBe('Mes gratitudes');
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    const carre = await gr.locator('.carre-rubrique, .carre-icone').first().evaluate((e) => getComputedStyle(e).backgroundColor);
-    expect(carre, `${schema} : carré de la carte, neutre (v12)`).toBe(rgb(t['surface-2']));
+    // v12 (4/9) : plus de carré, l'icône de la rubrique en --text-2, la même que celle des points positifs.
+    const [icone, iconePos] = await Promise.all([gr, pos].map((c) => c.locator('.tete-rubrique > svg').evaluate((e) => [getComputedStyle(e).color, e.innerHTML])));
+    expect(icone[0], `${schema} : icône de la carte, neutre (v12)`).toBe(rgb(t['text-2']));
+    expect(icone).toEqual(iconePos);
+    await expect(gr.locator('.carre-rubrique')).toHaveCount(0);
   }
   // Rien n'est noté sans frappe.
   expect(await entreeDuJour(page)).toBeFalsy();

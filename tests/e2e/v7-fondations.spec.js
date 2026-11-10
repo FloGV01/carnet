@@ -175,7 +175,7 @@ test('v12 : un choix non fait et un champ sont transparents, avec leur contour, 
       return r;
     });
     const transparent = ['rgba(0, 0, 0, 0)', `${rgb(t.contour)} 0px 0px 0px 1px inset`];
-    expect(fonds).toEqual({ carte: rgb(t.surface), bordure: '0px', rayon: '14px', choix: transparent, champ: transparent });
+    expect(fonds).toEqual({ carte: rgb(t.surface), bordure: '0px', rayon: '16px', choix: transparent, champ: transparent });
     // Aujourd'hui (tâche 4) : la zone des points positifs est dans sa carte, « Mémo vocal » sur le fond de l'écran.
     const style = (loc) => loc.evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).boxShadow]);
     expect(await style(page.locator('#points-positifs'))).toEqual(transparent);
@@ -186,43 +186,47 @@ test('v12 : un choix non fait et un champ sont transparents, avec leur contour, 
   }
 });
 
-test('barre d\'onglets 2b, en clair et en sombre : neutre, icônes de 22, pilule de 56 × 30 en --surface-2 et libellé en 700 pour l\'onglet actif', async ({ page }) => {
+// v12 (4/9, spec §5.4) : la barre d'onglets façon iOS. Fond --barre, filet de 0,5 en haut (sur Aujourd'hui, la bande du bas
+// le porte au-dessus d'elle) ; icônes de 25 au trait, libellés de 10 en 500, en --text-2 ; l'onglet actif en --accent-texte,
+// avec son icône pleine et son libellé en 600, sans pilule.
+test('barre d\'onglets façon iOS, en clair et en sombre : fond --barre, icônes de 25 ; l\'onglet actif en --accent-texte, icône pleine et libellé en 600, sans pilule', async ({ page }) => {
   for (const schema of ['light', 'dark']) {
     const t = schema === 'dark' ? sombre : clair;
     await page.emulateMedia({ colorScheme: schema });
-    for (const [hash, actif] of [['#/aujourdhui', 'Aujourd\'hui'], ['#/analyse', 'Analyse'], ['#/bien-etre', 'Bien-être'], ['#/soins', 'Soins']]) {
+    for (const [hash, actif] of [['#/aujourdhui', 'Aujourd\'hui'], ['#/analyse', 'Analyse'], ['#/bien-etre', 'Bien-être'], ['#/soins', 'Soins'], ['#/reglages', 'Réglages']]) {
       await aller(page, hash);
       const nav = page.getByRole('navigation', { name: 'Navigation principale' });
       await expect(nav.getByRole('link', { name: actif, exact: true })).toHaveAttribute('aria-current', 'page');
       const r = await nav.evaluate((n) => {
         const s = getComputedStyle(n);
         return {
-          fond: s.backgroundColor, filet: `${s.borderTopWidth} ${s.borderTopColor}`, hauteur: Math.round(n.getBoundingClientRect().height),
+          fond: s.backgroundColor, filet: s.boxShadow, bord: s.borderTopWidth, hauteur: Math.round(n.getBoundingClientRect().height),
           onglets: [...n.querySelectorAll('a')].map((a) => {
-            const pilule = a.querySelector('.onglet-icone');
-            const svg = a.querySelector('svg').getBoundingClientRect();
-            const p = getComputedStyle(pilule);
+            const enveloppe = a.querySelector('.onglet-icone');
+            const svg = a.querySelector('svg');
+            const b = svg.getBoundingClientRect();
+            const libelle = a.querySelector('.onglet-libelle');
             return {
               nom: a.textContent.trim(), actif: a.getAttribute('aria-current') === 'page', classe: a.className, couleur: getComputedStyle(a).color,
-              graisse: getComputedStyle(a.querySelector('.onglet-libelle')).fontWeight, icone: `${svg.width}×${svg.height}`,
-              pilule: `${pilule.getBoundingClientRect().width}×${pilule.getBoundingClientRect().height} ${p.borderTopLeftRadius} ${p.backgroundColor}`,
+              graisse: getComputedStyle(libelle).fontWeight, taille: getComputedStyle(libelle).fontSize, icone: `${b.width}×${b.height}`,
+              pleine: [...svg.querySelectorAll('path')].some((p) => p.getAttribute('fill') === 'currentColor'),
+              pilule: getComputedStyle(enveloppe).backgroundColor,
             };
           }),
         };
       });
-      expect(r.fond).toBe(rgb(t.bg));
-      expect(r.filet).toBe(`1px ${rgb(t.line)}`);
+      const quoi = `${schema} · ${hash}`;
+      expect(r.fond, quoi).toBe(rgb(t.barre));
+      expect(r.bord, quoi).toBe('0px');
+      expect(r.filet, quoi).toBe(hash === '#/aujourdhui' ? 'none' : `${rgb(t.line)} 0px 0.5px 0px 0px inset`);
       expect(r.hauteur).toBe(50);
       expect(r.onglets.map((o) => o.nom)).toEqual(['Aujourd\'hui', 'Analyse', 'Bien-être', 'Soins', 'Réglages']);
       for (const o of r.onglets) {
         expect(o.classe, `${o.nom} : aucune teinte`).toBe('onglet');
-        expect(o.icone).toBe('22×22');
-        if (o.actif) {
-          expect(o).toMatchObject({ couleur: rgb(t.text), graisse: '700', pilule: `56×30 10px ${rgb(t['surface-2'])}` });
-        } else {
-          expect(o).toMatchObject({ couleur: rgb(t['text-2']), graisse: '400', pilule: '56×30 10px rgba(0, 0, 0, 0)' });
-        }
-        expect(contraste(o.couleur, rgb(t.bg)), o.nom).toBeGreaterThanOrEqual(4.5);
+        expect([o.icone, o.taille, o.pilule], `${quoi} · ${o.nom}`).toEqual(['25×25', '10px', 'rgba(0, 0, 0, 0)']);
+        if (o.actif) expect([o.couleur, o.graisse, o.pleine], `${quoi} · ${o.nom}`).toEqual([rgb(t['accent-texte']), '600', true]);
+        else expect([o.couleur, o.graisse, o.pleine], `${quoi} · ${o.nom}`).toEqual([rgb(t['text-2']), '500', false]);
+        expect(contraste(o.couleur, rgb(t.barre)), `${quoi} · ${o.nom}`).toBeGreaterThanOrEqual(4.5);
       }
     }
   }

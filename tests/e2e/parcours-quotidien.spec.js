@@ -37,10 +37,10 @@ test('les 5 champs du soir en 5 touchers, sans frappe, sans bouton Enregistrer ;
   await expect(groupe(page, 'Explosions')).toHaveCount(0);
   await expect(groupe(page, 'Humeur')).toHaveCount(0);
   await atteignable(page);
-  // À 390 px : « Moment difficile » et « Émotion » en toutes lettres, chacun avec son carré.
+  // À 390 px : « Moment difficile » et « Émotion » en toutes lettres, chacun avec son icône (v12 : sans carré).
   await expect(page.locator('.actions-flottantes .moment-difficile .libelle-action')).toBeVisible();
   await expect(page.locator('.actions-flottantes .moment .libelle-action')).toBeVisible();
-  await expect(page.locator('.actions-flottantes .carre-action')).toHaveCount(2);
+  await expect(page.locator('.actions-flottantes .action-bande > svg')).toHaveCount(2);
   await expect(page.getByRole('button', { name: /enregistrer/i })).toHaveCount(0);
   await expect(page.getByText('Enregistré')).toBeVisible();
   const entree = await entreeDuJour(page);
@@ -86,7 +86,7 @@ test('pire cas : 9 champs (v11 : Mes gratitudes, ajoutée par normaliserJournee)
   await expect.poll(async () => (await entreeDuJour(page))?.explosions).toBe(0);
 });
 
-// 21 px (xxxLarge), 28 (AX1) et 33 (AX2) : d'abord « Moment difficile » ne garde que son carré, puis « + Épisode » que son
+// 21 px (xxxLarge), 28 (AX1) et 33 (AX2) : d'abord « Moment difficile » ne garde que son icône, puis « + Épisode » que son
 // « + ». « Émotion » garde son nom en entier et reste le plus large (P5) ; rien ne sort de son bouton.
 test('grand texte iOS : la bande garde ses trois actions sur une ligne, « Moment difficile » puis « + Épisode » réduits', async ({ page }) => {
   for (const largeur of [390, 375]) {

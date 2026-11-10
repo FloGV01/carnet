@@ -18,21 +18,25 @@ test.beforeEach(async ({ page }) => {
 });
 
 const boite = (page, selecteur) => page.locator(selecteur).first().boundingBox();
-// Le titre du jour tel qu'il est affiché, sans « Aujourd'hui, » (réservé à VoiceOver).
-const titreVu = (page) => page.locator('h1').evaluate((h) => [...h.childNodes]
-  .filter((n) => !n.classList || !n.classList.contains('visuellement-cache')).map((n) => n.textContent).join('').trim());
+// Le titre du jour tel qu'il est écrit (v12 : le grand titre, puis le sur-titre, sans la virgule lue par VoiceOver) :
+// « Aujourd'hui Jeudi 15 octobre », « Mercredi 14 octobre ».
+const titreVu = (page) => page.locator('h1').evaluate((h) => {
+  const texte = (sel) => [...h.querySelector(sel).childNodes].filter((n) => !n.classList || !n.classList.contains('virgule-lue'))
+    .map((n) => n.textContent).join('').trim();
+  return `${texte('.grand-titre')} ${texte('.sur-titre')}`;
+});
 
 // ---------- Le soir en cartes ----------
 
-// Une carte de rubrique : son fond, son rayon, son carré (taille, couleur, icône) et son titre.
+// Une carte de rubrique : son fond, son rayon, son icône (taille, couleur), le carré qu'elle n'a plus (v12) et son titre.
 const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, nom) }).evaluate((c) => {
   const s = getComputedStyle(c);
-  const carre = c.querySelector('.carre-rubrique');
+  const icone = c.querySelector('.tete-rubrique > svg');
   const titre = c.querySelector('.titre-rubrique');
-  const r = carre.getBoundingClientRect();
+  const r = icone.getBoundingClientRect();
   return {
-    fond: s.backgroundColor, rayon: s.borderTopLeftRadius, carre: [Math.round(r.width), Math.round(r.height)], rayonCarre: getComputedStyle(carre).borderTopLeftRadius,
-    fondCarre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre.querySelector('svg')).color,
+    fond: s.backgroundColor, rayon: s.borderTopLeftRadius, icone: [Math.round(r.width), Math.round(r.height), getComputedStyle(icone).color],
+    carre: c.querySelectorAll('.carre-rubrique, .tete-rubrique [class*="carre"]').length,
     titre: titre.textContent, couleurTitre: getComputedStyle(titre).color, graisse: getComputedStyle(titre).fontWeight,
   };
 });
@@ -63,18 +67,16 @@ test('le soir avec les zones sûres de l\'iPhone, en clair et en sombre : six ru
     // au-dessus de la bande.
     atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
-    // Chaque rubrique : une carte --surface de rayon 14, un carré de 28 (rayon 7), neutre (v12 : plus de couleur de
-    // rubrique), l'icône en --text-2, le titre en 600.
+    // Chaque rubrique (v12, spec §5.4) : une carte --surface de rayon 16, sans carré coloré, l'icône de 20 en --text-2,
+    // le titre en 600.
     for (const [nom, libelle] of [['Lieu', 'Lieu'], ['Sommeil', 'Sommeil'], ['Contact humain', 'Contact humain'],
       ['Sport / mouvement', 'Sport / mouvement'], ['Traitement pris', 'Traitement pris']]) {
       const c = await carteDe(page, nom);
       const quoi = `${schema} · ${nom}`;
       expect(c.fond, quoi).toBe(rgb(t.surface));
-      expect(c.rayon, quoi).toBe('14px');
-      expect(c.carre, quoi).toEqual([28, 28]);
-      expect(c.rayonCarre, quoi).toBe('7px');
-      expect(c.fondCarre, quoi).toBe(rgb(t['surface-2']));
-      expect(c.icone, quoi).toBe(rgb(t['text-2']));
+      expect(c.rayon, quoi).toBe('16px');
+      expect(c.carre, quoi).toBe(0);
+      expect(c.icone, quoi).toEqual([20, 20, rgb(t['text-2'])]);
       expect(c.titre, quoi).toBe(libelle);
       expect(c.graisse, quoi).toBe('600');
       expect(contraste(c.couleurTitre, c.fond), quoi).toBeGreaterThanOrEqual(4.5);
@@ -265,39 +267,64 @@ test('grand texte (17 à 28 px, 390 et 375) : rien ne sort des cartes, choix fai
 
 // ---------- En-tête ----------
 
-test('en-tête 2b : « Jeudi 15 octobre » en 23/600 avec un chevron bas, ‹ en couleur action, › atténué sur aujourd\'hui', async ({ page }) => {
+// v12 (4/9, spec §5.4) : l'en-tête façon App Store. Le sur-titre en capitales, 13/600 en --text-2, avec son chevron bas ; le
+// grand titre, 34/41 en 700 ; le titre entier ouvre le sélecteur de date ; ‹ › dans des ronds neutres de 36, des cibles de
+// 44 ; › en --desactive sur aujourd'hui. Le nom accessible ne change pas.
+test('en-tête façon App Store : le sur-titre « JEUDI 15 OCTOBRE ⌄ » en 13/600, le grand titre « Aujourd\'hui » en 34/700, ‹ › dans des ronds neutres, › grisé sur aujourd\'hui ; un autre jour, « Mercredi 14 » sous « OCTOBRE »', async ({ page }) => {
+  const mesure = () => page.locator('.entete-jour').evaluate((e) => {
+    const s = (x, pseudo) => getComputedStyle(x, pseudo);
+    const [h1, grand, sur] = ['h1', '.grand-titre', '.sur-titre'].map((x) => e.querySelector(x));
+    const [rh, rg, rs] = [h1, grand, sur].map((x) => x.getBoundingClientRect());
+    const chevron = sur.querySelector('svg');
+    const date = e.querySelector('input[type="date"]').getBoundingClientRect();
+    const rond = (b) => ({ cible: [b.getBoundingClientRect().width, b.getBoundingClientRect().height], couleur: s(b).color,
+      rond: [Number.parseFloat(s(b, '::before').width), s(b, '::before').borderTopLeftRadius, s(b, '::before').backgroundColor],
+      centre: Math.round(b.getBoundingClientRect().top + b.getBoundingClientRect().height / 2 - (rg.top + rg.height / 2)),
+      aDroite: b.getBoundingClientRect().left >= rh.right, desactive: b.disabled, opacite: s(b).opacity });
+    const [precedent, suivant] = [...e.querySelectorAll('.nav-jour')].map(rond);
+    return {
+      grand: [grand.textContent, Number.parseFloat(s(grand).fontSize), Math.round(Number.parseFloat(s(grand).lineHeight)), s(grand).fontWeight, s(grand).color],
+      sur: [sur.textContent.trim(), Math.round(Number.parseFloat(s(sur).fontSize)), s(sur).fontWeight, s(sur).textTransform, s(sur).color],
+      surAuDessus: rs.bottom <= rg.top + 0.5,
+      chevron: [Math.round(chevron.getBoundingClientRect().width), chevron.getBoundingClientRect().right <= rs.right + 0.5],
+      dateCouvre: date.left <= rh.left + 0.5 && date.right >= Math.max(rg.right, rs.right) - 0.5 && date.top <= rs.top + 0.5 && date.bottom >= rg.bottom - 0.5 && date.height >= 44,
+      precedent, suivant,
+    };
+  });
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
-    // Affiché : « Jeudi 15 octobre » ; lu par VoiceOver : « Aujourd'hui, Jeudi 15 octobre ».
     const titre = page.getByRole('heading', { level: 1 });
     await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
-    expect(await titreVu(page)).toBe('Jeudi 15 octobre');
-    const s = await page.locator('.entete-jour').evaluate((e) => {
-      const h1 = e.querySelector('h1');
-      const chevron = e.querySelector('h1 svg').getBoundingClientRect();
-      const date = e.querySelector('input[type="date"]').getBoundingClientRect();
-      const [precedent, suivant] = [...e.querySelectorAll('.nav-jour')];
-      const r = h1.getBoundingClientRect();
-      return {
-        taille: Math.round(Number.parseFloat(getComputedStyle(h1).fontSize)), graisse: getComputedStyle(h1).fontWeight, chevron: [Math.round(chevron.width), chevron.right <= r.right && chevron.top >= r.top && chevron.bottom <= r.bottom],
-        couleurChevron: getComputedStyle(e.querySelector('h1 svg')).color,
-        dateCouvre: date.left <= r.left && date.right >= r.right && date.top <= r.top && date.bottom >= r.bottom,
-        precedent: [getComputedStyle(precedent).color, precedent.getBoundingClientRect().width, precedent.getBoundingClientRect().left > r.right],
-        suivant: [getComputedStyle(suivant).opacity, suivant.disabled, suivant.getBoundingClientRect().height],
-      };
-    });
-    expect(s.taille).toBe(23);
-    expect(s.graisse).toBe('600');
-    expect(s.chevron).toEqual([16, true]);
-    expect(s.couleurChevron, schema).toBe(rgb(t['text-2']));
-    expect(s.dateCouvre, 'le titre ouvre le sélecteur de date').toBe(true);
-    expect(s.precedent, schema).toEqual([rgb(t.action), 44, true]);
-    expect(s.suivant).toEqual(['0.4', true, 44]);
+    expect(await titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
+    const m = await mesure();
+    expect(m.grand, schema).toEqual(['Aujourd\'hui, ', 34, 41, '700', rgb(t.text)]);
+    expect(m.sur, schema).toEqual(['Jeudi 15 octobre', 13, '600', 'uppercase', rgb(t['text-2'])]);
+    expect(contraste(m.sur[4], rgb(t.bg)), schema).toBeGreaterThanOrEqual(4.5);
+    expect(m.surAuDessus, 'le sur-titre au-dessus du grand titre').toBe(true);
+    expect(m.chevron).toEqual([13, true]);
+    expect(m.dateCouvre, 'le titre ouvre le sélecteur de date').toBe(true);
+    // ‹ › : des cibles de 44, des ronds de 36 à la couleur --rond, jamais l'accent ; centrés sur le grand titre, à sa droite.
+    for (const b of [m.precedent, m.suivant]) {
+      expect(b.cible, schema).toEqual([44, 44]);
+      expect(b.rond, schema).toEqual([36, '50%', rgb(t.rond)]);
+      expect(Math.abs(b.centre), schema).toBeLessThanOrEqual(1);
+      expect(b.aDroite).toBe(true);
+    }
+    expect([m.precedent.couleur, m.precedent.desactive], schema).toEqual([rgb(t.text), false]);
+    expect([m.suivant.couleur, m.suivant.desactive, m.suivant.opacite], schema).toEqual([rgb(t.desactive), true, '1']);
   }
   await page.getByRole('button', { name: 'Jour précédent' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Mercredi 14 octobre');
-  expect(await page.getByRole('button', { name: 'Jour suivant' }).evaluate((b) => [b.disabled, getComputedStyle(b).opacity])).toEqual([false, '1']);
+  expect(await titreVu(page)).toBe('Mercredi 14 octobre');
+  const m = await mesure();
+  expect(m.grand.slice(0, 2)).toEqual(['Mercredi 14', 34]);
+  expect(m.sur.slice(0, 4)).toEqual(['octobre', 13, '600', 'uppercase']);
+  expect([m.suivant.desactive, m.suivant.couleur]).toEqual([false, rgb(sombre.text)]);
+  // Le 1er du mois : « Jeudi 1er » sous « OCTOBRE ».
+  await aller(page, '#/jour/2026-10-01');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Jeudi 1er octobre');
+  expect(await titreVu(page)).toBe('Jeudi 1er octobre');
 });
 
 // ---------- Ma journée et le résumé (point de vigilance 5) ----------
@@ -443,7 +470,7 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
     });
     const quoi = (i) => `${schema} · rangée ${i + 1}`;
     expect(m.fond).toBe(rgb(t.surface));
-    expect(m.rayon).toBe('14px');
+    expect(m.rayon).toBe('16px');
     m.rangees.forEach((r, i) => {
       expect(r.hauteur, quoi(i)).toBeGreaterThanOrEqual(58);
       expect(r.taille, quoi(i)).toBe(28);
@@ -471,47 +498,56 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
 
 // ---------- Bande du bas (P5) ----------
 
-test('bande du bas : « Émotion » est le plus large et ouvre Émotion du moment ; « Moment difficile » sur deux lignes ; « + Épisode » en couleur action', async ({ page }) => {
+// v12 (4/9, spec §5.4) : la bande sur --barre, un filet en haut ; « Émotion » est le seul aplat d'accent, « Moment difficile »
+// et « + Épisode » sont neutres (la carte et le contour) ; chacun son icône, sans carré, et le même corps de texte.
+test('bande du bas : « Émotion », le plus large, seul aplat d\'accent, ouvre Émotion du moment ; « Moment difficile » sur deux lignes et « + Épisode » neutres, au contour ; le même corps de texte pour les trois', async ({ page }) => {
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     const bande = page.locator('.actions-flottantes');
     await expect(bande.getByRole('link')).toHaveCount(3);
+    const fondBande = await bande.evaluate((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).boxShadow]);
+    expect(fondBande, schema).toEqual([rgb(t.barre), `${rgb(t.line)} 0px 0.5px 0px 0px inset`]);
     const m = await bande.evaluate((b) => [...b.children].map((a) => {
       const r = a.getBoundingClientRect();
-      const carre = a.querySelector('.carre-action');
+      const icone = a.querySelector(':scope > svg');
       const libelle = a.querySelector('.libelle-action');
       return {
         nom: a.getAttribute('aria-label') || a.textContent.trim(), largeur: r.width, hauteur: r.height, fond: getComputedStyle(a).backgroundColor, texte: getComputedStyle(a).color,
-        carre: carre && [Math.round(carre.getBoundingClientRect().width), getComputedStyle(carre).backgroundColor, getComputedStyle(carre).color],
+        contour: getComputedStyle(a).boxShadow, carre: a.querySelectorAll('[class*="carre"]').length,
+        icone: icone && [Math.round(icone.getBoundingClientRect().width), getComputedStyle(icone).color],
         lignes: libelle && Math.round(libelle.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(libelle).lineHeight)),
         taille: libelle && Math.round(Number.parseFloat(getComputedStyle(libelle).fontSize)), graisse: libelle && getComputedStyle(libelle).fontWeight,
       };
     }));
     const [difficile, emotion, episode] = m;
     expect(m.map((x) => x.nom)).toEqual(['Moment difficile', 'Émotion du moment', 'Épisode']);
-    for (const x of m) expect(x.hauteur).toBe(48);
+    for (const x of m) {
+      expect(x.hauteur).toBe(48);
+      expect([x.taille, x.graisse], `${x.nom} : le même corps de texte`).toEqual([15, '600']);
+      expect(x.carre, `${x.nom} : plus de carré`).toBe(0);
+      expect(x.icone && x.icone[1], `${schema} · ${x.nom} : l'icône à la couleur du texte`).toBe(x.texte);
+      expect(contraste(x.texte, x.fond), `${schema} · ${x.nom}`).toBeGreaterThanOrEqual(4.5);
+    }
     expect(emotion.largeur).toBeGreaterThan(difficile.largeur);
     expect(emotion.largeur).toBeGreaterThan(episode.largeur);
     expect(difficile.largeur).toBeGreaterThanOrEqual(112);
     expect(difficile.largeur).toBeLessThanOrEqual(114);
     expect(difficile.lignes, 'Moment difficile sur deux lignes').toBe(2);
-    expect([difficile.taille, difficile.graisse]).toEqual([13, '600']);
-    // v12 (3/9) : leurs carrés sont neutres (plus de couleur de rubrique).
-    for (const x of [difficile, emotion]) {
-      expect(x.fond, `${schema} · ${x.nom}`).toBe(rgb(t.surface));
-      expect(x.carre, `${schema} · ${x.nom}`).toEqual([28, rgb(t['surface-2']), rgb(t.text)]);
-      expect(contraste(x.texte, x.fond)).toBeGreaterThanOrEqual(4.5);
+    expect([emotion.fond, emotion.texte, emotion.contour], `${schema} · Émotion, seul aplat d'accent`).toEqual([rgb(t.accent), rgb(t['sur-accent']), 'none']);
+    for (const x of [difficile, episode]) {
+      expect([x.fond, x.texte, x.contour], `${schema} · ${x.nom}, neutre`).toEqual([rgb(t.surface), rgb(t.text), `${rgb(t.contour)} 0px 0px 0px 1px inset`]);
     }
-    expect([episode.fond, episode.texte], schema).toEqual([rgb(t.action), rgb(t['action-on'])]);
   }
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
   await expect(page.getByRole('dialog', { name: 'Émotion du moment' })).toBeVisible();
-  // Sur un jour passé, pas de bouton Émotion : les deux autres se partagent la bande.
+  // Sur un jour passé, pas de bouton Émotion, donc pas d'aplat : les deux autres se partagent la bande.
   await aller(page, '#/jour/2026-10-12');
   await expect.poll(() => titreVu(page)).toBe('Lundi 12 octobre');
   await expect(page.getByRole('link', { name: 'Émotion du moment' })).toHaveCount(0);
   await expect(page.locator('.actions-flottantes > *')).toHaveCount(2);
+  expect(await page.locator('.actions-flottantes > *').evaluateAll((els) => els.map((a) => getComputedStyle(a).backgroundColor)))
+    .toEqual([rgb(sombre.surface), rgb(sombre.surface)]);
 });
 
 // ---------- Changer de jour en glissant (B4) ----------
@@ -520,7 +556,7 @@ test('bande du bas : « Émotion » est le plus large et ouvre Émotion du momen
 
 
 test('glisser change de jour : vers la droite la veille, vers la gauche le lendemain, jamais au-delà d\'aujourd\'hui', async ({ page }) => {
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   await glisser(page, '.carte-champ .tete-rubrique', 120, 8);
   await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
   await expect.poll(() => titreVu(page)).toBe('Mercredi 14 octobre');
@@ -530,12 +566,12 @@ test('glisser change de jour : vers la droite la veille, vers la gauche le lende
   await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
   await glisser(page, '.liste-evenements, .evenements-jour', -100, -10);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   // Jamais au-delà d'aujourd'hui.
   await glisser(page, '.carte-champ .tete-rubrique', -150);
   await page.clock.runFor(300);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   // Un geste rapide de 40 px suffit ; un geste lent de 40 px, non.
   await glisser(page, '.carte-champ .tete-rubrique', 40, 0, 400);
   await page.clock.runFor(300);

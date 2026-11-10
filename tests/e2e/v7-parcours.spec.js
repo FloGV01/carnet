@@ -264,7 +264,8 @@ test('v12 : les parcours n\'ont plus de couleur : leurs choix faits en accent, l
       return { fond: s.backgroundColor, rayon: s.borderTopLeftRadius, texte: s.color, terme: [getComputedStyle(v).color, getComputedStyle(v).fontWeight], mots: p.textContent };
     });
     expect(rappel.mots).toBe('Ça a démarré avec Conflit, ça ressemblait à colère, intensité 7.');
-    expect([rappel.fond, rappel.rayon, rappel.terme], schema).toEqual([rgb(t.surface), '14px', [rgb(t.text), '600']]);
+    // v12 (4/9, spec §5.2) : les cartes ont un rayon de 16.
+    expect([rappel.fond, rappel.rayon, rappel.terme], schema).toEqual([rgb(t.surface), '16px', [rgb(t.text), '600']]);
     expect(contraste(rappel.terme[0], rappel.fond), `${schema} · terme`).toBeGreaterThanOrEqual(4.5);
     expect(contraste(rappel.texte, rappel.fond), `${schema} · rappel`).toBeGreaterThanOrEqual(4.5);
     await fiche.getByRole('button', { name: 'Fermer', exact: true }).click();
@@ -396,7 +397,7 @@ test('Moment difficile : les exercices courts en tête (v10), la respiration dan
         nom: [v.querySelector('.parcours-tete .nom').textContent, st(v.querySelector('.point-teinte')).backgroundColor],
       };
     });
-    for (const c of s.cartes) expect(c, schema).toEqual([rgb(t.surface), '14px']);
+    for (const c of s.cartes) expect(c, schema).toEqual([rgb(t.surface), '16px']);
     expect(s.cercle.taille).toBeGreaterThanOrEqual(140);
     expect(s.cercle.taille).toBeLessThanOrEqual(164);
     expect(s.cercle, schema).toMatchObject({ fond: rgb(t['surface-2']), bord: '2px', couleurBord: rgb(t.contour), disque: rgb(t.surface) });
