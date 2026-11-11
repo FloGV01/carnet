@@ -265,20 +265,17 @@ export function choisirSpotify(r, choix) {
   return normaliserRefuges({ ...n, playlists: [...n.playlists, ligne] });
 }
 
-// Choisie dans le compte : une ligne de source Spotify a ce lien. v12 : elle part avec basculerSpotify, si plus rien ne s'en sert.
-export const choisieDeSpotify = (r, lien) => normaliserRefuges(r).playlists.some((p) => p.source === 'spotify' && p.lien === lien);
-
-// Un toucher sur une playlist de son compte : ajoutée à la fin avec la source Spotify, ou retirée si elle y est déjà. Avec
-// trois playlists notées, rien ne s'ajoute. Une ligne collée à la main, même avec ce lien, n'est jamais touchée.
-// v12 : remplacée par choisirSpotify ; elle part, avec ses tests, avec l'écran de la v11 qui s'en sert encore (tâche 6 ;
-// code-mort.test.js échoue quand plus rien ne l'appelle).
-export function basculerSpotify(r, playlist) {
+// v12 (6/9, spec v12 §6.3) : « Mettre à jour la liste » ne choisit rien. Les morceaux relus chez Spotify remplacent ceux de
+// la playlist suivie, si c'est toujours la playlist `id` (son lien a pu changer pendant la connexion) ; son nom, son lien et
+// sa source restent, qu'elle ait été collée ou choisie. Une autre playlist, ou plus de playlist suivie : rien ne change.
+// Aucun morceau (une playlist vidée chez Spotify) : le champ part, et `suite` avec lui.
+export function avecMorceaux(r, id, lecture) {
   const n = normaliserRefuges(r);
-  const lien = lienDeSpotify(estObjet(playlist) ? playlist.lien : null);
-  if (!lien) return n;
-  if (choisieDeSpotify(n, lien)) return { ...n, playlists: n.playlists.filter((p) => !(p.source === 'spotify' && p.lien === lien)) };
-  if (n.playlists.length >= MAX_PLAYLISTS) return n;
-  return normaliserRefuges({ ...n, playlists: [...n.playlists, { nom: playlist.nom, lien, source: 'spotify' }] });
+  const suivie = playlistSuivie(n);
+  if (!suivie || typeof id !== 'string' || !ID_SPOTIFY.test(id) || idPlaylistSpotify(suivie.p.lien) !== id) return n;
+  const l = estObjet(lecture) ? lecture : {};
+  const ligne = { nom: suivie.p.nom, lien: suivie.p.lien, source: suivie.p.source, morceaux: l.morceaux, suite: l.suite };
+  return normaliserRefuges({ ...n, playlists: n.playlists.map((p, k) => (k === suivie.i ? ligne : p)) });
 }
 
 // « Retirer ces playlists » : les lignes venues de Spotify partent ; les lignes collées à la main et les titres restent.

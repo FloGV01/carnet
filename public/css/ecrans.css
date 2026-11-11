@@ -740,16 +740,36 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    reste dans la carte, à portée du doigt (contre-relecture de la v11 : un « si » de 70 signes élargissait la ligne à 602 px
    pour 362, et la carte, qui coupe ce qui dépasse, rejetait le bouton hors de l'écran). */
 .mon-plan .ligne-info > span:first-child { min-width: 0; overflow-wrap: anywhere; }
-/* Mes refuges (v11) : ses titres, puis ses playlists, chacune une carte avec son nom et son lien, à la suite des lignes qui
-   s'écoutent. */
+/* Mes refuges (v12, spec v12 §6.1) : une simple liste. « Modifier » à droite de « Retour » (cible de 44) ; les cartes des
+   playlists, la ligne « Un toucher ouvre Spotify. » collée à elles, les morceaux en liste groupée, puis « Mes titres », en
+   lecture seule. Vide : une carte, sa phrase, « Choisir dans mon compte » et « Coller un lien ». */
+.modifier-refuges { padding: 0 8px; font-weight: 400; }
+.refuges .note-refuges { margin-top: -8px; padding: 0 4px; overflow-wrap: anywhere; }
+.refuges-vide { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.refuges-vide > .btn-lien { align-self: flex-start; }
+.titres-refuges { display: flex; flex-direction: column; gap: 6px; }
+.titres-refuges > .libelle-section { padding: 4px 4px 0; }
+/* Les morceaux (v12) : une rangée par morceau, de 56 au moins, le titre en 16 puis l'artiste en 15, en --text-2 ; ni icône
+   ni chevron. Les filets de 0,5 commencent au texte, comme les listes d'iOS. Un titre sans espace passe à la ligne. */
+.liste-morceaux > li + li { border-top: 0; position: relative; }
+.liste-morceaux > li + li::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: .5px; background: var(--line); }
+.ligne-morceau {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 56px; padding: 8px 16px;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
+}
+.titre-morceau { font-size: var(--t-corps); line-height: 1.3; }
+.artiste-morceau { font-size: var(--t-sous); line-height: 1.3; color: var(--text-2); }
+/* Les réglages de Mes refuges (v12) : la connexion à Spotify, puis ses playlists, chacune une carte avec son nom et son lien,
+   puis ses titres. */
 .playlists-refuges { gap: 10px; }
 .playlists-refuges > .etiquette { margin-bottom: -4px; }
 .saisie-playlist { display: flex; flex-direction: column; gap: 10px; }
 .saisie-playlist .etiquette { margin-bottom: 4px; }
 /* Sans dictée, le texte prend toute la largeur : un lien collé tient sur moins de lignes. */
 .saisie-playlist .champ-avec-dicter .champ-texte { padding-right: 14px; }
-/* La connexion à Spotify (v11, tâche 7) : dans une carte, sous les lignes qui s'écoutent, le bouton et son texte, le code à
-   coller, la liste de ses playlists à cocher (une colonne : un nom peut être long), puis « Retirer ces playlists ». */
+/* La connexion à Spotify (v11, tâche 7 ; v12, en tête des réglages) : dans une carte, les boutons et leur note, le code à
+   coller, le message, la liste de ses playlists à choisir (une colonne : un nom peut être long), puis « Retirer ces
+   playlists ». */
 .compte-spotify { display: flex; flex-direction: column; gap: 10px; }
 .code-compte, .liste-compte { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .pastilles.liste-spotify { grid-template-columns: 1fr; gap: 8px; }

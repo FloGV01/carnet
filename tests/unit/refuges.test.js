@@ -6,9 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_PLAYLISTS, NOM_MAX, lienAccepte, lienDeSpotify, normaliserRefuges, refugesVides, playlistsAOuvrir, nomPlaylist,
-  avecPlaylist, formesDuLien, listePlaylists, choisieDeSpotify, basculerSpotify, sansSpotify,
+  avecPlaylist, formesDuLien, listePlaylists, sansSpotify,
   MAX_MORCEAUX, PAGES_MORCEAUX_MAX, ID_SPOTIFY, lienAOuvrir, idPlaylistSpotify, listeMorceaux, choisirSpotify, playlistSuivie,
-  formesDuMorceau,
+  formesDuMorceau, avecMorceaux,
 } from '../../public/js/domain/refuges.js';
 
 // Un identifiant factice de 22 signes, lisible : « pl1 » donne « pl10000000000000000000 ».
@@ -276,35 +276,6 @@ test('listePlaylists : le nom (en texte) et le lien du lecteur public ; un élé
 
 const DE_SPOTIFY = (n) => ({ nom: `Compte ${n}`, lien: `https://open.spotify.com/playlist/s${n}` });
 
-test('basculerSpotify : ajoute à la fin avec la source Spotify, retire au second toucher ; avec trois playlists, rien ne s\'ajoute', () => {
-  const collee = { nom: 'Collée', lien: 'spotify:playlist:m', source: null };
-  let r = basculerSpotify({ titres: 'Un titre', playlists: [collee] }, DE_SPOTIFY(1));
-  assert.deepEqual(r, { titres: 'Un titre', playlists: [collee, { ...DE_SPOTIFY(1), source: 'spotify' }] });
-  assert.equal(choisieDeSpotify(r, DE_SPOTIFY(1).lien), true);
-  r = basculerSpotify(r, DE_SPOTIFY(2));
-  assert.equal(r.playlists.length, MAX_PLAYLISTS);
-  // Plein : la quatrième ne s'ajoute pas, et rien d'autre ne bouge.
-  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(3)), r);
-  // Le second toucher la retire ; la place libérée reprend une autre playlist.
-  r = basculerSpotify(r, DE_SPOTIFY(1));
-  assert.deepEqual(r.playlists.map((p) => p.nom), ['Collée', 'Compte 2']);
-  assert.equal(choisieDeSpotify(r, DE_SPOTIFY(1).lien), false);
-  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(3)).playlists.map((p) => p.nom), ['Collée', 'Compte 2', 'Compte 3']);
-  // Sans nom : la ligne garde son lien, l'écran dit « Playlist 3 ».
-  assert.deepEqual(basculerSpotify({}, { nom: null, lien: 'https://open.spotify.com/playlist/z' }).playlists, [{ nom: null, lien: 'https://open.spotify.com/playlist/z', source: 'spotify' }]);
-});
-
-test('basculerSpotify : une ligne collée à la main n\'est jamais retirée, même avec le même lien ; un lien hors du lecteur public ne s\'ajoute pas', () => {
-  const collee = { nom: 'Collée', lien: 'https://open.spotify.com/playlist/s1', source: null };
-  const r = basculerSpotify({ playlists: [collee] }, DE_SPOTIFY(1));
-  assert.deepEqual(r.playlists, [collee, { ...DE_SPOTIFY(1), source: 'spotify' }]);
-  assert.deepEqual(basculerSpotify(r, DE_SPOTIFY(1)).playlists, [collee]);
-  for (const lien of ['spotify:playlist:s1', 'https://autre.test/playlist/s1', 'javascript:alert(1)', null, 12]) {
-    assert.deepEqual(basculerSpotify({ playlists: [collee] }, { nom: 'X', lien }), normaliserRefuges({ playlists: [collee] }), String(lien));
-  }
-  for (const x of [null, undefined, 'texte', 12]) assert.deepEqual(basculerSpotify({ playlists: [collee] }, x), normaliserRefuges({ playlists: [collee] }));
-});
-
 test('sansSpotify : les lignes venues de Spotify partent ; les lignes collées à la main et les titres restent', () => {
   const r = {
     titres: 'Pluie lente',
@@ -519,6 +490,32 @@ test('v12 : choisirSpotify, le choix unique ; la playlist touchée remplace la l
   // Des morceaux abîmés dans le choix sont remis en forme, comme à la lecture.
   assert.deepEqual(choisirSpotify({}, { nom: 'P', lien: LIEN_PL, morceaux: [{ id: 'x', titre: 'T' }, { ...morceau(1), jeton: 'secret' }], suite: 'oui' }).playlists,
     [{ nom: 'P', lien: LIEN_PL, source: 'spotify', morceaux: [morceau(1)] }]);
+});
+
+// v12 (6/9) : « Mettre à jour la liste » ne choisit rien : la ligne suivie garde son nom, son lien et sa source (collée ou
+// choisie), seuls ses morceaux changent ; une ligne qui n'est plus celle de la demande ne change pas.
+test('v12 : avecMorceaux, les morceaux relus remplacent ceux de la playlist suivie ; son nom, son lien et sa source restent', () => {
+  const collee = { nom: 'Collée', lien: 'https://music.apple.com/fr/playlist/x', source: null };
+  const suivie = { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null, morceaux: morceaux(3), suite: true };
+  const r = { titres: 'Un titre', playlists: [collee, suivie] };
+  const avant = structuredClone(r);
+  // Sans `suite` dans la réponse, la suite d'avant part aussi.
+  assert.deepEqual(avecMorceaux(r, PL, { morceaux: morceaux(2) }),
+    { titres: 'Un titre', playlists: [collee, { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null, morceaux: morceaux(2) }] });
+  assert.deepEqual(r, avant, 'l\'objet reçu n\'est pas modifié');
+  assert.deepEqual(avecMorceaux(r, PL, { morceaux: morceaux(2), suite: true }).playlists[1], { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null, morceaux: morceaux(2), suite: true });
+  // Une ligne collée sans morceaux encore, en lien web : la première mise à jour les lui donne ; la source reste.
+  const choisie = { nom: 'Pour dormir', lien: LIEN_PL2, source: 'spotify' };
+  assert.deepEqual(avecMorceaux({ playlists: [collee, choisie] }, PL2, { morceaux: [morceau(1)] }).playlists, [collee, { ...choisie, morceaux: [morceau(1)] }]);
+  // Une playlist vidée chez Spotify : les morceaux partent, la ligne reste.
+  assert.deepEqual(avecMorceaux(r, PL, { morceaux: [] }).playlists, [collee, { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null }]);
+  // Le lien changé pendant la connexion (une autre playlist, ou plus de playlist suivie) : rien ne change.
+  for (const id of [PL2, idFactice('autre'), null, undefined, 'abc', 12]) assert.deepEqual(avecMorceaux(r, id, { morceaux: [morceau(9)] }), normaliserRefuges(r), String(id));
+  assert.deepEqual(avecMorceaux({ playlists: [collee] }, PL, { morceaux: [morceau(1)] }), normaliserRefuges({ playlists: [collee] }));
+  // Des morceaux abîmés sont remis en forme, comme à la lecture ; une réponse abîmée vaut une liste vide.
+  assert.deepEqual(avecMorceaux(r, PL, { morceaux: [{ id: 'x', titre: 'T' }, { ...morceau(4), jeton: 'secret' }], suite: 'oui' }).playlists[1],
+    { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null, morceaux: [morceau(4)] });
+  for (const x of [null, undefined, 'texte', 12]) assert.deepEqual(avecMorceaux(r, PL, x).playlists[1], { nom: 'Pour souffler', lien: `spotify:playlist:${PL}`, source: null }, String(x));
 });
 
 test('v12 : listeMorceaux lit une page de GET /playlists/{id}/items ; écarte null, fichiers locaux, épisodes, identifiants invalides et morceaux sans titre', () => {

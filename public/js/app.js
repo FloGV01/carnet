@@ -44,6 +44,7 @@ import { Minuteur } from './ui/ecrans/minuteur.js';
 import { Concentration } from './ui/ecrans/concentration.js';
 import { Sons } from './ui/ecrans/sons.js';
 import { MesRefuges } from './ui/ecrans/refuges.js';
+import { ReglagesRefuges } from './ui/ecrans/refuges-reglages.js';
 import { CodeSpotify } from './ui/ecrans/code-spotify.js';
 
 const ECRANS = {
@@ -91,6 +92,7 @@ const ECRANS = {
   concentration: () => html`<${Concentration} />`,
   sons: () => html`<${Sons} />`,
   refuges: () => html`<${MesRefuges} />`,
+  'refuges-reglages': () => html`<${ReglagesRefuges} />`,
 };
 
 function useEtatApp() {

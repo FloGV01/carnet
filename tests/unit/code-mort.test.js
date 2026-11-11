@@ -93,10 +93,12 @@ test('aucun module de l\'app n\'est oublié dans un coin : chacun est atteint pa
 
 // v12 (relecture de la tâche 1) : choisirSpotify et formesDuMorceau remplacent basculerSpotify, choisieDeSpotify et
 // formesDuLien, avec PLAYLIST_SPOTIFY, qui ne sert qu'à formesDuLien. Les anciennes restent tant que les écrans de la v11
-// s'en servent (ui/ecrans/refuges.js, ui/ecrans/diagnostic.js). Leurs tests les importent encore, et le contrôle des modules
-// ne voit pas un export que plus rien n'appelle : ce contrôle échoue dès que leur dernier usage dans l'app part (tâches 6 et
-// 7 du plan v12), pour qu'elles partent avec lui, leurs tests aussi.
-const REMPLACEES_V12 = ['basculerSpotify', 'choisieDeSpotify', 'formesDuLien', 'PLAYLIST_SPOTIFY'];
+// s'en servent (ui/ecrans/diagnostic.js). Leurs tests les importent encore, et le contrôle des modules ne voit pas un export
+// que plus rien n'appelle : ce contrôle échoue dès que leur dernier usage dans l'app part (tâche 7 du plan v12), pour
+// qu'elles partent avec lui, leurs tests aussi. v12 (6/9) : basculerSpotify et choisieDeSpotify sont parties avec l'écran
+// de la v11, et ne reviennent pas.
+const REMPLACEES_V12 = ['formesDuLien', 'PLAYLIST_SPOTIFY'];
+const PARTIES_V12 = ['basculerSpotify', 'choisieDeSpotify'];
 // La définition d'un nom au premier niveau d'un module : une fonction jusqu'à son « } » en début de ligne, ou une constante
 // écrite sur une ligne.
 const definition = (nom) => new RegExp(`^(?:export )?(?:function ${echapper(nom)}\\b[\\s\\S]*?^\\}$|const ${echapper(nom)}\\b[^\\n]*$)`, 'm');
@@ -142,9 +144,13 @@ test('le contrôle des remplacées repère bien un nom sans usage, même appelé
   assert.deepEqual(sansUsage(avec('import { nouvelle } from \'../domain/d.js\'; nouvelle();'), domaine, noms), ['ancienne', 'aide', 'vieille', 'MOTIF']);
   // Un nom seulement importé, ou qui en contient un autre (`aideMoi`), n'est pas un usage.
   assert.deepEqual(sansUsage(avec('import { ancienne, vieille } from \'../domain/d.js\'; const aideMoi = 1; vieille(aideMoi);'), domaine, noms), ['ancienne', 'aide']);
-  // Les quatre définitions sont bien trouvées dans domain/refuges.js : sinon le contrôle ne relèverait jamais rien.
+  // Les définitions qui restent sont bien trouvées dans domain/refuges.js : sinon le contrôle ne relèverait jamais rien.
   const refuges = join(PUBLIC, 'js', 'domain', 'refuges.js');
   for (const nom of REMPLACEES_V12) assert.match(MODULES.get(refuges), definition(nom), nom);
+});
+
+test('v12 (6/9) : basculerSpotify et choisieDeSpotify sont parties de l\'app, et n\'y reviennent pas', () => {
+  for (const nom of PARTIES_V12) assert.equal(present(nom), false, nom);
 });
 
 test('le contrôle des modules repère bien un orphelin, même nommé dans la liste du service worker', () => {

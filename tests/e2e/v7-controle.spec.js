@@ -41,7 +41,9 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // entrées, le Diagnostic et « Ouvrir une playlist » ; la confirmation de « Revenir » et l'Aide iPhone), dans ce parcours et,
 // en plus, dans le leur, comme ceux de la v10. Le soir y gagne le contrôle des 44 pt, qui échouait déjà en v10 sous
 // « Jour précédent » (corrigé : `.sous-jour`, ecrans.css). En très grand texte (33 à 53), Mes refuges, les roues et Mes
-// gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v11-spotify.spec.js), à cause de sa garde réseau.
+// gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v12-spotify.spec.js), à cause de sa garde réseau.
+// v12 (6/9) : Mes refuges, une simple liste : vide, puis plein avec ses morceaux et « La suite est dans Spotify. » ; ses
+// réglages (la saisie de la v11) ; en très grand texte, un titre de morceau de 70 signes sans espace.
 // v12 (5/9) : sur chaque écran du parcours, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6) : aucun rond sans texte ni
 // icône ne l'a pour fond ou pour contour, aucun graphique, écran de l'émotion ni « Réveil la nuit » n'en a de trace, et en clair,
 // aucun lien vert ne se pose sur --surface-2. Le parcours passe aussi par un jour de Mes jours touché, son détail ouvert.
@@ -235,11 +237,15 @@ const ECRANS_V10 = [
 ];
 
 // Les écrans nouveaux de la v11, sur le même modèle : chacun part de son adresse, ou de l'écran qui le précède ici, et pose
-// ce qu'il lui faut. Mes refuges, inventés : deux titres, une playlist venue de Spotify (nommé à côté) et une collée.
+// ce qu'il lui faut. Mes refuges, inventés : deux titres, une playlist venue de Spotify (nommé à côté) et une collée. v12 : la
+// playlist de Spotify a ses morceaux, inventés, et une suite ; ses identifiants sont factices (22 signes), le dépôt est public.
+const ID_FACTICE = (debut) => debut.padEnd(22, '0');
+const MORCEAUX = ['Pluie lente', 'Le matin calme', 'Rivière douce', 'Sous les pins', 'Marée basse', 'Brume du lac', 'Nuit claire', 'Pas à pas']
+  .map((titre, i) => ({ id: ID_FACTICE(`mo${i + 1}`), titre, artiste: i % 3 === 2 ? null : 'Les Vagues Douces' }));
 const REFUGES = {
   titres: 'Pluie lente\nLe matin calme',
   playlists: [
-    { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc', source: 'spotify' },
+    { nom: 'Pour souffler', lien: `https://open.spotify.com/playlist/${ID_FACTICE('pl1')}`, source: 'spotify', morceaux: MORCEAUX, suite: true },
     { nom: 'Pour marcher', lien: 'https://music.apple.com/fr/playlist/marcher/pl.u-abc', source: null },
   ],
 };
@@ -303,17 +309,22 @@ const ECRANS_V11 = [
     await zone.fill('Partir avant que ça monte.');
     await expect.poll(() => p.evaluate(() => window.__carnet.repo.episodes.tous().then((l) => l.map((e) => e.ceQueJeRetiens)))).toContain('Partir avant que ça monte.');
   }, '.recap ~ .champ-recap #episodes-ceQueJeRetiens'],
-  // v11 (6/11, 7/11) : Mes refuges vide (le bouton « Choisir dans mon compte », jamais touché ici), puis plein : ses titres, une
-  // playlist de Spotify, nommé à côté, et « Retirer ces playlists », une collée ; chacune s'écoute d'un toucher.
+  // v11 (6/11, 7/11 ; v12, 6/9) : Mes refuges vide (sa phrase, « Choisir dans mon compte », jamais touché ici, et « Coller un
+  // lien »), puis plein : une playlist de Spotify, nommé à côté, une collée, chacune s'écoute d'un toucher ; ses morceaux,
+  // « La suite est dans Spotify. » et ses titres, en lecture seule. Puis ses réglages : la saisie de la v11, les boutons de
+  // Spotify et « Retirer ces playlists ».
   ['Mes refuges, vide', async (p) => {
     await p.evaluate(() => window.__carnet.repo.meta.ecrire('refuges', null));
     await remonter(p, '#/refuges');
-  }, 'main.refuges #refuges-nom-0'],
+  }, 'main.refuges .refuges-vide .btn-plein'],
   ['Mes refuges, plein', async (p) => {
     await p.evaluate((r) => window.__carnet.repo.meta.ecrire('refuges', r), REFUGES);
     await remonter(p, '#/refuges');
     await expect(p.locator('main.refuges a.lien-refuge')).toHaveCount(2);
-  }, 'main.refuges a.lien-refuge'],
+    await expect(p.locator('main.refuges .ligne-morceau')).toHaveCount(MORCEAUX.length);
+  }, 'main.refuges .titres-refuges'],
+  ['Réglages de Mes refuges', (p) => p.locator('main.refuges').getByRole('link', { name: 'Modifier', exact: true }).click(),
+    'main.refuges-reglages #refuges-nom-0'],
   // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan.
   ['Moment difficile, playlists et titres', async (p) => {
     await remonter(p, '#/moment-difficile');
@@ -734,15 +745,18 @@ test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableau
 // non plus, en entier, page comprise. À partir de 40 px, seul ce que la v11 y ajoute est contrôlé : les trois roues notées et la
 // carte Mes gratitudes, écrite. Le reste du soir y déborde encore (« nuit dernière », « Télétravail », le résumé d'un relevé),
 // comme en v10, à l'identique (page de 395, 449 puis 496 px) : un écran hérité, hors de la v11 (spec v11 §3 ; docs/decisions.md,
-// v10, « En attente de l'utilisateur »).
-test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px, et ses trois roues notées et Mes gratitudes écrites au-delà, ne sortent pas de l\'écran de côté', async ({ page }) => {
+// v10, « En attente de l'utilisateur »). v12 (6/9) : Mes refuges a ses morceaux, dont un titre et un artiste de 70 signes sans
+// espace (point de vigilance 4), et ses réglages sont contrôlés de même.
+test('très grand texte (33 à 53) : Mes refuges plein, ses morceaux et ses réglages, le soir entier à 33 px, et ses trois roues notées et Mes gratitudes écrites au-delà, ne sortent pas de l\'écran de côté', async ({ page }) => {
   test.setTimeout(180000);
   await verser(page);
+  const long = 'x7'.repeat(35);
+  const refugesLongs = { ...REFUGES, playlists: [{ ...REFUGES.playlists[0], morceaux: [{ id: ID_FACTICE('mo99'), titre: long, artiste: long }, ...MORCEAUX] }, REFUGES.playlists[1]] };
   await page.evaluate(async (r) => {
     await window.__carnet.repo.meta.ecrire('refuges', r);
     await window.__carnet.repo.journal.patch('2026-10-15', { heuresSommeil: 7.5, sportMouvement: true, activites: [{ duree: 'dureeSport:de_30_a_60' }],
       contactHumain: true, contacts: [{ effet: 'contactEffet:ressourcant' }], gratitudes: 'Merci à la voisine pour le colis.' });
-  }, REFUGES);
+  }, refugesLongs);
   await page.reload();
   await appPrete(page);
   const nouveauDuSoir = '.aujourdhui .roue-choix, .aujourdhui .carte-champ:has(#gratitudes)';
@@ -757,9 +771,16 @@ test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px,
     if (soir.length) fautes[`le soir, ${taille} px`] = soir;
     await remonter(page, '#/refuges');
     await expect(page.locator('main.refuges a.lien-refuge')).toHaveCount(2);
+    await expect(page.locator('main.refuges .ligne-morceau')).toHaveCount(MORCEAUX.length + 1);
+    await expect(page.locator('main.refuges .titre-morceau').first()).toHaveText(long);
     await stabiliser(page);
     const refuges = await debordements(page);
     if (refuges.length) fautes[`Mes refuges, ${taille} px`] = refuges;
+    await remonter(page, '#/refuges/reglages');
+    await expect(page.locator('main.refuges-reglages #refuges-nom-1')).toBeVisible();
+    await stabiliser(page);
+    const reglagesRefuges = await debordements(page);
+    if (reglagesRefuges.length) fautes[`Réglages de Mes refuges, ${taille} px`] = reglagesRefuges;
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});

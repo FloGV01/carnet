@@ -209,3 +209,10 @@ test('v11 · Mes refuges : /refuges, onglet Bien-être, qu\'on l\'ouvre de Bien-
   assert.equal(ongletDe('mon-plan'), 'reglages', 'Mon plan ne change pas d\'onglet');
   for (const h of ['#/refuges/', '#/refuges/x', '#/bien-etre/refuges', '#/mon-plan/refuges']) assert.equal(lireRoute(h).inconnue, true, h);
 });
+
+test('v12 · les réglages de Mes refuges : /refuges/reglages, onglet Bien-être ; rien d\'autre', () => {
+  assert.deepEqual(lireRoute('#/refuges/reglages'), { nom: 'refuges-reglages', params: {}, chemin: '/refuges/reglages' });
+  assert.equal(versHash('refuges-reglages'), '#/refuges/reglages');
+  assert.equal(ongletDe('refuges-reglages'), 'bien-etre');
+  for (const h of ['#/refuges/reglages/', '#/refuges/reglages/x', '#/reglages/refuges', '#/refuges/Reglages']) assert.equal(lireRoute(h).inconnue, true, h);
+});
