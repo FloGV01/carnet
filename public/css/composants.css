@@ -37,7 +37,7 @@
 .liste { list-style: none; margin: 0; padding: 0; }
 /* Les filets des listes : 1 px. Une bordure de 0,5 px (spec v12, §5.4) vaut 1/3 px dans WebKit à l'échelle 3, et disparaît
    sur une rangée posée à un demi-pixel de l'écran (vu dans « Les plus fréquents », tâche 5) ; les filets en boîte (::before,
-   ecrans.css) gardent leur 0,5 px, qui ne disparaît jamais. */
+   ecrans.css : les listes à icônes et les replis d'Aujourd'hui) ont leur 0,5 px, qui ne disparaît jamais. */
 .liste > li + li { border-top: 1px solid var(--line); }
 .liste.carte { padding: 0 var(--esp-4); }
 .liste.carte-groupe { padding: 0; }

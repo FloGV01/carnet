@@ -551,11 +551,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .pastilles.reveils { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.6fr); }
 
 /* Replis en liste groupée 2b : une carte, une rangée de 58 au moins par repli (l'icône à l'accent, sans carré depuis la v12,
-   libellé 16/500, résumé 14 px sur une ligne coupée, chevron en --contour), filets décalés de 52. Ouvert, le repli se
-   déploie dans la carte. */
+   libellé 16/500, résumé 14 px sur une ligne coupée, chevron en --contour), filets de 0,5 décalés de 52 (v12, spec §5.4 ;
+   1 px jusqu'à la v11), posés sur le haut de la rangée, hors du flux, comme ceux des listes à icônes (.avec-carres) : rien
+   ne glisse d'un demi-pixel sous eux. Ouvert, le repli se déploie dans la carte. */
 .aujourdhui .replis { overflow: visible; }
 .replis > .repli.repli-carte { border-top: 0; border-radius: 0; background: none; padding: 0 12px; }
-.replis > .repli + .repli::before { content: ""; display: block; height: 1px; margin: 0 -12px 0 40px; background: var(--line); }
+.replis > .repli + .repli { position: relative; }
+.replis > .repli + .repli::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: .5px; background: var(--line); }
 .replis > .repli .repli-tete { min-height: 58px; gap: 12px; padding: 7px 0; flex-wrap: nowrap; }
 .repli-textes { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .replis > .repli .repli-titre { font-size: var(--t-corps); font-weight: 500; line-height: 1.25; }

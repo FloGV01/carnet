@@ -436,8 +436,9 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 // ---------- Replis en liste groupée ----------
 
 // v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
-// reste là pour une nuit déjà notée.
-test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une icône d\'accent sans carré et un chevron en --contour (v12), le résumé sous le libellé', async ({ page }) => {
+// reste là pour une nuit déjà notée. v12 (5/9, relecture) : le filet entre deux replis fait 0,5 px (spec §5.4), comme ceux de
+// Réglages et de Bien-être (v7-controle) ; il gardait le 1 px de la v7.
+test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une icône d\'accent sans carré et un chevron en --contour (v12), des filets de 0,5 décalés de 52, le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
     pese: ['pese:bruit', 'pese:lumiere', 'pese:monde', 'pese:changement', 'pese:attente'], recharge: ['recharge:seul', 'recharge:calme'],
@@ -463,7 +464,10 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une 
             graisse: getComputedStyle(r.querySelector('.repli-titre')).fontWeight,
             resume: resume && { dessous: resume.getBoundingClientRect().top >= titre.bottom - 1, gauche: Math.abs(resume.getBoundingClientRect().left - titre.left) < 1,
               taille: Math.round(Number.parseFloat(getComputedStyle(resume).fontSize)), ellipse: getComputedStyle(resume).textOverflow, couleur: getComputedStyle(resume).color },
-            filet: filet && Number.parseFloat(getComputedStyle(r).paddingLeft) + Number.parseFloat(filet.marginLeft),
+            // Le filet (son ::before, posé sur le haut de la rangée) : où il commence depuis le bord de la carte, son épaisseur, et
+            // où il finit depuis l'autre bord.
+            filet: filet && [Math.round(r.getBoundingClientRect().left - carte.left + Number.parseFloat(filet.left)), filet.height,
+              Math.round(carte.right - r.getBoundingClientRect().right + Number.parseFloat(filet.right))],
             chevron: Boolean(tete.querySelector(':scope > .repli-fleche')),
           };
         }),
@@ -478,7 +482,9 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une 
       expect(r.gauche, quoi(i)).toBe(12);
       expect(r.graisse, quoi(i)).toBe('500');
       expect(r.chevron, quoi(i)).toBe(true);
-      if (i > 0) expect(r.filet, `${quoi(i)} : filet décalé de 52`).toBe(52);
+      // La première rangée n'a pas de filet ; les suivantes, un filet de 0,5 qui commence après l'icône (12 + 28 + 12) et va
+      // jusqu'au bord droit de la carte.
+      expect(r.filet, `${quoi(i)} : filet de 0,5 décalé de 52`).toEqual(i === 0 ? null : [52, '0.5px', 0]);
       // v12 (spec §5.4) : plus de carré ni de couleur de rubrique ; un repli ouvre quelque chose, son icône est à l'accent, et
       // son chevron en --contour (3:1 sur la carte).
       expect([r.carre, r.icone, r.fleche], quoi(i)).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte']), rgb(t.contour)]);
