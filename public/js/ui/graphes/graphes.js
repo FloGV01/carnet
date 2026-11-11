@@ -1,7 +1,8 @@
 // Graphiques de l'écran Analyse (v5), rendus en SVG. Couleurs par classes (aucun style dans le
-// SVG ni en ligne) : chaque rangée porte la teinte de sa rubrique ; les émotions du moment, la couleur de
-// leur famille (.emo-*, roue et graphiques d'émotions seulement), sauf les points de Mes jours en mode jour, à la
-// couleur de la zone de leur mot (.zone-*, v9 : un point montre un relevé, pas une famille). Toucher une colonne affiche
+// SVG ni en ligne). v12 (spec §5.5) : la couleur ne dit qu'une émotion. Les émotions du moment ont la couleur de leur
+// famille (.emo-*, roue et graphiques d'émotions seulement), sauf les points de Mes jours en mode jour, à la couleur de la
+// zone de leur mot (.zone-*, v9 : un point montre un relevé, pas une famille) ; tout le reste est à l'encre (--donnee*),
+// jamais à l'accent, et ses séries se distinguent par leur place, leur forme et leur rampe. Toucher une colonne affiche
 // son détail sous le graphique ; « Voir en tableau » reste la voie accessible. Seuls les jours
 // (semaines, mois) avec une donnée se touchent ou ont une ligne : rien ne signale un jour vide.
 import { html, useState } from '../lib.js';
@@ -19,13 +20,13 @@ import { texteHeuresSommeil } from '../../domain/champs.js';
 
 // Le cadre commun : titre, graphique (ou son tableau), légende, détail touché, « Voir en tableau », pied.
 // `corps` remplace le SVG unique (dim, aria, children) quand un graphique se dessine en plusieurs morceaux.
-// Sans `rubrique` (v7 : Mes jours, Ta journée, les graphiques d'émotions), le titre n'a pas de point de couleur : les
-// rangées et les familles portent les leurs. `classe` : une classe propre au graphique, sur la figure (Mes nuits).
-export function Cadre({ titre, rubrique = null, classe = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
+// Le titre n'a pas de point de couleur (v12 : les rubriques n'en ont plus). `classe` : une classe propre au graphique, sur
+// la figure (Mes nuits).
+export function Cadre({ titre, classe = null, droite, resume, tableau, legende, detail, dim, aria, pied, corps, children }) {
   const [voirTableau, setVoirTableau] = useState(false);
-  return html`<figure class=${['graphe', rubrique && `teinte-${rubrique}`, classe].filter(Boolean).join(' ')}>
+  return html`<figure class=${['graphe', classe].filter(Boolean).join(' ')}>
     <figcaption>
-      <span class="graphe-tete"><span class="graphe-titre">${rubrique && html`<span class="point-rubrique" aria-hidden="true"></span>`}${titre}</span>
+      <span class="graphe-tete"><span class="graphe-titre">${titre}</span>
         ${droite && html`<span class="graphe-droite">${droite}</span>`}</span>
       ${resume && html`<span class="graphe-resume">${resume}</span>`}
     </figcaption>
@@ -57,12 +58,12 @@ export const LegendeFamilles = ({ familles }) => familles.map((f) => html`<span 
 export const LegendeZones = ({ creux = false }) => html`${ZONES.map((z) => html`<span class=${`zone-${z}`}><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-emo" cx="6" cy="6" r="4" /></svg>${NOMS_ZONES[z]}</span>`)}
   ${creux && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-creux" cx="6" cy="6" r="3.5" /></svg>sans zone</span>`}`;
 // La rampe du sommeil et celle de l'énergie, une case par niveau : « du clair au foncé » serait faux en sombre, où la
-// rampe va du foncé au clair (v7).
-export const LegendeRampe = ({ classes, libelles, teinte = null, prefixe = '', suffixe = '' }) => html`<span class=${teinte ? `rampe teinte-${teinte}` : 'rampe'}>${prefixe}
+// rampe va du foncé au clair (v7). v12 : les deux sont la rampe de l'encre à 3 pas (--donnee-1 à 3).
+export const LegendeRampe = ({ classes, libelles, prefixe = '', suffixe = '' }) => html`<span class="rampe">${prefixe}
   ${classes.map((c, i) => html`<span class="pas-rampe"><svg viewBox="0 0 12 12" aria-hidden="true"><rect class=${`g-${c}`} x="1" y="1" width="10" height="10" /></svg>${libelles[i]}</span>`)}${suffixe}</span>`;
 export const LegendeNuits = ({ lib }) => html`<${LegendeRampe} classes=${['sommeil-1', 'sommeil-2', 'sommeil-3']} prefixe="nuit"
   libelles=${['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'].map((id) => lib(id).toLowerCase())} />`;
-export const LegendeEnergie = ({ lib, unite }) => html`<${LegendeRampe} classes=${['energie-1', 'energie-2', 'energie-3']} teinte="energie" prefixe="énergie"
+export const LegendeEnergie = ({ lib, unite }) => html`<${LegendeRampe} classes=${['energie-1', 'energie-2', 'energie-3']} prefixe="énergie"
   libelles=${['energie:basse', 'energie:moyenne', 'energie:haute'].map((id) => lib(id).toLowerCase())} suffixe=${unite} />`;
 
 // « colère 3 · sérénité 2 » : un compte par famille, dans l'ordre de la roue, sans les familles à zéro (analyse/emotions.js).
@@ -142,9 +143,9 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, perso = null,
   // Les anciennes notes : par semaine ou par mois, le point est une moyenne, et un anneau la dit faite de peu de
   // valeurs. Des libellés fixes, sans valeur calculée.
   const legendeNotes = g.notes.points.length > 0 && html`
-    <span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'note du jour' : 'moyenne des notes'}</span>
-    ${g.notes.points.some((p) => !p.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><circle class="g-anneau" cx="6" cy="6" r="3.5" /></svg>peu de valeurs</span>`}
-    ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true" class="teinte-humeur"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}`;
+    <span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-point" cx="6" cy="6" r="3.5" /></svg>${f.pas === 'jour' ? 'note du jour' : 'moyenne des notes'}</span>
+    ${g.notes.points.some((p) => !p.plein) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="g-anneau" cx="6" cy="6" r="3.5" /></svg>peu de valeurs</span>`}
+    ${g.notes.traits.length > 0 && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-trait" x1="6" x2="6" y1="1" y2="11" /></svg>note du plus bas au plus haut</span>`}`;
   const legende = html`<p class="legende-graphe legende-frise">
     ${g.points.length > 0 ? html`<${LegendeZones} creux=${g.points.some((p) => !p.zone)} />` : html`<${LegendeFamilles} familles=${familles} />`}
     ${legendeNotes}
@@ -163,15 +164,15 @@ export function MesJours({ frise: f, reperes = SANS_REPERE, carte, perso = null,
       <text class="g-changement-num" x=${r.texteX} y=${r.texteY} text-anchor="middle">${r.etiquette}</text>`)}
     ${g.points.map((p) => html`<circle class=${p.zone ? `g-emo zone-${p.zone}` : 'g-creux'} cx=${p.x} cy=${p.y} r=${p.r} />`)}
     ${g.barres.map((b) => html`<rect class=${`g-emo emo-${b.famille}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
-    <g class="teinte-humeur">
+    <g class="g-notes">
       ${g.notes.traits.map((t) => html`<line class="g-trait" x1=${t.x} x2=${t.x} y1=${t.y1} y2=${t.y2} />`)}
       ${g.notes.points.map((p) => html`<circle class=${p.plein ? 'g-point' : 'g-anneau'} cx=${p.x} cy=${p.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}
     </g>
     ${g.nuits.map((n) => html`<rect class=${`g-${n.classe}`} x=${n.x} y=${n.y} width=${n.l} height=${n.h} rx="1.5" />`)}
-    <g class="teinte-expl">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
-    <g class="teinte-ep">${g.autres.map((a) => html`<circle class="g-plein" cx=${a.x} cy=${a.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}</g>
-    <g class="teinte-energie">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
-    <g class="teinte-bien-etre">${g.bienEtre.map((b) => html`<polygon class="g-plein g-bien-etre" points=${losange(b)} />`)}</g>
+    <g class="g-explosions">${g.encoches.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
+    <g class="g-autres-episodes">${g.autres.map((a) => html`<circle class="g-plein" cx=${a.x} cy=${a.y} r=${g.largeurColonne < 12 ? 2.5 : 3.5} />`)}</g>
+    <g class="g-energie-basse">${g.energieBasse.map((e) => html`<rect class="g-barre" x=${e.x} y=${e.y} width=${e.l} height=${e.h} rx="1.5" />`)}</g>
+    <g class="g-seances">${g.bienEtre.map((b) => html`<polygon class="g-plein g-bien-etre" points=${losange(b)} />`)}</g>
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.cle ? null : z.cle)} />`)}
   </${Cadre}>`;
 }
@@ -210,19 +211,19 @@ export function TaJournee({ parHeure, profil, carte }) {
     ${zone && html`<rect class="g-choix" x=${zone.x} y="0" width=${zone.l} height=${g.axeY - 6} rx="3" />`}
     <${Etiquettes} g=${g} />
     ${g.barres.map((b) => html`<rect class=${`g-emo emo-${b.famille}`} x=${b.x} y=${b.y} width=${b.l} height=${b.h} />`)}
-    <g class="teinte-energie">${g.energies.map((e) => html`<rect class=${`g-${e.classe}`} x=${e.x} y=${e.y} width=${e.l} height=${e.h} />`)}</g>
+    <g class="g-energies">${g.energies.map((e) => html`<rect class=${`g-${e.classe}`} x=${e.x} y=${e.y} width=${e.l} height=${e.h} />`)}</g>
     ${g.etiquettes.map((e) => html`<text class="g-axe" x=${e.x} y=${g.axeY + 6} text-anchor="middle">${e.texte}</text>`)}
     ${g.zones.map((z) => html`<rect class="g-zone" x=${z.x} y="0" width=${z.l} height=${d.hauteur} onClick=${() => setChoix(choix === z.debut ? null : z.debut)} />`)}
   </${Cadre}>`;
 }
 
 // Barres en jours : une ligne par élément (ordre fixe de la liste), un segment par précision,
-// d'une seule teinte en rampe, et les comptes écrits en toutes lettres. Aucun total, aucun tri.
-export function Barres({ titre, rubrique, lignes, precisions, lib, pied }) {
+// en rampe d'opacité sur l'encre (v12), et les comptes écrits en toutes lettres. Aucun total, aucun tri.
+export function Barres({ titre, lignes, precisions, lib, pied }) {
   const max = Math.max(1, ...lignes.map((l) => l.total));
   const L = 200;
-  return html`<figure class=${`graphe barres teinte-${rubrique}`}>
-    <figcaption><span class="graphe-tete"><span class="graphe-titre"><span class="point-rubrique" aria-hidden="true"></span>${titre}</span></span></figcaption>
+  return html`<figure class="graphe barres">
+    <figcaption><span class="graphe-tete"><span class="graphe-titre">${titre}</span></span></figcaption>
     <ul class="liste-barres">${lignes.map((l) => {
       // Longueur : les jours distincts ; segments : la part de chaque précision dans cette longueur.
       let x = 0;

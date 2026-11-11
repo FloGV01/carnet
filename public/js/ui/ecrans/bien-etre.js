@@ -15,7 +15,7 @@ import { useFavoris } from '../composants/epingle.js';
 import { Lecteur, lireDernier } from '../composants/lecteur.js';
 import { LigneElement, hashElement, lancerElement, surOuvrir } from '../composants/ligne-element.js';
 import { PucesRespiration, useReglagesRespiration } from '../composants/respiration.js';
-import { CarreIcone } from '../composants/rubrique.js';
+import { IconeLigne } from '../composants/rubrique.js';
 import { Icones } from '../icones.js';
 import { ENTREES, titreElement } from '../../domain/entrees-bien-etre.js';
 import { exerciceDe } from '../../domain/exercices.js';
@@ -37,7 +37,7 @@ const LIGNES_ENTREES = [
 // lecture, qui le relance d'un toucher.
 function CarteReprendre({ id }) {
   const titre = titreElement(id);
-  return html`<section class="carte carte-reprendre teinte-bien-etre" aria-labelledby="titre-reprendre">
+  return html`<section class="carte carte-reprendre" aria-labelledby="titre-reprendre">
     <a class="lien-reprendre" href=${hashElement(id)} onClick=${surOuvrir(id, RETOUR)}>
       <h2 class="titre-carte" id="titre-reprendre">Reprendre</h2>
       <span class="exercice-titre">${titre}</span>
@@ -53,13 +53,13 @@ export function BienEtre() {
   return html`<main class="ecran bien-etre">
     <${Entete} titre="Bien-être" />
     ${dernier && html`<${CarteReprendre} id=${dernier} />`}
-    ${favoris && favoris.length > 0 && html`<section class="carte carte-groupe teinte-bien-etre" aria-labelledby="titre-favoris">
+    ${favoris && favoris.length > 0 && html`<section class="carte carte-groupe" aria-labelledby="titre-favoris">
       <h2 class="titre-carte titre-etape" id="titre-favoris">Favoris</h2>
       <ul class="liste">${favoris.map((id) => html`<${LigneElement} key=${id} id=${id} retour=${RETOUR} />`)}</ul>
     </section>`}
-    ${favoris && html`<ul class="liste carte carte-groupe avec-carres entrees teinte-bien-etre" aria-label="Entrées">
+    ${favoris && html`<ul class="liste carte carte-groupe avec-carres entrees" aria-label="Entrées">
       ${LIGNES_ENTREES.map((x) => html`<li key=${x.id}><a class="ligne-carte" href=${x.href}>
-        <${CarreIcone} icone=${x.icone} teinte="bien-etre" /><span class="ligne-libelle">${x.titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`)}
+        <${IconeLigne} icone=${x.icone} /><span class="ligne-libelle">${x.titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`)}
     </ul>
     <p class="ligne-fixe">${LIGNE_FIXE}</p>`}
   </main>`;

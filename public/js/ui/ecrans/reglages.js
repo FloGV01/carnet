@@ -4,7 +4,7 @@
 // tendances) disparaît avec ces analyses ; les réglages déjà enregistrés sont ignorés. v11 : « Revenir » demande confirmation.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
-import { CarreIcone } from '../composants/rubrique.js';
+import { IconeLigne } from '../composants/rubrique.js';
 import { Icones } from '../icones.js';
 import { VERSION, VERSION_APP } from '../../version.js';
 import { etatStockage, formaterOctets } from '../../plateforme/persistance.js';
@@ -28,10 +28,10 @@ function useAppuiLong(action, ms = 700) {
 
 export const dateIso = (iso) => formaterDateLongue(cleLocale(new Date(iso)));
 
-// Liste groupée 2b : l'icône dans un carré de 28, neutre ou à la couleur d'un parcours (Moment difficile, énergie pour
-// « Me ressourcer »), le libellé, le chevron ; filets décalés après le carré.
-const LigneLien = ({ href, icone, teinte, titre }) => html`<li><a class="ligne-carte" href=${href}>
-  ${icone && html`<${CarreIcone} icone=${icone} teinte=${teinte} />`}<span class="ligne-libelle">${titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`;
+// Liste groupée 2b : l'icône, à l'accent (la rangée ouvre un écran ; v12, sans carré ni couleur de parcours), le libellé, le
+// chevron ; filets décalés après l'icône.
+const LigneLien = ({ href, icone, titre }) => html`<li><a class="ligne-carte" href=${href}>
+  ${icone && html`<${IconeLigne} icone=${icone} />`}<span class="ligne-libelle">${titre}</span>${Icones.chevron({ trait: 2 })}</a></li>`;
 
 export function Reglages() {
   const [stockage, setStockage] = useState(null);
@@ -75,9 +75,9 @@ export function Reglages() {
         ${s && html`<p class="note-carte-interne">Taille : ${formaterOctets(s.taille)}${fichiers && fichiers.length > 1 ? ` · ${fichiers.length} fichiers` : ''}</p>`}
       </div>
       <ul class="liste avec-carres">
-        <li><button type="button" class="ligne-carte action" disabled=${!fichiers} onClick=${sauvegarde.exporterMaintenant}><${CarreIcone} icone="exporter" />Exporter</button></li>
-        <li><button type="button" class="ligne-carte action" onClick=${() => entree.current && entree.current.click()}><${CarreIcone} icone="importer" />Importer</button></li>
-        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${() => setConfirmerRetour(true)}><${CarreIcone} icone="retour" />Revenir à l'état d'avant l'import</button></li>`}
+        <li><button type="button" class="ligne-carte action" disabled=${!fichiers} onClick=${sauvegarde.exporterMaintenant}><${IconeLigne} icone="exporter" />Exporter</button></li>
+        <li><button type="button" class="ligne-carte action" onClick=${() => entree.current && entree.current.click()}><${IconeLigne} icone="importer" />Importer</button></li>
+        ${s && s.copie && html`<li><button type="button" class="ligne-carte action" onClick=${() => setConfirmerRetour(true)}><${IconeLigne} icone="retour" />Revenir à l'état d'avant l'import</button></li>`}
       </ul>
       <input ref=${entree} type="file" multiple class="visuellement-cache" aria-label="Fichier de sauvegarde" onChange=${choisirFichiers} />
     </section>
@@ -96,9 +96,9 @@ export function Reglages() {
 
     <h2 id="titre-moment-difficile" class="libelle-section">Moment difficile</h2>
     <ul class="liste carte carte-groupe avec-carres" aria-labelledby="titre-moment-difficile">
-      <${LigneLien} href="#/mon-plan" icone="monPlan" teinte="difficile" titre="Mon plan" />
-      <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" teinte="difficile" titre="Moment difficile" />
-      <${LigneLien} href="#/reglages/ressourcer" icone="energie" teinte="energie" titre="Me ressourcer" />
+      <${LigneLien} href="#/mon-plan" icone="monPlan" titre="Mon plan" />
+      <${LigneLien} href="#/reglages/moment-difficile" icone="respiration" titre="Moment difficile" />
+      <${LigneLien} href="#/reglages/ressourcer" icone="energie" titre="Me ressourcer" />
       <${LigneLien} href="#/reglages/aide-iphone" icone="aideIphone" titre="Aide iPhone" />
     </ul>
 

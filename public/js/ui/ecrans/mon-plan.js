@@ -3,7 +3,7 @@
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
-import { CarreIcone } from '../composants/rubrique.js';
+import { IconeLigne } from '../composants/rubrique.js';
 import { repo } from '../../donnees.js';
 import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
 import { etatApp } from '../../store.js';
@@ -54,7 +54,7 @@ export function MonPlan() {
           </li>`)}</ul>`}
     </section>
     <div class="carte carte-groupe avec-carres">
-      <a class="ligne-carte" href="#/refuges"><${CarreIcone} icone="musique" teinte="difficile" /><span class="ligne-libelle">Mes refuges</span>${Icones.chevron({ trait: 2 })}</a>
+      <a class="ligne-carte" href="#/refuges"><${IconeLigne} icone="musique" /><span class="ligne-libelle">Mes refuges</span>${Icones.chevron({ trait: 2 })}</a>
     </div>
   </main>`;
 }

@@ -95,7 +95,7 @@ test('écrire s\'enregistre seul et se retrouve après rechargement ; rien ne pa
   expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.endsWith(':gratitudes')))).toEqual([]);
 });
 
-test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points positifs », affichée, au carré des points positifs ; elle se masque et se déplace', async ({ page }) => {
+test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points positifs », affichée, à l\'icône des points positifs ; elle se masque et se déplace', async ({ page }) => {
   await aller(page, '#/reglages/journee');
   await expect(page.getByRole('switch', { name: 'Afficher Mes gratitudes' })).toBeVisible();
   const libelles = await page.locator('.ma-journee .ligne-champ-reglage .ligne-libelle').allTextContents();
@@ -105,9 +105,11 @@ test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points po
   const ligne = (nom) => page.locator('.ma-journee .ligne-champ-reglage', { hasText: nom });
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    const [gr, pos] = await Promise.all(['Mes gratitudes', 'Mes points positifs'].map((n) => ligne(n).locator('.carre-ligne').evaluate((e) => getComputedStyle(e).backgroundColor)));
-    expect(gr, `${schema} : carré de Mes gratitudes, neutre (v12)`).toBe(rgb(t['surface-2']));
-    expect(gr).toBe(pos);
+    const [gr, pos] = await Promise.all(['Mes gratitudes', 'Mes points positifs'].map((n) => ligne(n).locator('.icone-ligne')
+      .evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector('svg')).color, e.querySelector('path').getAttribute('d')])));
+    // L'icône seule, sans carré, en --text-2 (v12 : la rangée nomme une rubrique, elle n'ouvre rien), celle des points positifs.
+    expect(gr.slice(0, 2), `${schema} : icône de Mes gratitudes`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['text-2'])]);
+    expect(gr).toEqual(pos);
   }
   // Montée d'un cran : avant les points positifs, ici et sur Aujourd'hui.
   await page.getByRole('button', { name: 'Monter Mes gratitudes' }).click();

@@ -1,10 +1,10 @@
 import { html } from '../lib.js';
 import { Icones } from '../icones.js';
 
-// Carré d'icône d'une liste groupée 2b, comme les réglages de l'iPhone (Réglages, Le soir) : 28 px, rayon 7, neutre
-// (--surface-2), l'icône dessus. v12 (spec §5.4) : les rubriques et les parcours n'ont plus de couleur ; `teinte`, encore
-// passée par quelques écrans, est ignorée.
-export const CarreIcone = ({ icone }) => html`<span class="carre-ligne" aria-hidden="true">${Icones[icone]({ trait: 2 })}</span>`;
+// L'icône d'une rangée de liste groupée (Réglages, Le soir, Bien-être, Mes refuges), dans une place de 28 à gauche du libellé.
+// v12 (spec §5.4) : plus de carré coloré, ni de carré du tout. Elle est à l'accent quand la rangée ouvre quelque chose (un lien,
+// un bouton), en --text-2 quand elle nomme une rubrique (Réglages › Le soir) : ecrans.css le décide selon la rangée.
+export const IconeLigne = ({ icone }) => html`<span class="icone-ligne" aria-hidden="true">${Icones[icone]({ trait: 2 })}</span>`;
 
 // Tête d'une carte de rubrique (v12, spec §5.4 ; Aujourd'hui) : l'icône de 20 en --text-2, sans carré (elle désigne la
 // rubrique, elle n'ouvre rien), puis le titre ; `sous` (« nuit dernière ») le suit sur la même ligne, en discret.

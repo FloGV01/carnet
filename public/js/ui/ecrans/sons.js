@@ -41,11 +41,14 @@ export function lireReglagesSons() {
   };
 }
 
-// Le volume bouge le son pendant le geste, et n'est écrit qu'au lâcher.
+// Le volume bouge le son pendant le geste, et n'est écrit qu'au lâcher. La part remplie de la piste, à l'accent jusqu'au
+// bouton (v12, ecrans.css), suit la valeur : --part, de 0 à 1, posée par style (CSSOM, jamais un attribut écrit en texte).
 function Volume({ valeur, surGlisser, surLacher }) {
+  const part = (valeur - VOLUME_MIN) / (1 - VOLUME_MIN);
   return html`<label class="reglage-volume">
     <span>Volume</span>
     <input type="range" min=${VOLUME_MIN} max="1" step="0.05" value=${valeur} aria-valuetext=${`${Math.round(valeur * 100)} %`}
+      style=${{ '--part': String(Math.round(part * 1000) / 1000) }}
       onInput=${(e) => surGlisser(Number(e.target.value))} onChange=${(e) => surLacher(Number(e.target.value))} />
   </label>`;
 }
@@ -123,5 +126,5 @@ export function Sons() {
         </div>
       </div>`;
   const pied = enCours && html`<button type="button" class="btn btn-plein bouton-arreter" onClick=${arreter}>Arrêter</button>`;
-  return html`<${CadreParcours} titre=${titre} teinte="bien-etre" icone=${enCours ? undefined : 'onde'} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
+  return html`<${CadreParcours} titre=${titre} icone=${enCours ? undefined : 'onde'} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
 }

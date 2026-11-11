@@ -3,7 +3,7 @@ import { test, expect } from '../aides/gardes.js';
 import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js';
 import { canaux, contraste, jetons, oklch } from '../aides/couleurs.js';
 import { vueMoment, noter, continuer, faisais } from '../aides/emotion.js';
-import { stabiliser, verserControle, ciblesPetites } from '../aides/controle.js';
+import { stabiliser, verserControle, ciblesPetites, rondsAccent, accentHorsDeSaPlace, liensSurSurface2 } from '../aides/controle.js';
 
 // v12 · Le design simple façon Apple (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5).
 // Tâche 3 : les jetons, l'accent vert B et les choix. Un choix fait est un aplat d'accent, son texte et sa coche ✓ en
@@ -11,7 +11,9 @@ import { stabiliser, verserControle, ciblesPetites } from '../aides/controle.js'
 // avec son contour. Rien ne change de taille au toucher. La roue, l'interrupteur et les champs passent au même système. Les
 // écrans de l'émotion et « Réveil la nuit » n'ont pas d'accent. Tâche 4 : Aujourd'hui façon Apple (l'en-tête, les cartes sans
 // carré coloré, la bande du bas, les onglets), sans couleur de rubrique, et la page du soir qui ne grandit pas de plus de
-// 120 px. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
+// 120 px. Tâche 5 : les autres écrans et les graphiques ; l'accent vert reste à sa place (la règle de forme et le point de
+// vigilance 3 sont contrôlés sur tous les écrans du contrôle, v7-controle.spec.js ; ici, leurs contrôles eux-mêmes), les
+// graphiques sont à l'encre, une seule action en aplat par vue. Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const THEMES = [['light', clair], ['dark', sombre]];
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -365,3 +367,191 @@ test('v12 (4/9) · point de vigilance 4 : en très grand texte (17 à 53, 390 et
   }
 });
 
+
+// ---------- Tâche 5 : les autres écrans et les graphiques ----------
+
+// Les contrôles de l'accent (tests/aides/controle.js), qui passent sur chaque écran du contrôle global, voient pour de bon ce
+// qu'ils cherchent : un point ou un disque vert sans texte ni icône, un rond d'un SVG à l'accent, l'accent dans un graphique,
+// un lien vert sur --surface-2 ; et laissent passer un rond qui porte une icône (une commande) et un contrôle autour d'un
+// graphique.
+test('v12 (5/9) · les contrôles de l\'accent voient pour de bon un point vert, l\'accent dans un graphique et un lien vert sur --surface-2, et laissent passer une commande ronde à icône', async ({ page }) => {
+  const accents = [rgb(clair.accent), rgb(clair['accent-texte'])];
+  const verifier = async () => ({
+    ronds: await rondsAccent(page, accents), lieux: await accentHorsDeSaPlace(page, accents),
+    liens: await liensSurSurface2(page, rgb(clair['accent-texte']), rgb(clair['surface-2'])),
+  });
+  await verserControle(page);
+  await aller(page, '#/analyse');
+  await expect(page.locator('main')).not.toContainText('Calcul…', { timeout: 30000 });
+  await expect(page.locator('figure.graphe').first()).toBeVisible();
+  await stabiliser(page);
+  expect(await verifier()).toEqual({ ronds: [], lieux: [], liens: [] });
+  await page.evaluate(() => {
+    const main = document.querySelector('main');
+    const el = (balise, classe, style, parent = main) => {
+      const e = document.createElement(balise);
+      e.className = classe;
+      e.style.cssText = style;
+      parent.append(e);
+      return e;
+    };
+    el('i', 'essai-point', 'display: block; width: 10px; height: 10px; background: var(--accent);');
+    el('div', 'essai-disque', 'width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-texte);');
+    const commande = el('button', 'essai-commande', 'width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent);');
+    commande.append(document.querySelector('.onglets svg').cloneNode(true));
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'essai-svg');
+    svg.innerHTML = '<circle class="essai-rond" cx="6" cy="6" r="4" />';
+    main.append(svg);
+    svg.firstChild.style.fill = 'var(--accent)';
+    const figure = document.querySelector('figure.graphe');
+    el('span', 'essai-graphe', 'color: var(--accent-texte);', figure).textContent = 'vert';
+    el('button', 'essai-controle', 'color: var(--accent-texte);', figure).textContent = 'Voir';
+    el('span', 'essai-lien', 'color: var(--accent-texte);', el('div', 'essai-fond', 'background: var(--surface-2);')).textContent = 'Voir ce jour';
+  });
+  const f = await verifier();
+  expect([...new Set(f.ronds.map((x) => x.split(' ')[0]))].sort()).toEqual(['circle.essai-rond', 'div.essai-disque', 'i.essai-point']);
+  expect(f.lieux).toEqual(['graphe › span.essai-graphe : color à l\'accent']);
+  expect(f.liens).toEqual(['« Voir ce jour » (span.essai-lien) : un lien vert sur --surface-2']);
+});
+
+// Spec §5.5 : la couleur ne dit qu'une émotion. Hors des zones et des familles, un graphique est à l'encre (--donnee*), jamais
+// à l'accent ; ses séries se distinguent par leur forme et leur rampe : le pas le plus discret d'une rampe (nuit Mal, énergie
+// basse) a un contour à 3:1 au moins sur la carte, et « peu de valeurs » est une barre creuse au contour à 3:1 au moins, sur la
+// carte comme sur la piste (au lieu d'une barre pâlie à 0,45, 2,25:1).
+test('v12 (5/9) · les graphiques sont à l\'encre : les séries de Mes jours se distinguent par leur forme, le pas discret des rampes a un contour à 3:1, « peu de valeurs » est une barre creuse au contour à 3:1, en clair et en sombre', async ({ page }) => {
+  await verserControle(page);
+  const neutre = (c) => c === 'none' || /rgba\(0, 0, 0, 0\)/.test(c) || oklch(c).C < 0.02;
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await page.reload();
+    await aller(page, '#/analyse');
+    await expect(page.locator('main')).not.toContainText('Calcul…', { timeout: 30000 });
+    const mesJours = page.locator('figure.graphe', { hasText: 'Mes jours' });
+    await expect(mesJours.locator('svg[role="img"]')).toBeVisible();
+    const m = await mesJours.evaluate((f) => {
+      const s = (e) => getComputedStyle(e);
+      const serie = (sel) => [...f.querySelectorAll(sel)].map((e) => ({ forme: e.tagName, fill: s(e).fill, stroke: s(e).stroke }));
+      return {
+        carte: s(f).backgroundColor,
+        series: {
+          notes: serie('svg[role="img"] g.g-notes > circle'), nuits: serie('svg[role="img"] rect[class^="g-sommeil-"]'),
+          explosions: serie('g.g-explosions > rect'), energie: serie('g.g-energie-basse > rect'), seances: serie('g.g-seances > polygon'),
+        },
+        rampe: [1, 2, 3].map((i) => s(f.querySelector(`.pas-rampe rect.g-sommeil-${i}`)).fill),
+        discrets: [...f.querySelectorAll('rect.g-sommeil-1')].map((e) => [s(e).stroke, s(e).strokeWidth]),
+      };
+    });
+    // Chaque série a sa forme : un point (rond) par note, une barre par nuit, une encoche par explosion, une barre par jour
+    // d'énergie basse, un losange par séance de Bien-être.
+    const formes = Object.fromEntries(Object.entries(m.series).map(([k, v]) => [k, [...new Set(v.map((x) => x.forme))]]));
+    expect(formes, schema).toEqual({ notes: ['circle'], nuits: ['rect'], explosions: ['rect'], energie: ['rect'], seances: ['polygon'] });
+    for (const [k, v] of Object.entries(m.series)) {
+      for (const x of v) expect([x.fill, x.stroke].filter((c) => !neutre(c)), `${schema} · ${k} : à l'encre`).toEqual([]);
+    }
+    // La rampe des nuits : les trois pas de l'encre, distincts ; le pas discret, cerclé du pas suivant, à 3:1 sur la carte.
+    expect(m.rampe, schema).toEqual([rgb(t['donnee-1']), rgb(t['donnee-2']), rgb(t['donnee-3'])]);
+    expect(m.discrets.length, schema).toBeGreaterThan(1);
+    for (const [trait, largeur] of m.discrets) {
+      expect([trait, largeur], schema).toEqual([rgb(t['donnee-2']), '1px']);
+      expect(contraste(trait, m.carte), `${schema} : contour du pas discret`).toBeGreaterThanOrEqual(3);
+    }
+    // Ta journée : l'énergie en rampe de l'encre, son pas discret cerclé de même.
+    const journee = page.locator('figure.graphe', { hasText: 'Ta journée heure par heure' });
+    const energie = await journee.evaluate((f) => [1, 2, 3].map((i) => { const r = f.querySelector(`.pas-rampe rect.g-energie-${i}`); return [getComputedStyle(r).fill, getComputedStyle(r).stroke]; }));
+    expect(energie.map((x) => x[0]), schema).toEqual([rgb(t['donnee-1']), rgb(t['donnee-2']), rgb(t['donnee-3'])]);
+    expect(energie[0][1], schema).toBe(rgb(t['donnee-2']));
+    expect(contraste(energie[0][1], m.carte), schema).toBeGreaterThanOrEqual(3);
+    // « Peu de valeurs », dans « Avant mes jours à énergie basse » : une barre creuse, jamais pâlie.
+    await aller(page, '#/comprendre/energie');
+    const avant = page.locator('figure.graphe', { hasText: 'Avant mes jours à énergie basse' });
+    await expect(avant.locator('rect.g-barre-creuse').first()).toBeVisible();
+    const creuses = await avant.evaluate((f) => ({
+      carte: getComputedStyle(f).backgroundColor, piste: getComputedStyle(f.querySelector('rect.g-piste')).fill, pales: f.querySelectorAll('.g-peu').length,
+      legende: Boolean([...f.querySelectorAll('.legende-graphe > span')].find((x) => x.textContent.includes('peu de valeurs') && x.querySelector('rect.g-barre-creuse'))),
+      barres: [...f.querySelectorAll('rect.g-barre-creuse')].map((r) => [getComputedStyle(r).fill, getComputedStyle(r).stroke, getComputedStyle(r).opacity]),
+    }));
+    expect([creuses.pales, creuses.legende], schema).toEqual([0, true]);
+    for (const [fond, trait, opacite] of creuses.barres) {
+      expect([fond, trait, opacite], schema).toEqual([rgb(t.surface), rgb(t.donnee), '1']);
+      expect(contraste(trait, creuses.carte), `${schema} : peu de valeurs, sur la carte`).toBeGreaterThanOrEqual(3);
+      expect(contraste(trait, creuses.piste), `${schema} : peu de valeurs, sur la piste`).toBeGreaterThanOrEqual(3);
+    }
+  }
+});
+
+// Les aplats d'accent d'une vue : les éléments visibles peints à l'accent (hors des choix faits), dans l'écran ou le parcours.
+const aplats = (page, accent) => page.evaluate((acc) => [...document.querySelectorAll('main *, .parcours *')]
+  .filter((e) => e.getClientRects().length && getComputedStyle(e).backgroundColor === acc && !e.closest('[aria-pressed="true"]'))
+  .map((e) => e.getAttribute('aria-label') || e.textContent.trim()), accent);
+// Les rangées d'une liste : l'icône (place, fond, couleur) et le chevron.
+const rangees = (loc) => loc.evaluate((ul) => [...ul.querySelectorAll('.ligne-carte')].map((a) => {
+  const i = a.querySelector('.icone-ligne');
+  return { texte: a.textContent.trim(), fond: getComputedStyle(i).backgroundColor, icone: getComputedStyle(i.querySelector('svg')).color,
+    chevron: getComputedStyle(a.querySelector(':scope > svg:last-child')).color };
+}));
+
+// Spec §5.4 : une seule action en aplat par vue, « Reprendre » dans Bien-être et « Commencer » dans Moment difficile ; les petits
+// ▶ des favoris et des listes deviennent une icône d'accent sans fond. Les rangées qui ouvrent quelque chose ont leur icône à
+// l'accent, sans carré, et leur chevron en --contour. « Faite le… » du Programme est à l'encre (§5.3 : jamais un « fait » vert).
+test('v12 (5/9) · une seule action en aplat par vue : « Reprendre » dans Bien-être, « Commencer » dans Moment difficile ; les ▶ des favoris et des listes, une icône d\'accent sans fond ; les entrées à l\'icône d\'accent ; « Faite le… » à l\'encre, en clair et en sombre', async ({ page }) => {
+  await verserControle(page);
+  await page.evaluate(async () => {
+    localStorage.setItem('carnet:bien-etre:dernier', JSON.stringify('expiration-longue'));
+    await window.__carnet.repo.meta.ecrire('favorisBienEtre', ['soupir', 'sons-de-fond']);
+  });
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    await aller(page, '#/aujourdhui');
+    await aller(page, '#/bien-etre');
+    const entrees = page.getByRole('list', { name: 'Entrées' });
+    await expect(entrees.getByRole('link')).toHaveCount(5);
+    await expect(page.locator('.bien-etre .ligne-element')).toHaveCount(2);
+    expect(await aplats(page, rgb(t.accent)), schema).toEqual(['Commencer Expiration longue']);
+    const petits = await page.locator('.bien-etre .bouton-lecture.petit').evaluateAll((l) => l.map((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).color,
+      Math.round(b.getBoundingClientRect().width)]));
+    expect(petits, schema).toEqual([[TRANSPARENT, rgb(t['accent-texte']), 48], [TRANSPARENT, rgb(t['accent-texte']), 48]]);
+    for (const r of await rangees(entrees)) {
+      expect([r.fond, r.icone, r.chevron], `${schema} · ${r.texte}`).toEqual([TRANSPARENT, rgb(t['accent-texte']), rgb(t.contour)]);
+    }
+    // Une liste d'entrée : aucun aplat, ses ▶ en icônes d'accent.
+    await aller(page, '#/bien-etre/calmer');
+    await expect(page.locator('.entree-bien-etre .ligne-element').first()).toBeVisible();
+    expect(await aplats(page, rgb(t.accent)), schema).toEqual([]);
+    // Le Programme : « Faite le… » et sa coche à l'encre.
+    await aller(page, '#/bien-etre/programme');
+    const faite = page.locator('.programme .seance-faite').first();
+    await expect(faite).toContainText('Faite le');
+    expect(await faite.evaluate((e) => [getComputedStyle(e).color, getComputedStyle(e.querySelector('svg')).color]), schema).toEqual([rgb(t['text-2']), rgb(t.text)]);
+    // Moment difficile : « Commencer » seul en aplat ; les exercices courts neutres ; Mon plan, son icône en --text-2.
+    await aller(page, '#/aujourdhui');
+    await aller(page, '#/moment-difficile');
+    const vue = page.getByRole('dialog', { name: 'Moment difficile' });
+    await expect(vue.getByRole('button', { name: 'Commencer', exact: true })).toBeVisible();
+    expect(await aplats(page, rgb(t.accent)), schema).toEqual(['Commencer']);
+    await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
+  }
+});
+
+// Spec §5.3 : le curseur de volume, comme sur iOS, sa partie remplie à l'accent jusqu'au bouton, blanc. WebKit ne donne pas le
+// style calculé des pseudo-éléments du curseur : on lit la part remplie (--part, posée par sons.js) et la feuille de style.
+test('v12 (5/9) · le volume des sons de fond, comme sur iOS : la part remplie de la piste suit la valeur, à l\'accent ; le bouton est blanc', async ({ page }) => {
+  await aller(page, '#/sons');
+  const volume = page.getByRole('slider', { name: 'Volume' });
+  await expect(volume).toHaveValue('0.5');
+  const part = () => volume.evaluate((i) => i.style.getPropertyValue('--part'));
+  expect(await part()).toBe('0.474');
+  await volume.fill('1');
+  await expect.poll(part).toBe('1');
+  await volume.fill('0.05');
+  await expect.poll(part).toBe('0');
+  const regles = await page.evaluate(() => {
+    const toutes = [...document.styleSheets].flatMap((f) => [...f.cssRules]);
+    const de = (pseudo) => toutes.find((r) => r.selectorText && r.selectorText.includes('.reglage-volume') && r.selectorText.includes(pseudo));
+    return { piste: de('slider-runnable-track').style.getPropertyValue('background-image') || de('slider-runnable-track').style.background,
+      bouton: de('slider-thumb').style.backgroundColor };
+  });
+  expect(regles.piste).toContain('var(--accent) var(--rempli)');
+  expect(regles.piste).toContain('var(--contour) var(--rempli)');
+  expect(regles.bouton).toBe('rgb(255, 255, 255)');
+});

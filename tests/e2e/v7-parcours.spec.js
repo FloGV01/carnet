@@ -162,14 +162,14 @@ test('repère d\'étape en points, jamais une barre : faites et en cours à l\'e
       expect(p[2].fond, `${quoi} : à venir, sans fond`).toBe('rgba(0, 0, 0, 0)');
       expect(p[2].contour, `${quoi} : à venir, en contour`).toBe(rgb(t['text-2']));
       expect(p[0].contour, `${quoi} : faite, pleine`).toBe(p[0].fond);
-      // En-tête : « Fermer » (600, action), puis le nom derrière un petit carré neutre (v12), sans « · ».
+      // En-tête : « Fermer » (600, action), puis le nom, sans « · », et sans le petit carré qui le précédait (v12, spec §5.4 :
+      // `.point-teinte` est retiré).
       const tete = await vue.locator('.parcours-tete').evaluate((h) => {
         const f = h.querySelector('.fermer');
-        const carre = h.querySelector('.nom .point-teinte');
         return { fermer: [getComputedStyle(f).fontWeight, getComputedStyle(f).color], nom: h.querySelector('.nom').textContent,
-          carre: carre && [getComputedStyle(carre).backgroundColor, getComputedStyle(carre).borderTopLeftRadius, carre.getBoundingClientRect().width] };
+          enfants: h.querySelector('.nom').children.length };
       });
-      expect(tete, quoi).toEqual({ fermer: ['600', rgb(t.action)], nom, carre: [rgb(t['text-2']), '3px', 11] });
+      expect(tete, quoi).toEqual({ fermer: ['600', rgb(t.action)], nom, enfants: 0 });
       await vue.getByRole('button', { name: 'Fermer', exact: true }).click();
     }
     // Rouvert : le récapitulatif, toutes les étapes faites, aucune en cours.
@@ -199,7 +199,7 @@ const tete = (vue) => vue.locator('.parcours-tete').evaluate((h) => {
   };
 });
 
-test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne de 48 à 21 et 23 px ; plus grand, le repère passe sous le nom, jamais coupé ; le toast se pose sous l\'en-tête', async ({ page }) => {
+test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne de 48 jusqu\'à 25 px ; plus grand, le repère passe sous le nom, jamais coupé ; le toast se pose sous l\'en-tête', async ({ page }) => {
   const id = await creerEpisode(page, { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:conflit', intensite: 7 });
   const id11 = await creerEpisode(page, { date: '2026-10-14', heure: '19:30', emotion: 'emotion:colere', intensite: 6,
     apresCoup: { types: ['typeExplosion:colere', 'typeExplosion:surcharge'] } });
@@ -214,11 +214,13 @@ test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne 
     }
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   };
-  // 11 étapes (Colère et Surcharge cochées) : sur une ligne jusqu'à 21 px, puis le repère dessous.
+  // 11 étapes (Colère et Surcharge cochées) : sur une ligne jusqu'à 23 px, puis le repère dessous (v12 : sans le petit carré
+  // devant le nom, 20 px de gagnés ; 21 px en v11).
   await aller(page, `#/apres-coup/${id11}`);
   await expect(ac.getByRole('img', { name: 'Récapitulatif' })).toBeVisible();
   await expect(ac.locator('.reperes i')).toHaveCount(11);
-  await verifier([[null, { hauteur: 48, repere: 'à côté' }], [21, { hauteur: 48, repere: 'à côté' }], [23, { repere: 'dessous' }]], null);
+  await verifier([[null, { hauteur: 48, repere: 'à côté' }], [21, { hauteur: 48, repere: 'à côté' }], [23, { hauteur: 48, repere: 'à côté' }],
+    [24, { repere: 'dessous' }], [28, { repere: 'dessous' }]], null);
   await ac.getByRole('button', { name: 'Fermer', exact: true }).click();
 
   // 8 étapes, juste après un épisode noté : son toast est encore là, posé en haut. L'horloge s'arrête pour qu'il reste.
@@ -230,8 +232,9 @@ test('en-tête en grand texte : l\'Après coup à 8 étapes tient sur une ligne 
   await expect(ac.getByRole('img', { name: 'Étape 1 sur 8' })).toBeVisible();
   await expect(page.locator('.toast.en-haut')).toHaveText(/Épisode enregistré/);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50));
+  // 8 étapes : sur une ligne jusqu'à 25 px (23 px en v11), puis le repère dessous.
   await verifier([[null, { hauteur: 48, repere: 'à côté' }], [21, { hauteur: 48, repere: 'à côté' }], [23, { hauteur: 48, repere: 'à côté' }],
-    [28, { repere: 'dessous' }], [33, { repere: 'dessous' }]], true);
+    [25, { hauteur: 48, repere: 'à côté' }], [26, { repere: 'dessous' }], [28, { repere: 'dessous' }], [33, { repere: 'dessous' }]], true);
 });
 
 // Style d'un choix fait (après son fondu) : fond, texte, graisse, coche.
@@ -395,7 +398,7 @@ test('Moment difficile : les exercices courts en tête (v10), la respiration dan
         commencer: { fond: st(commencer).backgroundColor, texte: st(commencer).color, graisse: st(commencer).fontWeight, hauteur: commencer.getBoundingClientRect().height },
         pied: v.querySelector('.parcours-pied').getBoundingClientRect().top,
         hautCorps: v.querySelector('.parcours-corps').getBoundingClientRect().top,
-        nom: [v.querySelector('.parcours-tete .nom').textContent, st(v.querySelector('.point-teinte')).backgroundColor],
+        nom: [v.querySelector('.parcours-tete .nom').textContent, v.querySelectorAll('.parcours-tete .nom *').length],
       };
     });
     for (const c of s.cartes) expect(c, schema).toEqual([rgb(t.surface), '16px']);
@@ -406,7 +409,7 @@ test('Moment difficile : les exercices courts en tête (v10), la respiration dan
     expect(s.commencer.hauteur).toBeGreaterThanOrEqual(52);
     expect(s.commencer.hauteur).toBeLessThanOrEqual(56);
     expect(contraste(s.commencer.fond, s.commencer.texte), `${schema} · Commencer`).toBeGreaterThanOrEqual(4.5);
-    expect(s.nom, schema).toEqual(['Moment difficile', rgb(t['text-2'])]);
+    expect(s.nom, schema).toEqual(['Moment difficile', 0]);
     // v10 : à l'ouverture, les exercices courts et « Commencer » sont à l'écran, au-dessus de « Noter un épisode », qui reste à
     // sa place ; la suite vient en défilant, et le bas de Mon plan s'arrête au-dessus du pied, rien n'est caché.
     await expect(vue.getByRole('button', { name: 'Commencer' })).toBeInViewport({ ratio: 1 });
@@ -430,12 +433,13 @@ test('Moment difficile : les exercices courts en tête (v10), la respiration dan
       expect(p, `${schema} · ${nom}`).toEqual({ texte, hauteur: 44, fond: 'rgba(0, 0, 0, 0)', couleur: rgb(t.text), chevron: true });
       expect(contraste(p.couleur, rgb(t.surface))).toBeGreaterThanOrEqual(4.5);
     }
-    // « Une chose à la fois › » et « Modifier » (couleur action, 600), le carré de Mon plan neutre (v12).
+    // « Une chose à la fois › » et « Modifier » (couleur action, 600), l'icône de Mon plan en --text-2, sans carré (v12).
     const acces = vue.getByRole('button', { name: 'Une chose à la fois', exact: true });
     expect(await acces.evaluate((b) => [getComputedStyle(b).fontWeight, Boolean(b.querySelector('svg')), b.getBoundingClientRect().height >= 44])).toEqual(['600', true, true]);
     const modifier = vue.getByRole('link', { name: 'Modifier mon plan', exact: true });
     expect(await modifier.evaluate((a) => [a.textContent, getComputedStyle(a).fontWeight, getComputedStyle(a).color])).toEqual(['Modifier', '600', rgb(t.action)]);
-    expect(await vue.locator('.carre-plan').evaluate((c) => [getComputedStyle(c).backgroundColor, c.getBoundingClientRect().width])).toEqual([rgb(t['surface-2']), 28]);
+    expect(await vue.locator('.icone-plan').evaluate((c) => [getComputedStyle(c).backgroundColor, getComputedStyle(c.querySelector('svg')).color]))
+      .toEqual(['rgba(0, 0, 0, 0)', rgb(t['text-2'])]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   }
 });
@@ -525,12 +529,12 @@ test('Moment difficile, « Réduire les animations » : le cercle reste figé (l
   expect([expire.taille, expire.disque, expire.fond]).toEqual([repos.taille, repos.disque, repos.fond]);
   await vue.getByRole('button', { name: 'Arrêter' }).click();
 
-  // « Une chose à la fois » : même en-tête (carré du parcours), sans repère.
+  // « Une chose à la fois » : même en-tête (le nom seul, v12), sans repère.
   await vue.getByRole('button', { name: 'Une chose à la fois', exact: true }).click();
   const cartes = page.getByRole('dialog', { name: 'Une chose à la fois' });
   await expect(cartes.locator('.une-chose-texte')).toHaveText('je sors marcher');
   await expect(cartes.locator('.reperes')).toHaveCount(0);
-  await expect(cartes.locator('.parcours-tete .point-teinte')).toHaveCount(1);
+  await expect(cartes.locator('.parcours-tete .nom')).toHaveText('Une chose à la fois');
   await cartes.getByRole('button', { name: 'Fermer', exact: true }).click();
 
   // Sans plan : « Écrire mon plan » dans la carte de Mon plan, et pas de « Une chose à la fois ».

@@ -48,7 +48,7 @@ export function Programme() {
   return html`<main class="ecran fiche programme">
     <${Entete} titre="Programme" retour=${() => { location.hash = RETOUR; }} />
     <div class="presentation-programme">${PRESENTATION.map((t) => html`<p>${pourAffichage(t)}</p>`)}</div>
-    ${ETAPES.map((etape) => html`<section class="carte carte-groupe etape-programme teinte-bien-etre" key=${etape.id} aria-labelledby=${`etape-${etape.id}`}>
+    ${ETAPES.map((etape) => html`<section class="carte carte-groupe etape-programme" key=${etape.id} aria-labelledby=${`etape-${etape.id}`}>
       <h2 class="titre-carte titre-etape" id=${`etape-${etape.id}`}>${etape.titre}</h2>
       <ul class="liste">${etape.seances.map((id) => html`<${LigneSeance} key=${id} id=${id} faiteLe=${faites[id]} aujourdhui=${aujourdhui} />`)}</ul>
     </section>`)}

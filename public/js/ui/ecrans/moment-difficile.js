@@ -76,11 +76,11 @@ export function MomentDifficile() {
   const quitterCartes = (vers) => () => { retour.current = vers; setCartesOuvertes(false); };
   const fermer = () => { location.hash = '#/aujourdhui'; };
   if (cartesOuvertes && cartes.length > 0) {
-    return html`<${CadreParcours} titre="Une chose à la fois" teinte="difficile" surFermer=${quitterCartes('acces')}>
+    return html`<${CadreParcours} titre="Une chose à la fois" surFermer=${quitterCartes('acces')}>
       <${UneChose} cartes=${cartes} surToutVoir=${quitterCartes('plan')} />
     </${CadreParcours}>`;
   }
-  return html`<${CadreParcours} titre="Moment difficile" teinte="difficile" surFermer=${fermer}
+  return html`<${CadreParcours} titre="Moment difficile" surFermer=${fermer}
     pied=${html`<a class="btn-lien" href="#/episode/nouveau">${Icones.plus({ trait: 2 })}Noter un épisode</a>`}>
     <div class="etape moment-difficile">
       <${ExercicesCourts} />
@@ -93,7 +93,7 @@ export function MomentDifficile() {
       <section class="carte plan-moment" aria-labelledby="titre-plan-moment">
         <div class="plan-moment-tete">
           <h2 class="titre-plan-moment" id="titre-plan-moment" tabindex="-1" ref=${titrePlan}>
-            <span class="carre-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
+            <span class="icone-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
           ${lu && !rienDEcrit && html`<a class="btn-lien modifier-plan" href="#/mon-plan" aria-label="Modifier mon plan">Modifier</a>`}
         </div>
         ${lu && (rienDEcrit

@@ -21,5 +21,5 @@ const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="epi
 // Un épisode noté à chaud se ferme seul après « Ta réaction » (v6.1) ; rouvert, il montre son récapitulatif.
 export function Episode({ id }) {
   return html`<${ParcoursFiche} store="episodes" route="episode" titre="Épisode" nomFiche="Épisode" etapes=${ETAPES_EPISODE}
-    textes=${TEXTES_EPISODE} avecHeure=${true} id=${id} memo=${memo} teinte="ep" avecPlan=${true} sortieDirecte=${true} />`;
+    textes=${TEXTES_EPISODE} avecHeure=${true} id=${id} memo=${memo} avecPlan=${true} sortieDirecte=${true} />`;
 }

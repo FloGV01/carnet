@@ -128,6 +128,93 @@ export const mouvements = (page) => page.evaluate(() => {
   return fautes;
 });
 
+// ---------- L'accent vert, à sa place (v12, spec §5.3, §5.5 et §5.6 ; point de vigilance 3) ----------
+// Trois contrôles, qui lisent les styles calculés de l'écran affiché, pseudo-éléments ::before et ::after compris, et rendent
+// leurs fautes. `accents` : les valeurs calculées de l'accent du thème (--accent et --accent-texte de la racine, « rgb(r, g, b) »).
+// Un seul page.evaluate, sans code fabriqué dans la page (la CSP refuse eval) : `quoi` choisit le contrôle.
+const controlerAccent = (page, quoi, accents, surface2 = null) => page.evaluate(([q, acc, gris]) => {
+  // « rgb(r, g, b) » d'une couleur calculée opaque ; null pour une couleur transparente ou à demi.
+  const opaque = (c) => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return p.length > 3 && p[3] < 1 ? null : `rgb(${p[0]}, ${p[1]}, ${p[2]})`;
+  };
+  // Les couleurs peintes d'un style : [propriété, couleur].
+  const peintes = (s, { texte = true } = {}) => [
+    ...(texte ? [['color', s.color]] : []), ['background', s.backgroundColor], ['fill', s.fill], ['stroke', s.stroke],
+    ...['Top', 'Right', 'Bottom', 'Left'].filter((c) => parseFloat(s[`border${c}Width`]) > 0 && s[`border${c}Style`] !== 'none').map((c) => [`border-${c}`, s[`border${c}Color`]]),
+    ...(s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 ? [['outline', s.outlineColor]] : []),
+    ...(s.boxShadow.match(/rgba?\([^)]*\)/g) || []).map((c) => ['box-shadow', c]),
+  ];
+  const vert = (c) => acc.includes(opaque(c));
+  const nom = (el, pseudo) => `${el.tagName.toLowerCase()}.${String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className).trim().split(/\s+/).join('.')}${pseudo || ''}`;
+  const vu = (el, s) => s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
+  const pseudos = (el) => [null, '::before', '::after'].map((p) => [p, getComputedStyle(el, p)])
+    .filter(([p, s]) => (!p || (s.content !== 'none' && s.content !== 'normal')) && vu(el, s));
+  const fautes = [];
+  if (q === 'ronds') {
+    // La règle de forme (spec §5.3) : l'accent n'est jamais un rond ni un point, ronds et bulles appartenant aux émotions.
+    // Aucun élément rond sans texte ni icône (un disque : un rayon de 50 % au moins, sur une boîte presque carrée ; ou un
+    // point : moins de 16 px de côté) n'a l'accent pour fond ou pour contour. Un rond qui porte une icône (▶ du lecteur) ou un
+    // texte est une commande : il peut porter l'accent. Les ronds d'un SVG (circle, ellipse) non plus, ni en fond ni en trait.
+    const contenu = (el) => Boolean(el.textContent.trim()) || Boolean(el.querySelector('svg, img'));
+    for (const el of document.querySelectorAll('body *')) {
+      if (el instanceof SVGElement) {
+        const s = getComputedStyle(el);
+        if (!['circle', 'ellipse'].includes(el.tagName) || !vu(el, s)) continue;
+        for (const [prop, c] of [['fill', s.fill], ['stroke', s.stroke]]) if (vert(c)) fautes.push(`${nom(el)} : ${prop} à l'accent`);
+        continue;
+      }
+      if (contenu(el)) continue;
+      for (const [pseudo, s] of pseudos(el)) {
+        const r = el.getBoundingClientRect();
+        const [l, h] = pseudo ? [parseFloat(s.width), parseFloat(s.height)] : [r.width, r.height];
+        if (!(l > 0) || !(h > 0)) continue;
+        const rayon = Math.min(...['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'].map((c) => {
+          const v = s[`border${c}Radius`].split(' ')[0];
+          return v.endsWith('%') ? (parseFloat(v) / 100) * Math.min(l, h) : parseFloat(v) || 0;
+        }));
+        if (!(rayon >= Math.min(l, h) / 2 - 0.5 && Math.abs(l - h) <= 2) && !(l < 16 && h < 16)) continue;
+        for (const [prop, c] of peintes(s, { texte: false })) if (vert(c)) fautes.push(`${nom(el, pseudo)} (${Math.round(l)} × ${Math.round(h)}) : ${prop} à l'accent`);
+      }
+    }
+  } else if (q === 'lieux') {
+    // Le point de vigilance 3 : aucune trace de l'accent dans un graphique (spec §5.5 ; il reste sur les contrôles autour,
+    // « Voir en tableau », « Voir ce jour », « Pourquoi ? »), sur les écrans de l'émotion (.moment-plein, §5.6) ni sur « Réveil
+    // la nuit » (.ecran-noir, §5.2) : ni texte, ni fond, ni bord, ni contour, ni ombre, ni remplissage, ni trait.
+    for (const zone of document.querySelectorAll('figure.graphe, .moment-plein, .ecran-noir')) {
+      const graphe = zone.matches('figure.graphe');
+      for (const el of [zone, ...zone.querySelectorAll('*')]) {
+        if (graphe && el.closest('a, button')) continue;
+        for (const [pseudo, s] of pseudos(el)) {
+          for (const [prop, c] of peintes(s)) if (vert(c)) fautes.push(`${zone.className.split(' ')[0]} › ${nom(el, pseudo)} : ${prop} à l'accent`);
+        }
+      }
+    }
+  } else {
+    // Un lien vert (un texte à --accent-texte) ne se pose jamais sur --surface-2 en clair (spec §5.3 : 4,48:1, sous 4,5). Le
+    // fond est celui du premier ancêtre opaque.
+    const fond = (el) => {
+      for (let e = el; e; e = e.parentElement) {
+        const c = opaque(getComputedStyle(e).backgroundColor);
+        if (c) return c;
+      }
+      return opaque(getComputedStyle(document.documentElement).backgroundColor);
+    };
+    for (const el of document.querySelectorAll('body *')) {
+      if (el instanceof SVGElement || ![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.data.trim())) continue;
+      const s = getComputedStyle(el);
+      if (vu(el, s) && vert(s.color) && fond(el) === gris) fautes.push(`« ${el.textContent.trim().slice(0, 30)} » (${nom(el)}) : un lien vert sur --surface-2`);
+    }
+  }
+  return [...new Set(fautes)];
+}, [quoi, accents, surface2]);
+export const rondsAccent = (page, accents) => controlerAccent(page, 'ronds', accents);
+export const accentHorsDeSaPlace = (page, accents) => controlerAccent(page, 'lieux', accents);
+// `lien` : la couleur calculée de --accent-texte ; `surface2` : celle de --surface-2.
+export const liensSurSurface2 = (page, lien, surface2) => controlerAccent(page, 'liens', [lien], surface2);
+
 // Le plan et les données du contrôle global (v7-controle.spec.js, déplacés ici en v12 : la hauteur de la page du soir,
 // v12-design.spec.js, se mesure sur les mêmes).
 export const PLAN_CONTROLE = {

@@ -55,12 +55,12 @@ export function Consultation({ id: idRoute }) {
   const questions = fiche.questions || [];
   const majQuestions = (q) => ecrire({ questions: q.length ? q : null });
   const cellules = [
-    ...(ind.humeur.n ? [{ libelle: 'Humeur (notes)', valeur: uneDecimale(ind.humeur.moyenne), teinte: 'humeur' }] : []),
-    { libelle: `Nuits ${libelle(carte, 'sommeil:mal')}`, valeur: ind.nuits.n ? String(ind.nuits.mal) : null, teinte: 'sommeil' },
-    { libelle: 'Explosions', valeur: ind.explosions.n ? String(ind.explosions.total) : null, teinte: 'expl' },
-    { libelle: 'Épisodes', valeur: String(ind.episodes.nombre), teinte: 'ep' },
+    ...(ind.humeur.n ? [{ libelle: 'Humeur (notes)', valeur: uneDecimale(ind.humeur.moyenne) }] : []),
+    { libelle: `Nuits ${libelle(carte, 'sommeil:mal')}`, valeur: ind.nuits.n ? String(ind.nuits.mal) : null },
+    { libelle: 'Explosions', valeur: ind.explosions.n ? String(ind.explosions.total) : null },
+    { libelle: 'Épisodes', valeur: String(ind.episodes.nombre) },
   ];
-  return html`<${CadreParcours} titre="En consultation" teinte="trt" sansPoint=${true} surFermer=${revenir}
+  return html`<${CadreParcours} titre="En consultation" surFermer=${revenir}
     pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${revenir}>Terminer</button>`}>
     <div class="consultation">
       <div class="identite">
@@ -71,7 +71,7 @@ export function Consultation({ id: idRoute }) {
       <section class="carte chiffres-consultation" aria-label="30 derniers jours">
         <span class="legende-chiffres">30 derniers jours</span>
         <div class="grille-chiffres">${cellules.map((c) => html`<div class="cellule-chiffre">
-          <span class=${c.valeur == null ? 'valeur-chiffre vide-chiffre' : `valeur-chiffre teinte-${c.teinte}`}>${c.valeur ?? '·'}</span>
+          <span class=${c.valeur == null ? 'valeur-chiffre vide-chiffre' : 'valeur-chiffre'}>${c.valeur ?? '·'}</span>
           <span class="libelle-chiffre">${c.libelle}</span></div>`)}</div>
         ${nombreDeReleves(emotions) > 0 && html`<div class="emotions-consultation"><span class="legende-chiffres">Émotions</span><${BarresFamilles} compte=${emotions} /></div>`}
       </section>

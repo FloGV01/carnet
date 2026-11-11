@@ -4,7 +4,7 @@
 import { html } from '../lib.js';
 import { repo } from '../../donnees.js';
 import { nomPlaylist, normaliserRefuges } from '../../domain/refuges.js';
-import { CarreIcone } from './rubrique.js';
+import { IconeLigne } from './rubrique.js';
 import { Icones } from '../icones.js';
 
 // Seulement la base : jamais le réseau, ni à l'ouverture d'un écran, ni dans Moment difficile.
@@ -18,6 +18,6 @@ export function LignesPlaylists({ playlists }) {
   const lignes = normaliserRefuges({ playlists }).playlists.map((p, i) => ({ p, i })).filter(({ p }) => p.lien);
   if (!lignes.length) return null;
   return html`<div class="lignes-playlists">${lignes.map(({ p, i }) => html`<a class="carte ligne-carte lien-refuge" href=${p.lien} rel="noreferrer">
-    <${CarreIcone} icone="musique" /><span class="ligne-libelle">${nomPlaylist(p, i)}${p.source === 'spotify' && html`<span class="ligne-sous discret">Spotify</span>`}</span>
+    <${IconeLigne} icone="musique" /><span class="ligne-libelle">${nomPlaylist(p, i)}${p.source === 'spotify' && html`<span class="ligne-sous discret">Spotify</span>`}</span>
     ${Icones.sortie({ trait: 2 })}</a>`)}</div>`;
 }

@@ -150,7 +150,7 @@ export function ApresCoup({ id }) {
       return String(v);
     }).filter(Boolean).join(' · ');
     // Le récapitulatif se relit (v11, spec §11) : le doigt vers la droite y fait comme « Fermer », jamais aux étapes.
-    return html`<${CadreParcours} titre="Après coup" teinte="ep" etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+    return html`<${CadreParcours} titre="Après coup" etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
       relecture=${true} pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
         <h2 class="titre-question">Récapitulatif</h2>
@@ -175,12 +175,12 @@ export function ApresCoup({ id }) {
   const bloc = (b, i) => {
     if (b.type === 'multi') {
       return html`<div class="bloc-etape" key=${`${et.cle}-${i}`}>${b.titre && html`<h3 class="sous-titre-etape">${b.titre}</h3>`}
-        <${PastillesMultiples} etiquette=${b.titre || et.question} options=${options(items, b.liste, ac[b.champ])} valeurs=${ac[b.champ]} surChoix=${(v) => sansErreur(ecrireAC(b.champ, v))} teinte="ep"
+        <${PastillesMultiples} etiquette=${b.titre || et.question} options=${options(items, b.liste, ac[b.champ])} valeurs=${ac[b.champ]} surChoix=${(v) => sansErreur(ecrireAC(b.champ, v))}
           exclusifs=${new Set(items.filter((x) => x.liste === b.liste && x.exclusif).map((x) => x.id))} />
       </div>`;
     }
     if (b.type === 'echelle') {
-      return html`<${Pastilles} key=${et.cle} etiquette=${et.question} ariaPrefixe="Sur 10 :" options=${ECHELLE} valeur=${ac[b.champ] ?? null} colonnes=${5} classe="chiffres grille-choix" teinte="ep"
+      return html`<${Pastilles} key=${et.cle} etiquette=${et.question} ariaPrefixe="Sur 10 :" options=${ECHELLE} valeur=${ac[b.champ] ?? null} colonnes=${5} classe="chiffres grille-choix"
         surChoix=${(v) => { sansErreur(ecrireAC(b.champ, v)); clearTimeout(suivant.current); if (v != null) suivant.current = setTimeout(() => avancer(etape), DELAI_SUIVANT_MS); }} />`;
     }
     if (b.type === 'texte') {
@@ -189,7 +189,7 @@ export function ApresCoup({ id }) {
     }
     if (b.type === 'declencheur') {
       return html`<div class="bloc-etape" key="declencheur">
-        <${Pastilles} etiquette="Déclencheur" options=${options(items, 'declencheur', ep.declencheur)} valeur=${ep.declencheur ?? null} colonnes=${2} classe="grille-choix" teinte="ep"
+        <${Pastilles} etiquette="Déclencheur" options=${options(items, 'declencheur', ep.declencheur)} valeur=${ep.declencheur ?? null} colonnes=${2} classe="grille-choix"
           surChoix=${(v) => { setEp((e) => ({ ...e, declencheur: v })); sansErreur(ecrire({ declencheur: v })); }} />
         <${ChampTexte} id="ac-situation" etiquette="Ce qui s'est passé" valeur=${ep.situation} lignes=${2}
           cleBrouillon=${`carnet:brouillon:${id}:situation`} surEnregistrer=${(v) => { setEp((e) => ({ ...e, situation: v })); return ecrire({ situation: v }); }} />
@@ -213,7 +213,7 @@ export function ApresCoup({ id }) {
     return null;
   };
 
-  return html`<${CadreParcours} titre="Après coup" teinte="ep" etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
+  return html`<${CadreParcours} titre="Après coup" etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDate}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => setEtape(etape - 1)}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>${remplie ? 'Suivant' : 'Passer'}${Icones.chevron({ trait: 2 })}</button>`}>
     <div class=${`etape${et.courte ? ' courte' : ''}`} key=${et.cle}>

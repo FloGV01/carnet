@@ -40,31 +40,32 @@ export const calculerAnalyse = () => lireSiChange('analyse', async () => {
   return { resultat, items, carte: carteLibelles(items), zeroDepuis, perso };
 });
 
-// En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre, chacune
-// avec le carré de sa couleur (deux touchers pour chaque onglet, v6.1). Elles passent à la ligne en grand texte.
+// En haut (2b) : « Historique › » (v7 : l'Historique a quitté la barre d'onglets), puis les trois portes de Comprendre (deux
+// touchers pour chaque onglet, v6.1). v12 (spec §5.4) : une porte ouvre quelque chose, son icône est à l'accent, sans carré ni
+// couleur de rubrique. Elles passent à la ligne en grand texte.
 // v11 (spec §7) : « Épisodes », à côté d'« Historique », ouvre l'Historique sur ce segment, quel que soit le dernier retenu ;
 // un épisode s'ouvre ainsi en 3 touchers depuis l'onglet. Les deux passent l'un sous l'autre en grand texte.
-const COULEURS_PORTES = { explosions: ['explosions', 'expl'], energie: ['energie', 'energie'], rythmes: ['rythmes', 'sommeil'] };
+const ICONES_PORTES = { explosions: 'explosions', energie: 'energie', rythmes: 'rythmes' };
 const Portes = () => html`<nav class="portes-analyse" aria-label="Historique, épisodes et Comprendre">
   <div class="portes-historique">
     <a class="porte-historique" href="#/historique">
-      <span class="carre-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
+      <span class="icone-porte" aria-hidden="true">${Icones.historique()}</span><span class="porte-titre">Historique</span>${Icones.chevron({ trait: 2 })}
     </a>
-    <a class="porte-historique teinte-ep" href="#/historique" onClick=${allerAuxEpisodes}>
-      <span class="carre-porte" aria-hidden="true">${Icones.note()}</span><span class="porte-titre">Épisodes</span>${Icones.chevron({ trait: 2 })}
+    <a class="porte-historique" href="#/historique" onClick=${allerAuxEpisodes}>
+      <span class="icone-porte" aria-hidden="true">${Icones.note()}</span><span class="porte-titre">Épisodes</span>${Icones.chevron({ trait: 2 })}
     </a>
   </div>
   <div class="portes" role="group" aria-label="Comprendre">${PORTES_COMPRENDRE.map((o) => {
-    const [icone, teinte] = COULEURS_PORTES[o.valeur];
-    return html`<a class=${`porte teinte-${teinte}`} href=${versHash('comprendre', { onglet: o.valeur })}>
-      <span class="porte-haut" aria-hidden="true"><span class="carre-porte">${Icones[icone]()}</span>${Icones.chevron({ trait: 2 })}</span>
+    return html`<a class="porte" href=${versHash('comprendre', { onglet: o.valeur })}>
+      <span class="porte-haut" aria-hidden="true"><span class="icone-porte">${Icones[ICONES_PORTES[o.valeur]]()}</span>${Icones.chevron({ trait: 2 })}</span>
       <span class="porte-titre">${o.libelle}</span>
     </a>`;
   })}</div>
 </nav>`;
 
-const Tuile = ({ titre, valeur, detail, fragile, rubrique, classe = '' }) => html`<div class=${`tuile teinte-${rubrique} ${classe}`}>
-  <span class="tuile-titre"><span class="point-rubrique petit" aria-hidden="true"></span>${titre}</span>
+// Une tuile chiffrée : son titre, sa valeur en --text, son détail ; ni point ni couleur de rubrique (v12, spec §5.4).
+const Tuile = ({ titre, valeur, detail, fragile }) => html`<div class="tuile">
+  <span class="tuile-titre">${titre}</span>
   <span class=${valeur === '·' ? 'tuile-valeur vide-chiffre' : 'tuile-valeur'}>${valeur}</span>
   ${(detail || fragile) && html`<span class="tuile-detail">${detail || ''}${detail && fragile ? ' ' : ''}${fragile ? '(peu de valeurs)' : ''}</span>`}
 </div>`;
@@ -102,15 +103,15 @@ function MaSemaine({ f, frise7, semaine, carte }) {
     <div class="carte-entete"><h2 class="titre-carte">Ma semaine</h2><span class="note-carte-interne">${formaterPlage(semaine.du, semaine.au)}</span></div>
     <div class="tuiles-semaine">
       ${nEmotions > 0 && html`<${TuileEmotions} compte=${semaine.emotions} />`}
-      <${Tuile} rubrique="sommeil" titre=${`nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'} />
-      <${Tuile} rubrique="expl" titre="explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'}
+      <${Tuile} titre=${`nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'} />
+      <${Tuile} titre="explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'}
         detail=${joursExpl.length && joursExpl.length <= 2 ? joursExpl.join(', ') : ''} />
-      <${Tuile} rubrique="ep" titre="épisodes" valeur=${String(f.episodes.nombre)} />
+      <${Tuile} titre="épisodes" valeur=${String(f.episodes.nombre)} />
     </div>
-    ${semaine.positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" icone="positifs" teinte="pos" memoriser=${false}>
+    ${semaine.positifs.length > 0 && html`<${Repli} cle="positifs-semaine" titre="Tes points positifs" icone="positifs" memoriser=${false}>
       <${LignesSemaine} textes=${semaine.positifs} />
     </${Repli}>`}
-    ${semaine.gratitudes.length > 0 && html`<${Repli} cle="gratitudes-semaine" titre="Tes gratitudes" icone="positifs" teinte="pos" memoriser=${false}>
+    ${semaine.gratitudes.length > 0 && html`<${Repli} cle="gratitudes-semaine" titre="Tes gratitudes" icone="positifs" memoriser=${false}>
       <${LignesSemaine} textes=${semaine.gratitudes} />
     </${Repli}>`}
   </section>`;
@@ -178,8 +179,8 @@ function DetailsBarres({ f, items, carte }) {
   if (!contacts.length && !sport.length) return null;
   return html`<section class="section-analyse">
     <h2 class="titre-section equilibre">Avec qui, comment c'était · Mouvement</h2>
-    ${contacts.length > 0 && html`<${Barres} titre="Avec qui, comment c'était" rubrique="contact" lignes=${contacts} precisions=${effets} lib=${lib} pied="En jours, selon tes réponses à « Comment c'était »." />`}
-    ${sport.length > 0 && html`<${Barres} titre="Mouvement" rubrique="sport" lignes=${sport} precisions=${durees} lib=${lib} pied="En jours, par durée notée." />`}
+    ${contacts.length > 0 && html`<${Barres} titre="Avec qui, comment c'était" lignes=${contacts} precisions=${effets} lib=${lib} pied="En jours, selon tes réponses à « Comment c'était »." />`}
+    ${sport.length > 0 && html`<${Barres} titre="Mouvement" lignes=${sport} precisions=${durees} lib=${lib} pied="En jours, par durée notée." />`}
   </section>`;
 }
 
@@ -192,21 +193,21 @@ function Tuiles({ f, carte }) {
   const lib = (id) => carte.get(id) || id;
   const r = f.nuits.reveils;
   return html`<div class="tuiles">
-    <${Tuile} rubrique="expl" titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />
-    <${Tuile} rubrique="sommeil" titre=${`Nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'}
+    <${Tuile} titre="Explosions" valeur=${f.explosions.n ? String(f.explosions.total) : '·'} detail=${f.explosions.jours ? `${jours(f.explosions.jours)} avec` : ''} />
+    <${Tuile} titre=${`Nuits ${lib('sommeil:mal')}`} valeur=${f.nuits.n ? String(f.nuits.mal) : '·'}
       detail=${f.nuits.n ? `${lib('sommeil:moyen')} ${f.nuits.moyen} · ${lib('sommeil:bien')} ${f.nuits.bien}` : ''} />
-    ${r.n > 0 && html`<${Tuile} rubrique="sommeil" titre="Réveils" valeur=${moyenneReveils(r)} detail="moyenne" fragile=${r.fragile} />`}
-    ${f.nuits.nCoucher > 0 && html`<${Tuile} rubrique="sommeil" titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />`}
-    ${f.nuits.nLever > 0 && html`<${Tuile} rubrique="sommeil" titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />`}
-    <${Tuile} rubrique="sommeil" titre="Durée de nuit" valeur=${f.nuits.duree ? duree(f.nuits.duree) : '·'} detail=${f.nuits.duree ? 'médiane' : ''} />
-    <${Tuile} rubrique="contact" titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} detail=${detailJours(f.contactDetail.avec, lib)} />
-    ${f.contactDetail.effet.jours > 0 && html`<${Tuile} rubrique="contact" titre="Comment c'était" valeur=${jours(f.contactDetail.effet.jours)} detail=${detailJours(f.contactDetail.effet, lib)} />`}
-    <${Tuile} rubrique="lieu" titre=${lib('lieu:bureau')} valeur=${f.lieux.n ? jours(f.lieux.bureau) : '·'} detail=${f.lieux.n ? `${lib('lieu:teletravail').toLowerCase()} ${f.lieux.teletravail}` : ''} />
-    <${Tuile} rubrique="sport" titre="Sport / mouvement" valeur=${f.sport.n ? jours(f.sport.oui) : '·'} detail=${detailJours(f.sportDetail.types, lib)} />
-    <${Tuile} rubrique="trt" titre="Traitement pris" valeur=${f.traitement.n ? `${f.traitement.oui} · ${f.traitement.partiel} · ${f.traitement.non}` : '·'}
+    ${r.n > 0 && html`<${Tuile} titre="Réveils" valeur=${moyenneReveils(r)} detail="moyenne" fragile=${r.fragile} />`}
+    ${f.nuits.nCoucher > 0 && html`<${Tuile} titre="Coucher" valeur=${f.nuits.coucher || '·'} detail=${f.nuits.coucher ? 'médian' : ''} />`}
+    ${f.nuits.nLever > 0 && html`<${Tuile} titre="Lever" valeur=${f.nuits.lever || '·'} detail=${f.nuits.lever ? 'médian' : ''} />`}
+    <${Tuile} titre="Durée de nuit" valeur=${f.nuits.duree ? duree(f.nuits.duree) : '·'} detail=${f.nuits.duree ? 'médiane' : ''} />
+    <${Tuile} titre="Contact humain" valeur=${f.contact.n ? jours(f.contact.oui) : '·'} detail=${detailJours(f.contactDetail.avec, lib)} />
+    ${f.contactDetail.effet.jours > 0 && html`<${Tuile} titre="Comment c'était" valeur=${jours(f.contactDetail.effet.jours)} detail=${detailJours(f.contactDetail.effet, lib)} />`}
+    <${Tuile} titre=${lib('lieu:bureau')} valeur=${f.lieux.n ? jours(f.lieux.bureau) : '·'} detail=${f.lieux.n ? `${lib('lieu:teletravail').toLowerCase()} ${f.lieux.teletravail}` : ''} />
+    <${Tuile} titre="Sport / mouvement" valeur=${f.sport.n ? jours(f.sport.oui) : '·'} detail=${detailJours(f.sportDetail.types, lib)} />
+    <${Tuile} titre="Traitement pris" valeur=${f.traitement.n ? `${f.traitement.oui} · ${f.traitement.partiel} · ${f.traitement.non}` : '·'}
       detail=${f.traitement.n ? `${lib('traitementPris:oui')} · ${lib('traitementPris:partiel')} · ${lib('traitementPris:non')}` : ''} />
-    <${Tuile} rubrique="ep" titre="Épisodes" valeur=${String(f.episodes.nombre)} detail=${f.episodes.nIntensite ? `intensité moyenne ${nombre(f.episodes.intensite)}` : ''} fragile=${f.episodes.nIntensite > 0 && f.episodes.fragile} />
-    <${Tuile} rubrique="sy" titre="Symptômes" valeur=${String(f.symptomes.nombre)} />
+    <${Tuile} titre="Épisodes" valeur=${String(f.episodes.nombre)} detail=${f.episodes.nIntensite ? `intensité moyenne ${nombre(f.episodes.intensite)}` : ''} fragile=${f.episodes.nIntensite > 0 && f.episodes.fragile} />
+    <${Tuile} titre="Symptômes" valeur=${String(f.symptomes.nombre)} />
   </div>`;
 }
 

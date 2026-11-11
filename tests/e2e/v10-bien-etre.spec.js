@@ -85,8 +85,8 @@ test('l\'accueil plein : « Reprendre », « Favoris », les cinq entrées, la l
   for (const [i, x] of avant.entries()) if (i) expect(x[1]).toBeGreaterThanOrEqual(avant[i - 1][1] + avant[i - 1][2]);
   const texte = await accueil(page).innerText();
   expect(texte).not.toMatch(/séance|aujourd'hui|déjà|fois|série|\d|%/i);
-  // Cibles de 44 au moins, et le gros bouton de « Reprendre ».
-  expect(Math.round((await lancer(reprendre(page), 'Expiration longue').boundingBox()).width)).toBe(64);
+  // Cibles de 44 au moins, et le bouton rond de « Reprendre » (v12 : 52, la maquette ; 64 jusqu'à la v11).
+  expect(Math.round((await lancer(reprendre(page), 'Expiration longue').boundingBox()).width)).toBe(52);
   for (const b of await accueil(page).locator('a, button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
   // Des séances de toutes sortes, y compris de cet exercice, ne changent rien.
   await page.evaluate(async () => {

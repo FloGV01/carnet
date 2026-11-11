@@ -31,9 +31,10 @@ import { lireSiChange, lireBase } from '../lecture.js';
 const SEGMENTS = [{ valeur: 'jours', libelle: 'Jours' }, { valeur: 'episodes', libelle: 'Épisodes' }, { valeur: 'symptomes', libelle: 'Symptômes' }];
 const PERIODES = [{ valeur: '7', libelle: '7 j' }, { valeur: '30', libelle: '30 j' }];
 const HUMEURS = [{ valeur: 'bas', libelle: '1-4' }, { valeur: 'moyen', libelle: '5-6' }, { valeur: 'haut', libelle: '7-10' }];
-// L'icône de chaque rubrique d'une puce (2b) : la même que sa carte sur Aujourd'hui, à sa couleur.
+// L'icône de chaque rubrique d'une puce (2b) : la même que sa carte sur Aujourd'hui, en --text-2 (v12 : les rubriques n'ont
+// plus de couleur).
 const ICONES_PUCE = { lieu: 'lieu', sommeil: 'sommeil', humeur: 'humeur', contact: 'contact', sport: 'sport', expl: 'explosions', trt: 'traitement' };
-const Puce = ({ p }) => html`<span class=${`puce teinte-${p.rubrique}`}>${ICONES_PUCE[p.rubrique] && Icones[ICONES_PUCE[p.rubrique]]({ trait: 2.2 })}${p.texte}</span>`;
+const Puce = ({ p }) => html`<span class="puce">${ICONES_PUCE[p.rubrique] && Icones[ICONES_PUCE[p.rubrique]]({ trait: 2.2 })}${p.texte}</span>`;
 const AVANT_EXTRAIT = 18;
 const APRES_EXTRAIT = 28;
 

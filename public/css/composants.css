@@ -35,6 +35,9 @@
 .carte-entete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); margin-bottom: 8px; }
 .ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); min-height: var(--cible); }
 .liste { list-style: none; margin: 0; padding: 0; }
+/* Les filets des listes : 1 px. Une bordure de 0,5 px (spec v12, §5.4) vaut 1/3 px dans WebKit à l'échelle 3, et disparaît
+   sur une rangée posée à un demi-pixel de l'écran (vu dans « Les plus fréquents », tâche 5) ; les filets en boîte (::before,
+   ecrans.css) gardent leur 0,5 px, qui ne disparaît jamais. */
 .liste > li + li { border-top: 1px solid var(--line); }
 .liste.carte { padding: 0 var(--esp-4); }
 .liste.carte-groupe { padding: 0; }
@@ -46,7 +49,8 @@
 .ligne-carte .ligne-libelle { flex: 1; }
 .ligne-carte .ligne-valeur { color: var(--text-2); font-size: var(--t-sous); }
 .ligne-carte svg { width: 20px; height: 20px; color: var(--text-2); flex: none; }
-.ligne-carte svg.chevron { width: 16px; height: 16px; stroke-width: 2; }
+/* Le chevron (ou la sortie) au bout d'une rangée : en --contour (v12, spec §5.4), 3:1 sur la carte. */
+.ligne-carte > svg:last-child:not(:first-child) { color: var(--contour); }
 .ligne-carte.action { color: var(--action); padding: 0 16px; }
 .ligne-carte.action svg { color: currentColor; }
 .ligne-carte[disabled] { color: var(--text-2); }
@@ -82,11 +86,6 @@
   font-size: var(--t-sous); font-weight: 600; text-decoration: none;
 }
 .pilule svg { width: 18px; height: 18px; }
-/* Une pilule à carré (2b, « En consultation ») : neutre, l'icône dans un petit carré neutre (v12 : les rubriques n'ont plus
-   de couleur), comme les boutons de la bande du bas d'Aujourd'hui. */
-.pilule.teintee { padding-left: 8px; gap: 8px; }
-.carre-pilule { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
-.pilule .carre-pilule svg { width: 17px; height: 17px; }
 .actions-col { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
 
 /* Interrupteur (role=switch), comme sur iOS (v12) : éteint, un rail --surface-2 au contour (3:1) et un bouton --contour ;
@@ -377,11 +376,14 @@ button.effacer svg { width: 18px; height: 18px; }
 .repli.resume-sous .repli-tete { flex-wrap: wrap; align-content: center; gap: 0 var(--esp-2); padding: 6px 0; }
 .repli.resume-sous .repli-resume { flex: 1 1 calc(100% - 24px); margin: 0 0 0 24px; }
 .repli-corps { padding: 0 0 14px 24px; display: flex; flex-direction: column; gap: 10px; }
-/* Repli en carte (2b, v7) : l'icône dans un carré neutre à gauche (v12 : plus de couleur de rubrique), le chevron à droite, des rangées de 52. */
+/* Repli en carte (2b, v7) : l'icône à gauche, le chevron à droite, des rangées de 52. v12 (spec §5.4) : plus de carré ; le
+   repli ouvre quelque chose, son icône de 22 est à l'accent, dans une place de 28 (les filets partent toujours après elle),
+   et son chevron en --contour. */
 .repli.repli-carte { border-top: 0; background: var(--surface); border-radius: var(--r-carte); padding: 0 12px; }
 .repli-carte .repli-tete { min-height: 52px; gap: 12px; }
-.repli-icone { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
-.repli-icone svg { width: 17px; height: 17px; }
+.repli-icone { flex: none; width: 28px; height: 28px; color: var(--accent-texte); display: grid; place-items: center; }
+.repli-icone svg { width: 22px; height: 22px; }
+.repli-carte .repli-fleche { color: var(--contour); }
 .repli-carte .repli-titre { font-weight: 500; }
 .repli-carte .repli-titre + .repli-fleche { margin-left: auto; }
 .repli-carte .repli-corps { padding: 0 0 14px; }
@@ -438,9 +440,8 @@ button.effacer svg { width: 18px; height: 18px; }
   background-color: var(--bg);
   padding: var(--zone-haut) var(--zone-droite) var(--zone-bas) var(--zone-gauche);
 }
-/* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600) derrière un petit carré à sa couleur,
-   et, à droite, le repère d'étapes en points de 9 px, jamais une barre : faites, pleines à la couleur du parcours ;
-   en cours, pleine avec un anneau de 3 px en -tint-2 ; à venir, en --line (v8).
+/* En-tête 2b : « Fermer » (600, couleur action), puis le nom du parcours (600 ; v12 : sans le petit carré de couleur qui le
+   précédait), et, à droite, le repère d'étapes en points de 9 px, jamais une barre (v8 ; v12, plus bas : à l'encre).
    En grand texte, rien ne se coupe : le nom ne passe pas à la ligne tant qu'il tient seul sur une ligne, et quand les
    trois ne tiennent plus côte à côte, le repère passe dessous, dans une rangée de 28 (flex-wrap). L'ancre
    --tete-parcours cale le toast sous l'en-tête, quelle que soit sa hauteur. */
@@ -450,14 +451,13 @@ button.effacer svg { width: 18px; height: 18px; }
 }
 .parcours-tete .fermer { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; min-height: var(--cible); border: 0; background: none; color: var(--action); font-size: var(--t-corps); font-weight: 600; }
 .parcours-tete .fermer svg { width: 20px; height: 20px; }
-.parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
-.point-teinte { width: 11px; height: 11px; border-radius: 3px; background: var(--c, var(--text-2)); flex: none; }
+.parcours-tete .nom { min-width: 0; margin-left: 10px; font-weight: 600; font-size: var(--t-corps); color: var(--text); }
 .reperes { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px 0 8px; }
 /* À venir (v8, Q29) : un contour de 1,5 en --text-2, sans fond (README 2b : « contour (2a) »), au moins 3:1 sur le fond
    (5,6:1 en clair, 7,3:1 en sombre) ; --surface-2 ne se voyait pas sur le fond clair (1:1), et --line restait sous 3:1
    (relecture). Faites et en cours : pleines, le contour à la même couleur, de même taille ; à l'encre (v12, spec §5.3), jamais
    en vert : un point vert, et un « fait » vert. L'étape en cours a en plus un anneau --contour (3:1 sur le fond), qui seul la
-   distingue des étapes faites. */
+   distingue des étapes faites. « Réveil la nuit » les éteint (--c, .parcours.ecran-noir, ecrans.css). */
 .reperes i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-2); background: none; }
 .reperes i.fait, .reperes i.en-cours { background: var(--c, var(--text)); border-color: var(--c, var(--text)); }
 .reperes i.en-cours { box-shadow: 0 0 0 3px var(--contour); }
@@ -466,10 +466,11 @@ button.effacer svg { width: 18px; height: 18px; }
 .reperes:has(i:nth-child(10)) { gap: 5px; }
 .reperes:has(i:nth-child(10)) i { width: 8px; height: 8px; }
 /* Texte grand pour la largeur (moins de 21,5 rem : dès 19 px à 390, dès 17 px à 375) : l'en-tête se resserre, pour que
-   l'Après coup à 8 étapes tienne sur une ligne de 48 jusqu'à 23 px (et à 11 étapes jusqu'à 21 px), mesuré dans WebKit. */
+   l'Après coup à 8 étapes tienne sur une ligne de 48 jusqu'à 25 px (et à 11 étapes jusqu'à 23 px ; v12, sans le petit carré
+   devant le nom : 23 et 21 px en v11), mesuré dans WebKit. */
 @container tete (max-width: 21.5rem) {
   .parcours-tete .fermer { gap: 4px; }
-  .parcours-tete .nom { margin-left: 2px; gap: 7px; }
+  .parcours-tete .nom { margin-left: 2px; }
   .reperes { padding: 0 6px 0 4px; }
   .reperes:has(i:nth-child(10)) { gap: 4px; }
 }
@@ -481,14 +482,14 @@ button.effacer svg { width: 18px; height: 18px; }
 .parcours-pied .btn-lien { padding: 0 6px; gap: 2px; font-weight: 600; }
 .parcours-pied .btn-lien svg { width: 20px; height: 20px; stroke-width: 2; }
 .parcours-pied .terminer { flex: 1; margin: 4px 6px; }
-/* Le titre en grand d'un parcours (v7 ; v9 : le lecteur de Bien-être seul) : 25/600, avec l'icône dans un carré de 34
-   à la couleur du parcours. */
+/* Le titre en grand d'un parcours (v7 ; v9 : le lecteur de Bien-être seul) : 25/600, avec son icône de 24 en --text-2 (v12 :
+   sans carré ni couleur de parcours ; elle nomme l'exercice, elle n'ouvre rien). */
 .titre-parcours {
   display: flex; align-items: center; gap: 12px; margin: 6px var(--marge) 14px;
   font: 600 var(--t-parcours)/var(--l-parcours) var(--police); color: var(--text); text-wrap: pretty; overflow-wrap: anywhere;
 }
-.carre-titre { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
-.carre-titre svg { width: 20px; height: 20px; }
+.icone-titre { flex: none; display: grid; place-items: center; color: var(--text-2); }
+.icone-titre svg { width: 24px; height: 24px; }
 
 .ligne-date { padding: 0 var(--marge); flex: none; }
 .ligne-date .btn-lien { color: var(--text-2); font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
@@ -520,7 +521,8 @@ button.effacer svg { width: 18px; height: 18px; }
 .sous-question { font-size: var(--t-sous); color: var(--text-2); margin-top: 2px; }
 .phrase-resume { font-size: var(--t-corps); line-height: 1.45; color: var(--text-2); text-wrap: pretty; padding: 14px 16px; border-radius: var(--r-carte); background: var(--surface); }
 .phrase-recap { font-size: 1.059rem; line-height: 1.45; color: var(--text); text-wrap: pretty; margin-top: -6px; }
-.phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--c-text, var(--text)); }
+/* Les valeurs d'un rappel : en --text 600 (v12, spec §5.4 : plus de couleur de parcours). */
+.phrase-resume .valeur, .phrase-recap .valeur { font-weight: 600; color: var(--text); }
 /* « Ce jour-là » (v7) : les zones des émotions du jour en points (v9 ; leurs familles avant), devant leurs mots. */
 .emotions-jour .zones-jour { margin-right: 5px; vertical-align: 1px; }
 /* Intensité et échelles de 1 à 10 : 2 × 5 boutons de 64, chiffres en 21 (500, choisi 700). */
@@ -539,7 +541,7 @@ button.effacer svg { width: 18px; height: 18px; }
 .recap-nom { color: var(--text-2); width: 6.4em; flex: none; font-size: var(--t-sous); }
 .recap-val { flex: 1; min-width: 0; }
 .recap-val.discret { font-size: inherit; }
-.recap .ligne-recap svg { width: 16px; height: 16px; color: var(--text-2); stroke-width: 2; flex: none; }
+.recap .ligne-recap svg { width: 16px; height: 16px; color: var(--contour); stroke-width: 2; flex: none; }
 .champ-recap .etiquette { font-size: var(--t-sous); }
 .etape-recap .memo-vocal { margin-top: 0; }
 .supprimer { align-self: flex-start; }

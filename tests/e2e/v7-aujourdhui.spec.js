@@ -437,7 +437,7 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 
 // v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
 // reste là pour une nuit déjà notée.
-test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré neutre (v12), le résumé sous le libellé', async ({ page }) => {
+test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une icône d\'accent sans carré et un chevron en --contour (v12), le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
     pese: ['pese:bruit', 'pese:lumiere', 'pese:monde', 'pese:changement', 'pese:attente'], recharge: ['recharge:seul', 'recharge:calme'],
@@ -457,7 +457,8 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
           const resume = r.querySelector('.repli-resume');
           const filet = i > 0 ? getComputedStyle(r, '::before') : null;
           return {
-            hauteur: tete.getBoundingClientRect().height, carre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre).color,
+            hauteur: tete.getBoundingClientRect().height, carre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre.querySelector('svg')).color,
+            fleche: getComputedStyle(tete.querySelector('.repli-fleche')).color,
             taille: Math.round(carre.getBoundingClientRect().width), gauche: Math.round(carre.getBoundingClientRect().left - carte.left),
             graisse: getComputedStyle(r.querySelector('.repli-titre')).fontWeight,
             resume: resume && { dessous: resume.getBoundingClientRect().top >= titre.bottom - 1, gauche: Math.abs(resume.getBoundingClientRect().left - titre.left) < 1,
@@ -478,8 +479,11 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
       expect(r.graisse, quoi(i)).toBe('500');
       expect(r.chevron, quoi(i)).toBe(true);
       if (i > 0) expect(r.filet, `${quoi(i)} : filet décalé de 52`).toBe(52);
-      // v12 : neutre, comme Notes libres (plus de couleur de rubrique).
-      expect([r.carre, r.icone], quoi(i)).toEqual([rgb(t['surface-2']), rgb(t.text)]);
+      // v12 (spec §5.4) : plus de carré ni de couleur de rubrique ; un repli ouvre quelque chose, son icône est à l'accent, et
+      // son chevron en --contour (3:1 sur la carte).
+      expect([r.carre, r.icone, r.fleche], quoi(i)).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte']), rgb(t.contour)]);
+      expect(contraste(r.icone, m.fond), quoi(i)).toBeGreaterThanOrEqual(3);
+      expect(contraste(r.fleche, m.fond), quoi(i)).toBeGreaterThanOrEqual(3);
     });
     // Résumés : sous le libellé, en 14 px --text-2, une ligne coupée par une ellipse ; AA sur la carte.
     for (const i of [0, 1]) {

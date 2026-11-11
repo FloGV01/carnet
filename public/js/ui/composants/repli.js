@@ -9,9 +9,9 @@ const ECART_SOUS_BANDEAU = 8;
 // `resumeSous` : pour un titre long, le résumé passe sous le titre au lieu d'y être coupé.
 // `cleStockage` : clé du stockage local, à la place de `carnet:repli:<cle>`.
 // `surBascule(ouvert)` : prévient l'écran quand le repli s'ouvre ou se ferme.
-// `icone` (2b, v7) : le repli est une carte, l'icône dans un carré neutre à gauche du titre et le chevron à droite. Dans la
-// liste groupée d'Aujourd'hui (.replis), les replis sont les rangées d'une seule carte, le résumé sous le titre
-// (`resumeSous`). v12 : plus de couleur de rubrique ; une prop `teinte` reçue est ignorée.
+// `icone` (2b, v7) : le repli est une carte, l'icône à gauche du titre et le chevron à droite. Dans la liste groupée
+// d'Aujourd'hui (.replis), les replis sont les rangées d'une seule carte, le résumé sous le titre (`resumeSous`). v12 (spec
+// §5.4) : plus de carré coloré ; un repli ouvre quelque chose, son icône est à l'accent, et son chevron en --contour.
 // `caler` (v6.1) : à l'ouverture par un toucher, la page se cale pour montrer le repli en haut de
 // l'écran, en douceur, ou d'un saut si « Réduire les animations » est actif. Jamais au chargement
 // (un repli resté ouvert ne fait rien défiler), jamais à la fermeture. Le haut de l'écran est sous le

@@ -1,9 +1,9 @@
 // Comprendre (v6, spec §2) : les graphiques de l'écran, rendus en SVG à partir des résultats purs de
 // analyse/comprendre.js et analyse/emotions.js, au statut « ok » ; sous un seuil, PasAssez dit « Pas encore assez de
-// données ». Chacun a une seule teinte, celle de sa rubrique (v7 : un graphique d'émotions prend les couleurs de ses
-// familles, et rien d'autre) ; une phrase d'accessibilité fixe, qui dit ce qui est montré et sur quelle période, sans
-// valeur ; « Voir en tableau », qui donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des
-// causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
+// données ». Un graphique d'émotions prend les couleurs de ses familles (v7), et rien d'autre ; tous les autres sont à
+// l'encre (v12, spec §5.5 : la couleur ne dit qu'une émotion, et l'accent n'entre jamais dans un graphique). Chacun a une
+// phrase d'accessibilité fixe, qui dit ce qui est montré et sur quelle période, sans valeur ; « Voir en tableau », qui
+// donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
 // v8 : Mes nuits (Q15), nuit par nuit sur 4 semaines ; Émotions selon ce que je faisais (Q18) ; l'énergie haute et
 // l'hyperfocus dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le jour » est retiré le 26/10 : Mes nuits
 // le remplace.
@@ -51,29 +51,26 @@ const LEGENDE_MESURE = {
   explosion: () => 'jour avec explosion',
   energieBasse: (lib) => `énergie ${lib('energie:basse').toLowerCase()}`,
 };
-// La teinte d'un graphique en colonnes suit sa mesure (v7 : l'énergie en orange) ; les émotions, leurs familles.
-const RUBRIQUE_MESURE = { emotions: null, nuitMal: 'sommeil', explosion: 'expl', energieBasse: 'energie' };
-
-// Chaque graphique : son titre, sa rubrique, ce qu'il montre (pour la phrase d'accessibilité). Graphique aligné :
+// Chaque graphique : son titre, ce qu'il montre (pour la phrase d'accessibilité). Graphique aligné :
 // aussi ce que comptent ses barres, pour la légende.
 const G = {
-  explosionsAvant: { titre: 'Avant mes explosions', rubrique: 'expl', reperes: 'Explosions',
+  explosionsAvant: { titre: 'Avant mes explosions', reperes: 'Explosions',
     montre: () => `pour chaque élément, une barre par jour, de trois jours avant une explosion au jour même${AUTRES}` },
-  explosionsApres: { titre: 'Après mes explosions', rubrique: 'expl', reperes: 'Explosions',
+  explosionsApres: { titre: 'Après mes explosions', reperes: 'Explosions',
     montre: () => `pour chaque élément, une barre par jour, du lendemain d'une explosion à trois jours après${AUTRES}` },
-  energieAvant: { titre: 'Avant mes jours à énergie basse', rubrique: 'energie', reperes: 'Jours à énergie basse',
+  energieAvant: { titre: 'Avant mes jours à énergie basse', reperes: 'Jours à énergie basse',
     montre: () => `pour chaque élément, une barre par jour, de trois jours avant un jour à énergie basse au jour même${AUTRES}` },
-  retoursBureau: { titre: "Autour d'un retour au bureau", rubrique: 'lieu', reperes: 'Retours au bureau',
+  retoursBureau: { titre: "Autour d'un retour au bureau", reperes: 'Retours au bureau',
     montre: () => `pour chaque élément, une barre par jour, de la veille d'un retour au bureau à deux jours après${AUTRES}` },
   semaine: { titre: 'Selon le jour de la semaine', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque jour de la semaine` },
   lieu: { titre: 'Selon le lieu', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque lieu` },
   mois: { titre: 'Selon le mois', montre: (lib, m) => `${MONTRE_MESURE[m](lib)}, pour chaque mois` },
   // v8 · Mes nuits : toujours les 4 dernières semaines (SEUILS.comprendre.nuitsSemaines), quelle que soit la période choisie.
-  mesNuits: { titre: 'Mes nuits', rubrique: 'sommeil', sur: 'sur les quatre dernières semaines',
+  mesNuits: { titre: 'Mes nuits', sur: 'sur les quatre dernières semaines',
     montre: () => 'une ligne par nuit notée, avec une barre longue comme les heures dormies, à la teinte de la qualité de la nuit' },
-  activites: { titre: 'Selon ce que tu faisais', rubrique: 'energie',
+  activites: { titre: 'Selon ce que tu faisais',
     montre: () => "pour chaque activité, une barre découpée en relevés d'énergie basse, moyenne et haute" },
-  peseRecharge: { titre: 'Ce qui a pesé, ce qui a rechargé', rubrique: 'energie',
+  peseRecharge: { titre: 'Ce qui a pesé, ce qui a rechargé',
     montre: () => 'deux groupes de barres, une par élément, longue comme le nombre de jours où il est noté' },
   // v7 · émotions du moment
   apresNuit: { titre: 'Après une nuit',
@@ -97,19 +94,16 @@ export function phraseAria(graphe, periode, lib, mesure = 'emotions') {
 }
 
 // Sous un seuil (spec §2.1) : la carte du graphique, son titre, « Pas encore assez de données pour le dire. »
-// et « Pourquoi ? », qui donne la règle fixe, sans aucun décompte. La teinte des colonnes suit leur mesure ; les
-// colonnes d'émotions ont la règle des émotions (v7).
+// et « Pourquoi ? », qui donne la règle fixe, sans aucun décompte. Les colonnes d'émotions ont la règle des émotions
+// (v7).
 const regleDe = (graphe, mesure) => {
   if (mesure !== 'emotions' || !['semaine', 'lieu', 'mois'].includes(graphe)) return REGLES_COMPRENDRE[graphe];
   return graphe === 'lieu' ? REGLES_COMPRENDRE.emotionsLieu : REGLES_COMPRENDRE.emotions;
 };
-export const PasAssez = ({ graphe, mesure = 'emotions' }) => {
-  const rubrique = Object.hasOwn(G[graphe], 'rubrique') ? G[graphe].rubrique : RUBRIQUE_MESURE[mesure];
-  return html`<figure class=${rubrique ? `graphe teinte-${rubrique}` : 'graphe'}>
-    <figcaption><span class="graphe-titre">${rubrique && html`<span class="point-rubrique" aria-hidden="true"></span>`}${G[graphe].titre}</span></figcaption>
+export const PasAssez = ({ graphe, mesure = 'emotions' }) => html`<figure class="graphe">
+    <figcaption><span class="graphe-titre">${G[graphe].titre}</span></figcaption>
     <${Pourquoi} regle=${regleDe(graphe, mesure)} />
   </figure>`;
-};
 
 // ---------- Le graphique aligné (spec §2.2) ----------
 
@@ -157,8 +151,11 @@ export function GrapheAligne({ graphe, resultat, periode, carte, aujourdhui }) {
     ${blocs.map((b) => html`<tbody><tr><th scope="rowgroup" colspan="2">${nomBloc(b, lib)}</th></tr>
       ${b.barres.filter((x) => x.n > 0).map((x) => html`<tr><td>${nomDecalage(graphe, x.decalage)}</td><td>${libelleCompte(x)}</td></tr>`)}
       ${b.autres.n > 0 && html`<tr><td>Les autres jours</td><td>${libelleCompte(b.autres)}</td></tr>`}</tbody>`)}</table>`;
+  // « Peu de valeurs » (v12, spec §5.5) : une barre creuse, au contour à 3:1, et non plus pâlie (0,45 d'opacité, 2,25:1).
+  const peu = g.some((b) => b.lignes.some((l) => l.barre && l.barre.peu && l.barre.l > 0));
   const legende = html`<p class="legende-graphe legende-frise">
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre" x="1" y="3" width="10" height="6" /></svg>${conf.reperes.toLowerCase()}</span>
+    ${peu && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre-creuse" x="1" y="3" width="10" height="6" /></svg>peu de valeurs</span>`}
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><line class="g-repere" x1="6" x2="6" y1="0" y2="12" /></svg>les autres jours</span>
   </p>`;
   const blocSvg = (b, bloc) => {
@@ -170,7 +167,7 @@ export function GrapheAligne({ graphe, resultat, periode, carte, aujourdhui }) {
       ${b.lignes.map((l, k) => html`
         <text class="g-axe g-graduation" x="0" y=${l.y}>${nomDecalage(graphe, l.decalage)}</text>
         ${l.barre && html`<rect class="g-piste" x=${l.piste.x} y=${l.piste.y} width=${l.piste.l} height=${l.piste.h} rx="2" />
-          ${l.barre.l > 0 && html`<rect class=${l.barre.peu ? 'g-barre g-peu' : 'g-barre'} x=${l.barre.x} y=${l.barre.y} width=${l.barre.l} height=${l.barre.h} rx="2" />`}
+          ${l.barre.l > 0 && html`<rect class=${l.barre.peu ? 'g-barre-creuse' : 'g-barre'} x=${l.barre.x} y=${l.barre.y} width=${l.barre.l} height=${l.barre.h} rx="2" />`}
           <text class="g-axe g-graduation" x=${d.compteX} y=${l.y}>${libelleCompte(bloc.barres[k])}</text>`}`)}
       ${b.repere && html`
         <line class="g-repere-fond" x1=${b.repere.x} x2=${b.repere.x} y1=${b.repere.y1} y2=${b.repere.y2} />
@@ -186,7 +183,7 @@ export function GrapheAligne({ graphe, resultat, periode, carte, aujourdhui }) {
     ${legende}
     ${g.map((b, i) => blocSvg(b, blocs[i]))}
   </div>`;
-  return html`<${Cadre} titre=${conf.titre} rubrique=${conf.rubrique} tableau=${tableau} corps=${corps} pied=${PIED} />`;
+  return html`<${Cadre} titre=${conf.titre} tableau=${tableau} corps=${corps} pied=${PIED} />`;
 }
 
 // ---------- Les colonnes (spec §2.5, graphiques 1, 2 et 5) ----------
@@ -214,7 +211,7 @@ export function GrapheColonnes({ pas, mesure, resultat, periode, carte }) {
     <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre" x="3" y="1" width="6" height="10" /></svg>${LEGENDE_MESURE[mesure](lib)}</span>
     ${g.barres.some((b) => b.creuse) && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre-creuse" x="3" y="1" width="6" height="10" /></svg>peu de valeurs</span>`}
   </p>`;
-  return html`<${Cadre} titre=${G[pas].titre} rubrique=${RUBRIQUE_MESURE[mesure]} tableau=${tableau} legende=${legende}
+  return html`<${Cadre} titre=${G[pas].titre} tableau=${tableau} legende=${legende}
     dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria(pas, periode, lib, mesure)} pied=${PIED}>
     <line class="g-filet" x1=${g.base.x1} x2=${g.base.x2} y1=${g.base.y} y2=${g.base.y} />
     ${g.barres.map((b) => html`<rect class=${b.creuse ? 'g-barre-creuse' : 'g-barre'} x=${b.x} y=${b.y} width=${b.l} height=${b.h} rx="2" />`)}
@@ -257,8 +254,8 @@ export function GrapheFamilles({ graphe, entete = '', lignes, periode, carte, me
 
 // nuits : mesNuits (analyse/comprendre.js), au moins une avec sa durée. Une ligne par nuit notée ; le texte de chaque
 // ligne dit la qualité et la durée, la teinte et la longueur de la barre les montrent. Rien d'autre : ni phrase, ni
-// moyenne, ni régularité. La barre « Mal », le pas clair de la rampe, a un contour au pas suivant (g-mes-nuits, dans
-// ecrans.css) : sa longueur se lit, en clair comme en sombre, sans toucher aux jetons 2b.
+// moyenne, ni régularité. La barre « Mal », le pas discret de la rampe de l'encre, a un contour au pas suivant (ecrans.css) :
+// sa longueur se lit, en clair comme en sombre.
 export function GrapheMesNuits({ nuits, periode, carte }) {
   const lib = (id) => carte.get(id) || id;
   const g = geometrieMesNuits(nuits);
@@ -269,7 +266,7 @@ export function GrapheMesNuits({ nuits, periode, carte }) {
     <${LegendeNuits} lib=${lib} />
     ${g.lignes.some((l) => l.barre && l.barre.classe === 'creuse') && html`<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="g-barre-creuse" x="1" y="3" width="10" height="6" rx="2" /></svg>qualité non notée</span>`}
   </p>`;
-  return html`<${Cadre} titre=${G.mesNuits.titre} rubrique=${G.mesNuits.rubrique} classe="g-mes-nuits" droite=${`${SEUILS.comprendre.nuitsSemaines} dernières semaines`}
+  return html`<${Cadre} titre=${G.mesNuits.titre} classe="g-mes-nuits" droite=${`${SEUILS.comprendre.nuitsSemaines} dernières semaines`}
     tableau=${tableau} legende=${legende} dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria('mesNuits', periode, lib)} pied=${PIED}>
     ${g.filets.map((f) => html`<line class="g-filet" x1=${f.x} x2=${f.x} y1=${f.y1} y2=${f.y2} />`)}
     ${g.graduations.map((t) => html`<text class="g-axe" x=${t.x} y=${t.y} text-anchor="middle">${t.texte}</text>`)}
@@ -297,7 +294,7 @@ export function GrapheActivites({ resultat, periode, carte }) {
     ${['energie:basse', 'energie:moyenne', 'energie:haute'].map((id) => html`<th scope="col">${lib(id)}</th>`)}<th scope="col">Relevés</th></tr></thead>
     <tbody>${activites.map((a) => html`<tr><td>${lib(a.id)}</td><td>${a.basse}</td><td>${a.moyenne}</td><td>${a.haute}</td><td>${a.n}</td></tr>`)}</tbody></table>`;
   const legende = html`<p class="legende-graphe legende-frise"><${LegendeEnergie} lib=${lib} unite="(en relevés)" /></p>`;
-  return html`<${Cadre} titre=${G.activites.titre} rubrique=${G.activites.rubrique} tableau=${tableau} legende=${legende}
+  return html`<${Cadre} titre=${G.activites.titre} tableau=${tableau} legende=${legende}
     dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria('activites', periode, lib)} pied=${PIED}>
     ${g.groupes[0].lignes.map((l, i) => html`<${LigneBarre} l=${l} nom=${lib(activites[i].id)} compte=${activites[i].libelle} d=${d} />`)}
   </${Cadre}>`;
@@ -316,7 +313,7 @@ export function GraphePeseRecharge({ resultat, periode, carte }) {
   const tableau = html`<table class="tableau-lignes tableau-comprendre"><thead><tr><th scope="col">Élément</th><th scope="col">Jours</th></tr></thead>
     ${GROUPES.map(([cle, titre]) => html`<tbody><tr><th scope="rowgroup" colspan="2">${titre}</th></tr>
       ${resultat[cle].map((e) => html`<tr><td>${lib(e.id)}</td><td>${e.libelle}</td></tr>`)}</tbody>`)}</table>`;
-  return html`<${Cadre} titre=${G.peseRecharge.titre} rubrique=${G.peseRecharge.rubrique} tableau=${tableau}
+  return html`<${Cadre} titre=${G.peseRecharge.titre} tableau=${tableau}
     dim=${{ largeur: d.largeur, hauteur: g.hauteur }} aria=${phraseAria('peseRecharge', periode, lib)} pied=${PIED}>
     ${g.groupes.map((gr, i) => html`<text class="g-titre-bloc" x="0" y=${gr.titreY}>${GROUPES[i][1]}</text>
       ${gr.lignes.map((l, k) => html`<${LigneBarre} l=${l} nom=${lib(resultat[gr.cle][k].id)} compte=${resultat[gr.cle][k].libelle} d=${d} />`)}`)}

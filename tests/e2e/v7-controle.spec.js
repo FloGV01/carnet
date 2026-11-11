@@ -4,7 +4,8 @@ import { viderBase, aller, appPrete, groupe } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { vueMoment, toucherMot, noter, continuer, terminer } from '../aides/emotion.js';
 import { installerParole, cacher, montrer } from '../aides/lecteur.js';
-import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMouvements, mouvements, verserControle as verser } from '../aides/controle.js';
+import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMouvements, mouvements, verserControle as verser, rondsAccent, accentHorsDeSaPlace,
+  liensSurSurface2 } from '../aides/controle.js';
 
 // v7 (9/9) · Contrôle global (plan v6.2, tâches 6 et 7) : on parcourt les écrans principaux, avec des données inventées,
 // en clair et en sombre.
@@ -41,6 +42,10 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // en plus, dans le leur, comme ceux de la v10. Le soir y gagne le contrôle des 44 pt, qui échouait déjà en v10 sous
 // « Jour précédent » (corrigé : `.sous-jour`, ecrans.css). En très grand texte (33 à 53), Mes refuges, les roues et Mes
 // gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v11-spotify.spec.js), à cause de sa garde réseau.
+// v12 (5/9) : sur chaque écran du parcours, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6) : aucun rond sans texte ni
+// icône ne l'a pour fond ou pour contour, aucun graphique, écran de l'émotion ni « Réveil la nuit » n'en a de trace, et en clair,
+// aucun lien vert ne se pose sur --surface-2. Le parcours passe aussi par un jour de Mes jours touché, son détail ouvert.
+// Réglages et Le soir ont des icônes sans carré.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -400,6 +405,10 @@ const ECRANS = (ids) => [
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
   ['Analyse', (p) => aller(p, '#/analyse'), '.analyse .selecteur-periode'],
+  // v12 (5/9) : le dernier jour de Mes jours touché, son détail ouvert et son lien « Voir ce jour » (sur le fond de l'écran, et non
+  // sur --surface-2 : spec §5.3).
+  ['Analyse, un jour de Mes jours touché', (p) => p.locator('figure.graphe', { hasText: 'Mes jours' }).locator('rect.g-zone').last().click(),
+    'figure.graphe .detail-colonne a.lien'],
   // v9 (8/8) : « Tes zones », ses bulles comptées, puis sa barre par semaine en tableau.
   ['Analyse, Tes zones en tableau', (p) => p.locator('section.tes-zones').getByRole('button', { name: 'Voir en tableau' }).click(),
     'section.tes-zones figure.g-zones-semaines table'],
@@ -494,14 +503,22 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
+// v12 (5/9) : sur chaque écran, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6). La règle de forme : aucun rond sans
+// texte ni icône ne l'a pour fond ou pour contour ; le point de vigilance 3 : aucune trace de lui dans les graphiques, sur les
+// écrans de l'émotion ni sur « Réveil la nuit » ; et, en clair, aucun lien vert sur --surface-2 (tests/aides/controle.js).
 for (const schema of ['light', 'dark']) {
-  test(`contraste ${schema === 'light' ? 'en clair' : 'en sombre'} : tout texte visible des écrans principaux a au moins 4,5:1 sur son fond ; ni tirets, ni choix fait sans coche`, async ({ page }) => {
-    test.setTimeout(180000);
+  test(`contraste ${schema === 'light' ? 'en clair' : 'en sombre'} : tout texte visible des écrans principaux a au moins 4,5:1 sur son fond ; ni tirets, ni choix fait sans coche ; l'accent vert à sa place`, async ({ page }) => {
+    test.setTimeout(240000);
+    const t = schema === 'light' ? clair : sombre;
+    const accents = [rgb(t.accent), rgb(t['accent-texte'])];
     const fautes = await parcourir(page, schema, async (nom) => [
       ...await contrastesFaibles(page, nom.startsWith('Confirmation') ? '.boite-confirmation' : 'body'),
       ...await epinglesFaibles(page),
       ...(await tirets(page)).map((x) => `tirets : ${x}`),
       ...(await sansCoche(page)).map((x) => `choix fait sans coche : ${x}`),
+      ...(await rondsAccent(page, accents)).map((x) => `rond à l'accent : ${x}`),
+      ...(await accentHorsDeSaPlace(page, accents)).map((x) => `accent hors de sa place : ${x}`),
+      ...(schema === 'light' ? await liensSurSurface2(page, rgb(t['accent-texte']), rgb(t['surface-2'])) : []),
     ]);
     expect(fautes).toEqual({});
   });
@@ -748,44 +765,47 @@ test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px,
   expect(fautes).toEqual({});
 });
 
-// Le style d'un carré d'icône et de la rangée qui le porte, et le filet de la rangée suivante (son ::before).
-const carres = (page, liste) => page.locator(liste).evaluate((ul) => [...ul.querySelectorAll(':scope > li')].map((li) => {
-  const c = li.querySelector('.carre-ligne');
+// Le style de l'icône d'une rangée (sa place de 28) et de la rangée qui la porte, et le filet de la rangée suivante (son ::before).
+const icones = (page, liste) => page.locator(liste).evaluate((ul) => [...ul.querySelectorAll(':scope > li')].map((li) => {
+  const c = li.querySelector('.icone-ligne');
   const r = c && c.getBoundingClientRect();
   const filet = getComputedStyle(li, '::before');
+  const chevron = li.querySelector('.ligne-carte > svg:last-child');
   return {
     texte: li.textContent.trim(), fond: c && getComputedStyle(c).backgroundColor, icone: c && getComputedStyle(c.querySelector('svg')).color,
-    taille: r && [Math.round(r.width), Math.round(r.height)], rayon: c && getComputedStyle(c).borderTopLeftRadius,
-    hauteur: Math.round(li.getBoundingClientRect().height),
-    filet: filet.content === 'none' || filet.content === 'normal' ? null : Math.round(parseFloat(filet.left)),
-    gaucheCarre: r && Math.round(r.left - ul.getBoundingClientRect().left),
+    place: r && [Math.round(r.width), Math.round(r.height)], dessin: c && Math.round(c.querySelector('svg').getBoundingClientRect().width),
+    hauteur: Math.round(li.getBoundingClientRect().height), chevron: chevron && getComputedStyle(chevron).color,
+    filet: filet.content === 'none' || filet.content === 'normal' ? null : [Math.round(parseFloat(filet.left)), filet.height],
+    gaucheIcone: r && Math.round(r.left - ul.getBoundingClientRect().left),
   };
 }));
 
-test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neutres (v12 : plus de couleur de rubrique ni de parcours), filets décalés après le carré, en clair et en sombre', async ({ page }) => {
+test('Réglages et Le soir en listes groupées 2b : des icônes de 22 sans carré (v12), à l\'accent sur une rangée qui ouvre un écran, en --text-2 sur une rangée qui nomme une rubrique ; chevrons en --contour, filets de 0,5 décalés après l\'icône, en clair et en sombre', async ({ page }) => {
   for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/reglages');
     await expect(page.locator('#titre-moment-difficile')).toBeVisible();
-    const md = await carres(page, 'ul[aria-labelledby="titre-moment-difficile"]');
+    const md = await icones(page, 'ul[aria-labelledby="titre-moment-difficile"]');
     expect(md.map((x) => x.texte)).toEqual(['Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone']);
     md.forEach((x, i) => {
-      expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
-      expect(x.icone, `${schema} ${x.texte}`).toBe(rgb(t.text));
-      expect(contraste(x.fond, x.icone), `${schema} ${x.texte} : icône`).toBeGreaterThanOrEqual(3);
-      expect(x.taille).toEqual([28, 28]);
-      expect(x.rayon).toBe('7px');
-      expect(x.gaucheCarre).toBe(12);
+      // Une rangée qui ouvre un écran : son icône à l'accent, sans carré ni couleur de parcours ; son chevron en --contour.
+      expect([x.fond, x.icone, x.chevron], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte']), rgb(t.contour)]);
+      expect(contraste(x.icone, rgb(t.surface)), `${schema} ${x.texte} : icône`).toBeGreaterThanOrEqual(3);
+      expect(contraste(x.chevron, rgb(t.surface)), `${schema} ${x.texte} : chevron`).toBeGreaterThanOrEqual(3);
+      expect(x.place).toEqual([28, 28]);
+      expect(x.dessin).toBe(22);
+      expect(x.gaucheIcone).toBe(12);
       expect(x.hauteur).toBeGreaterThanOrEqual(52);
-      // La première rangée n'a pas de filet ; les suivantes, un filet qui commence après le carré (12 + 28 + 12).
-      expect(x.filet).toBe(i === 0 ? null : 52);
+      // La première rangée n'a pas de filet ; les suivantes, un filet de 0,5 qui commence après l'icône (12 + 28 + 12).
+      expect(x.filet).toEqual(i === 0 ? null : [52, '0.5px']);
     });
-    const saisie = await carres(page, 'ul[aria-labelledby="titre-ma-saisie"]');
-    for (const x of saisie) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
-    // Le soir : chaque champ a le carré de sa rubrique, neutre comme sa carte sur Aujourd'hui (v12).
+    const saisie = await icones(page, 'ul[aria-labelledby="titre-ma-saisie"]');
+    for (const x of saisie) expect([x.fond, x.icone], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte'])]);
+    // Le soir : chaque champ a l'icône de sa rubrique, en --text-2, sans carré, comme sa carte sur Aujourd'hui (v12) : la
+    // rangée nomme une rubrique (son interrupteur la règle), elle n'ouvre rien.
     await aller(page, '#/reglages/journee');
     await expect(page.locator('.ma-journee .avec-carres')).toBeVisible();
-    const soir = await carres(page, '.ma-journee .avec-carres');
+    const soir = await icones(page, '.ma-journee .avec-carres');
     const champs = ['Lieu', 'Sommeil', 'Humeur', 'Contact humain', 'Sport / mouvement', 'Explosions (compteur du soir)', 'Traitement pris',
       'Mes points positifs',
       // v11 : Mes gratitudes, juste après les points positifs.
@@ -793,7 +813,10 @@ test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neu
       // v8 : « Nuit en détail », masqué par défaut, avec ce qu'il contient en secondaire.
       'Nuit en détailcoucher, lever, réveils', 'Ce qui a pesé · ce qui a rechargé'];
     expect(soir.map((x) => x.texte)).toEqual(champs);
-    for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
+    for (const x of soir) {
+      expect([x.fond, x.icone], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['text-2'])]);
+      expect(x.gaucheIcone, `${schema} ${x.texte}`).toBe(12);
+    }
   }
 });
 

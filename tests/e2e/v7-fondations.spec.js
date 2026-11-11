@@ -14,7 +14,7 @@ const creerEpisode = (page, e) => page.evaluate(async (x) => (await window.__car
 const COLERE = { date: '2026-10-14', heure: '18:42', emotion: 'emotion:colere', declencheur: 'declencheur:surcharge_sensorielle', intensite: 7 };
 
 // Classe de teinte → couleur des jetons : les 7 familles de la roue. Sans teinte : couleur action, l'accent (v12). Une
-// ancienne classe de rubrique, que le code pose encore ici ou là, ne colore plus rien.
+// ancienne classe de rubrique (v11), que le code ne pose plus depuis la v12 (tâche 5), ne colorerait plus rien.
 const TEINTES = {
   'teinte-sommeil': null, 'teinte-humeur': null,
   ...Object.fromEntries(FAMILLES_ROUE.map((f) => [`emo-${f}`, `emo-${f}`])),

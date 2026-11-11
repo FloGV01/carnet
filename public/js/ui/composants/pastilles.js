@@ -4,8 +4,8 @@ import { decouperLibelle } from '../../domain/libelles.js';
 
 // Grille de choix : un toucher choisit, un second toucher sur le choix sélectionné l'efface.
 // L'écriture part au click (jamais au touchstart) pour qu'un défilement ne sélectionne rien.
-// Choisi : un aplat d'accent, graisse 600 et coche (sélection commune, composants.css ; v12 : plus de couleur de rubrique,
-// une prop `teinte` reçue est ignorée). Une option peut porter son nom pour VoiceOver (`aria`) quand son libellé affiché est
+// Choisi : un aplat d'accent, graisse 600 et coche (sélection commune, composants.css ; v12 : plus de couleur de
+// rubrique). Une option peut porter son nom pour VoiceOver (`aria`) quand son libellé affiché est
 // découpé (« 4 h » et, en petit, « ou moins »).
 export function Pastilles({ etiquette, options, valeur, surChoix, colonnes = 3, classe = '', ariaPrefixe, surAjouter }) {
   return html`<div class=${`pastilles colonnes-${colonnes} ${classe}`} role="group" aria-label=${etiquette}>

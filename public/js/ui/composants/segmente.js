@@ -3,8 +3,8 @@ import { coche, libelleChoix } from './coche.js';
 
 // Choix sur une ligne (Mal · Moyen · Bien, Oui · Non…), en boutons séparés.
 // Même règle : second toucher = effacer, sauf pour un choix de vue (`sansVide`).
-// Choisi : un aplat d'accent, graisse 600 et coche (v12 : plus de couleur de rubrique ; une prop `teinte` reçue est
-// ignorée). La largeur d'un bouton ne change pas quand on le choisit (coche.js, composants.css).
+// Choisi : un aplat d'accent, graisse 600 et coche (v12 : plus de couleur de rubrique). La
+// largeur d'un bouton ne change pas quand on le choisit (coche.js, composants.css).
 export function Segmente({ etiquette, options, valeur, surChoix, classe = '', sansVide = false }) {
   return html`<div class=${`segmente ${classe}`} role="group" aria-label=${etiquette}>
     ${options.map((o) => {

@@ -173,5 +173,5 @@ export function Concentration() {
     </div>`;
     pied = html`<button type="button" class="btn btn-plein bouton-arreter" onClick=${arreter}>Arrêter</button>`;
   }
-  return html`<${CadreParcours} titre=${titre} teinte="bien-etre" icone=${etat === 'avant' ? 'historique' : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
+  return html`<${CadreParcours} titre=${titre} icone=${etat === 'avant' ? 'historique' : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
 }

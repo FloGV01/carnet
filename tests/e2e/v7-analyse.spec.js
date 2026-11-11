@@ -124,9 +124,9 @@ test('la rangée « Humeur (notes) » n\'apparaît qu\'avec des notes de 1 à 10
   await periode(page, '3 mois').click();
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes']);
   await expect(graphe(page)).toHaveAttribute('aria-label', /émotions, humeur \(notes de 1 à 10\), nuits/);
-  await expect(graphe(page).locator('g.teinte-humeur circle')).toHaveCount(1);
+  await expect(graphe(page).locator('g.g-notes circle')).toHaveCount(1);
   // Par semaine, le point est une moyenne ; une seule note dans la semaine : un anneau, « peu de valeurs ». La légende le dit.
-  await expect(graphe(page).locator('g.teinte-humeur circle.g-anneau')).toHaveCount(1);
+  await expect(graphe(page).locator('g.g-notes circle.g-anneau')).toHaveCount(1);
   await expect(legende.locator(':scope > span')).toContainText(['moyenne des notes', 'peu de valeurs']);
   await expect(legende.locator(':scope > span', { hasText: 'moyenne des notes' }).locator('circle.g-point')).toHaveCount(1);
   await expect(legende.locator(':scope > span', { hasText: 'peu de valeurs' }).locator('circle.g-anneau')).toHaveCount(1);
@@ -172,7 +172,7 @@ test('point de vigilance 1 : une sauvegarde v6.1 (format 4) importée garde ses 
   await expect(graphe(page)).toHaveAttribute('aria-label', /émotions, humeur \(notes de 1 à 10\), nuits/, { timeout: 15000 });
   await expect(etiquettes(page)).toContainText(['Émotions', 'Humeur', '(notes)']);
   await expect(graphe(page).locator('circle.g-emo')).toHaveCount(0);
-  await expect(graphe(page).locator('g.teinte-humeur circle').first()).toBeVisible();
+  await expect(graphe(page).locator('g.g-notes circle').first()).toBeVisible();
   await mesJours(page).getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(mesJours(page).getByRole('cell', { name: /humeur 6/ }).first()).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/NaN|undefined/);
@@ -189,13 +189,13 @@ test('point de vigilance 5 : un jour qui mêle une ancienne note et une émotion
   await periode(page, '7 j').click();
   await expect(etiquettes(page)).toHaveText(['Émotions', 'Humeur', '(notes)', 'Nuits', 'Explosions', 'Épisodes', 'Énergie', 'basse']);
   await expect(graphe(page).locator('circle.g-emo.zone-rouge')).toHaveCount(1);
-  await expect(graphe(page).locator('g.teinte-humeur circle')).toHaveCount(1);
+  await expect(graphe(page).locator('g.g-notes circle')).toHaveCount(1);
   // Par jour, le point est la note du jour : la légende le dit, sans moyenne ni anneau.
   const legende = mesJours(page).locator('.legende-frise');
   await expect(legende.locator(':scope > span', { hasText: 'note du jour' }).locator('circle.g-point')).toHaveCount(1);
   await expect(legende).not.toContainText(/moyenne|peu de valeurs/);
   // La même colonne, le jeudi : le point de l'émotion et celui de la note.
-  const [emo, note] = await Promise.all([graphe(page).locator('circle.g-emo').getAttribute('cx'), graphe(page).locator('g.teinte-humeur circle').getAttribute('cx')]);
+  const [emo, note] = await Promise.all([graphe(page).locator('circle.g-emo').getAttribute('cx'), graphe(page).locator('g.g-notes circle').getAttribute('cx')]);
   expect(emo).toBe(note);
   await mesJours(page).getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(mesJours(page).getByRole('row', { name: /jeudi 15 oct\./ })).toContainText('émotions : irrité · humeur 6 · énergie basse');
@@ -260,11 +260,12 @@ test('AA des textes de l\'Analyse (2b), en clair et en sombre : portes, tuiles, 
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/analyse');
     await expect(page.getByRole('region', { name: 'Ma semaine' })).toBeVisible();
-    // « Tes points positifs » : le carré est neutre (v12 : plus de couleur de rubrique), et l'icône s'y lit (3:1 au moins).
+    // « Tes points positifs » : plus de carré (v12, spec §5.4) ; le repli ouvre quelque chose, son icône est à l'accent et se lit
+    // sur la carte (3:1 au moins).
     const carre = await page.getByRole('region', { name: 'Ma semaine' }).locator('.repli-icone')
-      .evaluate((e) => ({ fond: getComputedStyle(e).backgroundColor, icone: getComputedStyle(e).color }));
-    expect(carre.fond, `${schema} : carré des points positifs`).toBe(rgb(t['surface-2']));
-    expect(contraste(carre.icone, carre.fond), `${schema} : icône des points positifs`).toBeGreaterThanOrEqual(3);
+      .evaluate((e) => ({ fond: getComputedStyle(e).backgroundColor, icone: getComputedStyle(e.querySelector('svg')).color }));
+    expect(carre, `${schema} : icône des points positifs`).toEqual({ fond: 'rgba(0, 0, 0, 0)', icone: rgb(t['accent-texte']) });
+    expect(contraste(carre.icone, t.surface), `${schema} : icône des points positifs`).toBeGreaterThanOrEqual(3);
     const selecteurs = ['.porte-titre', '.tuile-titre', '.tuile-valeur', '.nom-famille', '.compte-famille', '.carte-entete .note-carte-interne',
       'text.g-etiquette', 'text.g-tete', '.legende-graphe > span', '.titre-section', '.graphe-titre'];
     for (const sel of selecteurs) {

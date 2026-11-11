@@ -193,7 +193,7 @@ export function MesRefuges() {
       <${ChampTexte} id="refuges-titres" etiquette="Mes titres" valeur=${refuges.titres} lignes=${4} placeholder="Un titre par ligne."
         cleBrouillon="carnet:brouillon:refuges:titres" surEnregistrer=${changerTitres} />
     </div>
-    <section class="champ-fiche playlists-refuges teinte-bien-etre" aria-labelledby="titre-mes-playlists">
+    <section class="champ-fiche playlists-refuges" aria-labelledby="titre-mes-playlists">
       <h2 class="etiquette" id="titre-mes-playlists">Mes playlists</h2>
       <${LignesPlaylists} playlists=${refuges.playlists} />
       ${(spotify || deSpotify) && html`<div class="carte compte-spotify">

@@ -25,7 +25,7 @@ test('aucun relevé d\'énergie : pas de rangée, pas de ligne dans la légende'
   await expect(graphe).toBeVisible();
   await expect(graphe).toHaveAttribute('viewBox', `0 0 326 ${HAUTEUR_SIMPLE}`);
   await expect(etiquettes(graphe)).toHaveText(['Émotions', 'Nuits', 'Explosions', 'Épisodes']);
-  await expect(graphe.locator('g.teinte-energie > rect.g-barre')).toHaveCount(0);
+  await expect(graphe.locator('g.g-energie-basse > rect.g-barre')).toHaveCount(0);
   // v9 : la légende des zones nomme « Énergie haute · désagréable »… (une zone, pas la rangée) ; rien d'autre, ni dans le
   // graphique ni dans la légende, ne parle d'énergie.
   await expect(graphe).not.toContainText(/énergie/i);
@@ -46,7 +46,7 @@ test('énergie basse : une marque les jours concernés (01:00 et « vers 0 h » 
   await aller(page, '#/analyse');
   const figure = mesJours(page);
   const graphe = figure.getByRole('img', { name: /^Mes jours, une colonne par jour : émotions, nuits, explosions, épisodes, énergie basse\./ });
-  const marques = graphe.locator('g.teinte-energie > rect.g-barre');
+  const marques = graphe.locator('g.g-energie-basse > rect.g-barre');
   await expect(etiquettes(graphe)).toHaveText(['Émotions', 'Nuits', 'Explosions', 'Épisodes', 'Énergie', 'basse']);
   await expect(marques).toHaveCount(3);
   // Les jours qui portent une donnée se touchent : les 11, 12, 13 et 14. Le 14 (énergie moyenne) n'a pas de marque.
@@ -60,7 +60,7 @@ test('énergie basse : une marque les jours concernés (01:00 et « vers 0 h » 
   // Par semaine : le nombre de jours, en barre (1 jour la semaine du 5, 2 jours la semaine du 12).
   await periode(page, /3 mois/).click();
   const semaines = figure.getByRole('img', { name: /^Mes jours, une colonne par semaine : / });
-  await expect(semaines.locator('g.teinte-energie > rect.g-barre')).toHaveCount(2);
+  await expect(semaines.locator('g.g-energie-basse > rect.g-barre')).toHaveCount(2);
   await figure.getByRole('button', { name: 'Voir en tableau' }).click();
   await expect(figure.getByRole('cell', { name: /1 jour d'énergie basse/ })).toHaveCount(1);
   await expect(figure.getByRole('cell', { name: /2 jours d'énergie basse/ })).toHaveCount(1);

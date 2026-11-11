@@ -58,7 +58,7 @@
   font-size: var(--t-legende); line-height: 20px; padding: 0 7px 0 5px; border-radius: 7px;
   background: var(--surface-2); color: var(--text); font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.puce svg { flex: none; width: 13px; height: 13px; color: var(--c, var(--text-2)); }
+.puce svg { flex: none; width: 13px; height: 13px; color: var(--text-2); }
 .icone-memo { display: inline-flex; width: 15px; height: 15px; color: var(--text-2); }
 .icone-memo svg { width: 15px; height: 15px; }
 .extrait mark { background: var(--surface-2); color: var(--text); border-radius: 3px; padding: 0 2px; font-weight: 600; }
@@ -82,7 +82,9 @@
 .tete-prochain-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .nom-prochain { font-size: var(--t-corps); font-weight: 600; }
 .quand-prochain { font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
-.tete-prochain > svg { width: 16px; height: 16px; color: var(--text-2); stroke-width: 2; flex: none; }
+.tete-prochain > svg { width: 16px; height: 16px; color: var(--contour); stroke-width: 2; flex: none; }
+/* « En consultation » : une pilule neutre au contour ; elle ouvre un écran, son icône est à l'accent (v12, spec §5.4). */
+.btn-consultation svg { color: var(--accent-texte); }
 .btn-consultation { align-self: flex-start; }
 .ligne-rdv-liste { min-height: 52px; padding: 8px 10px 8px 16px; }
 .ligne-rdv-liste .ligne-valeur { font-variant-numeric: tabular-nums; }
@@ -198,7 +200,7 @@
 .grille-chiffres { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
 .emotions-consultation { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .cellule-chiffre { display: flex; flex-direction: column; gap: 4px; }
-.valeur-chiffre { font-size: var(--t-chiffre); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--c-text, var(--text)); }
+.valeur-chiffre { font-size: var(--t-chiffre); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); }
 .valeur-chiffre.vide-chiffre { color: var(--text-2); }
 .libelle-chiffre { font-size: var(--t-legende); line-height: 1.25; color: var(--text-2); }
 .bloc-consultation { display: flex; flex-direction: column; gap: 6px; }
@@ -209,8 +211,9 @@
 .analyse { gap: 12px; padding-bottom: calc(100px + var(--zone-bas)); }
 .analyse > .entete-onglet { margin-bottom: 2px; }
 .portes-analyse { display: flex; flex-direction: column; gap: 8px; }
-.carre-porte { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
-.carre-porte svg { width: 17px; height: 17px; }
+/* L'icône d'une porte (v12, spec §5.4) : à l'accent, sans carré ni couleur de rubrique ; une porte ouvre quelque chose. */
+.icone-porte { flex: none; width: 24px; height: 24px; color: var(--accent-texte); display: grid; place-items: center; }
+.icone-porte svg { width: 22px; height: 22px; }
 /* v11 : « Historique » et « Épisodes » côte à côte, de même largeur ; en grand texte, quand l'un des deux ne tient plus sur
    sa moitié, ils passent l'un sous l'autre, chacun sur toute la largeur. */
 .portes-historique { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -219,8 +222,8 @@
   display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: var(--r-carte);
   background: var(--surface); color: var(--text); text-decoration: none; font-size: var(--t-corps); font-weight: 600;
 }
-.porte-historique > svg { margin-left: auto; width: 16px; height: 16px; color: var(--text-2); }
-/* Les portes de Comprendre : trois cartes de 76, le carré de leur couleur et un chevron en haut, le nom en bas. Elles
+.porte-historique > svg { margin-left: auto; width: 16px; height: 16px; color: var(--contour); }
+/* Les portes de Comprendre : trois cartes de 76, leur icône et un chevron en haut, le nom en bas. Elles
    passent à la ligne quand la place manque (grand texte d'iOS, écran étroit) : « Explosions » ne se coupe pas. 6,25 em :
    les trois tiennent sur une ligne au texte par défaut, à 375 comme à 390 de large. */
 .portes { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -229,7 +232,7 @@
   color: var(--text); text-decoration: none; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
 }
 .porte-haut { display: flex; align-items: flex-start; justify-content: space-between; }
-.porte-haut > svg { width: 16px; height: 16px; color: var(--text-2); }
+.porte-haut > svg { width: 16px; height: 16px; color: var(--contour); }
 .porte-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.2; }
 .selon-periode { display: flex; flex-direction: column; gap: 12px; }
 .centre { text-align: center; margin: 12px 0; }
@@ -258,11 +261,9 @@
 .tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.9em), 1fr)); gap: 8px; }
 .tuile { background: var(--surface); border: 0; border-radius: var(--r-bouton); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 96px; }
 .tuile-titre { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
-.tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--c-text, var(--text)); }
+.tuile-valeur { font-size: 1.765rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--text); }
 .tuile-detail { font-size: var(--t-note); color: var(--text-2); line-height: 1.25; }
 .vide-chiffre { color: var(--text-2) !important; }
-.point-rubrique { width: 10px; height: 10px; border-radius: 5px; background: var(--c, var(--text-2)); flex: none; }
-.point-rubrique.petit { width: 8px; height: 8px; border-radius: 4px; }
 /* En très grand texte, un tableau plus large que sa carte y défile, plutôt que de faire défiler la page de côté. */
 .graphe { margin: 0; background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
 .graphe figcaption { display: flex; flex-direction: column; gap: 2px; }
@@ -278,11 +279,13 @@
 .g-etiquette { font-size: 12.5px; fill: var(--text); dominant-baseline: middle; }
 .g-tete { font-size: 12px; font-weight: 600; }
 .g-filet { stroke: var(--line); stroke-width: 1; }
-/* v12 (spec §5.5) : hors des familles et des zones, un graphique est à l'encre (--donnee), sans accent. */
-.g-point { fill: var(--c, var(--donnee)); stroke: var(--c, var(--donnee)); stroke-width: 2; }
-.g-anneau { fill: var(--surface); stroke: var(--c, var(--donnee)); stroke-width: 2; }
-.g-plein { fill: var(--c, var(--donnee)); }
-.g-barre { fill: var(--c, var(--donnee)); }
+/* v12 (spec §5.5) : hors des familles et des zones, un graphique est à l'encre (--donnee*), jamais à l'accent : la couleur ne
+   dit qu'une émotion. Ses séries se distinguent par leur place (une rangée chacune), leur forme (point, anneau, trait, barre,
+   encoche, rond, losange) et leur rampe. */
+.g-point { fill: var(--donnee); stroke: var(--donnee); stroke-width: 2; }
+.g-anneau { fill: var(--surface); stroke: var(--donnee); stroke-width: 2; }
+.g-plein { fill: var(--donnee); }
+.g-barre { fill: var(--donnee); }
 /* Émotions du moment (v7) : la couleur de leur famille (.emo-*), qui ne vaut que pour la roue et ces graphiques ; un point
    de Mes jours en mode jour, celle de la zone de son mot (.zone-*, v9). Un relevé sans zone (famille seule de la v7) :
    un point creux, neutre, comme dans Ma journée. */
@@ -295,13 +298,14 @@
 :is(.zone-rouge, .zone-jaune, .zone-bleu, .zone-vert) > svg > .g-emo { fill: var(--c-fill); stroke: var(--c); stroke-width: 1; }
 .g-creux { fill: var(--surface); stroke: var(--text-2); stroke-width: 1.5; }
 .g-zone { fill: transparent; cursor: pointer; }
-/* Les nuits Mal · Moyen · Bien : la rampe de l'encre à 3 pas (v12, --donnee-1 à 3). */
+/* Les nuits Mal · Moyen · Bien, et l'énergie basse · moyenne · haute (plus bas) : la rampe de l'encre à 3 pas (v12, --donnee-1
+   à 3 ; elle s'inverse en sombre, et les légendes disent les pas). Le pas le plus discret se voit à peine sur la carte : un
+   contour au pas suivant (--donnee-2, 3:1 au moins sur la carte, dans les deux thèmes) dessine ses barres et sa case de
+   légende (Mes nuits depuis la v8 ; partout depuis la v12). */
 .g-sommeil-1 { fill: var(--donnee-1); background: var(--donnee-1); }
 .g-sommeil-2 { fill: var(--donnee-2); background: var(--donnee-2); }
 .g-sommeil-3 { fill: var(--donnee-3); background: var(--donnee-3); }
-/* Mes nuits (v8) : le pas « Mal » se voit à peine sur la carte. Un contour au pas « Moyen » (--donnee-2, 3:1 au moins sur
-   la carte) dessine sa barre et sa case de légende. */
-.g-mes-nuits rect.g-sommeil-1 { stroke: var(--donnee-2); stroke-width: 1; }
+rect:is(.g-sommeil-1, .g-energie-1) { stroke: var(--donnee-2); stroke-width: 1; }
 .legende-graphe { display: flex; align-items: center; gap: 6px; font-size: var(--t-note); color: var(--text-2); }
 .legende-graphe svg { width: 12px; height: 12px; flex: none; }
 .tableau-lignes { border-collapse: collapse; width: 100%; font-size: var(--t-sous); font-variant-numeric: tabular-nums; }
@@ -546,9 +550,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .pastilles.pese-recharge .pastille { min-height: var(--cible); padding: 6px 10px; }
 .pastilles.reveils { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.6fr); }
 
-/* Replis en liste groupée 2b : une carte, une rangée de 58 au moins par repli (carré à la couleur de la rubrique,
-   libellé 16/500, résumé 14 px sur une ligne coupée, chevron), filets décalés de 52. Ouvert, le repli se déploie
-   dans la carte. */
+/* Replis en liste groupée 2b : une carte, une rangée de 58 au moins par repli (l'icône à l'accent, sans carré depuis la v12,
+   libellé 16/500, résumé 14 px sur une ligne coupée, chevron en --contour), filets décalés de 52. Ouvert, le repli se
+   déploie dans la carte. */
 .aujourdhui .replis { overflow: visible; }
 .replis > .repli.repli-carte { border-top: 0; border-radius: 0; background: none; padding: 0 12px; }
 .replis > .repli + .repli::before { content: ""; display: block; height: 1px; margin: 0 -12px 0 40px; background: var(--line); }
@@ -577,7 +581,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 }
 .ligne-evenement .heure { width: max(70px, 4.6em); flex: none; white-space: nowrap; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ligne-evenement .resume { flex: 1; min-width: 0; line-height: 1.3; }
-.ligne-evenement > svg { width: 16px; height: 16px; color: var(--text-2); flex: none; stroke-width: 2; }
+.ligne-evenement > svg { width: 16px; height: 16px; color: var(--contour); flex: none; stroke-width: 2; }
 .point-evenement { width: 10px; height: 10px; border-radius: 5px; background: var(--c, var(--text-2)); flex: none; }
 /* Un épisode ou un symptôme : un petit carré neutre, pour ne pas le confondre avec le rond d'un relevé. */
 .point-evenement.point-parcours { border-radius: 2px; }
@@ -622,13 +626,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .ligne-carte.action.petite { font-size: var(--t-sous); min-height: var(--cible); }
 .ligne-carte.action svg { width: 20px; height: 20px; }
 .ligne-carte.action[disabled] { color: var(--text-2); }
-/* Listes groupées 2b à carrés d'icônes (Réglages, Le soir), comme les réglages de l'iPhone : le carré de 28 (rayon 7),
-   neutre (v12), puis le libellé ; rangées de 52 au moins, filets décalés après le carré
-   (12 + 28 + 12 = 52), comme les replis d'Aujourd'hui. */
-.carre-ligne { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
-.ligne-carte .carre-ligne svg, .carre-ligne svg { width: 17px; height: 17px; color: inherit; }
+/* Listes groupées 2b à icônes (Réglages, Le soir, Bien-être), comme les réglages de l'iPhone : l'icône de 22, dans une place
+   de 28, puis le libellé ; rangées de 52 au moins, filets de 0,5 décalés après l'icône (12 + 28 + 12 = 52), comme les replis
+   d'Aujourd'hui. v12 (spec §5.4) : plus de carré. L'icône est à l'accent quand la rangée ouvre quelque chose (un lien, un
+   bouton), en --text-2 quand elle nomme une rubrique (Réglages › Le soir, dont les rangées portent un interrupteur). */
+.icone-ligne { flex: none; width: 28px; height: 28px; color: var(--text-2); display: grid; place-items: center; }
+:is(a, button).ligne-carte:not([disabled]) > .icone-ligne { color: var(--accent-texte); }
+.ligne-carte .icone-ligne svg, .icone-ligne svg { width: 22px; height: 22px; color: inherit; }
 .liste.avec-carres > li + li { border-top: 0; position: relative; }
-.liste.avec-carres > li + li::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--line); }
+.liste.avec-carres > li + li::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: .5px; background: var(--line); }
 .avec-carres .ligne-carte { min-height: 52px; padding-left: 12px; gap: 12px; }
 .avec-carres .ligne-champ-reglage { padding-left: 12px; gap: 12px; }
 /* Un libellé coupé sur plusieurs lignes (grand texte) garde 8 px jusqu'aux filets ; sur une ligne, la rangée garde 52. */
@@ -771,9 +777,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lien-apres-coup { padding: 10px 10px 10px 16px; min-height: 56px; }
 .lien-apres-coup .ligne-libelle { display: flex; flex-direction: column; gap: 2px; }
 .titre-apres-coup { font-weight: 600; }
-/* Carte « Après coup · TCC » des épisodes : un cadre de bouton, neutre, son texte en accent (v12). */
-.ligne-carte.bouton-apres-coup { border: 1px solid var(--c, var(--contour)); border-radius: var(--r-bouton); background: var(--c-tint, var(--surface)); color: var(--c-text, var(--accent-texte)); }
-.bouton-apres-coup .note-carte-interne, .ligne-carte.bouton-apres-coup svg { color: inherit; }
+/* Carte « Après coup · TCC » des épisodes : un cadre de bouton, neutre (la carte et le contour), son texte en accent (v12,
+   spec §5.4) ; son chevron, comme tous ceux d'une rangée, en --contour (composants.css). */
+.ligne-carte.bouton-apres-coup { border: 1px solid var(--contour); border-radius: var(--r-bouton); background: var(--surface); color: var(--accent-texte); }
+.bouton-apres-coup .note-carte-interne { color: inherit; }
 /* Aujourd'hui et sa liste : une ligne ordinaire, toujours de la même forme (aucun état). */
 .ligne-apres-coup-jour {
   display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); min-height: var(--cible);
@@ -1104,7 +1111,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    l'app, utile au guidage). En 4-6 le pic est à 40 % du cycle. Mouvement réduit : base.css coupe
    l'animation, et le cercle change de teinte d'un coup à chaque phase (pleine à l'inspiration, claire
    à l'expiration), en plus des mots. */
-/* En 2b (v7) : trois cartes à la couleur du parcours (bleu brume), serrées. */
+/* En 2b (v7) : des cartes serrées ; v12 : neutres, « Commencer » seul en aplat d'accent (spec §5.4). */
 .moment-difficile { gap: 10px; padding-top: 8px; }
 /* Les quatre exercices courts (v10) : 2 × 2, de même taille, neutres (v12 : surface, contour, texte en 600), en tête de l'écran. En très
    grand texte, ils passent l'un sous l'autre quand « Panique », le mot le plus long d'un seul tenant, ne tient plus dans sa
@@ -1136,7 +1143,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .respiration .btn svg { width: 20px; height: 20px; }
 .reglage-respiration { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
 /* Moment difficile (2b) : « Cohérence cardiaque » en 20/600, la durée et le rythme en puces (« 5 minutes ▾ »,
-   « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54 à la couleur du parcours.
+   « 5 s · 5 s ▾ » : un menu de l'iPhone habillé en bouton neutre de 44), « Commencer » de 54, seul aplat d'accent (v12).
    Les puces servent aussi à l'écran « avant » de la cohérence cardiaque de Bien-être (v10). */
 .moment-difficile .respiration { gap: 12px; }
 .moment-difficile .phase-respiration { font-size: 1.176rem; min-height: 1.3em; margin-top: 2px; }
@@ -1157,23 +1164,24 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .une-chose-acces.ligne-carte { min-height: 54px; padding: 0 14px 0 16px; background: var(--surface); border-radius: var(--r-carte); font-weight: 600; }
 .une-chose-acces.ligne-carte svg { width: 18px; height: 18px; }
 /* Les playlists de Mes refuges (v11), dans Moment difficile et dans Mes refuges : une carte d'une ligne chacune, comme « Une
-   chose à la fois », le carré de musique à la couleur de l'écran, le nom en 600 et, dessous, « Spotify » en discret, puis la
-   sortie. En très grand texte, le nom passe à la ligne et la carte grandit. */
+   chose à la fois », l'icône de musique à l'accent (v12 : elle ouvre la musique), le nom en 600 et, dessous, « Spotify » en
+   discret, puis la sortie. En très grand texte, le nom passe à la ligne et la carte grandit. */
 .lignes-playlists { display: flex; flex-direction: column; gap: 10px; }
 .lien-refuge.ligne-carte { min-height: 54px; padding: 8px 14px 8px 12px; gap: 12px; background: var(--surface); border-radius: var(--r-carte); font-weight: 600; }
 .lien-refuge .ligne-libelle { min-width: 0; overflow-wrap: anywhere; }
 .lien-refuge .ligne-sous { display: block; font-weight: 400; }
 .lien-refuge.ligne-carte > svg { width: 18px; height: 18px; }
-/* Mon plan (2b) : une carte ; en tête, un carré de 28 à la couleur du parcours (icône Mon plan), le titre en 21/600 et
-   « Modifier » à droite (couleur action, 600, cible de 44). Les rubriques en capitales, le texte en 19, interligne 1,45. */
+/* Mon plan (2b) : une carte ; en tête, l'icône Mon plan en --text-2 (v12 : sans carré ; elle nomme la carte), le titre en
+   21/600 et « Modifier » à droite (couleur action, 600, cible de 44). Les rubriques en capitales, le texte en 19, interligne
+   1,45. */
 .plan-moment { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 16px; }
 .plan-moment .rubrique-plan p, .plan-moment .liste-si-alors { font-size: 1.12rem; line-height: 1.45; }
 .plan-moment .libelle-section { padding-bottom: 2px; }
 .plan-moment > .btn-lien { align-self: flex-start; }
 .plan-moment-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); }
 .titre-plan-moment { display: flex; align-items: center; gap: 12px; min-width: 0; font: 600 1.235rem/1.3 var(--police); color: var(--text); }
-.carre-plan { flex: none; width: 28px; height: 28px; border-radius: 7px; background: var(--c, var(--surface-2)); color: var(--c-on, var(--text)); display: grid; place-items: center; }
-.carre-plan svg { width: 17px; height: 17px; }
+.icone-plan { flex: none; width: 24px; height: 24px; color: var(--text-2); display: grid; place-items: center; }
+.icone-plan svg { width: 22px; height: 22px; }
 .modifier-plan { flex: none; min-width: var(--cible); justify-content: flex-end; font-weight: 600; }
 /* « Une chose à la fois » (v6) : une ligne du plan par écran, en très grand texte. La carte défile si le
    texte est long, les boutons restent à l'écran. Aucun repère de position : rien n'est compté. */
@@ -1187,29 +1195,33 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Bien-être (v7 ; v10 : « Reprendre », les favoris, les quatre entrées ; v11 : cinq), la ligne fixe en bas. Aucun compteur. */
 .bien-etre { gap: 12px; }
 .bien-etre > .entete-onglet { margin-bottom: 2px; }
-/* Les cinq entrées (v11 : Mes refuges après le Programme) : des rangées de 60, le carré à la couleur de Bien-être, le libellé 17/600, le chevron. */
-.entrees .ligne-carte { min-height: 60px; padding-block: 8px; font-weight: 600; }
+/* Les cinq entrées (v11 : Mes refuges après le Programme) : des rangées de 60, l'icône à l'accent (v12 : elle ouvre une
+   entrée, sans carré), le libellé en 17, le chevron ; v12 (la maquette) : le libellé en 400, comme les listes d'iOS. */
+.entrees .ligne-carte { min-height: 60px; padding-block: 8px; font-size: var(--t-bloc); }
 .entrees .ligne-libelle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .carte-respiration { padding: 18px 16px 16px; }
 .carte-respiration .respiration { padding-top: 0; }
 /* Dans une carte (Moment difficile), comme dans le rendu 2b : un cercle de 152, cerclé de 2 px, et dedans le disque qui
-   respire ; neutres (v12, spec §5.3), « Commencer » en accent. Sans mouvement, le disque reste figé et, à l'inspiration, se
-   remplit. */
-.carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--c-tint-2, var(--surface-2)); border: 2px solid var(--c, var(--contour)); }
-.carte-respiration .cercle-respiration span { background: var(--c-tint, var(--surface)); border: 0; }
-.carte-respiration .respiration .btn-plein { background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); }
+   respire ; neutres (v12, spec §5.3 : le vert n'est jamais un disque), « Commencer » seul en aplat d'accent. Sans mouvement,
+   le disque reste figé et, à l'inspiration, se remplit. */
+.carte-respiration .cercle-respiration { width: 152px; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--contour); }
+.carte-respiration .cercle-respiration span { background: var(--surface); border: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .carte-respiration .cercle-respiration.phase-inspire span { background: var(--c, var(--text-2)); }
+  .carte-respiration .cercle-respiration.phase-inspire span { background: var(--text-2); }
 }
-/* La carte « Reprendre » (v10) : à gauche, un lien vers l'écran de départ (le titre de la carte en 17/600, puis celui de l'élément
-   en 16) ; à droite, le bouton lecture rond, qui le relance. En très grand texte, le bouton passe sous le lien. */
+/* La carte « Reprendre » (v10) : à gauche, un lien vers l'écran de départ (le titre de la carte, puis celui de l'élément) ; à
+   droite, le bouton lecture rond, qui le relance. En très grand texte, le bouton passe sous le lien. v12 (la maquette) : le titre
+   de la carte en sur-titre (13/600, capitales, --text-2), celui de l'élément en 20/600 ; le bouton de 52, le seul aplat
+   d'accent de Bien-être (spec §5.4). */
 .carte-reprendre { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; column-gap: 12px; padding: 0 14px 0 0; }
+.carte-reprendre .titre-carte { font: 600 var(--t-note)/1.25 var(--police); letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+.carte-reprendre .exercice-titre { font: 600 1.176rem/1.25 var(--police); letter-spacing: -0.01em; color: var(--text); }
 .lien-reprendre {
   flex: 1 1 11rem; display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: var(--cible); padding: 14px 0 14px 16px;
   color: var(--text); text-decoration: none; overflow-wrap: anywhere;
 }
-.lien-reprendre .exercice-titre { font-weight: 400; }
-.carte-reprendre > .bouton-lecture { margin-block: 10px; }
+.carte-reprendre > .bouton-lecture { width: 52px; height: 52px; margin-block: 12px; }
+.carte-reprendre > .bouton-lecture svg { width: 24px; height: 24px; }
 /* Une ligne d'un élément de Bien-être (v10) : le titre et sa ligne de description, l'épingle, et le bouton lecture de 48 (toutes
    deux des cibles de 44 au moins). En très grand texte, le titre prend la ligne et les boutons passent dessous, à droite. */
 .ligne-element { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; padding-right: 10px; }
@@ -1218,12 +1230,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   color: var(--text); text-decoration: none; overflow-wrap: anywhere;
 }
 .ligne-element-actions { flex: none; display: flex; align-items: center; gap: 8px; padding-block: 7px; }
-.bouton-lecture.petit { width: 48px; height: 48px; }
-.bouton-lecture.petit svg { width: 22px; height: 22px; }
+/* Le petit bouton lecture d'une ligne (les favoris, les listes des entrées) : une icône d'accent sans fond (v12, spec §5.4 :
+   une seule action en aplat par vue), dans une cible de 48. */
+.bouton-lecture.petit { width: 48px; height: 48px; background: none; color: var(--accent-texte); }
+.bouton-lecture.petit svg { width: 26px; height: 26px; }
 /* L'écran Programme (v8) : la présentation en 15 --text-2, une carte par étape (son titre 17/600 en tête, puis ses
-   séances en rangées de liste 2b, chevron), la ligne fixe en bas. Une séance faite : une coche à la couleur de Bien-être
-   (accent, 3:1) et « Faite le 12/10 » en 14 --text-2, sous sa durée ; pas faite : rien. L'épingle (v10) à côté du lien, le
-   dessin à la marge du titre ; en très grand texte, le lien prend la ligne et l'épingle passe dessous, à droite. */
+   séances en rangées de liste 2b, chevron), la ligne fixe en bas. Une séance faite : une coche à l'encre (v12, spec §5.3 :
+   jamais un « fait » vert) et « Faite le 12/10 » en 14 --text-2, sous sa durée ; pas faite : rien. L'épingle (v10) à côté
+   du lien, le dessin à la marge du titre ; en très grand texte, le lien prend la ligne et l'épingle passe dessous, à droite. */
 .programme { gap: 12px; }
 .presentation-programme { display: flex; flex-direction: column; gap: 6px; font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-wrap: pretty; }
 .titre-etape { padding: 12px 16px 10px; }
@@ -1232,15 +1246,15 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .rangee-seance > .ligne-seance { flex: 1 1 11rem; min-width: 0; overflow-wrap: anywhere; }
 .rangee-seance > .epingle { margin-block: 4px; }
 .seance-faite { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); }
-.seance-faite svg { flex: none; width: 14px; height: 14px; color: var(--c, var(--text)); }
+.seance-faite svg { flex: none; width: 14px; height: 14px; color: var(--text); }
 .ligne-exercice { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 9px 12px 9px 16px; color: var(--text); text-decoration: none; }
 .ligne-exercice-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .exercice-titre { font-size: var(--t-corps); font-weight: 600; line-height: 1.25; }
 .exercice-description { font-size: var(--t-petit); line-height: 1.3; color: var(--text-2); text-wrap: pretty; }
-.ligne-exercice > svg { flex: none; width: 16px; height: 16px; color: var(--text-2); }
+.ligne-exercice > svg { flex: none; width: 16px; height: 16px; color: var(--contour); }
 .ligne-fixe { font-size: var(--t-sous); line-height: 1.4; color: var(--text-2); text-align: center; padding: 2px 0 8px; }
-/* Le bouton lecture rond (v8) : l'accent (v12 : une icône dit que c'est une commande, pas une émotion), comme « Commencer » ;
-   64 dans une carte, 84 au centre de l'anneau avant de commencer. */
+/* Le bouton lecture rond (v8) : l'accent (v12, spec §5.3 : une icône dit que c'est une commande, pas une émotion), comme
+   « Commencer » ; 84 au centre de l'anneau avant de commencer. « Réveil la nuit » l'éteint (--c-fill, .parcours.ecran-noir). */
 .bouton-lecture {
   position: relative; flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%;
   background: var(--c-fill, var(--action)); color: var(--c-on, var(--action-on)); display: grid; place-items: center;
@@ -1286,8 +1300,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
   .etiquette-noting.brille { animation: etiquette-brille 600ms ease-out; }
 }
 @keyframes etiquette-brille { from { box-shadow: 0 0 0 0 var(--c, var(--contour)); } to { box-shadow: 0 0 0 10px transparent; } }
-/* L'anneau : la piste en --line (un filet), le temps passé à la couleur (accent, 3:1 sur le fond) ; dedans, le disque du souffle
-   (-tint-2, cerclé de 2 px à la couleur, comme le cercle de la respiration en 2b) et le bouton. */
+/* L'anneau : la piste en --line (un filet), le temps passé en --text-2 (3:1 sur le fond ; v12, spec §5.3 : jamais vert, pas plus
+   que le disque) ; dedans, le disque du souffle (neutre, --surface-2 cerclé de 2 px en --contour, comme le cercle de la
+   respiration) et le bouton. La nuit (.parcours.ecran-noir) les éteint encore (--c, --c-tint-2). */
 .lecteur-anneau { position: relative; width: min(232px, 60vw); aspect-ratio: 1; display: grid; place-items: center; }
 .lecteur-anneau > * { grid-area: 1 / 1; }
 .lecteur-anneau > .bouton-lecture { z-index: 1; }
@@ -1296,7 +1311,7 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .anneau-plein { fill: none; stroke: var(--c, var(--text-2)); stroke-width: 5; stroke-linecap: round; }
 /* Le disque grandit à l'inspiration et rétrécit à l'expiration, sur la durée du temps (une classe par durée, de 1 à
    12 s) ; il reste immobile pendant « Retiens », et en pause. Avec « Réduire les animations », il ne bouge pas : poumons
-   pleins (inspiration, « Retiens » qui la suit), il est cerclé de la couleur. */
+   pleins (inspiration, « Retiens » qui la suit), il est cerclé de --text-2. */
 .disque-souffle {
   width: 84%; height: 84%; border-radius: 50%; background: var(--c-tint-2, var(--surface-2)); border: 2px solid var(--c, var(--contour)); transform: scale(.55);
   animation-timing-function: ease-in-out; animation-fill-mode: both;
@@ -1339,12 +1354,22 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .actions-lecteur .btn { min-height: 56px; padding: 0 8px; font-size: 1.059rem; }
 .terminer-lecteur { grid-column: 1 / -1; justify-self: center; padding: 0 16px; }
 /* Sons de fond et minuteurs (v10, spec §9) : des écrans du lecteur. Les quatre sons en 2 × 2 (l'un sous l'autre en très grand
-   texte), le volume avec sa cible de 44, le temps restant de la concentration en grand, « Arrêter » de toute la largeur. */
+   texte), le volume avec sa cible de 44, le temps restant de la concentration en grand, « Arrêter » de toute la largeur.
+   Le volume, comme sur iOS (v12, spec §5.3) : la partie remplie de la piste à l'accent, le reste en --contour (3:1 sur le fond),
+   et le bouton blanc, détaché par une ombre et un filet. --part (de 0 à 1, posée par sons.js) mène la partie remplie jusqu'au
+   centre du bouton, qui va de 14 px du bord gauche à 14 px du bord droit. */
 .segmente.choix-son { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
 .reglage-volume { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: var(--t-sous); color: var(--text-2); }
-.reglage-volume input { flex: 1 1 10rem; min-width: 0; min-height: var(--cible); margin: 0; background: none; -webkit-appearance: none; appearance: none; }
-.reglage-volume input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--text-2); }
-.reglage-volume input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0; background: var(--c-fill, #ffffff); box-shadow: 0 0 0 1.5px var(--c, var(--contour)); }
+.reglage-volume input { --part: .5; flex: 1 1 10rem; min-width: 0; min-height: var(--cible); margin: 0; background: none; -webkit-appearance: none; appearance: none; }
+.reglage-volume input::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  --rempli: calc(14px + (100% - 28px) * var(--part));
+  background: linear-gradient(90deg, var(--accent) var(--rempli), var(--contour) var(--rempli));
+}
+.reglage-volume input::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; border: 0;
+  background: #ffffff; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .18), 0 0 0 1.5px var(--contour);
+}
 .temps-restant { font: 600 min(20vw, 4.5rem)/1.1 var(--police); color: var(--text); font-variant-numeric: tabular-nums; text-align: center; }
 .parcours-pied .bouton-arreter { flex: 1; margin: 4px 6px; }
 /* « Me ressourcer » (v6) : « Pour récupérer, je… » tel qu'écrit (les retours à la ligne sont gardés), dans la carte
@@ -1386,21 +1411,18 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lignes-semaine { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--t-corps); line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .selecteur-periode { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
 /* v6 : du plus bas au plus haut des anciennes notes d'un jour, sous le point de la note du jour */
-.g-trait { stroke: var(--c, var(--donnee)); stroke-width: 2; stroke-linecap: round; opacity: .7; }
+.g-trait { stroke: var(--donnee); stroke-width: 2; stroke-linecap: round; opacity: .7; }
 .g-choix { fill: var(--surface-2); }
-.g-energie-1 { fill: var(--c, var(--donnee)); opacity: .3; }
-.g-energie-2 { fill: var(--c, var(--donnee)); opacity: .6; }
-.g-energie-3 { fill: var(--c, var(--donnee)); }
-/* v8 (Q29) : en sombre, l'énergie basse passe à 0,2 pour se distinguer de la moyenne (2,5:1 entre elles, au lieu de 2:1) ;
-   elle reste aussi visible sur la carte qu'en clair (1,5:1). Une valeur change, jamais la teinte. */
-@media (prefers-color-scheme: dark) {
-  .g-energie-1 { opacity: .2; }
-}
+/* L'énergie basse · moyenne · haute : la rampe de l'encre à 3 pas, comme les nuits (v12 ; le contour du pas discret, plus haut). */
+.g-energie-1 { fill: var(--donnee-1); }
+.g-energie-2 { fill: var(--donnee-2); }
+.g-energie-3 { fill: var(--donnee-3); }
+/* Contact et Sport (« Avec qui, comment c'était », « Mouvement ») : une rampe d'opacité sur l'encre (v12). */
 .g-rampe-0 { fill: var(--line); }
-.g-rampe-1 { fill: var(--c, var(--donnee)); opacity: .3; }
-.g-rampe-2 { fill: var(--c, var(--donnee)); opacity: .55; }
-.g-rampe-3 { fill: var(--c, var(--donnee)); opacity: .8; }
-.g-rampe-4 { fill: var(--c, var(--donnee)); }
+.g-rampe-1 { fill: var(--donnee); opacity: .3; }
+.g-rampe-2 { fill: var(--donnee); opacity: .55; }
+.g-rampe-3 { fill: var(--donnee); opacity: .8; }
+.g-rampe-4 { fill: var(--donnee); }
 .legende-frise { flex-wrap: wrap; gap: 4px 12px; }
 .legende-frise > span { display: inline-flex; align-items: center; gap: 5px; }
 .legende-frise svg { width: 14px; height: 12px; }
@@ -1412,7 +1434,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .g-changement { stroke: var(--text-2); stroke-width: 1; }
 .g-changement-num { font-size: 11px; font-weight: 600; fill: var(--text-2); } /* TAILLE_REPERE, geometrie.js */
 .legende-reperes { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: var(--t-note); line-height: 1.4; color: var(--text-2); overflow-wrap: anywhere; }
-.detail-colonne { font-size: var(--t-sous); line-height: 1.45; text-wrap: pretty; padding: 8px 10px; border-radius: var(--r-moyen); background: var(--surface-2); }
+/* Le détail d'une colonne ou d'une barre touchée, dans la carte du graphique : sur le fond de l'écran (v12), et non sur
+   --surface-2, où ses liens verts (« Voir ce jour », les dates) passeraient sous 4,5:1 en clair (spec §5.3). */
+.detail-colonne { font-size: var(--t-sous); line-height: 1.45; text-wrap: pretty; padding: 8px 10px; border-radius: var(--r-moyen); background: var(--bg); }
 .liste-barres { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
 .ligne-barre { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); gap: 2px 10px; align-items: center; }
 .barre-nom { font-size: var(--t-sous); font-weight: 600; overflow-wrap: anywhere; }
@@ -1422,9 +1446,10 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .g-titre-bloc { font-size: 11px; font-weight: 600; fill: var(--text); }
 .g-nom { font-size: 11px; fill: var(--text); }
 .g-compte { fill: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.g-piste { fill: var(--c-tint, var(--surface-2)); }
-.g-peu { opacity: .45; }
-.g-barre-creuse { fill: var(--surface); stroke: var(--c, var(--donnee)); stroke-width: 1.5; }
+.g-piste { fill: var(--surface-2); }
+/* Une barre creuse (« peu de valeurs », une nuit sans qualité) : le fond de la carte, et un contour à l'encre (v12, spec §5.5 :
+   3:1 au moins sur la carte et sur la piste ; « peu de valeurs » était pâlie à 0,45, 2,25:1). */
+.g-barre-creuse { fill: var(--surface); stroke: var(--donnee); stroke-width: 1.5; }
 .g-repere { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .g-repere-fond { stroke: var(--surface); stroke-width: 4; }
 .tableau-comprendre tbody th { text-align: left; font-size: var(--t-sous); font-weight: 600; padding: 12px 0 4px; }
