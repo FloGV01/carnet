@@ -4,6 +4,7 @@ import { toucher, groupe, viderBase, aller, appPrete } from '../aides/saisie.js'
 import { canaux, contraste, jetons, oklch } from '../aides/couleurs.js';
 import { vueMoment, noter, continuer, faisais } from '../aides/emotion.js';
 import { stabiliser, verserControle, ciblesPetites, rondsAccent, accentHorsDeSaPlace, liensSurSurface2 } from '../aides/controle.js';
+import { installerParole } from '../aides/lecteur.js';
 
 // v12 · Le design simple façon Apple (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5).
 // Tâche 3 : les jetons, l'accent vert B et les choix. Un choix fait est un aplat d'accent, son texte et sa coche ✓ en
@@ -554,4 +555,39 @@ test('v12 (5/9) · le volume des sons de fond, comme sur iOS : la part remplie d
   expect(regles.piste).toContain('var(--accent) var(--rempli)');
   expect(regles.piste).toContain('var(--contour) var(--rempli)');
   expect(regles.bouton).toBe('rgb(255, 255, 255)');
+});
+
+// Spec §5.2 : les étiquettes du noting, transparentes, ont le contour d'un bouton non rempli (--contour, 3:1 au moins sur le
+// fond), comme « Précédent » et « Suivant » à côté. Relecture de la tâche 5 : en --line, un filet, elles se voyaient à peine
+// (1,53:1 en clair, 1,79:1 en sombre). Une bordure, pas un box-shadow : le halo du toucher anime déjà box-shadow.
+test('v12 (5/9) · les étiquettes du noting ont le contour d\'un bouton non rempli, en --contour, à 3:1 au moins sur le fond du parcours, en clair et en sombre', async ({ page }) => {
+  await installerParole(page);
+  await page.reload();
+  await aller(page, '#/exercice/noting');
+  const vue = page.getByRole('dialog', { name: 'Noter ce qui passe' });
+  await vue.getByRole('button', { name: 'Commencer', exact: true }).click();
+  const etiquettes = vue.locator('.etiquettes-noting .etiquette-noting');
+  // Jusqu'aux étiquettes : les étapes avancent aussi seules, le lecteur y est peut-être déjà.
+  for (let i = 0; i < 4 && await etiquettes.count() === 0; i += 1) await vue.getByRole('button', { name: 'Suivant', exact: true }).click();
+  await expect(etiquettes).toHaveCount(4);
+  for (const [schema, t] of THEMES) {
+    await page.emulateMedia({ colorScheme: schema });
+    const m = await vue.evaluate((v) => ({
+      fond: getComputedStyle(v).backgroundColor,
+      voisins: [...v.querySelectorAll('.actions-lecteur .btn')].map((b) => getComputedStyle(b).boxShadow),
+      etiquettes: [...v.querySelectorAll('.etiquette-noting')].map((b) => {
+        const s = getComputedStyle(b);
+        return { nom: b.textContent.trim(), bord: [s.borderTopColor, s.borderTopWidth, s.borderTopStyle], fond: s.backgroundColor };
+      }),
+    }));
+    expect(m.fond, schema).toBe(rgb(t.bg));
+    expect(m.etiquettes.map((e) => e.nom), schema).toEqual(['Pensée', 'Corps', 'Son', 'Émotion']);
+    for (const e of m.etiquettes) {
+      expect([...e.bord, e.fond], `${schema} · ${e.nom}`).toEqual([rgb(t.contour), '1px', 'solid', TRANSPARENT]);
+      expect(contraste(e.bord[0], m.fond), `${schema} · ${e.nom} : son contour sur le fond`).toBeGreaterThanOrEqual(3);
+    }
+    // « Précédent » et « Suivant », à côté : le même contour.
+    expect(m.voisins.length, schema).toBeGreaterThan(0);
+    for (const c of m.voisins) expect(c, schema).toBe(contourDe(t));
+  }
 });

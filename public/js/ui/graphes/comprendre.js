@@ -3,7 +3,8 @@
 // données ». Un graphique d'émotions prend les couleurs de ses familles (v7), et rien d'autre ; tous les autres sont à
 // l'encre (v12, spec §5.5 : la couleur ne dit qu'une émotion, et l'accent n'entre jamais dans un graphique). Chacun a une
 // phrase d'accessibilité fixe, qui dit ce qui est montré et sur quelle période, sans valeur ; « Voir en tableau », qui
-// donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des causes. ». Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
+// donne les valeurs ; et le pied « Ce sont tes notes, rassemblées : pas des causes. ».
+// Jamais de pourcentage. Une valeur absente (n = 0) ne dessine rien et n'a pas de ligne dans le tableau.
 // v8 : Mes nuits (Q15), nuit par nuit sur 4 semaines ; Émotions selon ce que je faisais (Q18) ; l'énergie haute et
 // l'hyperfocus dans « Avant mes jours à énergie basse » (Q17). « Tes nuits selon le jour » est retiré le 26/10 : Mes nuits
 // le remplace.

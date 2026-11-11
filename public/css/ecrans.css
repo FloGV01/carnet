@@ -1289,10 +1289,12 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .lecteur-reste { min-height: 1.4em; font-size: var(--t-sous); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
 /* Le noting (v10, spec §6) : quatre étiquettes de 60 au moins, en 2 × 2 ; quand la moitié de la largeur fait moins de 4,2 rem
    (très grand texte, plus de 40 px), l'une sous l'autre, le mot entier. Touchée, l'une brille 600 ms : son fond change et, sauf
-   avec « Réduire les animations », un halo s'étend et s'efface. Rien d'autre ne bouge. */
+   avec « Réduire les animations », un halo s'étend et s'efface. Rien d'autre ne bouge. Transparentes, elles ont le contour d'un
+   bouton non rempli (v12, spec §5.2 : --contour, 3:1 sur le fond ; --line, un filet, ne s'y voyait pas), en bordure et non en
+   box-shadow, que le halo anime déjà. */
 .etiquettes-noting { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(calc(50% - 5px), 4.2rem), 1fr)); gap: 10px; }
 .etiquette-noting {
-  min-width: 0; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-moyen); background: var(--fond-choix);
+  min-width: 0; min-height: 60px; padding: 8px; border: 1px solid var(--contour); border-radius: var(--r-moyen); background: var(--fond-choix);
   color: var(--text); font: 600 var(--t-corps)/1.25 var(--police); overflow-wrap: anywhere;
 }
 .etiquette-noting.brille { background: var(--c-tint-2, var(--surface-2)); }
