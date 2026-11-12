@@ -771,6 +771,39 @@ test('Diagnostic, « Ouvrir un morceau » : les deux formes du premier morceau g
   for (const a of await liens.all()) expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(44);
   await expect(section()).toContainText('Le premier morceau de Mes refuges. À noter : où ça s\'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient.');
   await expect(section()).not.toContainText('Aucun morceau');
+  // Relecture de la tâche 7 : la note passe par pourAffichage, comme celle du son de fond. toContainText ramène l'espace
+  // insécable à une espace simple : on lit le texte affiché. En grand texte (23 px, celui de v7-controle), puis 33 et 53 px,
+  // aucune ligne des deux notes ne commence par une ponctuation haute ; avant, à 23 px, une ligne commençait par « : où ça ».
+  expect(await section().locator('p.discret').textContent()).toContain('À noter : où ça s\'ouvre');
+  const debutsFautifs = {};
+  for (const taille of [23, 33, 53]) {
+    await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
+    const notes = await page.locator('main.diag p.discret').evaluateAll((l) => l.map((p) => {
+      const lignes = [];
+      const plage = document.createRange();
+      const marche = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+      let haut = null;
+      for (let n = marche.nextNode(); n; n = marche.nextNode()) {
+        for (let i = 0; i < n.length; i += 1) {
+          // Une espace sécable : là où la ligne peut changer. Elle compte dans le texte de la ligne, pas dans sa mesure.
+          if (/[^\S ]/.test(n.data[i])) { if (lignes.length) lignes[lignes.length - 1] += ' '; continue; }
+          plage.setStart(n, i);
+          plage.setEnd(n, i + 1);
+          const q = plage.getClientRects()[0];
+          if (!q || q.width === 0) continue;
+          if (haut === null || q.top > haut + 2) { lignes.push(''); haut = q.top; }
+          lignes[lignes.length - 1] += n.data[i];
+        }
+      }
+      return lignes.map((x) => x.trim());
+    }));
+    expect(notes, `${taille} px : les deux notes, le son de fond et le morceau`).toHaveLength(2);
+    for (const lignes of notes) expect(lignes.length, `${taille} px : ${lignes[0]}`).toBeGreaterThan(2);
+    const fautes = notes.flatMap((lignes) => lignes.filter((x, k) => k > 0 && /^[:;?!»·]/.test(x)));
+    if (fautes.length) debutsFautifs[`${taille} px`] = fautes;
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect(debutsFautifs).toEqual({});
   // Les deux touchers : le rapport nomme chaque forme, et rien d'autre, ni titre, ni artiste, ni identifiant, ni lien.
   const formes = section().locator('a.btn');
   for (const i of [0, 1]) {

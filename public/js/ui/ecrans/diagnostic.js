@@ -9,7 +9,8 @@
 // v12 (spec v12 §6.2) : « Ouvrir un morceau » remplace « Ouvrir une playlist », dont l'essai est fait (seul le lien direct
 // vers l'app ouvrait Spotify, c'est celui de la v12). Deux liens sur le premier morceau gardé dans Mes refuges, le morceau
 // seul et le morceau dans sa playlist (formesDuMorceau), pour noter ce qui joue après lui. Le rapport ne note que le nom de
-// la forme touchée, jamais un titre ni un identifiant. Sans morceau, la rubrique le dit, sans lien.
+// la forme touchée, jamais un titre ni un identifiant. Sans morceau, la rubrique le dit, sans lien. Sa note passe par
+// pourAffichage, comme celle du son de fond : en grand texte, « : » ne commence jamais une ligne (relecture de la tâche 7).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { suspendreSon } from '../composants/signal-sonore.js';
@@ -238,7 +239,7 @@ export function Diagnostic() {
       ${essai && html`<div class="actions">
         ${formesDuMorceau(essai.morceau, essai.playlist).map((f) => html`<a class="btn" href=${f.href} rel="noreferrer"
           onClick=${() => noter('Ouvrir un morceau', f.nom)}>${f.nom}</a>`)}
-        <p class="discret">Le premier morceau de Mes refuges. À noter : où ça s'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient.</p>
+        <p class="discret">${pourAffichage('Le premier morceau de Mes refuges. À noter : où ça s\'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient.')}</p>
       </div>`}
     </section>
     <section class="section">
