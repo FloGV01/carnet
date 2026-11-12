@@ -92,64 +92,12 @@ test('aucun module de l\'app n\'est oublié dans un coin : chacun est atteint pa
 });
 
 // v12 (relecture de la tâche 1) : choisirSpotify et formesDuMorceau remplacent basculerSpotify, choisieDeSpotify et
-// formesDuLien, avec PLAYLIST_SPOTIFY, qui ne sert qu'à formesDuLien. Les anciennes restent tant que les écrans de la v11
-// s'en servent (ui/ecrans/diagnostic.js). Leurs tests les importent encore, et le contrôle des modules ne voit pas un export
-// que plus rien n'appelle : ce contrôle échoue dès que leur dernier usage dans l'app part (tâche 7 du plan v12), pour
-// qu'elles partent avec lui, leurs tests aussi. v12 (6/9) : basculerSpotify et choisieDeSpotify sont parties avec l'écran
-// de la v11, et ne reviennent pas.
-const REMPLACEES_V12 = ['formesDuLien', 'PLAYLIST_SPOTIFY'];
-const PARTIES_V12 = ['basculerSpotify', 'choisieDeSpotify'];
-// La définition d'un nom au premier niveau d'un module : une fonction jusqu'à son « } » en début de ligne, ou une constante
-// écrite sur une ligne.
-const definition = (nom) => new RegExp(`^(?:export )?(?:function ${echapper(nom)}\\b[\\s\\S]*?^\\}$|const ${echapper(nom)}\\b[^\\n]*$)`, 'm');
-const cite = (code, nom) => new RegExp(`(^|[^\\w$])${echapper(nom)}($|[^\\w$])`).test(code);
-// Un nom importé sans être appelé ne sert pas : les instructions `import { … } from '…'` ne comptent pas.
-const sansImports = (code) => code.replace(/\bimport\s*\{[^}]*\}\s*from\s*['"][^'"]+['"]\s*;?/g, ' ');
-// Les noms encore définis dans `fichier` que plus rien n'utilise : ni le reste de l'app (le module lui-même compris, hors de
-// ces définitions), ni la définition d'un autre nom de la liste qui sert encore. Un nom déjà retiré n'est pas relevé.
-function sansUsage(modules, fichier, noms) {
-  let reste = modules.get(fichier);
-  const defs = new Map();
-  for (const nom of noms) {
-    const m = reste.match(definition(nom));
-    if (m) { defs.set(nom, m[0]); reste = reste.replace(m[0], ''); }
-  }
-  const app = [...modules].map(([f, code]) => sansImports(f === fichier ? reste : code)).join('\n');
-  const servent = new Set();
-  for (let ajout = true; ajout;) {
-    ajout = false;
-    for (const nom of defs.keys()) {
-      if (servent.has(nom) || !(cite(app, nom) || [...servent].some((s) => cite(defs.get(s), nom)))) continue;
-      servent.add(nom);
-      ajout = true;
-    }
-  }
-  return [...defs.keys()].filter((nom) => !servent.has(nom));
-}
+// formesDuLien, avec PLAYLIST_SPOTIFY, qui ne servait qu'à formesDuLien. v12 (6/9) : basculerSpotify et choisieDeSpotify sont
+// parties avec l'écran de la v11 ; v12 (7/9) : formesDuLien et PLAYLIST_SPOTIFY avec le Diagnostic de la v11, leurs tests
+// aussi. Aucune ne revient.
+const PARTIES_V12 = ['basculerSpotify', 'choisieDeSpotify', 'formesDuLien', 'PLAYLIST_SPOTIFY'];
 
-test('les fonctions remplacées en v12 ne restent pas sans usage : tant que domain/refuges.js les garde, l\'app s\'en sert', () => {
-  assert.deepEqual(sansUsage(MODULES, join(PUBLIC, 'js', 'domain', 'refuges.js'), REMPLACEES_V12), [],
-    'plus rien ne s\'en sert dans l\'app : les retirer de domain/refuges.js, avec leurs tests (tests/unit/refuges.test.js)');
-});
-
-test('le contrôle des remplacées repère bien un nom sans usage, même appelé par une autre remplacée', () => {
-  const domaine = '/a/js/domain/d.js';
-  const source = 'export const aide = (x) => x;\nexport function ancienne(y) {\n  return aide(y);\n}\n'
-    + 'const MOTIF = /x/;\nexport function vieille(z) {\n  return MOTIF.test(z);\n}\nexport function nouvelle() {\n  return 1;\n}\n';
-  const noms = ['ancienne', 'aide', 'vieille', 'MOTIF', 'deja-retiree'];
-  const avec = (ecran) => new Map([[domaine, source], ['/a/js/ui/e.js', ecran]]);
-  // L'écran appelle `ancienne`, qui appelle `aide` : seules `vieille` et `MOTIF`, qui ne sert qu'à elle, sont sans usage.
-  assert.deepEqual(sansUsage(avec('import { ancienne, nouvelle } from \'../domain/d.js\'; ancienne(nouvelle());'), domaine, noms), ['vieille', 'MOTIF']);
-  // Plus rien ne les appelle : toutes, sauf le nom déjà retiré du module.
-  assert.deepEqual(sansUsage(avec('import { nouvelle } from \'../domain/d.js\'; nouvelle();'), domaine, noms), ['ancienne', 'aide', 'vieille', 'MOTIF']);
-  // Un nom seulement importé, ou qui en contient un autre (`aideMoi`), n'est pas un usage.
-  assert.deepEqual(sansUsage(avec('import { ancienne, vieille } from \'../domain/d.js\'; const aideMoi = 1; vieille(aideMoi);'), domaine, noms), ['ancienne', 'aide']);
-  // Les définitions qui restent sont bien trouvées dans domain/refuges.js : sinon le contrôle ne relèverait jamais rien.
-  const refuges = join(PUBLIC, 'js', 'domain', 'refuges.js');
-  for (const nom of REMPLACEES_V12) assert.match(MODULES.get(refuges), definition(nom), nom);
-});
-
-test('v12 (6/9) : basculerSpotify et choisieDeSpotify sont parties de l\'app, et n\'y reviennent pas', () => {
+test('v12 (6/9, 7/9) : basculerSpotify, choisieDeSpotify, formesDuLien et PLAYLIST_SPOTIFY sont parties de l\'app, et n\'y reviennent pas', () => {
   for (const nom of PARTIES_V12) assert.equal(present(nom), false, nom);
 });
 

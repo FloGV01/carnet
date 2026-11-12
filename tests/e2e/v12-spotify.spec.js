@@ -470,9 +470,12 @@ test.describe('avec Spotify simulé', () => {
     await expect(lignes(ecran(page))).toHaveAccessibleName('Pour marcher Spotify');
     expect(await hrefs(liensMorceaux(page))).toEqual(gardes(1, 62).map((m) => `spotify:track:${m.id}`));
     await expect(page.locator('img')).toHaveCount(0);
-    // Moment difficile aussi, sans requête.
+    // Moment difficile aussi, sans requête : la carte, puis, après Mon plan, les mêmes morceaux (v12, 7/9).
     const v = await ouvrirMoment(page);
     expect(await hrefs(lignes(v))).toEqual([`spotify:playlist:${id('sp2')}`]);
+    const liste = v.getByRole('list', { name: 'Morceaux de Pour marcher', exact: true });
+    await expect(liste.getByRole('link')).toHaveCount(62);
+    expect(await hrefs(liste.getByRole('link'))).toEqual(gardes(1, 62).map((m) => `spotify:track:${m.id}`));
     expect(demandes.toutes.length, 'aucune requête après le choix').toBe(avant);
 
     // Aucun jeton : ni dans le localStorage, ni dans la méta, ni dans la sauvegarde ; la demande est partie. Les morceaux, eux,

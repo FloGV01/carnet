@@ -749,8 +749,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .refuges-vide > .btn-lien { align-self: flex-start; }
 /* « Coller le code de Spotify », tant qu'une demande attend son retour : un lien seul sous l'en-tête, ou dans la carte vide. */
 .refuges > .coller-code { align-self: flex-start; margin: -8px 0; padding: 0 4px; }
-.titres-refuges { display: flex; flex-direction: column; gap: 6px; }
-.titres-refuges > .libelle-section { padding: 4px 4px 0; }
+/* « Mes titres », et les morceaux de Moment difficile (v12, spec v12 §6.6) : un titre de section, puis la carte. Le nom d'une
+   playlist sans espace passe à la ligne, comme « La suite est dans Spotify. ». */
+.titres-refuges, .morceaux-moment { display: flex; flex-direction: column; gap: 6px; }
+.titres-refuges > .libelle-section, .morceaux-moment > .libelle-section { padding: 4px 4px 0; overflow-wrap: anywhere; }
+.morceaux-moment > .note-refuges { padding: 0 4px; overflow-wrap: anywhere; }
 /* Les morceaux (v12) : une rangée par morceau, de 56 au moins, le titre en 16 puis l'artiste en 15, en --text-2 ; ni icône
    ni chevron. Les filets de 0,5 commencent au texte, comme les listes d'iOS. Un titre sans espace passe à la ligne. */
 .liste-morceaux > li + li { border-top: 0; position: relative; }

@@ -11,7 +11,10 @@ import { installerPartageFactice, fichiersPartages } from '../aides/partage-stub
 // sauvegarde avec Mon plan. Une carte et un morceau posent le lien direct vers l'app (spotify:playlist:<ID>,
 // spotify:track:<ID>, music://…), fabriqué à l'affichage : les données gardent le lien noté. Aucun lien n'est suivi (les tests
 // lisent `href`, et la garde refuse toute requête vers un autre hôte). Les playlists s'écoutent aussi dans Moment difficile,
-// sous « Une chose à la fois », et les titres sont avec le reste de Mon plan. Le Diagnostic essaie trois formes du lien.
+// sous « Une chose à la fois », et les titres sont avec le reste de Mon plan. v12 (7/9, spec v12 §6.6) : les morceaux gardés
+// y viennent après Mon plan, sous le nom de leur playlist, sans requête ni « Mettre à jour la liste ». Le Diagnostic essaie
+// deux formes du premier morceau gardé (spec v12 §6.2) ; le rapport ne note que celle touchée. Les morceaux vont dans la
+// sauvegarde, jamais dans l'Export PSY ni dans la vue soignants (spec v12 §6.5).
 // Point de vigilance 4 : une méta abîmée ou écrite à la main n'affiche que du texte et des liens des trois schémas permis ; en
 // très grand texte, un titre de morceau de 70 signes sans espace ne fait rien déborder de côté.
 // Le dépôt est public : données inventées, sans prénom, identifiants factices de 22 signes.
@@ -415,6 +418,10 @@ test('point de vigilance 4 : une méta abîmée ou écrite à la main ; aucune e
   await expect(nom(page, 4)).toHaveCount(0);
   const v = await ouvrirMoment(page);
   await verifierLignes(v, [{ href: DIRECT_PL, nom: 'Bonne Spotify' }, { href: 'spotify:playlist:p', nom: PIEGE }]);
+  // v12 (7/9) : les mêmes morceaux après Mon plan, sous le nom de la suivie ; le titre piégé y est du texte.
+  await expect(v.getByRole('region', { name: 'Bonne', exact: true }).getByRole('heading', { level: 2 })).toHaveText('Bonne');
+  await verifierMorceaux(v, 'Bonne', [{ id: id('mo1'), titre: PIEGE, artiste: PIEGE }, morceau(3)]);
+  await expect(listeMorceaux(v)).toHaveCount(1);
   // Le second : le titre piégé, dans Mon plan de Moment difficile, en texte ; aucune ligne d'écoute.
   await ecrireMeta(page, 'refuges', abimees[1]);
   const w = await ouvrirMoment(page);
@@ -425,9 +432,10 @@ test('point de vigilance 4 : une méta abîmée ou écrite à la main ; aucune e
 });
 
 // Point de vigilance 4 (v12) : un titre et un artiste de 70 signes sans espace, une playlist au nom aussi long, en texte par
-// défaut puis en très grand texte (33 à 53) : tout passe à la ligne, rien ne sort de sa rangée ni de l'écran de côté.
-test('point de vigilance 4 : un titre de morceau de 70 signes sans espace, en texte par défaut et en très grand texte, passe à la ligne ; rien ne déborde de côté', async ({ page }) => {
-  test.setTimeout(60000);
+// défaut puis en très grand texte (33 à 53) : tout passe à la ligne, rien ne sort de sa rangée ni de l'écran de côté. v12
+// (7/9) : de même dans Moment difficile, où le nom de la playlist titre ses morceaux.
+test('point de vigilance 4 : un titre de morceau de 70 signes sans espace, en texte par défaut et en très grand texte, passe à la ligne ; rien ne déborde de côté, dans Mes refuges ni dans Moment difficile', async ({ page }) => {
+  test.setTimeout(90000);
   const long = 'x7'.repeat(35);
   expect(long).toHaveLength(70);
   const refuges = { titres: `${long}\nPluie lente`, playlists: [{ nom: long, lien: LIEN_PL, source: 'spotify', morceaux: [{ id: id('mo9'), titre: long, artiste: long }, ...morceaux(3)], suite: true }] };
@@ -451,6 +459,24 @@ test('point de vigilance 4 : un titre de morceau de 70 signes sans espace, en te
       return { page: document.documentElement.scrollWidth, dehors };
     });
     if (mesure.page !== 390 || mesure.dehors.length) fautes[taille || 'défaut'] = mesure;
+    // Moment difficile : ses morceaux, leur titre et leur note restent dans l'écran, et chaque texte dans sa rangée.
+    const v = await ouvrirMoment(page);
+    await expect(listeMorceaux(v).getByRole('link')).toHaveCount(4);
+    const moment = await v.evaluate((d) => {
+      const dehors = [];
+      const section = d.querySelector('.morceaux-moment');
+      for (const e of [section, ...section.querySelectorAll('*')]) {
+        const r = e.getBoundingClientRect();
+        if (r.width > 0 && (r.left < -0.5 || r.right > window.innerWidth + 0.5)) dehors.push(`${e.tagName.toLowerCase()}.${e.className}`);
+        const rangee = e.closest('.ligne-morceau');
+        if (rangee && rangee !== e && r.width > 0) {
+          const b = rangee.getBoundingClientRect();
+          if (r.left < b.left - 0.5 || r.right > b.right + 0.5) dehors.push(`hors de sa rangée : ${e.tagName.toLowerCase()}.${e.className}`);
+        }
+      }
+      return { titre: section.querySelector('h2').textContent.length, dehors };
+    });
+    if (moment.titre !== 70 || moment.dehors.length) fautes[`Moment difficile, ${taille || 'défaut'}`] = moment;
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});
@@ -492,6 +518,55 @@ test('Moment difficile : les quatre boutons en tête et à l\'écran ; une ligne
   await expect(feuille).not.toContainText('Mes titres');
   await expect(feuille).not.toContainText('Pluie lente');
   await expect(feuille.getByRole('link')).toHaveCount(0);
+});
+
+// v12 (7/9, spec v12 §6.6) : les morceaux gardés de la playlist suivie, la même liste que dans Mes refuges, viennent après Mon
+// plan, sous le nom de leur playlist : plus haut, ils repousseraient Mon plan de plusieurs écrans. La carte de la playlist
+// reste à sa place, en lien direct. Rien n'est lu que la base : aucune requête, et rien pour relire la liste chez Spotify.
+test('Moment difficile : les morceaux de la playlist suivie après Mon plan, sous son nom, chacun spotify:track:<ID>, « La suite est dans Spotify. » au-delà du plafond ; la carte à sa place, en lien direct ; aucune requête, rien pour mettre à jour la liste', async ({ page }) => {
+  const demandes = [];
+  page.on('request', (r) => demandes.push(r.url()));
+  await ecrireMeta(page, 'monPlan', PLAN);
+  await ecrireMeta(page, 'refuges', { titres: 'Pluie lente', playlists: [
+    { nom: null, lien: MUSIQUE, source: null },
+    { nom: 'Détente', lien: `${LIEN_PL}?si=1`, source: 'spotify', morceaux: morceaux(12), suite: true },
+  ] });
+  let v = await ouvrirMoment(page);
+  const ordre = () => v.evaluate((d) => [...d.querySelector('.etape').children].map((e) => e.className));
+  await expect.poll(ordre).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'lignes-playlists',
+    'carte plan-moment', 'morceaux-moment']);
+  // La carte de la suivie en tête, puis l'autre, chacune en lien direct ; les titres dans Mon plan.
+  await verifierLignes(v, [{ href: DIRECT_PL, nom: 'Détente Spotify' }, { href: DIRECT_MUSIQUE, nom: 'Playlist 1' }]);
+  await expect(v.getByRole('region', { name: 'Mon plan' }).locator('.rubrique-plan').last().locator('p')).toHaveText('Pluie lente');
+  // Les morceaux : une section au nom de la playlist, la liste de Mes refuges, puis la suite, sans aucun nombre.
+  const section = v.getByRole('region', { name: 'Détente', exact: true });
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText('Détente');
+  const liste = await verifierMorceaux(section, 'Détente', morceaux(12));
+  for (const a of await liste.getByRole('link').all()) expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(liste.locator('svg, img')).toHaveCount(0);
+  await expect(section.locator('p')).toHaveText(['La suite est dans Spotify.']);
+  // Sous Mon plan, à l'écran comme dans l'ordre.
+  const [plan, morceauxEnTete] = await Promise.all([v.locator('.plan-moment').boundingBox(), section.boundingBox()]);
+  expect(morceauxEnTete.y).toBeGreaterThanOrEqual(plan.y + plan.height);
+  // Rien pour relire la liste chez Spotify, ni pour choisir une playlist ; aucune requête hors de l'app.
+  await expect(v.getByRole('button', { name: /Mettre à jour|Changer de playlist|Choisir dans mon compte/ })).toHaveCount(0);
+  await expect(v).not.toContainText('Mettre à jour la liste');
+  await expect(v).not.toContainText('Un toucher ouvre Spotify.');
+  // Les données ne changent pas : le lien noté reste le lien web.
+  expect((await lireMeta(page, 'refuges')).playlists[1].lien).toBe(`${LIEN_PL}?si=1`);
+
+  // Sans nom, la suivie s'appelle par sa place ; sous le plafond, pas de suite.
+  await ecrireMeta(page, 'refuges', { playlists: [{ nom: 'Pour dormir' }, { nom: null, lien: LIEN_PL, source: null, morceaux: morceaux(3) }] });
+  v = await ouvrirMoment(page);
+  const sansNom = v.getByRole('region', { name: 'Playlist 2', exact: true });
+  await verifierMorceaux(sansNom, 'Playlist 2', morceaux(3));
+  await expect(sansNom.locator('p')).toHaveCount(0);
+  // Une playlist pas encore lue : sa carte seule, sans section.
+  await ecrireMeta(page, 'refuges', { playlists: [{ nom: 'Détente', lien: LIEN_PL, source: null }] });
+  v = await ouvrirMoment(page);
+  await expect.poll(ordre).toEqual(['exercices-courts', 'carte carte-respiration', 'carte ligne-carte une-chose-acces', 'lignes-playlists', 'carte plan-moment']);
+  await expect(listeMorceaux(v)).toHaveCount(0);
+  expect(demandes.filter((u) => !/^(blob|data):/.test(u) && new URL(u).hostname !== '127.0.0.1')).toEqual([]);
 });
 
 // Relecture finale : un titre sans espace (un lien collé dans « Mes titres », 70 signes) ne passait pas à la ligne : il
@@ -669,22 +744,100 @@ test('la sauvegarde : Mes refuges part et revient avec Mon plan, ses morceaux co
   await expect(page.getByText(/refuges/)).toHaveCount(0);
 });
 
-test('Diagnostic, « Ouvrir une playlist » : les trois formes du lien de la première playlist qui en a un, jamais suivies ; le rapport sans lien ; sans playlist, une phrase', async ({ page }) => {
-  const section = () => page.locator('section', { has: page.getByRole('heading', { name: 'Ouvrir une playlist' }) });
-  await aller(page, '#/diagnostic');
-  await expect(section()).toContainText('Note d\'abord une playlist dans Mes refuges.');
-  await expect(section().getByRole('link')).toHaveCount(0);
-  // Une playlist sans lien d'abord : c'est la suivante qui sert.
-  await ecrireMeta(page, 'refuges', { playlists: [{ nom: 'Sans lien' }, { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc?si=1' }] });
+// v12 (7/9, spec v12 §6.2) : « Ouvrir un morceau », les deux formes du premier morceau gardé, le morceau seul et le morceau
+// dans sa playlist. Aucune n'est suivie : le test lit `href`. Pour les toucher, il retire d'abord leur `href` : ce ne sont plus
+// des liens spotify:, et le toucher n'atteint que ce qui note la forme dans le rapport, qui n'en garde que le nom.
+test('Diagnostic, « Ouvrir un morceau » : les deux formes du premier morceau gardé, jamais suivies ; le rapport ne note que la forme touchée, sans titre ni identifiant ; sans morceau, une phrase sans lien', async ({ page }) => {
+  const section = () => page.locator('main.diag section', { has: page.getByRole('heading', { name: 'Ouvrir un morceau', exact: true }) });
+  const rapport = () => page.locator('main.diag pre').textContent();
+  // Sans refuges, puis avec des playlists sans morceaux : une phrase, aucun lien.
+  for (const refuges of [null, { playlists: [{ nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify' }, { nom: 'Pour marcher', lien: MUSIQUE }] }]) {
+    await ecrireMeta(page, 'refuges', refuges);
+    await aller(page, '#/reglages');
+    await aller(page, '#/diagnostic');
+    await expect(section().locator('p')).toHaveText(['Aucun morceau noté dans Mes refuges.']);
+    await expect(section().locator('a')).toHaveCount(0);
+  }
+  await expect(page.getByRole('heading', { name: 'Ouvrir une playlist' })).toHaveCount(0);
+  // La suivie est la deuxième ligne : son premier morceau.
+  const gardes = morceaux(3);
+  await ecrireMeta(page, 'refuges', { playlists: [{ nom: 'Pour marcher', lien: MUSIQUE }, { nom: 'Détente', lien: `${LIEN_PL}?si=1`, source: 'spotify', morceaux: gardes }] });
   await aller(page, '#/reglages');
   await aller(page, '#/diagnostic');
   const liens = section().getByRole('link');
-  await expect(liens).toHaveText(['Lien web', 'Lien web, nouvelle fenêtre', 'Lien direct vers l\'app']);
-  expect(await hrefs(liens)).toEqual(['https://open.spotify.com/playlist/abc', 'https://open.spotify.com/playlist/abc', 'spotify:playlist:abc']);
-  expect(await liens.evaluateAll((l) => l.map((a) => [a.getAttribute('target'), a.getAttribute('rel')]))).toEqual([
-    [null, 'noreferrer'], ['_blank', 'noopener noreferrer'], [null, 'noreferrer']]);
-  await expect(section()).toContainText('À noter : où ça s\'ouvre, où on revient.');
-  await expect(section()).not.toContainText('Note d\'abord');
-  const rapport = await page.locator('main.diag pre').textContent();
-  expect(rapport).not.toMatch(/spotify|playlist|https:/i);
+  await expect(liens).toHaveText(['Morceau seul', 'Morceau dans sa playlist']);
+  expect(await hrefs(liens)).toEqual([`spotify:track:${gardes[0].id}`, `spotify:track:${gardes[0].id}?context=spotify%3Aplaylist%3A${PL}`]);
+  expect(await liens.evaluateAll((l) => l.map((a) => [a.getAttribute('target'), a.getAttribute('rel')]))).toEqual([[null, 'noreferrer'], [null, 'noreferrer']]);
+  for (const a of await liens.all()) expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(section()).toContainText('Le premier morceau de Mes refuges. À noter : où ça s\'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient.');
+  await expect(section()).not.toContainText('Aucun morceau');
+  // Les deux touchers : le rapport nomme chaque forme, et rien d'autre, ni titre, ni artiste, ni identifiant, ni lien.
+  const formes = section().locator('a.btn');
+  for (const i of [0, 1]) {
+    await formes.nth(i).evaluate((a) => a.removeAttribute('href'));
+    await formes.nth(i).click();
+  }
+  await expect.poll(rapport).toContain('Ouvrir un morceau : Morceau seul\nOuvrir un morceau : Morceau dans sa playlist');
+  const texte = await rapport();
+  for (const x of [gardes[0].titre, gardes[0].artiste, gardes[0].id, PL, 'Détente', 'Pour marcher']) expect(texte).not.toContain(x);
+  expect(texte).not.toMatch(/spotify|https:|music:/i);
+  expect(await adresse(page)).toBe('#/diagnostic');
+});
+
+// v12 (7/9, spec v12 §6.5) : les morceaux partent dans la sauvegarde, jamais dans l'Export PSY ni dans la vue soignants, qui ne
+// lisent pas la méta. Leur texte et la page dessinée des soignants sont les mêmes avec et sans eux ; ce que la page écrit est
+// relevé au dessin (fillText), puisque le PDF n'en garde que l'image.
+test('un export qui contient des morceaux : ils sont dans la sauvegarde, jamais dans l\'Export PSY ni dans la vue soignants', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.addInitScript(() => {
+    window.__dessines = [];
+    const ecrire = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function fillText(texte, ...reste) {
+      window.__dessines.push(String(texte));
+      return ecrire.call(this, texte, ...reste);
+    };
+  });
+  await page.reload();
+  await appPrete(page);
+  await page.evaluate(async () => {
+    const r = window.__carnet.repo;
+    await r.journal.patch('2026-10-14', { lieu: 'lieu:bureau' });
+    await r.humeurs.creer({ date: '2026-10-14', heure: '12:00', emotion: 'roue:colere:irrite', energie: 'energie:basse' });
+    await r.humeurs.creer({ date: '2026-10-13', heure: '16:00', emotion: 'roue:serenite:calme', energie: null });
+  });
+  const liste = [{ id: id('va1'), titre: 'Valse des Saules', artiste: 'Orchestre du Lac' }, { id: id('br2'), titre: 'Brise sur la dune', artiste: null }];
+  const refuges = { titres: null, playlists: [{ nom: 'Escale du soir', lien: LIEN_PL, source: 'spotify', morceaux: liste, suite: true }] };
+  const traces = ['Valse des Saules', 'Orchestre du Lac', 'Brise sur la dune', 'Escale du soir', id('va1'), id('br2'), PL];
+  await ecrireMeta(page, 'refuges', refuges);
+  // La sauvegarde les emporte.
+  await aller(page, '#/reglages');
+  await page.getByRole('button', { name: 'Exporter', exact: true }).click();
+  await expect(page.getByText('Sauvegarde faite.')).toBeVisible();
+  const [f] = await fichiersPartages(page);
+  expect(JSON.parse(Buffer.from(f.octets).toString('utf8')).data.meta.find((m) => m.cle === 'refuges').valeur).toEqual(refuges);
+  // L'Export PSY et la page des soignants, avec les morceaux, puis sans.
+  const lire = async () => {
+    await aller(page, '#/reglages');
+    await aller(page, '#/export-psy');
+    const apercu = page.getByLabel('Aperçu du texte');
+    await expect(apercu).toContainText('irrité');
+    const psy = await apercu.textContent();
+    await aller(page, '#/reglages');
+    await page.evaluate(() => { window.__dessines = []; });
+    await aller(page, '#/soignants');
+    await expect(page.getByRole('button', { name: 'Partager en PDF' })).toBeEnabled({ timeout: 20000 });
+    const dessines = await page.evaluate(() => window.__dessines.slice());
+    const ecran = await page.locator('main').textContent();
+    return { psy, dessines, ecran };
+  };
+  const avec = await lire();
+  expect(avec.dessines.length).toBeGreaterThan(5);
+  for (const x of traces) {
+    expect(avec.psy, x).not.toContain(x);
+    expect(avec.dessines.join('\n'), x).not.toContain(x);
+    expect(avec.ecran, x).not.toContain(x);
+  }
+  expect(`${avec.psy}\n${avec.dessines.join('\n')}`).not.toMatch(/spotify|morceau/i);
+  await ecrireMeta(page, 'refuges', null);
+  expect(await lire()).toEqual(avec);
 });

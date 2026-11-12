@@ -5,8 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAX_PLAYLISTS, NOM_MAX, lienAccepte, lienDeSpotify, normaliserRefuges, refugesVides, playlistsAOuvrir, nomPlaylist,
-  avecPlaylist, formesDuLien, listePlaylists, sansSpotify,
+  MAX_PLAYLISTS, NOM_MAX, lienAccepte, lienDeSpotify, normaliserRefuges, refugesVides, nomPlaylist,
+  avecPlaylist, listePlaylists, sansSpotify,
   MAX_MORCEAUX, PAGES_MORCEAUX_MAX, ID_SPOTIFY, lienAOuvrir, idPlaylistSpotify, listeMorceaux, choisirSpotify, playlistSuivie,
   formesDuMorceau, avecMorceaux,
 } from '../../public/js/domain/refuges.js';
@@ -150,19 +150,11 @@ test('normaliserRefuges : avec la source Spotify, un lien refusé fait perdre la
   }
 });
 
-test('refugesVides, playlistsAOuvrir et nomPlaylist', () => {
+test('refugesVides et nomPlaylist', () => {
   for (const x of [null, {}, { titres: '  ', playlists: [] }, { playlists: [{ nom: '', lien: 'ftp://x' }] }, 'texte']) assert.equal(refugesVides(x), true, JSON.stringify(x));
   assert.equal(refugesVides({ titres: 'Une chanson' }), false);
   assert.equal(refugesVides({ playlists: [{ nom: 'Sans lien' }] }), false);
   assert.equal(refugesVides({ playlists: [{ lien: 'spotify:playlist:abc' }] }), false);
-
-  const r = { playlists: [{ nom: 'Sans lien' }, { lien: 'spotify:playlist:abc' }, { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc?si=1', source: 'spotify' }] };
-  assert.deepEqual(playlistsAOuvrir(r), [
-    { nom: null, lien: 'spotify:playlist:abc', source: null },
-    { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc', source: 'spotify' },
-  ]);
-  assert.deepEqual(playlistsAOuvrir({ playlists: [{ lien: 'javascript:alert(1)' }] }), []);
-  assert.deepEqual(playlistsAOuvrir(null), []);
 
   assert.equal(nomPlaylist({ nom: 'Pour souffler' }, 0), 'Pour souffler');
   assert.equal(nomPlaylist({ nom: null, lien: 'spotify:playlist:abc' }, 0), 'Playlist 1');
@@ -221,30 +213,6 @@ test('avecPlaylist : une ligne vidée de son nom et de son lien disparaît, et l
   assert.deepEqual(avecPlaylist(r, 0, { nom: '   ' }).playlists.map((p) => p.nom), ['Deux', 'Trois']);
   assert.deepEqual(avecPlaylist(avecPlaylist(r, 1, { nom: null }), 1, { lien: '' }).playlists.map((p) => p.nom), ['Une', 'Trois']);
   assert.deepEqual(avecPlaylist({ playlists: [{ lien: 'spotify:playlist:d' }] }, 0, { lien: 'ftp://x' }), { titres: null, playlists: [] });
-});
-
-// Le Diagnostic essaie trois formes d'un même lien (spec §8.5). Aucune n'est suivie ici.
-test('formesDuLien : lien web, lien web dans une nouvelle fenêtre, et lien direct vers l\'app pour une playlist de Spotify ou de Musique', () => {
-  const WEB = (href) => [{ nom: 'Lien web', href, nouvelle: false }, { nom: 'Lien web, nouvelle fenêtre', href, nouvelle: true }];
-  const APP = (href) => ({ nom: 'Lien direct vers l\'app', href, nouvelle: false });
-  assert.deepEqual(formesDuLien('https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO?si=abc'), [
-    ...WEB('https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO'), APP('spotify:playlist:37i9dQZF1DX4sWSpwq3LiO')]);
-  assert.deepEqual(formesDuLien('https://open.spotify.com/intl-fr/playlist/abc'), [...WEB('https://open.spotify.com/intl-fr/playlist/abc'), APP('spotify:playlist:abc')]);
-  assert.deepEqual(formesDuLien('https://music.apple.com/fr/playlist/calme/pl.u-abc'), [
-    ...WEB('https://music.apple.com/fr/playlist/calme/pl.u-abc'), APP('music://music.apple.com/fr/playlist/calme/pl.u-abc')]);
-  // Ni une playlist de Spotify, ni Musique : le lien web seul.
-  for (const lien of ['https://open.spotify.com/album/abc', 'https://open.spotify.com/playlist/', 'https://open.spotify.com/playlist/abc/autre',
-    'https://open.spotify.com:8443/playlist/abc', 'https://x@open.spotify.com/playlist/abc', 'https://open.spotify.com.autre.test/playlist/abc',
-    'https://autre.test/playlist/abc', 'https://music.apple.com.autre.test/fr/playlist/x']) {
-    assert.deepEqual(formesDuLien(lien), WEB(lienAccepte(lien)), lien);
-  }
-  // Déjà un lien vers l'app : lui seul.
-  assert.deepEqual(formesDuLien('spotify:playlist:abc'), [APP('spotify:playlist:abc')]);
-  assert.deepEqual(formesDuLien('music://music.apple.com/fr/playlist/x'), [APP('music://music.apple.com/fr/playlist/x')]);
-  // Un lien refusé : aucune forme.
-  for (const x of ['javascript:alert(1)', 'http://open.spotify.com/playlist/abc', 'data:text/html,x', '', null, 12]) assert.deepEqual(formesDuLien(x), [], String(x));
-  // Chaque forme rendue est un lien que l'app accepte.
-  for (const f of formesDuLien('https://open.spotify.com/playlist/abc')) assert.equal(lienAccepte(f.href), f.href);
 });
 
 // ---------- Choisir dans son compte Spotify (v11, tâche 7, spec §8.3) ----------

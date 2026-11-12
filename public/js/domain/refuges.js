@@ -147,9 +147,6 @@ export function refugesVides(r) {
   return !n.titres && n.playlists.length === 0;
 }
 
-// Les playlists qu'un toucher peut ouvrir : celles qui ont un lien.
-export const playlistsAOuvrir = (r) => normaliserRefuges(r).playlists.filter((p) => p.lien);
-
 // Le nom affiché d'une playlist : le sien, sinon « Playlist 1 » (i : sa place dans la liste, à partir de 0).
 export const nomPlaylist = (p, i) => (p && textePropre(p.nom)) || `Playlist ${i + 1}`;
 
@@ -175,27 +172,6 @@ export function avecPlaylist(r, i, changement) {
   }
   const playlists = ancienne ? n.playlists.map((p, k) => (k === i ? ligne : p)) : [...n.playlists, ligne];
   return normaliserRefuges({ ...n, playlists });
-}
-
-// Les trois formes d'un lien que le Diagnostic essaie sur l'iPhone (spec §8.5) : le lien web, le même dans une nouvelle
-// fenêtre, et le lien direct vers l'app pour une playlist du lecteur public de Spotify (spotify:playlist:<id>) ou un lien de
-// Musique (music://…). Un lien qui va déjà vers l'app n'a que cette forme ; un lien refusé n'en a aucune. Rien n'est suivi ici.
-// v12 : remplacée par formesDuMorceau ; elle part, avec PLAYLIST_SPOTIFY et son test, avec le Diagnostic de la v11 qui s'en
-// sert encore (tâche 7 ; code-mort.test.js échoue quand plus rien ne l'appelle).
-const PLAYLIST_SPOTIFY = /^\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?playlist\/([A-Za-z0-9]+)\/?$/;
-export function formesDuLien(lien) {
-  const propre = lienAccepte(lien);
-  if (!propre) return [];
-  const directe = (href) => ({ nom: 'Lien direct vers l\'app', href, nouvelle: false });
-  const url = new URL(propre);
-  if (url.protocol !== 'https:') return [directe(propre)];
-  const formes = [{ nom: 'Lien web', href: propre, nouvelle: false }, { nom: 'Lien web, nouvelle fenêtre', href: propre, nouvelle: true }];
-  const nu = !url.port && !url.username && !url.password;
-  const id = nu && url.hostname === HOTE_SPOTIFY && (url.pathname.match(PLAYLIST_SPOTIFY) || [])[1];
-  const app = id ? `spotify:playlist:${id}`
-    : nu && url.hostname === HOTE_MUSIQUE ? lienAccepte(`music://${url.hostname}${url.pathname}${url.search}`) : null;
-  if (app) formes.push(directe(app));
-  return formes;
 }
 
 // v12 (spec v12 §6.2) : les deux formes d'un morceau que le Diagnostic essaie sur l'iPhone, le morceau seul et le morceau

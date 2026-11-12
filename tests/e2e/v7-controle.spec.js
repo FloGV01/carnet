@@ -43,7 +43,8 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // « Jour précédent » (corrigé : `.sous-jour`, ecrans.css). En très grand texte (33 à 53), Mes refuges, les roues et Mes
 // gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v12-spotify.spec.js), à cause de sa garde réseau.
 // v12 (6/9) : Mes refuges, une simple liste : vide, puis plein avec ses morceaux et « La suite est dans Spotify. » ; ses
-// réglages (la saisie de la v11) ; en très grand texte, un titre de morceau de 70 signes sans espace.
+// réglages (la saisie de la v11) ; en très grand texte, un titre de morceau de 70 signes sans espace. v12 (7/9) : Moment
+// difficile avec ses morceaux, après Mon plan ; le Diagnostic et « Ouvrir un morceau ».
 // v12 (5/9) : sur chaque écran du parcours, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6) : aucun rond sans texte ni
 // icône ne l'a pour fond ou pour contour, aucun graphique, écran de l'émotion ni « Réveil la nuit » n'en a de trace, et en clair,
 // aucun lien vert ne se pose sur --surface-2. Le parcours passe aussi par un jour de Mes jours touché, son détail ouvert.
@@ -325,18 +326,26 @@ const ECRANS_V11 = [
   }, 'main.refuges .titres-refuges'],
   ['Réglages de Mes refuges', (p) => p.locator('main.refuges').getByRole('link', { name: 'Modifier', exact: true }).click(),
     'main.refuges-reglages #refuges-nom-0'],
-  // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan.
-  ['Moment difficile, playlists et titres', async (p) => {
+  // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan. v12 (7/9) : ses
+  // morceaux après Mon plan, sous le nom de la playlist, et « La suite est dans Spotify. ».
+  ['Moment difficile, playlists, titres et morceaux', async (p) => {
     await remonter(p, '#/moment-difficile');
     await expect(p.locator('.plan-moment')).toContainText('Pluie lente');
-  }, '.moment-difficile a.lien-refuge'],
+    await expect(p.locator('.moment-difficile a.lien-refuge')).toHaveCount(2);
+    await expect(p.locator('.moment-difficile .morceaux-moment .ligne-morceau')).toHaveCount(MORCEAUX.length);
+    await expect(p.locator('.moment-difficile .morceaux-moment .note-refuges')).toHaveText('La suite est dans Spotify.');
+  }, '.moment-difficile .morceaux-moment .ligne-morceau'],
   // v11 (6/11) : Bien-être et ses cinq entrées, Mes refuges après le Programme.
   ['Bien-être, cinq entrées', async (p) => {
     await aller(p, '#/bien-etre');
     await expect(p.getByRole('list', { name: 'Entrées' }).getByRole('link')).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
   }, '.bien-etre .entrees .ligne-carte'],
-  // v11 (6/11) : le Diagnostic, « Ouvrir une playlist » et ses trois formes du lien, jamais suivies.
-  ['Diagnostic, Ouvrir une playlist', (p) => aller(p, '#/diagnostic'), '.diag section[aria-labelledby="titre-ouvrir-playlist"] a.btn'],
+  // v11 (6/11) : le Diagnostic, « Ouvrir une playlist » et ses trois formes du lien, jamais suivies. v12 (7/9) : « Ouvrir un
+  // morceau », les deux formes du premier morceau gardé.
+  ['Diagnostic, Ouvrir un morceau', async (p) => {
+    await aller(p, '#/diagnostic');
+    await expect(p.locator('.diag section[aria-labelledby="titre-ouvrir-morceau"] a.btn')).toHaveText(['Morceau seul', 'Morceau dans sa playlist']);
+  }, '.diag section[aria-labelledby="titre-ouvrir-morceau"] a.btn'],
   // v11 (10/11) : « Revenir à l'état d'avant l'import » demande confirmation : une copie posée en base, comme après un import.
   ['Confirmation « Revenir »', async (p) => {
     await p.evaluate(() => window.__carnet.repo.tx(['snapshots'], 'readwrite', (t) => {

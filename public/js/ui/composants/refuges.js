@@ -3,7 +3,7 @@
 // aperçu, ni image (spec §8.2). Le nom d'une playlist est du texte, jamais du HTML.
 // v12 (spec v12 §6.1 et §6.2) : le lien direct vers l'app, fabriqué à l'affichage (lienAOuvrir) : la carte de la playlist
 // suivie ouvre Spotify d'un toucher. Les morceaux de la playlist suivie (ListeMorceaux), chacun un lien spotify:track:<ID>,
-// dans Mes refuges et, en tâche 7, dans Moment difficile. Les messages de la connexion à Spotify, partagés par Mes refuges et
+// dans Mes refuges et dans Moment difficile, après Mon plan. Les messages de la connexion à Spotify, partagés par Mes refuges et
 // ses réglages.
 import { html } from '../lib.js';
 import { repo } from '../../donnees.js';
