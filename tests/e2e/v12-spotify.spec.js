@@ -11,7 +11,9 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 //   avec le même jeton, gardé en mémoire le temps du choix (un seul usage, 10 minutes au plus), puis la note avec eux
 //   (`morceaux` : sans eux) ; la liste disparaît, et « Annuler » rend les refuges d'avant ; une coupure n'écrit rien ;
 // - une mise à jour : les morceaux de la playlist suivie, sans la liste du compte, puis Mes refuges, où ils s'affichent.
-// Aucun jeton gardé. Si le retour arrive dans Safari, la page montre un code à coller dans les réglages.
+// Aucun jeton gardé. Si le retour arrive dans Safari, la page montre un code à coller dans Mes refuges : tant qu'une demande
+// attend, « Coller le code de Spotify » y mène au champ du code, dans les réglages. Le toast « Annuler » d'un choix ou d'un
+// retrait ne vit que dans les réglages : les quitter le ferme, et Mes refuges montre toujours la base.
 // Aucune requête ne part pour de bon : la constante de l'app (SPOTIFY_CLIENT_ID) est remplacée dans le fichier servi, par du
 // vide ou par une valeur factice, jamais la vraie ; par défaut, la garde réseau reste active (toute requête vers un autre hôte
 // fait échouer le test) ; avec `hotesPermis`, les deux hôtes de Spotify répondent par des réponses simulées (page.route), et
@@ -69,7 +71,8 @@ async function servirConstante(page, valeur) {
 
 // Les deux hôtes de Spotify, simulés : la page d'autorisation (une page vide), le jeton, la liste, les morceaux d'une playlist.
 // Chaque demande est notée. `jeton` et `liste` : { status, corps } ou 'coupe' (le réseau coupé) ; `morceaux` : de même, ou une
-// fonction (identifiant, offset) qui les rend. `regler` change les réponses en cours de test (le réseau qui revient).
+// fonction (identifiant, offset) qui les rend, au besoin plus tard (une promesse : une réponse retenue). `regler` change les
+// réponses en cours de test (le réseau qui revient).
 async function simulerSpotify(page, options = {}) {
   const o = {
     jeton: { status: 200, corps: { access_token: 'jeton-de-test', token_type: 'Bearer', expires_in: 3600 } },
@@ -100,7 +103,7 @@ async function simulerSpotify(page, options = {}) {
     const m = u.hostname === 'api.spotify.com' && /^\/v1\/playlists\/([A-Za-z0-9]{22})\/items$/.exec(u.pathname);
     if (m) {
       demandes.morceaux.push({ u, playlist: m[1], entetes: await req.allHeaders() });
-      return repondre(route, typeof o.morceaux === 'function' ? o.morceaux(m[1], Number(u.searchParams.get('offset'))) : o.morceaux);
+      return repondre(route, await (typeof o.morceaux === 'function' ? o.morceaux(m[1], Number(u.searchParams.get('offset'))) : o.morceaux));
     }
     return route.abort();
   });
@@ -120,6 +123,8 @@ const choisirDansMonCompte = (page) => bouton(page, 'Choisir dans mon compte');
 const champCode = (page) => page.getByLabel('Code de Spotify', { exact: true });
 const groupeSpotify = (page) => page.getByRole('group', { name: 'Spotify', exact: true });
 const choix = (page, nom) => groupeSpotify(page).getByRole('button', { name: nom, exact: true });
+const collerCode = (page) => ecran(page).getByRole('link', { name: 'Coller le code de Spotify', exact: true });
+const retour = (page) => page.getByRole('button', { name: 'Retour', exact: true }).click();
 const lignes = (zone) => zone.locator('a.lien-refuge');
 const liensMorceaux = (page) => ecran(page).locator('ul.liste-morceaux a');
 const hrefs = (loc) => loc.evaluateAll((l) => l.map((a) => a.getAttribute('href')));
@@ -199,7 +204,11 @@ test('constante vide : ni bouton ni champ de code, ni dans Mes refuges vide ni d
   await expect(ecran(page).locator('.refuges-vide')).toBeVisible();
   await expect(choisirDansMonCompte(page)).toHaveCount(0);
   await expect(ecran(page).getByRole('link', { name: 'Coller un lien', exact: true })).toBeVisible();
+  await expect(collerCode(page)).toHaveCount(0);
   await ecrireMeta(page, 'refuges', { playlists: [{ nom: 'Pour souffler', lien: lienS(1), source: 'spotify' }] });
+  await ouvrirRefuges(page);
+  await expect(lignes(ecran(page))).toHaveCount(1);
+  await expect(collerCode(page)).toHaveCount(0);
   await ouvrirReglages(page);
   for (const nom of ['Choisir dans mon compte', 'Changer de playlist', 'Mettre à jour la liste']) await expect(bouton(page, nom)).toHaveCount(0);
   await expect(champCode(page)).toHaveCount(0);
@@ -265,6 +274,42 @@ test('la page du code : un retour dans Safari, avec ou sans demande en attente, 
   await expect(page.getByRole('heading', { name: 'Installer Emozio' })).toBeVisible();
 });
 
+test('une demande qui attend son retour : Mes refuges, vide puis plein, mène au champ du code par « Coller le code de Spotify » ; sans demande, ce lien n\'est pas là ; aucune requête', async ({ page }) => {
+  await demarrer(page);
+  // Sans demande : ni dans Mes refuges vide, ni plein.
+  await ouvrirRefuges(page);
+  await expect(collerCode(page)).toHaveCount(0);
+  await poserAttente(page);
+  // Vide : dans la carte, sous « Choisir dans mon compte », avant « Coller un lien » ; une cible de 44.
+  await ouvrirRefuges(page);
+  const vide = ecran(page).locator('.refuges-vide');
+  await expect(vide.getByRole('button')).toHaveText(['Choisir dans mon compte']);
+  await expect(vide.getByRole('link')).toHaveText(['Coller le code de Spotify', 'Coller un lien']);
+  await expect(collerCode(page)).toHaveAttribute('href', '#/refuges/reglages');
+  expect((await collerCode(page).boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(champCode(page)).toHaveCount(0);
+  await collerCode(page).click();
+  await expect(champCode(page)).toBeVisible();
+  expect(await adresse(page)).toBe('/#/refuges/reglages');
+  // Plein : seul, sous l'en-tête, avant les cartes ; le retour des réglages y ramène.
+  await ecrireMeta(page, 'refuges', { titres: 'Pluie lente', playlists: [{ nom: 'Détente', lien: lienS(1), source: 'spotify', morceaux: gardes(1, 3) }] });
+  await ouvrirRefuges(page);
+  await expect(liensMorceaux(page)).toHaveCount(3);
+  expect(await ecran(page).evaluate((m) => [...m.children].map((e) => e.className)).then((c) => c.slice(0, 3)))
+    .toEqual(['entete-pousse', 'btn-lien coller-code', 'lignes-playlists']);
+  expect((await collerCode(page).boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await collerCode(page).click();
+  await expect(champCode(page)).toBeVisible();
+  await retour(page);
+  await expect(collerCode(page)).toBeVisible();
+  // La demande partie (finie ou oubliée) : le lien aussi.
+  await page.evaluate((c) => localStorage.removeItem(c), CLE);
+  await ouvrirRefuges(page);
+  await expect(liensMorceaux(page)).toHaveCount(3);
+  await expect(collerCode(page)).toHaveCount(0);
+  // La garde (gardes.js) : aucune requête vers un autre hôte.
+});
+
 test('point de vigilance 5, sans réseau : un state qui ne correspond pas, un code sans demande, un refus de Spotify ; rien ne part, les refuges restent', async ({ page }) => {
   await demarrer(page);
   const notes = { titres: 'Pluie lente', playlists: [{ nom: 'Collée', lien: `https://open.spotify.com/playlist/${id('m1')}`, source: null, morceaux: gardes(1, 2) }] };
@@ -299,8 +344,11 @@ test('point de vigilance 5, sans réseau : un state qui ne correspond pas, un co
   await revenirDeSpotify(page, 'error=access_denied&state=autre');
   expect(await adresse(page)).toBe('/#/aujourdhui');
   expect(await attente(page)).not.toBeNull();
-  // Une demande vieille de plus d'une heure : le champ du code n'est plus là, et la clé est retirée.
+  // Une demande vieille de plus d'une heure : ni « Coller le code de Spotify » ni le champ du code, et la clé est retirée.
   await page.evaluate(([c, v]) => localStorage.setItem(c, JSON.stringify({ verifier: v, state: 's', creeLe: Date.now() - 3600001 })), [CLE, VERIFIER]);
+  await ouvrirRefuges(page);
+  await expect(liensMorceaux(page)).toHaveCount(2);
+  await expect(collerCode(page)).toHaveCount(0);
   await ouvrirReglages(page);
   await expect(champCode(page)).toHaveCount(0);
   expect(await attente(page)).toBeNull();
@@ -728,6 +776,124 @@ test.describe('avec Spotify simulé', () => {
     await expect(page.getByLabel('Nom de la playlist 1', { exact: true })).toHaveValue('');
   });
 
+  test('un retour arrivé dans Safari : de retour dans l\'app sans code, Mes refuges, vide puis plein, mène par « Coller le code de Spotify » au champ du code ; le code collé finit la connexion, et le lien part', async ({ page }) => {
+    await demarrer(page);
+    const demandes = await simulerSpotify(page);
+    await ouvrirRefuges(page);
+    await expect(collerCode(page)).toHaveCount(0);
+    await choisirDansMonCompte(page).click();
+    await expect.poll(() => demandes.autoriser.length).toBe(1);
+    const autoriser = Object.fromEntries(demandes.autoriser[0].searchParams);
+    await expect(page).toHaveTitle('Spotify simulé');
+    // L'app rouverte sans code dans l'adresse : le code est arrivé dans Safari (la page du code dit de le coller dans Mes refuges).
+    await page.goto('/');
+    await appPrete(page);
+    await ouvrirRefuges(page);
+    await expect(ecran(page).locator('.refuges-vide').getByRole('link')).toHaveText(['Coller le code de Spotify', 'Coller un lien']);
+    await collerCode(page).click();
+    await expect(champCode(page)).toBeVisible();
+    await retour(page);
+    // Plein, de même.
+    await ecrireMeta(page, 'refuges', { titres: null, playlists: [{ nom: 'Collée', lien: lienS(9), source: null, morceaux: gardes(1, 2) }] });
+    await ouvrirRefuges(page);
+    await expect(liensMorceaux(page)).toHaveCount(2);
+    await collerCode(page).click();
+    await champCode(page).fill('code-de-safari');
+    await bouton(page, 'Finir la connexion').click();
+    await expect(groupeSpotify(page).getByRole('button')).toHaveCount(4);
+    // Le jeton : le code collé, avec le verifier de la demande partie de Mes refuges.
+    expect(demandes.jeton).toHaveLength(1);
+    const corps = Object.fromEntries(new URLSearchParams(demandes.jeton[0].corps));
+    expect(corps).toMatchObject({ code: 'code-de-safari', client_id: FACTICE });
+    expect(createHash('sha256').update(corps.code_verifier).digest('base64url')).toBe(autoriser.code_challenge);
+    expect(await attente(page)).toBeNull();
+    // La demande finie : plus de lien vers le code.
+    await retour(page);
+    await expect(liensMorceaux(page)).toHaveCount(2);
+    await expect(collerCode(page)).toHaveCount(0);
+    expect(await toutCeQuiEstGarde(page)).not.toContain('jeton-de-test');
+  });
+
+  test('« Retour » pendant le toast « Annuler » d\'un choix ou d\'un retrait : le toast se ferme ; Mes refuges et les réglages rouverts montrent la base', async ({ page }) => {
+    await demarrer(page);
+    await simulerSpotify(page, { morceaux: (_, offset) => ({ status: 200, corps: pageMorceaux(12, offset) }) });
+    const collee = { nom: 'Ma liste', lien: 'https://music.apple.com/fr/playlist/calme/pl.u-abc', source: null };
+    const choisie = { nom: 'Pour souffler', lien: lienS(1), source: 'spotify', morceaux: gardes(1, 12) };
+    const toastOuvert = () => page.evaluate(() => Boolean(window.__carnet.etatApp.lire().toast));
+    await ecrireMeta(page, 'refuges', { titres: null, playlists: [collee] });
+    await listeDuCompte(page);
+    // Un choix, puis « Retour » avant 5 s : aucun « Annuler » dans Mes refuges, qui montre le choix noté.
+    await choix(page, 'Pour souffler').click();
+    await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [collee, choisie] });
+    await expect(annuler(page)).toBeVisible();
+    await retour(page);
+    await expect(liensMorceaux(page)).toHaveCount(12);
+    expect(await toastOuvert()).toBe(false);
+    await expect(toast(page)).toHaveCount(0);
+    expect(await hrefs(lignes(ecran(page)))).toEqual([`spotify:playlist:${id('sp1')}`, 'music://music.apple.com/fr/playlist/calme/pl.u-abc']);
+    expect(await lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [collee, choisie] });
+    // Les réglages rouverts : leurs lignes sont celles de la base.
+    await ecran(page).getByRole('link', { name: 'Modifier', exact: true }).click();
+    await expect(page.getByLabel('Nom de la playlist 2', { exact: true })).toHaveValue('Pour souffler');
+    // Un retrait, puis « Retour » : de même.
+    await bouton(page, 'Retirer ces playlists').click();
+    await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [collee] });
+    await expect(annuler(page)).toBeVisible();
+    await retour(page);
+    await expect.poll(() => hrefs(lignes(ecran(page)))).toEqual(['music://music.apple.com/fr/playlist/calme/pl.u-abc']);
+    expect(await toastOuvert()).toBe(false);
+    await expect(liensMorceaux(page)).toHaveCount(0);
+    await ecran(page).getByRole('link', { name: 'Modifier', exact: true }).click();
+    await expect(page.getByLabel('Nom de la playlist 1', { exact: true })).toHaveValue('Ma liste');
+    await expect(page.getByLabel('Nom de la playlist 2', { exact: true })).toHaveValue('');
+    // Une frappe sur la ligne vide écrit au bon rang : la deuxième.
+    await page.getByLabel('Nom de la playlist 2', { exact: true }).fill('Neuve');
+    await page.getByLabel('Nom de la playlist 2', { exact: true }).blur();
+    await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [collee, { nom: 'Neuve', lien: null, source: null }] });
+  });
+
+  test('des morceaux arrivés après « Retour » : un choix n\'écrit rien, sans toast ; une mise à jour s\'écrit, et Mes refuges, déjà ouvert, la montre', async ({ page }) => {
+    await demarrer(page);
+    const demandes = await simulerSpotify(page);
+    const avant = { titres: null, playlists: [{ nom: 'Détente', lien: lienS(1), source: 'spotify', morceaux: gardes(1, 3) }] };
+    await ecrireMeta(page, 'refuges', avant);
+    // Les morceaux retenus jusqu'à `lacher()` ; `rendus` compte les réponses parties.
+    let lacher = () => {};
+    let rendus = 0;
+    const retenir = () => {
+      const retenue = new Promise((ok) => { lacher = ok; });
+      demandes.regler({ morceaux: async (_, offset) => { await retenue; rendus += 1; return { status: 200, corps: pageMorceaux(12, offset) }; } });
+    };
+    // Un choix : la playlist touchée, puis « Retour » avant ses morceaux ; rien n'est écrit, aucun toast.
+    retenir();
+    await listeDuCompte(page);
+    await choix(page, 'Pour marcher').click();
+    await expect.poll(() => demandes.morceaux.length).toBe(1);
+    await retour(page);
+    await expect(liensMorceaux(page)).toHaveCount(3);
+    lacher();
+    await expect.poll(() => rendus).toBe(1);
+    await page.waitForTimeout(500);
+    expect(await lireMeta(page, 'refuges')).toEqual(avant);
+    expect(await page.evaluate(() => window.__carnet.etatApp.lire().toast)).toBeNull();
+    await expect(liensMorceaux(page)).toHaveCount(3);
+    // Une mise à jour : le retour de Spotify, puis « Retour » pendant la lecture des morceaux ; ils s'écrivent, et Mes refuges
+    // les montre à leur arrivée.
+    retenir();
+    await poserAttente(page, 'etat-de-test', { but: 'maj', playlist: id('sp1') });
+    await revenirDeSpotify(page, 'code=code-de-test&state=etat-de-test');
+    await expect.poll(() => demandes.morceaux.length).toBe(2);
+    await expect(reglages(page)).toBeVisible();
+    await retour(page);
+    await expect(liensMorceaux(page)).toHaveCount(3);
+    lacher();
+    await expect(liensMorceaux(page)).toHaveCount(12);
+    expect(rendus).toBe(2);
+    expect(await adresse(page)).toBe('/#/refuges');
+    expect(await lireMeta(page, 'refuges')).toEqual({ titres: null, playlists: [{ ...avant.playlists[0], morceaux: gardes(1, 12) }] });
+    expect(await page.evaluate(() => window.__carnet.etatApp.lire().toast)).toBeNull();
+  });
+
   // Le contrôle de ces écrans (spec §14), en clair et en sombre, avec « Réduire les animations » allumé : contraste AA, cibles de
   // 44 pt, aucun mot interdit, rien qui bouge.
   for (const schema of ['light', 'dark']) {
@@ -760,10 +926,12 @@ test.describe('avec Spotify simulé', () => {
         const m = await mouvements(page);
         if (m.length) fautes[`${nom}, mouvement`] = m;
       };
-      // Mes refuges et ses morceaux, puis les réglages : les boutons et leur note, et le champ du code (une demande attend).
-      await ouvrirRefuges(page);
-      await controler('Mes refuges, la carte et les morceaux', 'main.refuges .ligne-morceau');
+      // Mes refuges et ses morceaux, avec « Coller le code de Spotify » (une demande attend), puis les réglages : les boutons et
+      // leur note, et le champ du code.
       await poserAttente(page);
+      await ouvrirRefuges(page);
+      await controler('Mes refuges, la carte, les morceaux et le lien vers le code', 'main.refuges .ligne-morceau');
+      await expect(page.locator('main.refuges .coller-code')).toBeVisible();
       await ouvrirReglages(page);
       await expect(reglages(page).locator('.saisie-playlist .note-import')).toHaveText('Ce lien peut ne rien ouvrir depuis Emozio.');
       await controler('Les réglages, les boutons et le champ du code', '#code-spotify');
@@ -788,10 +956,11 @@ test.describe('avec Spotify simulé', () => {
       await poserAttente(page);
       await revenirDeSpotify(page, 'code=code-de-test&state=etat-de-test');
       await controler('Le message d\'échec', '.compte-spotify [role="status"]');
-      // Mes refuges vide, son bouton.
+      // Mes refuges vide, son bouton et le lien vers le code (une demande attend).
       await ecrireMeta(page, 'refuges', null);
+      await poserAttente(page);
       await ouvrirRefuges(page);
-      await controler('Mes refuges vide', '.refuges-vide .btn-plein');
+      await controler('Mes refuges vide', '.refuges-vide .coller-code');
       // La page du code.
       await page.goto('/?forcer-guide&code=AQBx-code-de-safari-assez-long-pour-passer-sur-plusieurs-lignes-0123456789abcdefghijklmnopqrstuvwxyz&state=x');
       await controler('La page du code', '.valeur-code');

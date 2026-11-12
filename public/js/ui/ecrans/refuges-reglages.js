@@ -14,10 +14,13 @@
 //   quand l'écran se démonte) ; rien n'est écrit avant la réponse. Avec des morceaux, la playlist est notée avec eux
 //   (choisirSpotify) ; si Spotify ne les donne pas (`morceaux`), elle est notée sans eux, avec le message. La liste disparaît
 //   alors, et « Annuler » rend les refuges d'avant. Une coupure du réseau n'écrit rien : on peut retoucher. Une connexion
-//   expirée n'écrit rien et le dit.
+//   expirée n'écrit rien et le dit. Quitter l'écran ferme « Annuler » (il ne vit qu'ici), et des morceaux arrivés après le
+//   départ n'écrivent rien.
 // - Une mise à jour : les morceaux de la playlist suivie, relus sans la liste du compte (avecMorceaux), puis l'écran revient
-//   à Mes refuges, où ils s'affichent. Si Spotify ne les donne pas, la playlist et ses anciens morceaux restent.
-// Le code, si le retour est arrivé dans Safari, se colle ici. Sans identifiant de l'app Spotify, ni bouton ni champ de code.
+//   à Mes refuges, où ils s'affichent (même finie après « Retour » : Mes refuges suit la base). Si Spotify ne les donne pas,
+//   la playlist et ses anciens morceaux restent.
+// Le code, si le retour est arrivé dans Safari, se colle ici : Mes refuges y mène tant qu'une demande attend (« Coller le code
+// de Spotify »). Sans identifiant de l'app Spotify, ni bouton ni champ de code.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { ChampTexte } from '../composants/texte.js';
@@ -112,6 +115,9 @@ export function ReglagesRefuges() {
   // « Annuler » après un retrait ou un choix : les playlists d'avant (lues dans sa transaction) reviennent, à leur place ; les
   // titres ne bougent pas. Une autre écriture des playlists ferme le toast, et une liste qui n'est plus celle laissée par
   // l'écriture annulée n'est pas remplacée (un « Annuler » touché après une écriture venue d'ailleurs) : rien ne se perd.
+  // Le toast appartient à cet écran : il se ferme quand on le quitte, et une écriture finie après son départ n'en ouvre pas
+  // (touché ailleurs, « Annuler » changerait la base sous un écran qui ne la relit pas, ou sous des champs qui parlent
+  // encore de la ligne annulée).
   const ecrireAnnulable = (texte, transformer) => {
     oublierAnnuler();
     let avant = null;
@@ -123,6 +129,7 @@ export function ReglagesRefuges() {
       return n;
     }).then((ok) => {
       if (!ok) return false;
+      if (!monte.current) return true;
       annulable.current = afficherToast(texte, {
         libelle: 'Annuler',
         faire: () => {
@@ -151,6 +158,8 @@ export function ReglagesRefuges() {
       .then((r) => {
         setCodeGarde(null);
         if (r.but === 'maj') return mettreAJour(r);
+        // La liste arrivée après le départ de l'écran : la fermeture qui détient le jeton n'est pas gardée.
+        if (!monte.current) return undefined;
         lecture.current = r.lireMorceaux;
         setListe(r.liste);
         return undefined;
@@ -173,7 +182,8 @@ export function ReglagesRefuges() {
   };
 
   // Un toucher sur une playlist du compte : ses morceaux d'abord, puis le choix écrit, avec « Annuler ». La fermeture est prise
-  // au toucher : un second toucher pendant la lecture ne fait rien (même avant que l'écran ne se redessine).
+  // au toucher : un second toucher pendant la lecture ne fait rien (même avant que l'écran ne se redessine). Une réponse
+  // arrivée après le départ de l'écran n'écrit rien : un choix écrit a toujours son « Annuler », qui vit sur cet écran.
   const noterChoix = (p, lu) => ecrireAnnulable('Playlist choisie', (r) => choisirSpotify(r, { nom: p.nom, lien: p.lien, ...lu }))
     .then((ok) => {
       setListe(null);
@@ -187,7 +197,8 @@ export function ReglagesRefuges() {
     setEchec(null);
     setEnCours(true);
     lire(idPlaylistSpotify(p.lien))
-      .then(({ morceaux, suite }) => noterChoix(p, { morceaux, suite }), (e) => {
+      .then(({ morceaux, suite }) => (monte.current ? noterChoix(p, { morceaux, suite }) : undefined), (e) => {
+        if (!monte.current) return undefined;
         const raison = e && e.raison;
         if (raison === 'morceaux') return noterChoix(p, {}).then((ok) => { if (ok) setEchec('morceaux'); });
         // Le jeton ne sert plus : la liste part, et le message invite à refaire un choix.
@@ -220,10 +231,11 @@ export function ReglagesRefuges() {
       if (retour.issue === 'finir' && spotify) finir(retour.code);
       else setEchec('autre');
     }
-    // En quittant l'écran, la fermeture qui détient le jeton est oubliée.
+    // En quittant l'écran, la fermeture qui détient le jeton est oubliée, et le toast « Annuler » se ferme.
     return () => {
       monte.current = false;
       lecture.current = null;
+      oublierAnnuler();
     };
   }, []);
 
