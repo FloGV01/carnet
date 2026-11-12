@@ -102,7 +102,8 @@ function useEtatApp() {
 }
 
 // `codeSpotify` : le code d'un retour de Spotify arrivé hors de l'app installée (main.js), à copier pour finir la connexion
-// dans l'app ; cette page passe avant le guide d'installation.
+// dans l'app ; cette page passe avant le guide d'installation. Ni l'une ni l'autre n'a de bandeau de mise à jour : sur le
+// guide, une nouvelle version s'applique seule (v12, main.js et doitAppliquerSeule) ; sur la page du code, jamais.
 export function App({ guide, codeSpotify }) {
   const etat = useEtatApp();
   if (codeSpotify) return html`<${CodeSpotify} code=${codeSpotify} />`;

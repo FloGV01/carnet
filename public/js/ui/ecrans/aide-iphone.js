@@ -65,13 +65,17 @@ const RUBRIQUES = [
   // v11 (spec §10) : une icône déjà sur l'écran d'accueil ne change sans doute pas seule, et la supprimer efface ses
   // données. Les étapes de la spec, mot pour mot sauf le nom (« Emozio », accord de l'utilisateur du 07/11, qui veut aussi
   // le nouveau nom sous l'icône) : rien n'est supprimé avant la dernière, une fois la copie vérifiée.
+  // v12 (spec v12 §7) : l'étape Safari commence par la phrase de la spec v12, mot pour mot. Une page de Safari servie par
+  // une ancienne version garde l'ancienne icône, et le bandeau n'existe pas dans Safari : fermer l'onglet puis rouvrir
+  // l'adresse la met à jour. L'accord de l'utilisateur sur la spec v12 prime sur le « mot pour mot » de la spec v11 ; le nom
+  // se règle dans l'aperçu, l'icône s'y vérifie encore.
   // La note dit ce que la copie ne garde pas (ce qui vit hors de la base, dans le stockage local de la page).
   {
     titre: 'Changer d\'icône sans rien perdre',
     etapes: [
       'Redémarrer l\'iPhone : l\'icône a peut-être changé. Si oui, et si son nom est « Emozio », c\'est fini.',
       'Dans l\'ancienne app : Réglages › Exporter, enregistrer dans Fichiers.',
-      'Dans Safari : ouvrir l\'adresse d\'Emozio, Partager › Sur l\'écran d\'accueil. Vérifier l\'aperçu : s\'il montre la nouvelle icône et le nom « Emozio », Ajouter. Sinon, annuler, fermer l\'onglet, rouvrir l\'adresse et recommencer.',
+      'Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour. Ensuite, Partager › Sur l\'écran d\'accueil. Le nom, « Emozio », reste modifiable dans l\'aperçu. Si l\'aperçu montre la nouvelle icône, Ajouter. Sinon, annuler et recommencer.',
       'Ouvrir la nouvelle app, Emozio, qui doit être vide : Réglages › Importer. Vérifier quelques jours dans l\'Historique.',
       'Ranger l\'ancienne app dans un dossier, et ne plus y écrire. La supprimer plus tard, ou jamais.',
     ],

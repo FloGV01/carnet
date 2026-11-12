@@ -1,8 +1,10 @@
 // Service worker d'Emozio : tout est mis en cache à l'installation, le cache passe
 // en premier, et une nouvelle version n'est activée qu'à la demande de la page
-// (toucher du bandeau), jamais d'office : une saisie en cours n'est jamais coupée.
+// (toucher du bandeau dans l'app installée ; d'elle-même sur le guide d'installation
+// de Safari, où rien ne se saisit, v12), jamais d'office : une saisie en cours n'est
+// jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = 'e52487f2ce0d';
+const VERSION = '535202c02a01';
 const FICHIERS = [
   "./",
   "./css/base.css",

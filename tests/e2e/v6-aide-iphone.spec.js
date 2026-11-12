@@ -55,6 +55,8 @@ test('Sieste : la page dit que la Concentration et les sons restent allumés, et
 // v11 (10/11) : le passage à la nouvelle icône, en pas-à-pas fixe (spec §10, appel du concepteur). Supprimer l'ancienne icône
 // efface ses données : aucune étape ne dit de supprimer quoi que ce soit avant la dernière, une fois la copie vérifiée.
 // Les étapes suivent le nom Emozio (accord de l'utilisateur du 07/11) : le nom sous l'icône se vérifie avec elle.
+// v12 (8/9, spec v12 §7) : l'étape Safari commence par la phrase de la spec v12, mot pour mot ; le bandeau n'existe pas dans
+// Safari, l'aide n'en parle pas.
 test('v11 : « Changer d\'icône sans rien perdre », les cinq étapes de la spec, rien à supprimer avant la dernière', async ({ page }) => {
   await aller(page, '#/reglages/aide-iphone');
   const icone = page.locator('section', { has: page.getByRole('heading', { name: 'Changer d\'icône sans rien perdre', level: 2 }) });
@@ -62,13 +64,16 @@ test('v11 : « Changer d\'icône sans rien perdre », les cinq étapes de la spe
   await expect(etapes).toHaveText([
     'Redémarrer l\'iPhone : l\'icône a peut-être changé. Si oui, et si son nom est « Emozio », c\'est fini.',
     'Dans l\'ancienne app : Réglages › Exporter, enregistrer dans Fichiers.',
-    'Dans Safari : ouvrir l\'adresse d\'Emozio, Partager › Sur l\'écran d\'accueil. Vérifier l\'aperçu : s\'il montre la nouvelle icône et le nom « Emozio », Ajouter. Sinon, annuler, fermer l\'onglet, rouvrir l\'adresse et recommencer.',
+    'Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour. Ensuite, Partager › Sur l\'écran d\'accueil. Le nom, « Emozio », reste modifiable dans l\'aperçu. Si l\'aperçu montre la nouvelle icône, Ajouter. Sinon, annuler et recommencer.',
     'Ouvrir la nouvelle app, Emozio, qui doit être vide : Réglages › Importer. Vérifier quelques jours dans l\'Historique.',
     'Ranger l\'ancienne app dans un dossier, et ne plus y écrire. La supprimer plus tard, ou jamais.',
   ]);
   const textes = await etapes.allTextContents();
   const supprimer = /suppr|effac/i;
   textes.slice(0, -1).forEach((t, i) => expect(t, `étape ${i + 1}`).not.toMatch(supprimer));
+  // v12 : l'étape Safari commence par la phrase de la spec, et la page ne parle nulle part du bandeau.
+  expect(textes[2].startsWith('Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour.')).toBe(true);
+  await expect(page.locator('main')).not.toContainText(/bandeau|Nouvelle version|Recharger/i);
   // Ce que la copie ne garde pas, en note.
   await expect(icone.locator('.note-import')).toHaveText('La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser.');
   // Cette rubrique passe par l'app (Exporter, Importer) : l'introduction ne dit « Emozio ne lance rien et ne lit rien »
