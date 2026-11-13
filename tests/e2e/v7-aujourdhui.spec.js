@@ -187,6 +187,22 @@ test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résu
   }
 });
 
+// v12 (8/9) : App s'abonne à l'état après son premier affichage. Une version qui attend, signalée entre les deux (dès le
+// démarrage, dans l'app installée), n'était pas vue : le bandeau ne paraissait pas. Ici, le signal part juste après le rendu
+// de main.js, avant les effets d'App.
+test('v12 : une version signalée juste après le premier affichage, avant l\'abonnement d\'App : le bandeau paraît', async ({ page }) => {
+  await page.addInitScript(() => {
+    new MutationObserver((_, obs) => {
+      if (!window.__carnet || !document.querySelector('#app main')) return;
+      obs.disconnect();
+      window.__carnet.etatApp.maj({ majDisponible: true });
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.reload();
+  await expect(page.locator('.bandeau')).toBeVisible();
+  await expect(page.getByText('Nouvelle version prête')).toBeVisible();
+});
+
 test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte, avec les zones sûres de l\'iPhone', async ({ page }) => {
   await simulerZonesSures(page);
   await toucher(page, 'Lieu', 'Bureau');

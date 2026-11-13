@@ -197,6 +197,9 @@ test('barre d\'onglets façon iOS, en clair et en sombre : fond --barre, icônes
       await aller(page, hash);
       const nav = page.getByRole('navigation', { name: 'Navigation principale' });
       await expect(nav.getByRole('link', { name: actif, exact: true })).toHaveAttribute('aria-current', 'page');
+      // Aujourd'hui n'affiche sa bande du bas qu'une fois sa journée lue : le filet se mesure ensuite (v12, 8/9 ; mesuré
+      // avant, il échouait une fois sur quatre environ).
+      if (hash === '#/aujourdhui') await expect(page.locator('.actions-flottantes')).toBeVisible();
       const r = await nav.evaluate((n) => {
         const s = getComputedStyle(n);
         return {

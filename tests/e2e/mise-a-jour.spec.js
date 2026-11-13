@@ -79,6 +79,31 @@ test('hors mode app, sur le guide : la nouvelle version s\'applique seule, une f
   expect(await comptes(page)).toEqual({ chargements: 2, skip: 1 });
 });
 
+// Le chemin de l'Aide iPhone (« ferme l'onglet, puis rouvre l'adresse ») : la nouvelle version attend déjà quand la page
+// s'ouvre. L'app en local, avec son bandeau, laisse une version en attente ; le même onglet ouvre ensuite la page du code
+// de Spotify (rien n'est appliqué), puis le guide (appliquée seule, une fois, un seul rechargement).
+test('hors mode app, une version qui attend déjà à l\'ouverture : la page du code la laisse, le guide l\'applique seul, une fois', async ({ page, request }) => {
+  await prete(page, '/?sw');
+  await nouvelleVersion(page, request);
+  await expect.poll(() => enAttente(page)).toBe(true);
+  await page.evaluate(() => sessionStorage.clear());
+  await page.goto('/?sw&forcer-guide&code=code-de-safari&state=x');
+  await expect(page.getByRole('heading', { name: 'Code de Spotify', level: 1 })).toBeVisible();
+  await page.evaluate(() => { window.__marqueur = 1; });
+  await resteEnAttente(page);
+  await expect(page.locator('.valeur-code')).toHaveText('code-de-safari');
+
+  await page.evaluate(() => sessionStorage.clear());
+  await page.goto('/?sw&forcer-guide');
+  // Le rechargement peut couper une lecture des comptes : elle est alors refaite.
+  await expect.poll(() => comptes(page).catch(() => null)).toEqual({ chargements: 2, skip: 1 });
+  await expect(page.getByRole('heading', { name: 'Installer Emozio' })).toBeVisible();
+  await expect(page.getByText('Nouvelle version prête')).toHaveCount(0);
+  await page.waitForTimeout(1500);
+  expect(await enAttente(page)).toBe(false);
+  expect(await comptes(page)).toEqual({ chargements: 2, skip: 1 });
+});
+
 test('hors mode app, sur la page du code de Spotify : jamais appliquée seule, le code reste affiché', async ({ page, request }) => {
   await prete(page, '/?sw&forcer-guide&code=code-de-safari&state=x');
   await expect(page.getByRole('heading', { name: 'Code de Spotify', level: 1 })).toBeVisible();

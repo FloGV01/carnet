@@ -351,8 +351,21 @@ rect:is(.g-sommeil-1, .g-energie-1) { stroke: var(--donnee-2); stroke-width: 1; 
 /* Rappel du soir, aide iPhone */
 .rappel, .aide-iphone { gap: 14px; }
 .rappel > .entete-pousse, .aide-iphone > .entete-pousse { margin-bottom: 0; }
-.aide-rubrique { display: grid; gap: 10px; }
-.etapes { margin: 0; padding-left: 22px; display: grid; gap: 12px; font-size: var(--t-corps); line-height: 1.45; }
+.aide-rubrique { display: grid; gap: 10px; container: rubrique / inline-size; }
+/* Le numéro d'une étape (« 3. », son espace comprise, environ 1 em) se pose dans le retrait, et peut mordre sur la marge de
+   la page. v12 (relecture de la tâche 8) : 22 px ne suffisaient plus en très grand texte, et le numéro sortait de l'écran
+   à gauche (« 3. » coupé dès 47 px). Le retrait suit alors le texte ; il reste de 22 px jusqu'à 33 px environ. */
+.etapes { margin: 0; padding-left: max(22px, 1.2em - var(--marge)); display: grid; gap: 12px; font-size: var(--t-corps); line-height: 1.45; }
+/* v12 (relecture de la tâche 8) : les textes de l'aide passent par pourAffichage, et un mot ne se sépare plus de ses
+   guillemets. En très grand texte (dès 43 px sur 390 de large), « « Concentration ». » ne tient plus sur une ligne :
+   la césure coupe alors les seuls mots longs (6 signes au moins de chaque côté, guillemets compris : « Emozio » reste
+   entier), au lieu que la page déborde de côté. « anywhere » ne sert que si l'iPhone ne sait pas couper. Au texte
+   courant et jusqu'à 40 px, rien ne change. */
+@container rubrique (max-width: 9em) {
+  .aide-rubrique > .libelle-section, .aide-rubrique .etapes, .aide-rubrique .note-import {
+    -webkit-hyphens: auto; hyphens: auto; -webkit-hyphenate-limit-before: 6; -webkit-hyphenate-limit-after: 6; overflow-wrap: anywhere;
+  }
+}
 
 .apercu-page { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: var(--r-petit); background: #FFFFFF; }
 @media print {
