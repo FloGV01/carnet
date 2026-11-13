@@ -560,8 +560,13 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 @container paire (min-width: calc(16.6em + 8px)) {
   .deux-colonnes .roue-valeur { min-height: max(var(--cible), calc(2 * 1.15em + 8px)); }
 }
-/* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. */
-.carte-detail { gap: 6px; padding-bottom: 12px; }
+/* Le détail du Sport et du Contact (v8, Q5) : une carte de rubrique en pleine largeur, sous la paire. 12 sur les côtés,
+   comme les demi-cartes de la paire, et 11 sur les côtés des types d'activité : les 7 types tiennent sur 3 rangées, comme
+   en v11 (Marche, Vélo et Course à pied sur la 1re, à 390 au texte par défaut). Avec les 14 de la carte, « Autre » passait
+   seul sur une 4e rangée, et la page du soir, Sport en détail ouvert, grandissait de 157 px depuis la v11 (relecture
+   finale ; v12-design.spec.js). */
+.carte-detail { gap: 6px; padding-bottom: 12px; padding-inline: 12px; }
+.carte-detail .pastilles.souples .pastille { padding-inline: 11px; }
 
 /* Mémo vocal (neutre) et « J'ai fini pour ce soir » (couleur action, sans fond) sur une ligne. */
 .aujourdhui .memo-vocal { margin-top: -2px; }
@@ -795,9 +800,11 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 .titre-morceau { font-size: var(--t-corps); line-height: 1.3; }
 .artiste-morceau { font-size: var(--t-sous); line-height: 1.3; color: var(--text-2); }
 /* Les réglages de Mes refuges (v12) : la connexion à Spotify, puis ses playlists, chacune une carte avec son nom et son lien,
-   puis ses titres. */
+   puis ses titres. « Mes playlists » et « Mes titres » ont le titre de section de Mes refuges (relecture finale : ils étaient
+   en étiquette de champ, en noir et en casse normale). */
 .playlists-refuges { gap: 10px; }
-.playlists-refuges > .etiquette { margin-bottom: -4px; }
+.playlists-refuges > .libelle-section, .titres-reglages > .libelle-section { padding: 4px 4px 0; overflow-wrap: anywhere; }
+.playlists-refuges > .libelle-section { margin-bottom: -4px; }
 .saisie-playlist { display: flex; flex-direction: column; gap: 10px; }
 .saisie-playlist .etiquette { margin-bottom: 4px; }
 /* Sans dictée, le texte prend toute la largeur : un lien collé tient sur moins de lignes. */

@@ -4,7 +4,7 @@
 // de Safari, où rien ne se saisit, v12), jamais d'office : une saisie en cours n'est
 // jamais coupée.
 // <precache:debut> (généré par scripts/precache.mjs, ne pas modifier à la main)
-const VERSION = 'a082276ffa79';
+const VERSION = '25f71780d50f';
 const FICHIERS = [
   "./",
   "./css/base.css",

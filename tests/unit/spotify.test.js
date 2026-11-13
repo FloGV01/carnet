@@ -278,25 +278,60 @@ test('finirConnexion : une page piégée (élément null, autre hôte, nom en HT
     [{ nom: '<b>x</b>', lien: 'https://open.spotify.com/playlist/a' }]);
 });
 
-test('finirConnexion : 401 et 403 → refus, rejet → réseau, le reste → réponse ; la demande n\'est gardée qu\'en réseau', async () => {
+// Relecture finale de la v12 : la demande n'est gardée qu'en réseau sur l'échange du code lui-même. Après l'échange (une page
+// de la liste du compte), le code a servi : un code ne sert qu'une fois (RFC 6749, §4.1.2). La demande est retirée, même en
+// réseau, et l'erreur porte `codeUtilise`, pour que l'écran ne garde pas ce code dans le champ.
+const echoue = async (promesse, attendue, quoi) => {
+  let erreur = null;
+  await assert.rejects(promesse.catch((e) => { erreur = e; throw e; }), raison(attendue), quoi);
+  return erreur;
+};
+test('finirConnexion : 401 et 403 → refus, rejet → réseau, le reste → réponse ; la demande n\'est gardée qu\'en réseau sur l\'échange du code ; après lui, `codeUtilise`', async () => {
   const cas = [
-    [{ jeton: reponse(401, {}) }, 'refus'],
-    [{ jeton: reponse(403, { error: 'access_denied' }) }, 'refus'],
-    [{ pages: [reponse(401, {})] }, 'refus'],
-    [{ pages: [reponse(403, {})] }, 'refus'],
-    [{ jeton: new TypeError('Load failed') }, 'reseau'],
-    [{ pages: [new TypeError('Load failed')] }, 'reseau'],
-    [{ jeton: reponse(400, { error: 'invalid_grant' }) }, 'reponse'],
-    [{ jeton: reponse(500, {}) }, 'reponse'],
-    [{ jeton: reponse(200, { token_type: 'Bearer' }) }, 'reponse'],
-    [{ jeton: reponse(200, null) }, 'reponse'],
-    [{ jeton: { ok: true, status: 200, json: async () => { throw new SyntaxError('JSON'); } } }, 'reponse'],
-    [{ pages: [reponse(500, {})] }, 'reponse'],
+    [{ jeton: reponse(401, {}) }, 'refus', false],
+    [{ jeton: reponse(403, { error: 'access_denied' }) }, 'refus', false],
+    [{ pages: [reponse(401, {})] }, 'refus', true],
+    [{ pages: [reponse(403, {})] }, 'refus', true],
+    [{ jeton: new TypeError('Load failed') }, 'reseau', false],
+    [{ pages: [new TypeError('Load failed')] }, 'reseau', true],
+    [{ jeton: reponse(400, { error: 'invalid_grant' }) }, 'reponse', false],
+    [{ jeton: reponse(500, {}) }, 'reponse', false],
+    [{ jeton: reponse(200, { token_type: 'Bearer' }) }, 'reponse', false],
+    [{ jeton: reponse(200, null) }, 'reponse', false],
+    [{ jeton: { ok: true, status: 200, json: async () => { throw new SyntaxError('JSON'); } } }, 'reponse', false],
+    [{ pages: [reponse(500, {})] }, 'reponse', true],
   ];
-  for (const [options, attendue] of cas) {
+  for (const [options, attendue, apresEchange] of cas) {
     const win = avecAttente();
-    await assert.rejects(finirConnexion({ code: 'c', win, clientId: 'client-de-test', fetch: fauxFetch(options), maintenant: MAINTENANT }), raison(attendue), JSON.stringify(options));
-    assert.equal(win.valeurs.has(CLE), attendue === 'reseau', `${attendue} : demande ${attendue === 'reseau' ? 'gardée' : 'retirée'}`);
+    const quoi = `${JSON.stringify(options)} → ${attendue}`;
+    const e = await echoue(finirConnexion({ code: 'c', win, clientId: 'client-de-test', fetch: fauxFetch(options), maintenant: MAINTENANT }), attendue, quoi);
+    const gardee = attendue === 'reseau' && !apresEchange;
+    assert.equal(win.valeurs.has(CLE), gardee, `${quoi} : demande ${gardee ? 'gardée' : 'retirée'}`);
+    assert.equal(e.codeUtilise === true, apresEchange, `${quoi} : codeUtilise`);
+  }
+});
+
+test('finirConnexion : un jeton reçu, puis la 2e page coupée (réseau), en choisir et en mise à jour : la demande est retirée et l\'erreur porte `codeUtilise` ; le même code redonné ne relance rien, sans demande en attente', async () => {
+  for (const [nom, win, options] of [
+    ['choisir', avecAttente(), { pages: [reponse(200, page(50, 0, 80)), new TypeError('Load failed')] }],
+    ['maj', pourMaj(), { morceaux: [reponse(200, pageMorceaux(50, 0, 120)), new TypeError('Load failed')] }],
+  ]) {
+    const fetch = fauxFetch(options);
+    const e = await echoue(finirConnexion({ code: 'code-un', win, clientId: 'client-de-test', fetch, maintenant: MAINTENANT }), 'reseau', nom);
+    assert.equal(e.codeUtilise, true, `${nom} : codeUtilise`);
+    assert.equal(win.valeurs.has(CLE), false, `${nom} : demande retirée`);
+    assert.equal(fetch.appels.filter((a) => a.url === JETON_URL).length, 1, `${nom} : un seul échange`);
+    assert.doesNotMatch(JSON.stringify([...win.valeurs]), /jeton-de-test/);
+    // « Finir la connexion » de nouveau, avec le même code : sans demande en attente, rien ne part.
+    const encore = fauxFetch(options);
+    await assert.rejects(finirConnexion({ code: 'code-un', win, clientId: 'client-de-test', fetch: encore, maintenant: MAINTENANT }), raison('reponse'));
+    assert.equal(encore.appels.length, 0, `${nom} : aucune seconde demande de jeton`);
+  }
+  // Coupé sur l'échange du code lui-même : la demande reste, sans `codeUtilise` (le code peut se recoller).
+  for (const win of [avecAttente(), pourMaj()]) {
+    const e = await echoue(finirConnexion({ code: 'code-un', win, clientId: 'client-de-test', fetch: fauxFetch({ jeton: new TypeError('Load failed') }), maintenant: MAINTENANT }), 'reseau', 'jeton');
+    assert.equal(e.codeUtilise, undefined);
+    assert.equal(win.valeurs.has(CLE), true);
   }
 });
 
@@ -392,7 +427,7 @@ test('finirConnexion, mise à jour : une page piégée (entrée null, fichier lo
   assert.equal(fini.suite, false);
 });
 
-test('finirConnexion, mise à jour : 403 ou 200 sans items → morceaux, 401 → refus, coupure → réseau (la demande reste) ; jamais un jeton écrit', async () => {
+test('finirConnexion, mise à jour : 403 ou 200 sans items → morceaux, 401 → refus, coupure → réseau ; après l\'échange du code, la demande est retirée, même en réseau ; jamais un jeton écrit', async () => {
   const cas = [
     [{ morceaux: [reponse(403, { error: { status: 403, message: 'Forbidden' } })] }, 'morceaux'],
     [{ morceaux: [reponse(200, { name: 'Pas à lui', total: 12 })] }, 'morceaux'],
@@ -410,8 +445,11 @@ test('finirConnexion, mise à jour : 403 ou 200 sans items → morceaux, 401 →
   for (const [options, attendue] of cas) {
     const win = pourMaj();
     const fetch = fauxFetch(options);
-    await assert.rejects(finirConnexion({ code: 'c', win, clientId: 'client-de-test', fetch, maintenant: MAINTENANT }), raison(attendue), `${JSON.stringify(options)} → ${attendue}`);
-    assert.equal(win.valeurs.has(CLE), attendue === 'reseau', `${attendue} : demande ${attendue === 'reseau' ? 'gardée' : 'retirée'}`);
+    const quoi = `${JSON.stringify(options)} → ${attendue}`;
+    const e = await echoue(finirConnexion({ code: 'c', win, clientId: 'client-de-test', fetch, maintenant: MAINTENANT }), attendue, quoi);
+    // Le code a servi dans tous ces cas, sauf un refus de l'échange lui-même : la demande est retirée, coupure comprise.
+    assert.equal(win.valeurs.has(CLE), false, `${quoi} : demande retirée`);
+    assert.equal(e.codeUtilise === true, !options.jeton, `${quoi} : codeUtilise`);
     assert.ok(fetch.appels.every((a) => !a.url.includes('/me/playlists')));
     assert.doesNotMatch(JSON.stringify([...win.valeurs]), /jeton-de-test/);
   }

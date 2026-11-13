@@ -50,6 +50,7 @@ const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 // identifiant de playlist invalide).
 // v12 : 'morceaux' (Spotify ne donne pas les morceaux d'une playlist qui n'est pas à lui : 403, ou 200 sans tableau `items`),
 // 'expiree' (`lireMorceaux` a déjà servi, ou plus de 10 minutes ont passé).
+// `codeUtilise` (finirConnexion) : l'erreur est venue après l'échange du code, qui ne peut plus resservir.
 export class ErreurSpotify extends Error {
   constructor(raison) {
     super(`Spotify : ${raison}`);
@@ -208,12 +209,16 @@ function fermetureMorceaux(demander, jeton, debut) {
 }
 
 // Finit la connexion : le code échangé contre un jeton (avec le verifier de la demande en attente). La demande en attente est
-// retirée à la fin, sauf en 'reseau', où le code peut se recoller.
+// retirée à la fin, sauf en 'reseau' sur l'échange du code lui-même, où le code peut se recoller. Une coupure après l'échange
+// (les pages de la liste du compte, ou des morceaux) retire aussi la demande : le code a déjà servi, et un code ne sert qu'une
+// fois (RFC 6749, §4.1.2). Toute erreur venue après l'échange porte `codeUtilise` : l'écran ne garde pas ce code (relecture
+// finale de la v12).
 // - « choisir » : la liste de ses playlists, page par page (l'offset est calculé ; le `next` de la réponse n'est jamais
 //   suivi). Rend { but: 'choisir', liste: [{ nom, lien }], lireMorceaux(id) → Promise<{ morceaux, suite }> }.
 // - « maj » (v12) : les morceaux de la playlist notée avec la demande, sans relire la liste du compte. Rend
 //   { but: 'maj', playlist, morceaux, suite }.
 export async function finirConnexion({ code, win = globalThis, clientId = SPOTIFY_CLIENT_ID, fetch = (...a) => win.fetch(...a), maintenant = Date.now() } = {}) {
+  let codeUtilise = false;
   try {
     const attente = lireAttente(win, maintenant);
     const propre = typeof code === 'string' ? code.trim() : '';
@@ -225,6 +230,7 @@ export async function finirConnexion({ code, win = globalThis, clientId = SPOTIF
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: corps.toString(),
     }) || {}).access_token;
     if (typeof jeton !== 'string' || !jeton) throw new ErreurSpotify('reponse');
+    codeUtilise = true;
     if (attente.but === 'maj') {
       const { morceaux, suite } = await lirePagesMorceaux(fetch, jeton, attente.playlist);
       oublierAttente(win);
@@ -243,7 +249,8 @@ export async function finirConnexion({ code, win = globalThis, clientId = SPOTIF
     return { but: 'choisir', liste, lireMorceaux: fermetureMorceaux(fetch, jeton, maintenant) };
   } catch (e) {
     const erreur = e instanceof ErreurSpotify ? e : new ErreurSpotify('reponse');
-    if (erreur.raison !== 'reseau') oublierAttente(win);
+    if (codeUtilise) erreur.codeUtilise = true;
+    if (erreur.raison !== 'reseau' || codeUtilise) oublierAttente(win);
     throw erreur;
   }
 }

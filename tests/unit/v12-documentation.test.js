@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { RACINE, lire } from '../aides/fichiers.js';
+import { jetons, contraste } from '../aides/couleurs.js';
 
 // v12 (9/9) · Ce que la v12 laisse écrit (plan v12, tâche 9 ; spec §8) : la règle « Zéro réseau » de CLAUDE.md et son exception
 // étendue, le jeton jamais écrit, la ligne de l'accent ; l'entrée v12.0.0 de docs/decisions.md et ses règles levées, annotées
@@ -166,6 +167,55 @@ test('docs/recette-iphone.md, « v12 » : les huit points de la spec §8, et leu
   const cochee = recette.replace('- [ ] **La page du soir**', '- [x] **La page du soir**');
   const suivie = `${cochee.trimEnd()}\n\n## v13\n\n- [ ] Un point d'après.\n`;
   for (const r of [recette, cochee, suivie]) assert.equal((sectionV12(r).match(/^- \[[ xX]\] /gm) || []).length, 8);
+});
+
+// Relecture finale de la v12 : le bandeau « Nouvelle version prête » n'existe pas dans Safari (spec §7) ; les lignes de CLAUDE.md
+// écrites d'après le plan, et les barres « Émotions » d'En consultation aux couleurs des familles, attendent sa décision ; la
+// lecture de l'en-tête d'Aujourd'hui par VoiceOver, vérifiée dans Chromium seulement (tâche 4), est à la recette.
+test('relecture finale : l\'entrée v12 ne place pas le bandeau dans Safari ; ce qui attend l\'utilisateur dit les lignes de CLAUDE.md écrites d\'après le plan et les barres d\'En consultation ; la recette fait lire l\'en-tête par VoiceOver', () => {
+  const v12 = entreeV12();
+  const decisions = section(v12, 'Décisions de l\'utilisateur (spec §2, 08 et 09/11)');
+  assert.doesNotMatch(decisions, /dans Safari, il a fallu toucher « Nouvelle version prête »/);
+  assert.ok(decisions.includes('Safari gardait l\'ancienne version ; il a fallu toucher « Nouvelle version prête » (le bandeau de l\'app installée, qui n\'existe pas dans Safari)'));
+  const attente = section(v12, 'En attente de l\'utilisateur').split('\n');
+  const claude = attente.find((l) => l.startsWith('- **`CLAUDE.md`**'));
+  assert.ok(claude, 'CLAUDE.md absent de « En attente de l\'utilisateur »');
+  for (const x of ['« Une seule couleur d\'accent, le vert (v12) »', '« Règles qui priment sur tout »', '« Changer de playlist »', '« Mettre à jour la liste »',
+    'd\'après le plan v12 (tâche 9)', 'la spec §8 ne prévoyait que l\'exception réseau et le jeton', 'avec son accord']) {
+    assert.ok(claude.includes(x), `CLAUDE.md, en attente : ${x}`);
+  }
+  const consultation = attente.find((l) => l.startsWith('- **Les barres « Émotions » d\'En consultation**'));
+  assert.ok(consultation, 'En consultation absent de « En attente de l\'utilisateur »');
+  for (const x of ['7 couleurs des familles', '`BarresFamilles`', 'À trancher, l\'écran reste tel quel', '`--donnee*`', 'avec son accord']) {
+    assert.ok(consultation.includes(x), `En consultation, en attente : ${x}`);
+  }
+  const soir = sectionV12(doc('docs', 'recette-iphone.md')).split('\n').find((l) => /^- \[[ xX]\] \*\*La page du soir\*\*/.test(l));
+  for (const x of ['Avec VoiceOver', '« Aujourd\'hui, Jeudi 15 octobre »', '« Mercredi 14 octobre »', 'sans épeler les capitales du sur-titre']) {
+    assert.ok(soir.includes(x), `recette, la page du soir : ${x}`);
+  }
+});
+
+// Relecture finale : le contraste d'un lien vert sur --surface-2 en clair, calculé depuis les jetons, est celui que donnent les
+// jetons, le contrôle et la documentation (la spec dit « environ 4,48 ») ; le commentaire de la carte dit son rayon, --r-carte.
+test('le lien vert sur --surface-2 en clair : 4,49:1, calculé depuis les jetons, partout où il est écrit ; le commentaire de la carte dit le rayon de --r-carte', () => {
+  const css = doc('public', 'css', 'tokens.css');
+  const { clair } = jetons(css);
+  const ecrit = `${contraste(clair['accent-texte'], clair['surface-2']).toFixed(2).replace('.', ',')}:1`;
+  assert.equal(ecrit, '4,49:1');
+  const lieux = {
+    'public/css/tokens.css': css,
+    'tests/aides/controle.js': doc('tests', 'aides', 'controle.js'),
+    'docs/decisions.md, entrée v12.0.0': entreeV12(),
+    'docs/design/integration.md': doc('docs', 'design', 'integration.md'),
+  };
+  for (const [nom, texte] of Object.entries(lieux)) {
+    const plat = texte.replace(/\s+/g, ' ');
+    assert.ok(plat.includes(ecrit), `${nom} : ${ecrit} absent`);
+    assert.doesNotMatch(plat, /4,48:1/, nom);
+  }
+  const rayon = /--r-carte:\s*(\d+)px;/.exec(css)[1];
+  assert.equal(rayon, '16');
+  assert.ok(doc('public', 'css', 'composants.css').includes(`/* Carte : --surface sans bordure, rayon ${rayon} (--r-carte) ;`));
 });
 
 test('la version 12.0.0 : package.json et js/version.js (écrit par npm run precache)', () => {

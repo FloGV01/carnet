@@ -139,7 +139,9 @@ test('les réglages : écrire ses titres et trois playlists ; tout s\'enregistre
   await expect.poll(async () => (await lireMeta(page, 'refuges'))?.playlists.length).toBe(1);
   // La ligne notée a sa suivante, vide.
   await expect(nom(page, 2)).toHaveValue('');
+  // Le lien s'écrit à la sortie de son champ (relecture finale).
   await lien(page, 1).fill(`${LIEN_PL}?si=xyz123`);
+  await lien(page, 1).blur();
   await expect.poll(async () => (await lireMeta(page, 'refuges'))?.playlists[0]).toEqual({ nom: 'Pour souffler', lien: LIEN_PL, source: null });
   await lien(page, 2).fill('https://exemple.test/ma-liste');
   await nom(page, 2).fill('Ailleurs');
@@ -222,13 +224,17 @@ test('les réglages : une ligne vidée de son nom et de son lien disparaît ; le
   await nom(page, 2).fill('Trois bis');
   await expect.poll(async () => (await lireMeta(page, 'refuges')).playlists[1]).toEqual({ nom: 'Trois bis', lien: 'spotify:playlist:c', source: null });
   expect((await lireMeta(page, 'refuges')).playlists[0]).toEqual({ nom: 'Une', lien: 'spotify:playlist:a', source: null });
-  // La dernière vidée devient la ligne vide sur place : le champ garde le focus, et y écrire ajoute une playlist au bout.
-  await nom(page, 2).fill('');
+  // La dernière vidée devient la ligne vide sur place : le champ garde le focus, et y écrire ajoute une playlist au bout. Le
+  // lien s'écrit à la sortie de son champ (relecture finale) : il est vidé d'abord, puis le nom, qui s'écrit pendant la frappe.
   await lien(page, 2).fill('');
+  await lien(page, 2).blur();
+  await expect.poll(async () => (await lireMeta(page, 'refuges')).playlists[1]).toEqual({ nom: 'Trois bis', lien: null, source: null });
+  await nom(page, 2).fill('');
   await expect.poll(async () => (await lireMeta(page, 'refuges')).playlists.map((p) => p.nom)).toEqual(['Une']);
-  await expect(lien(page, 2)).toBeFocused();
+  await expect(nom(page, 2)).toBeFocused();
   await expect(nom(page, 3)).toHaveCount(0);
   await lien(page, 2).fill('https://open.spotify.com/playlist/n');
+  await lien(page, 2).blur();
   await expect.poll(async () => (await lireMeta(page, 'refuges')).playlists).toEqual([
     { nom: 'Une', lien: 'spotify:playlist:a', source: null }, { nom: null, lien: 'https://open.spotify.com/playlist/n', source: null }]);
   // Tout vidé : la méta vaut null, et l'aperçu d'un import n'aurait rien à annoncer ; Mes refuges revient à son état vide.
@@ -253,6 +259,80 @@ test('les réglages : un brouillon resté sur l\'appareil revient dans son champ
   await expect(nom(page, 1)).toHaveValue('Pour la route');
   await expect.poll(() => lireMeta(page, 'refuges')).toEqual({ titres: 'Un titre resté', playlists: [{ nom: 'Pour la route', lien: null, source: null }] });
   await expect.poll(() => brouillons(page)).toEqual([]);
+});
+
+// Relecture finale : le lien s'écrivait 500 ms après la frappe. Une valeur de passage (le champ vidé puis le même lien recollé,
+// une faute effacée puis retapée) était écrite, et la playlist suivie perdait ses morceaux et sa source, que le même lien ne
+// rendait pas : seul « Mettre à jour la liste », par le réseau, pouvait les rendre. Le lien ne s'écrit plus qu'à la sortie de
+// son champ (spec v12 §6.5 : « le même lien recollé, les garde »), comme un sens de mot dans Réglages › Émotions.
+test('les réglages : le lien de la playlist suivie, vidé puis recollé une seconde plus tard, ou une faute effacée puis retapée, garde ses morceaux et sa source ; le lien ne s\'écrit qu\'à la sortie du champ ; une autre playlist les retire', async ({ page }) => {
+  const suivie = { nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify', morceaux: morceaux(12) };
+  await ecrireMeta(page, 'refuges', { titres: null, playlists: [suivie] });
+  const notee = await lireMeta(page, 'refuges');
+  await ouvrirReglages(page);
+  await expect(lien(page, 1)).toHaveValue(LIEN_PL);
+  // Vidé, une seconde passe (le nom se serait déjà écrit) : rien n'est écrit ; puis le même lien collé, et la sortie du champ.
+  await lien(page, 1).fill('');
+  await page.clock.runFor(1000);
+  expect(await lireMeta(page, 'refuges'), 'le lien vidé, pendant la frappe').toEqual(notee);
+  await lien(page, 1).fill(LIEN_PL);
+  await lien(page, 1).blur();
+  await expect.poll(() => brouillons(page)).toEqual([]);
+  expect(await lireMeta(page, 'refuges'), 'le même lien recollé').toEqual(notee);
+  // Une faute : le dernier signe effacé, une seconde, puis retapé, et la sortie du champ.
+  await lien(page, 1).press('End');
+  await lien(page, 1).press('Backspace');
+  await page.clock.runFor(1000);
+  expect(await lireMeta(page, 'refuges'), 'la faute, pendant la frappe').toEqual(notee);
+  await lien(page, 1).press('0');
+  await expect(lien(page, 1)).toHaveValue(LIEN_PL);
+  await lien(page, 1).blur();
+  await expect.poll(() => brouillons(page)).toEqual([]);
+  expect(await lireMeta(page, 'refuges'), 'la faute corrigée').toEqual(notee);
+  // Mes refuges montre toujours ses morceaux, et « Spotify » sous son nom.
+  await retour(page);
+  await verifierMorceaux(ecran(page), 'Pour souffler', morceaux(12));
+  await expect(lignes(ecran(page)).first()).toContainText('Spotify');
+  // Une autre playlist, écrite à la sortie du champ : ses morceaux et sa source partent, ils étaient ceux de l'ancienne.
+  await modifier(page).click();
+  await expect(titres(page)).toBeVisible();
+  const autre = `https://open.spotify.com/playlist/${id('pl2')}`;
+  await lien(page, 1).fill(autre);
+  await page.clock.runFor(1000);
+  expect(await lireMeta(page, 'refuges'), 'une autre playlist, pendant la frappe').toEqual(notee);
+  await lien(page, 1).blur();
+  await expect.poll(async () => (await lireMeta(page, 'refuges'))?.playlists).toEqual([{ nom: 'Pour souffler', lien: autre, source: null }]);
+  await retour(page);
+  await expect(listeMorceaux(ecran(page))).toHaveCount(0);
+});
+
+// Relecture finale : « Mes playlists » et « Mes titres » étaient posés en étiquette de champ (17 px, en noir, en casse normale),
+// alors que « Mes titres », sur Mes refuges, et les groupes des autres réglages ont le titre de section (13 px, en capitales
+// grises). Le champ des titres garde son nom accessible.
+test('les réglages : « Mes playlists » et « Mes titres » sont des titres de section, du style de « Mes titres » sur Mes refuges, en clair et en sombre ; le champ des titres garde son nom, « Mes titres »', async ({ page }) => {
+  await ecrireMeta(page, 'refuges', PLEINS);
+  const style = (loc) => loc.evaluate((e) => {
+    const s = getComputedStyle(e);
+    return [s.fontSize, s.fontWeight, s.textTransform, s.letterSpacing, s.color];
+  });
+  for (const schema of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: schema });
+    await ouvrirRefuges(page);
+    const modele = await style(ecran(page).getByRole('heading', { name: 'Mes titres', level: 2, exact: true }));
+    expect(modele[2], schema).toBe('uppercase');
+    await modifier(page).click();
+    await expect(titres(page)).toBeVisible();
+    for (const nomSection of ['Mes playlists', 'Mes titres']) {
+      const h = reglages(page).getByRole('heading', { name: nomSection, level: 2, exact: true });
+      await expect(h).toHaveClass(/(^| )libelle-section( |$)/);
+      expect(await style(h), `${schema} · ${nomSection}`).toEqual(modele);
+    }
+    await expect(reglages(page).getByRole('region', { name: 'Mes playlists', exact: true })).toBeVisible();
+    await expect(titres(page)).toHaveAccessibleName('Mes titres');
+    await expect(titres(page)).toHaveValue(PLEINS.titres);
+    await expect(reglages(page).locator('label.etiquette').filter({ hasText: /^Mes / })).toHaveCount(0);
+    await retour(page);
+  }
 });
 
 // ---------- Mes refuges : la liste ----------

@@ -205,8 +205,11 @@ test('v12 (3/9) · l\'écran 3 de l\'émotion, carte « Pour récupérer, je… 
 // La hauteur de la page du soir en v11 (b9870dd, mesurée le 10/11/2026 dans WebKit) : remplie comme le contrôle global
 // (verserControle), à 390 × 844, au texte par défaut, sans zones sûres, document.documentElement.scrollHeight.
 const HAUTEUR_SOIR_V11 = 1611;
+// La même, « Sport en détail » ouvert (v11 f5b6c8b, mesurée le 13/11/2026 de la même façon) : relecture finale, la carte du
+// détail n'avait pas été recalibrée comme la paire, et « Autre » passait seul sur une 4e rangée (+157 px).
+const HAUTEUR_SOIR_SPORT_V11 = 1915;
 
-test('v12 (4/9) · la page du soir, remplie comme le contrôle, grandit de 120 px au plus depuis la v11 (390 × 844, texte par défaut), en clair et en sombre', async ({ page }) => {
+test('v12 (4/9) · la page du soir, remplie comme le contrôle, grandit de 120 px au plus depuis la v11 (390 × 844, texte par défaut), en clair et en sombre, « Sport en détail » fermé puis ouvert', async ({ page }) => {
   await verserControle(page);
   for (const [schema] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
@@ -218,6 +221,15 @@ test('v12 (4/9) · la page du soir, remplie comme le contrôle, grandit de 120 p
     await stabiliser(page);
     const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
     expect(hauteur - HAUTEUR_SOIR_V11, `${schema} : ${hauteur} px, contre ${HAUTEUR_SOIR_V11} en v11`).toBeLessThanOrEqual(120);
+    // « Sport en détail » ouvert (il remplit « tout ») : les 7 types d'activité tiennent sur 3 rangées, comme en v11.
+    await page.getByRole('button', { name: 'Sport en détail', exact: true }).click();
+    const types = groupe(page, 'Activité 1 : type');
+    await expect(types.getByRole('button')).toHaveCount(7);
+    await stabiliser(page);
+    const rangees = await types.evaluate((g) => new Set([...g.querySelectorAll('button')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
+    expect(rangees, `${schema} : les types d'activité`).toBe(3);
+    const ouverte = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(ouverte - HAUTEUR_SOIR_SPORT_V11, `${schema}, Sport en détail : ${ouverte} px, contre ${HAUTEUR_SOIR_SPORT_V11} en v11`).toBeLessThanOrEqual(120);
   }
 });
 

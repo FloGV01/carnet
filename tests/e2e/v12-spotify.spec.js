@@ -663,31 +663,75 @@ test.describe('avec Spotify simulé', () => {
     expect(await page.evaluate(() => window.__piege)).toBeUndefined();
   });
 
-  test('« Mettre à jour la liste » coupé par le réseau : le message, la demande gardée, le code déjà dans le champ ; relancé, la liste arrive', async ({ page }) => {
+  // Relecture finale : coupé après l'échange du code (une page des morceaux), le code a servi, et un code ne sert qu'une fois
+  // (RFC 6749, §4.1.2). Il n'est plus gardé dans le champ : « Finir la connexion » échouait toujours, après une seconde
+  // demande de jeton. La demande est retirée, et « Mettre à jour la liste » en ouvre une autre.
+  test('« Mettre à jour la liste » coupé par le réseau pendant l\'échange du code : le message, la demande gardée, le code déjà dans le champ ; relancé, la liste arrive. Coupé après l\'échange (les morceaux, ou leur 2e page) : ni demande ni code gardés ; « Mettre à jour la liste » de nouveau, la liste arrive', async ({ page }) => {
     await demarrer(page);
     const notes = { playlists: [{ nom: 'Détente', lien: lienS(1), source: null, morceaux: gardes(1, 2) }] };
     await ecrireMeta(page, 'refuges', notes);
-    for (const coupe of [{ jeton: 'coupe' }, { morceaux: 'coupe' }]) {
+    const simuler = async (options) => {
       await page.unrouteAll({ behavior: 'wait' });
       await servirConstante(page, FACTICE);
       await page.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort('blockedbyclient'));
-      const demandes = await simulerSpotify(page, coupe);
-      await poserAttente(page, 'etat-de-test', { but: 'maj', playlist: id('sp1') });
-      await revenirDeSpotify(page, 'code=code-de-test&state=etat-de-test');
-      const ou = JSON.stringify(coupe);
-      await expect(statut(page), ou).toHaveText(N_ABOUTI);
-      expect(JSON.parse(await attente(page)), ou).toMatchObject({ but: 'maj', playlist: id('sp1') });
-      await expect(champCode(page), ou).toHaveValue('code-de-test');
-      expect(await lireMeta(page, 'refuges'), ou).toEqual(notes);
-      expect(await toutCeQuiEstGarde(page), ou).not.toContain('jeton-de-test');
-      // Le réseau revenu : « Finir la connexion » relance le même code, avec la même demande ; Mes refuges montre la liste.
-      demandes.regler({ jeton: { status: 200, corps: { access_token: 'jeton-de-test' } }, morceaux: (_, offset) => ({ status: 200, corps: pageMorceaux(5, offset) }) });
-      await bouton(page, 'Finir la connexion').click();
+      return simulerSpotify(page, options);
+    };
+    const revenu = { jeton: { status: 200, corps: { access_token: 'jeton-de-test' } }, morceaux: (_, offset) => ({ status: 200, corps: pageMorceaux(5, offset) }) };
+    const mesRefugesAJour = async (ou) => {
       await expect(liensMorceaux(page), ou).toHaveCount(5);
       expect(await adresse(page)).toBe('/#/refuges');
       expect(await attente(page)).toBeNull();
-      expect(demandes.liste).toHaveLength(0);
       expect(await lireMeta(page, 'refuges'), ou).toEqual({ playlists: [{ ...notes.playlists[0], morceaux: gardes(1, 5) }], titres: null });
+      expect(await toutCeQuiEstGarde(page), ou).not.toContain('jeton-de-test');
+    };
+
+    // Coupé pendant l'échange du code : la demande et le code restent ; « Finir la connexion » relance le même code.
+    let demandes = await simuler({ jeton: 'coupe' });
+    await poserAttente(page, 'etat-de-test', { but: 'maj', playlist: id('sp1') });
+    await revenirDeSpotify(page, 'code=code-de-test&state=etat-de-test');
+    await expect(statut(page)).toHaveText(N_ABOUTI);
+    expect(JSON.parse(await attente(page))).toMatchObject({ but: 'maj', playlist: id('sp1') });
+    await expect(champCode(page)).toHaveValue('code-de-test');
+    expect(await lireMeta(page, 'refuges')).toEqual(notes);
+    expect(await toutCeQuiEstGarde(page)).not.toContain('jeton-de-test');
+    demandes.regler(revenu);
+    await bouton(page, 'Finir la connexion').click();
+    await mesRefugesAJour('jeton coupé');
+    expect(demandes.jeton.map((d) => new URLSearchParams(d.corps).get('code'))).toEqual(['code-de-test', 'code-de-test']);
+    expect(demandes.liste).toHaveLength(0);
+    await ecrireMeta(page, 'refuges', notes);
+
+    // Coupé après l'échange : toutes les pages des morceaux, ou la 2e seulement (la 1re arrivée).
+    const coupes = [
+      ['les morceaux coupés', { morceaux: 'coupe' }, 1],
+      ['la 2e page coupée', { morceaux: (_, offset) => (offset === 50 ? 'coupe' : { status: 200, corps: pageMorceaux(62, offset) }) }, 2],
+    ];
+    for (const [ou, options, pages] of coupes) {
+      demandes = await simuler(options);
+      await poserAttente(page, 'etat-de-test', { but: 'maj', playlist: id('sp1') });
+      await revenirDeSpotify(page, 'code=code-de-test&state=etat-de-test');
+      await expect(statut(page), ou).toHaveText(N_ABOUTI);
+      expect(demandes.jeton, ou).toHaveLength(1);
+      expect(demandes.morceaux, ou).toHaveLength(pages);
+      // Le code a servi : ni la demande, ni le champ, ni le code nulle part à l'écran ; la liste notée reste.
+      expect(await attente(page), ou).toBeNull();
+      await expect(champCode(page), ou).toHaveCount(0);
+      await expect(bouton(page, 'Finir la connexion'), ou).toHaveCount(0);
+      await expect(reglages(page), ou).not.toContainText('code-de-test');
+      expect(await page.evaluate(() => [...document.querySelectorAll('input, textarea')].map((c) => c.value)), ou).not.toContain('code-de-test');
+      expect(await lireMeta(page, 'refuges'), ou).toEqual(notes);
+      expect(await toutCeQuiEstGarde(page), ou).not.toContain('jeton-de-test');
+      // Le réseau revenu : « Mettre à jour la liste » ouvre une autre demande ; son retour, avec un autre code, donne la liste.
+      demandes.regler(revenu);
+      await bouton(page, 'Mettre à jour la liste').click();
+      await expect.poll(() => demandes.autoriser.length, ou).toBe(1);
+      await expect(page).toHaveTitle('Spotify simulé');
+      const state = demandes.autoriser[0].searchParams.get('state');
+      expect(state).not.toBe('etat-de-test');
+      await revenirDeSpotify(page, `code=code-deux&state=${state}`);
+      await mesRefugesAJour(ou);
+      expect(demandes.jeton.map((d) => new URLSearchParams(d.corps).get('code')), ou).toEqual(['code-de-test', 'code-deux']);
+      expect(demandes.liste, ou).toHaveLength(0);
       await ecrireMeta(page, 'refuges', notes);
     }
   });
@@ -700,7 +744,8 @@ test.describe('avec Spotify simulé', () => {
       [{ jeton: { status: 401, corps: { error: 'invalid_client' } } }, REFUS, false],
       [{ liste: { status: 403, corps: { error: { status: 403, message: 'Forbidden' } } } }, REFUS, false],
       [{ jeton: 'coupe' }, N_ABOUTI, true],
-      [{ liste: 'coupe' }, N_ABOUTI, true],
+      // Coupé après l'échange du code : le code a servi, ni la demande ni lui ne sont gardés (relecture finale).
+      [{ liste: 'coupe' }, N_ABOUTI, false],
       [{ jeton: { status: 400, corps: { error: 'invalid_grant' } } }, N_ABOUTI, false],
       [{ jeton: { status: 200, corps: { token_type: 'Bearer' } } }, N_ABOUTI, false],
       [{ liste: { status: 200, corps: { items: 'pas une liste' } } }, null, false],
@@ -721,7 +766,8 @@ test.describe('avec Spotify simulé', () => {
         await expect(statut(page)).toHaveCount(0);
       }
       expect(await adresse(page), ou).toBe('/#/refuges/reglages');
-      // Seul le réseau coupé garde la demande, et le code du retour avec elle, déjà dans le champ : il se relance d'un toucher.
+      // Seul le réseau coupé pendant l'échange du code garde la demande, et le code du retour avec elle, déjà dans le champ : il
+      // se relance d'un toucher.
       expect(Boolean(await attente(page)), ou).toBe(gardee);
       await expect(champCode(page)).toHaveCount(gardee ? 1 : 0);
       if (gardee) await expect(champCode(page), ou).toHaveValue('code-de-test');

@@ -29,7 +29,7 @@
 .temoin-texte { position: absolute; width: 1em; height: 0; visibility: hidden; pointer-events: none; }
 
 /* ---------- Cartes et listes ---------- */
-/* Carte : --surface sans bordure, rayon 14 ; un choix non fait y est transparent, avec son contour (v12), comme sur le fond. */
+/* Carte : --surface sans bordure, rayon 16 (--r-carte) ; un choix non fait y est transparent, avec son contour (v12), comme sur le fond. */
 .carte { background: var(--surface); border-radius: var(--r-carte); padding: 14px 16px; }
 .carte-groupe { padding: 0; overflow: hidden; }
 .carte-entete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-2); margin-bottom: 8px; }

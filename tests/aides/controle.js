@@ -193,7 +193,7 @@ const controlerAccent = (page, quoi, accents, surface2 = null) => page.evaluate(
       }
     }
   } else {
-    // Un lien vert (un texte à --accent-texte) ne se pose jamais sur --surface-2 en clair (spec §5.3 : 4,48:1, sous 4,5). Le
+    // Un lien vert (un texte à --accent-texte) ne se pose jamais sur --surface-2 en clair (spec §5.3 : 4,49:1, sous 4,5). Le
     // fond est celui du premier ancêtre opaque.
     const fond = (el) => {
       for (let e = el; e; e = e.parentElement) {

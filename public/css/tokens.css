@@ -16,7 +16,7 @@
 :root {
   color-scheme: light dark;
 
-  /* Base (spec §5.2). --surface-2 : un remplissage discret, jamais un choix, et jamais le fond d'un lien vert (4,48:1 en
+  /* Base (spec §5.2). --surface-2 : un remplissage discret, jamais un choix, et jamais le fond d'un lien vert (4,49:1 en
      clair, sous 4,5). --barre : la bande du bas et les onglets. --line : les filets décoratifs. --contour : ce qui se
      touche sans être choisi (choix non faits, champs, roues), à 3:1 au moins sur le fond, la carte et --surface-2.
      --text-2 : AA sur le fond, la carte et --surface-2. */

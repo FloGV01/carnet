@@ -4,10 +4,12 @@
 //   boutons : « Mettre à jour la liste » et « Changer de playlist » quand une playlist est suivie, sinon « Choisir dans mon
 //   compte » ; la note « Une seule lecture… » ; le champ du code ; le message d'un échec ; la liste du compte pendant un choix ;
 //   « Retirer ces playlists », avec « Annuler » ;
-// - les trois lignes nom et lien, qui s'écrivent seules, en file comme Mon plan ; un lien refusé (ni https, ni spotify, ni
-//   music) n'est pas gardé, sans message ; « ?si=… » est retiré (domain/refuges.js) ; un lien https qui ne deviendra pas un
-//   lien direct vers une app a une note discrète ;
+// - les trois lignes nom et lien, qui s'écrivent seules, en file comme Mon plan (le lien à la sortie de son champ) ; un lien
+//   refusé (ni https, ni spotify, ni music) n'est pas gardé, sans message ; « ?si=… » est retiré (domain/refuges.js) ; un lien
+//   https qui ne deviendra pas un lien direct vers une app a une note discrète ;
 // - « Mes titres », un par ligne.
+// « Mes playlists » et « Mes titres » sont des titres de section (.libelle-section), comme sur Mes refuges et dans les autres
+// réglages ; le champ des titres garde son nom accessible, « Mes titres » (relecture finale).
 // Le retour de Spotify arrive dans Mes refuges (main.js), qui le passe ici : il est pris une seule fois.
 // - Un choix (spec v12 §6.4) : la liste de ses playlists s'affiche, en mémoire de l'écran, jamais en base. Un toucher sur l'une
 //   lit d'abord ses morceaux (`lireMorceaux`, la fermeture qui détient le jeton : un seul usage, 10 minutes au plus, oubliée
@@ -149,8 +151,11 @@ export function ReglagesRefuges() {
       else if (monte.current) location.replace(LISTE);
     });
   };
-  // Réseau coupé : la demande reste (plateforme/spotify.js), et le code avec elle, déjà dans le champ, pour relancer d'un
-  // toucher. Sans cela, le code d'un retour dans l'app, retiré de l'adresse et jamais montré, ne pourrait pas se recoller.
+  // Réseau coupé pendant l'échange du code : la demande reste (plateforme/spotify.js), et le code avec elle, déjà dans le
+  // champ, pour relancer d'un toucher. Sans cela, le code d'un retour dans l'app, retiré de l'adresse et jamais montré, ne
+  // pourrait pas se recoller. Coupé après l'échange (les pages de la liste du compte, ou des morceaux) : le code a servi, il ne
+  // resservirait pas ; la demande est retirée, le champ part avec elle, et le message laisse les boutons de la connexion
+  // (relecture finale de la v12).
   const finir = (code) => {
     setEchec(null);
     setEnCours(true);
@@ -166,7 +171,7 @@ export function ReglagesRefuges() {
       }, (e) => {
         const raison = e && e.raison;
         setEchec(raison === 'refus' || raison === 'morceaux' ? raison : 'autre');
-        setCodeGarde(raison === 'reseau' ? code : null);
+        setCodeGarde(raison === 'reseau' && !e.codeUtilise ? code : null);
       })
       .finally(() => { setEnCours(false); setAttente(Boolean(lireAttente(window))); });
   };
@@ -281,24 +286,29 @@ export function ReglagesRefuges() {
       ${deSpotify && html`<button type="button" class="btn" onClick=${retirer}>Retirer ces playlists</button>`}
     </div>`}
     <section class="champ-fiche playlists-refuges" aria-labelledby="titre-mes-playlists">
-      <h2 class="etiquette" id="titre-mes-playlists">Mes playlists</h2>
+      <h2 class="libelle-section" id="titre-mes-playlists">Mes playlists</h2>
       ${cles.map((cle, i) => {
         const p = refuges.playlists[i] || null;
         const n = i + 1;
-        // Dès la frappe, avant l'écriture (500 ms plus tard) : « Annuler » ne remplacerait plus ce qui s'écrit.
+        // Dès la frappe, avant l'écriture (500 ms plus tard, ou à la sortie du lien) : « Annuler » ne remplacerait plus ce qui
+        // s'écrit. Le lien ne s'écrit qu'à la sortie du champ (et en arrière-plan), comme un sens de mot dans Réglages › Émotions :
+        // une valeur de passage (une faute corrigée, le champ vidé puis le même lien recollé) n'est jamais écrite. Écrite, elle
+        // ferait perdre à la playlist suivie ses morceaux et sa source (avecPlaylist), que le même lien recollé ne rendrait pas
+        // (spec v12 §6.5 : « le même lien recollé, les garde » ; relecture finale). Le nom s'écrit toujours 500 ms après la frappe.
         return html`<div class="carte saisie-playlist" key=${cle} onInput=${oublierAnnuler}>
           <${ChampTexte} id=${`refuges-nom-${i}`} etiquette=${html`Nom<span class="visuellement-cache"> de la playlist ${n}</span>`}
             valeur=${p && p.nom} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:nom-${i}`}
             surEnregistrer=${(nom) => changerPlaylist(cle, { nom })} />
           <${ChampTexte} id=${`refuges-lien-${i}`} etiquette=${html`Lien<span class="visuellement-cache"> de la playlist ${n}</span>`}
-            valeur=${p && p.lien} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:lien-${i}`}
+            valeur=${p && p.lien} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:lien-${i}`} aLaSortie=${true}
             surEnregistrer=${(lien) => changerPlaylist(cle, { lien })} />
           ${p && lienIncertain(p.lien) && html`<p class="note-import">Ce lien peut ne rien ouvrir depuis Emozio.</p>`}
         </div>`;
       })}
     </section>
-    <div class="champ-fiche">
-      <${ChampTexte} id="refuges-titres" etiquette="Mes titres" valeur=${refuges.titres} lignes=${4} placeholder="Un titre par ligne."
+    <div class="champ-fiche titres-reglages">
+      <h2 class="libelle-section">Mes titres</h2>
+      <${ChampTexte} id="refuges-titres" etiquette=${null} ariaLabel="Mes titres" valeur=${refuges.titres} lignes=${4} placeholder="Un titre par ligne."
         cleBrouillon="carnet:brouillon:refuges:titres" surEnregistrer=${changerTitres} />
     </div>
   </main>`;
