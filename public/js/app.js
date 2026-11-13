@@ -44,6 +44,7 @@ import { Minuteur } from './ui/ecrans/minuteur.js';
 import { Concentration } from './ui/ecrans/concentration.js';
 import { Sons } from './ui/ecrans/sons.js';
 import { MesRefuges } from './ui/ecrans/refuges.js';
+import { ReglagesRefuges } from './ui/ecrans/refuges-reglages.js';
 import { CodeSpotify } from './ui/ecrans/code-spotify.js';
 
 const ECRANS = {
@@ -91,16 +92,25 @@ const ECRANS = {
   concentration: () => html`<${Concentration} />`,
   sons: () => html`<${Sons} />`,
   refuges: () => html`<${MesRefuges} />`,
+  'refuges-reglages': () => html`<${ReglagesRefuges} />`,
 };
 
+// v12 (8/9) : l'abonnement se fait après le premier affichage (useEffect). Un changement arrivé entre les deux, comme une
+// version qui attend signalée dès le démarrage (surMajDisponible), serait perdu, et le bandeau ne paraîtrait pas : l'état est
+// relu à l'abonnement.
 function useEtatApp() {
   const [etat, setEtat] = useState(etatApp.lire());
-  useEffect(() => etatApp.abonner(setEtat), []);
+  useEffect(() => {
+    const desabonner = etatApp.abonner(setEtat);
+    setEtat(etatApp.lire());
+    return desabonner;
+  }, []);
   return etat;
 }
 
 // `codeSpotify` : le code d'un retour de Spotify arrivé hors de l'app installée (main.js), à copier pour finir la connexion
-// dans l'app ; cette page passe avant le guide d'installation.
+// dans l'app ; cette page passe avant le guide d'installation. Ni l'une ni l'autre n'a de bandeau de mise à jour : sur le
+// guide, une nouvelle version s'applique seule (v12, main.js et doitAppliquerSeule) ; sur la page du code, jamais.
 export function App({ guide, codeSpotify }) {
   const etat = useEtatApp();
   if (codeSpotify) return html`<${CodeSpotify} code=${codeSpotify} />`;

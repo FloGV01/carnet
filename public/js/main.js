@@ -4,7 +4,7 @@ import { App } from './app.js';
 import { etatApp } from './store.js';
 import { lireRoute, ROUTE_ACCUEIL } from './routeur.js';
 import { doitAfficherGuide, estModeApp } from './plateforme/mode.js';
-import { initialiserSw } from './plateforme/sw-client.js';
+import { initialiserSw, doitAppliquerSeule } from './plateforme/sw-client.js';
 import { demanderPersistance } from './plateforme/persistance.js';
 import { survivreAuCycle } from './plateforme/cycle.js';
 import { estLocal } from './plateforme/mode.js';
@@ -32,7 +32,14 @@ window.addEventListener('hashchange', (e) => {
   window.scrollTo(0, 0);
 });
 
-initialiserSw({ surMajDisponible: () => etatApp.maj({ majDisponible: true }) }).catch(() => {});
+// v12 (spec v12 §7) : sur le guide d'installation de Safari, une nouvelle version s'applique seule (une fois, puis un seul
+// rechargement) ; dans l'app installée, le bandeau reste. La page affichée est celle d'App : la page du code d'abord, puis le
+// guide.
+const pageCode = issueSpotify === 'copier';
+initialiserSw({
+  surMajDisponible: () => etatApp.maj({ majDisponible: true }),
+  appliquerSeule: doitAppliquerSeule({ modeApp: estModeApp(window), guide, pageCode }),
+}).catch(() => {});
 if (estModeApp(window)) demanderPersistance();
 
 // Retour au premier plan : le jour logique est recalculé ; après 30 min d'absence,
@@ -63,4 +70,4 @@ if (estLocal(location)) window.__carnet = { repo, etatApp };
 // Le texte d'attente « Emozio » du HTML est retiré : Preact ne le remplace pas de lui-même.
 const racine = document.getElementById('app');
 racine.textContent = '';
-render(html`<${App} guide=${guide} codeSpotify=${issueSpotify === 'copier' ? retourSpotify.code : null} />`, racine);
+render(html`<${App} guide=${guide} codeSpotify=${pageCode ? retourSpotify.code : null} />`, racine);

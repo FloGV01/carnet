@@ -1,8 +1,8 @@
 // Icônes au trait, une seule famille (viewBox 24, trait de 2, extrémités et jonctions arrondies, currentColor).
 // Les 39 icônes du lot 2b (docs/design/retour-claude-design-v2/design_handoff_carnet_refonte/icons), sans leur
 // bloc <metadata>, chacune en un seul tracé (cercles et rectangles arrondis récrits en arcs). Le nom du fichier
-// est entre parenthèses quand la clé, plus ancienne, en diffère. Seul « arrêt » est rempli (état actif d'un
-// enregistrement).
+// est entre parenthèses quand la clé, plus ancienne, en diffère. Sont pleins : « arrêt » (état actif d'un enregistrement)
+// et, depuis la v12, les 5 icônes de l'onglet actif (plus bas).
 import { html } from './lib.js';
 
 const svg = (d, { trait = 2, etiquette } = {}) => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -87,7 +87,31 @@ const C = {
   musique: 'M9 18V5l11-2v13 M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M14 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
 };
 
-export const Icones = Object.fromEntries(Object.entries(C).map(([nom, d]) => [nom, (options) => svg(d, options)]));
+// Les icônes pleines de l'onglet actif (v12, spec §5.4), comme les SF Symbols « .fill » : la forme change avec la couleur,
+// la couleur ne dit pas seule quel onglet est ouvert. Elles reviennent sur la décision B1 (« seul arrêt est rempli »), pour
+// la barre d'onglets seulement. Chaque partie est au trait (`trait`), pleine et cerclée du trait (`plein`), ou pleine sans
+// trait (`aplat`). Une découpe (la nervure de la feuille, le filet du calendrier) est un trou (fill-rule evenodd) : elle
+// laisse voir la barre, sans couleur écrite. Dessinées d'après la maquette (.superpowers/v12/maquettes/build.mjs, PLEIN).
+const P = {
+  // Le livre : la couverture pleine, la tranche au trait.
+  aujourdhuiPlein: [['plein', 'M6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z'], ['trait', 'M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5']],
+  // Les axes au trait, trois barres pleines.
+  analysePlein: [['trait', 'M3 3v16a2 2 0 0 0 2 2h16'], ['aplat', 'M7.4 12.6h1.2a1 1 0 0 1 1 1v3.4a1 1 0 0 1-1 1H7.4a1 1 0 0 1-1-1v-3.4a1 1 0 0 1 1-1Z M12.4 3.6h1.2a1 1 0 0 1 1 1v12.4a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1V4.6a1 1 0 0 1 1-1Z M17.4 7.6h1.2a1 1 0 0 1 1 1v8.4a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1V8.6a1 1 0 0 1 1-1Z']],
+  // La feuille pleine, la nervure en creux (le trait, autour du trou, l'arrondit), la tige au trait.
+  bienEtrePlein: [['plein', 'M5 19C5 11 11 5 19 5c0 8-6 14-14 14Z M5.87 15.8L13.2 8.47L15.53 10.8L8.2 18.13Z'], ['trait', 'M3 21l2.2-2.2']],
+  // Le calendrier plein (le trait de l'icône compris), son filet en creux, les anneaux au trait.
+  soinsPlein: [['aplat', 'M5.5 3.55h13a3.45 3.45 0 0 1 3.45 3.45v12a3.45 3.45 0 0 1-3.45 3.45h-13A3.45 3.45 0 0 1 2.05 19V7A3.45 3.45 0 0 1 5.5 3.55Z M4 9.2h16a.8.8 0 0 1 0 1.6H4a.8.8 0 0 1 0-1.6Z'], ['trait', 'M16 2.5v3M8 2.5v3']],
+  // Les curseurs : les rails au trait, les boutons pleins.
+  reglagesPlein: [['plein', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.4 12a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0M9.4 10a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0M17.4 14a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0']],
+};
+const svgPlein = (parties, { trait = 2 } = {}) => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width=${trait} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${parties.map(([mode, d]) => html`<path d=${d}
+  fill=${mode === 'trait' ? null : 'currentColor'} fill-rule=${mode === 'trait' ? null : 'evenodd'} stroke=${mode === 'aplat' ? 'none' : null} />`)}</svg>`;
 
-// Arrêt : seule icône pleine.
+export const Icones = Object.fromEntries([
+  ...Object.entries(C).map(([nom, d]) => [nom, (options) => svg(d, options)]),
+  ...Object.entries(P).map(([nom, parties]) => [nom, (options) => svgPlein(parties, options)]),
+]);
+
+// Arrêt : pleine, sans trait.
 Icones.stop = () => html`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg>`;

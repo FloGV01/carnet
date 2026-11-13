@@ -94,8 +94,33 @@ test('les icônes de Mes refuges : « sortie » et « musique », avec leurs tra
   assert.equal(TRACES.musique, 'M9 18V5l11-2v13 M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M14 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0');
 });
 
+// v12 (4/9, spec §5.4) : les 5 icônes pleines de l'onglet actif, comme les SF Symbols « .fill » : la forme change avec la
+// couleur. Dans la même famille (viewBox 24, extrémités arrondies, currentColor), sans style ni couleur écrite : une découpe
+// (la nervure de la feuille, le filet du calendrier) est un trou (fill-rule evenodd), qui laisse voir la barre.
+const PLEINES = ['aujourdhuiPlein', 'analysePlein', 'bienEtrePlein', 'soinsPlein', 'reglagesPlein'];
+const BLOC_PLEIN = (MODULE.match(/^const P = \{([\s\S]*?)^\};/m) || [])[1] || '';
+const PLEINS = Object.fromEntries([...BLOC_PLEIN.matchAll(/^ {2}(\w+): \[([\s\S]*?)\],$/gm)]
+  .map((m) => [m[1], [...m[2].matchAll(/\['(trait|plein|aplat)', '([^']+)'\]/g)].map((x) => [x[1], x[2]])]));
+
+test('v12 · les 5 icônes pleines des onglets : chacune a au moins une partie pleine, des tracés valides, et la barre d\'onglets les emploie', () => {
+  assert.deepEqual(Object.keys(PLEINS), PLEINES);
+  for (const [nom, parties] of Object.entries(PLEINS)) {
+    assert.ok(parties.length > 0, nom);
+    assert.ok(parties.some(([mode]) => mode !== 'trait'), `${nom} : une partie pleine`);
+    for (const [, d] of parties) assert.match(d, /^M[\d.\s,MmLlHhVvCcSsQqTtAaZz-]+$/, nom);
+    // Chacune a son icône au trait, celle des onglets inactifs.
+    assert.ok(TRACES[nom.replace(/Plein$/, '')], `${nom} : pas d'icône au trait`);
+  }
+  assert.ok(!/style=|#[\da-f]{3,6}\b/i.test(sansCommentaires(BLOC_PLEIN)), 'ni style ni couleur écrite');
+  // La barre d'onglets : l'icône pleine pour l'onglet actif, au trait pour les autres.
+  const barre = sansCommentaires(lire(join(RACINE, 'public', 'js', 'ui', 'composants', 'barre-onglets.js')));
+  assert.match(barre, /Plein`\]/);
+  // L'en-tête du module ne dit plus que seul « arrêt » est rempli (décision B1, revue en v12).
+  assert.ok(!/Seul « arrêt » est rempli/.test(MODULE));
+});
+
 test('toute icône nommée dans l\'app existe dans le module', () => {
-  const connues = new Set([...Object.keys(TRACES), 'stop']);
+  const connues = new Set([...Object.keys(TRACES), ...PLEINES, 'stop']);
   const fautes = [];
   for (const f of lister(join(RACINE, 'public', 'js', 'ui'), (p) => p.endsWith('.js'))) {
     const code = sansCommentaires(lire(f));

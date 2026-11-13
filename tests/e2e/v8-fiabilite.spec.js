@@ -12,8 +12,6 @@ const AUJ = '2026-10-15';
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const THEMES = [['light', clair], ['dark', sombre]];
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
-// Une couleur d'opacité a posée sur un fond : la couleur vue.
-const vue = (couleur, fond, a) => `rgb(${canaux(couleur).map((c, i) => Math.round(c * a + canaux(fond)[i] * (1 - a))).join(', ')})`;
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date(2026, 9, 15, 21, 0) });
@@ -108,7 +106,7 @@ test('Q27 · sans simulation (WebKit sans iPhone), le Diagnostic dit des zones s
 
 // ---------- Q29 : les finitions ----------
 
-test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journée) ; en clair, rien ne change', async ({ page }) => {
+test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journée) ; v12 : la rampe de l\'encre à 3 pas, le pas discret cerclé à 3:1', async ({ page }) => {
   // Cinq jours de relevés à 10 h (basse), 14 h (moyenne) et 18 h (haute) : Ta journée a ses trois pas d'énergie.
   await page.evaluate(async (jours) => {
     const r = window.__carnet.repo;
@@ -125,16 +123,18 @@ test('Q29 · en sombre, l\'énergie basse se distingue de la moyenne (Ta journé
     await page.emulateMedia({ colorScheme: schema });
     const pas = await journee.evaluate((f) => [1, 2, 3].map((n) => {
       const s = getComputedStyle(f.querySelector(`.pas-rampe rect.g-energie-${n}`));
-      return { fill: s.fill, opacite: Number(s.opacity) };
+      return { fill: s.fill, opacite: Number(s.opacity), trait: s.stroke };
     }));
-    for (const p of pas) expect(p.fill, schema).toBe(rgb(t['c-energie']));
-    const [basse, moyenne, haute] = pas.map((p) => vue(t['c-energie'], t.surface, p.opacite));
-    if (schema === 'light') expect(pas.map((p) => p.opacite)).toEqual([0.3, 0.6, 1]);
-    else {
-      expect(contraste(basse, moyenne), 'basse et moyenne distinctes').toBeGreaterThanOrEqual(2.4);
-      expect(contraste(moyenne, haute)).toBeGreaterThanOrEqual(2);
-      expect(contraste(basse, t.surface), 'basse visible sur la carte').toBeGreaterThanOrEqual(1.4);
-    }
+    // v12 (5/9, spec §5.5) : la rampe de l'encre à 3 pas (--donnee-1 à 3), comme les nuits, en aplats pleins ; elle s'inverse
+    // en sombre. Le pas discret (basse) est cerclé du pas suivant, à 3:1 au moins sur la carte : il se voit, et se distingue de la
+    // moyenne par ce contour en plus de sa valeur.
+    expect(pas.map((p) => [p.fill, p.opacite]), schema).toEqual([1, 2, 3].map((n) => [rgb(t[`donnee-${n}`]), 1]));
+    expect(pas[0].trait, schema).toBe(rgb(t['donnee-2']));
+    expect(contraste(pas[0].trait, t.surface), `${schema} : contour de la basse sur la carte`).toBeGreaterThanOrEqual(3);
+    const [basse, moyenne, haute] = pas.map((p) => p.fill);
+    expect(contraste(moyenne, haute), schema).toBeGreaterThanOrEqual(2.5);
+    if (schema === 'light') expect(contraste(basse, moyenne)).toBeGreaterThanOrEqual(1.9);
+    else expect(contraste(basse, moyenne), 'basse et moyenne distinctes').toBeGreaterThanOrEqual(2.4);
   }
 });
 
@@ -169,14 +169,15 @@ test('Q29 · le repère Bien-être de Mes jours est un losange plein, distinct d
       await page.emulateMedia({ colorScheme: schema });
       const [bienEtre, nuit] = await Promise.all(['polygon.g-bien-etre', 'svg[role="img"] rect.g-sommeil-3'].map((x) => mesJours.locator(x).first()
         .evaluate((e) => { const s = getComputedStyle(e); return { fill: s.fill, stroke: s.stroke }; })));
-      expect(bienEtre.fill, schema).toBe(rgb(t['c-difficile']));
+      // v12 (3/9) : l'un et l'autre à l'encre des graphiques (--donnee, --donnee-3), sans teinte.
+      expect(bienEtre.fill, schema).toBe(rgb(t.donnee));
       expect(bienEtre.stroke, schema).toBe('none');
-      expect(contraste(t['c-difficile'], t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
-      expect(nuit.fill, schema).toBe(rgb(t['chart-sommeil-3']));
+      expect(contraste(t.donnee, t.surface), `${schema} : le losange sur la carte`).toBeGreaterThanOrEqual(3);
+      expect(nuit.fill, schema).toBe(rgb(t['donnee-3']));
     }
   }
-  // En sombre, les deux bleus sont les mêmes à l'œil (1:1) : seule la forme les distingue.
-  expect(contraste(sombre['c-difficile'], sombre['chart-sommeil-3'])).toBeLessThan(1.2);
+  // Les deux encres sont proches à l'œil (moins de 2:1), dans les deux thèmes : seule la forme les distingue.
+  for (const t of [clair, sombre]) expect(contraste(t.donnee, t['donnee-3'])).toBeLessThan(2);
 });
 
 test('Q29 · dans un parcours, les étapes à venir se voient, en clair comme en sombre : un contour à 3:1 au moins, sans fond, distinct des points pleins', async ({ page }) => {

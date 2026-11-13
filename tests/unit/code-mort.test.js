@@ -52,7 +52,8 @@ test('aucune classe CSS sans usage : chaque classe d\'une feuille est écrite ou
 
 test('le contrôle des classes repère bien une classe sans usage', () => {
   assert.equal(sert('aujourdhui'), true);
-  assert.equal(sert('teinte-sommeil'), true, 'fabriquée : teinte-${…}');
+  assert.equal(present('zone-vert'), false, 'jamais écrite telle quelle');
+  assert.equal(sert('zone-vert'), true, 'fabriquée : zone-${…}');
   assert.equal(sert('g-rampe-4'), true, 'fabriquée deux fois : g-${…} puis rampe-${…}');
   assert.deepEqual([...classesDe('.a .b-c:hover, .d > .e { x: 1 } @media (x) { .f { y: .5 } }')], ['a', 'b-c', 'd', 'e', 'f']);
   for (const c of ['lien-ligne', 'lien-bouton', 'profil-journee', 'note-carte', 'classe-inventee-sans-usage']) assert.equal(sert(c), false, c);
@@ -88,6 +89,16 @@ function orphelins(modules, entrees) {
 
 test('aucun module de l\'app n\'est oublié dans un coin : chacun est atteint par ses imports depuis main.js', () => {
   assert.deepEqual(orphelins(MODULES, [join(PUBLIC, 'js', 'main.js')]).map(rel), []);
+});
+
+// v12 (relecture de la tâche 1) : choisirSpotify et formesDuMorceau remplacent basculerSpotify, choisieDeSpotify et
+// formesDuLien, avec PLAYLIST_SPOTIFY, qui ne servait qu'à formesDuLien. v12 (6/9) : basculerSpotify et choisieDeSpotify sont
+// parties avec l'écran de la v11 ; v12 (7/9) : formesDuLien et PLAYLIST_SPOTIFY avec le Diagnostic de la v11, leurs tests
+// aussi. Aucune ne revient.
+const PARTIES_V12 = ['basculerSpotify', 'choisieDeSpotify', 'formesDuLien', 'PLAYLIST_SPOTIFY'];
+
+test('v12 (6/9, 7/9) : basculerSpotify, choisieDeSpotify, formesDuLien et PLAYLIST_SPOTIFY sont parties de l\'app, et n\'y reviennent pas', () => {
+  for (const nom of PARTIES_V12) assert.equal(present(nom), false, nom);
 });
 
 test('le contrôle des modules repère bien un orphelin, même nommé dans la liste du service worker', () => {

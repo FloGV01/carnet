@@ -591,6 +591,6 @@ export function Lecteur({ seance: exercice, mode = 'bien-etre', retour = '#/bien
     </div>`;
   }
   const iconeAvant = crise ? 'respiration' : 'bienEtre';
-  return html`<${CadreParcours} titre=${seance.titre} teinte=${crise ? 'difficile' : 'bien-etre'} noir=${seance.nuit === true}
+  return html`<${CadreParcours} titre=${seance.titre} noir=${seance.nuit === true}
     icone=${etat === 'avant' && !attente ? iconeAvant : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
 }

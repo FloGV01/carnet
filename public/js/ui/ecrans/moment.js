@@ -128,7 +128,7 @@ function PuceQuand({ quand, heures, ouvert, surBascule }) {
 function ListeVers({ quand, heures, surChoix }) {
   const choisie = quand ? Number(quand.heure.slice(0, 2)) : null;
   const choix = [{ h: null, texte: 'Maintenant' }, ...heures.map((h) => ({ h, texte: `${h} h` }))];
-  return html`<div class="pastilles souples teinte-humeur choix-vers" role="group" aria-label="C'était vers…">
+  return html`<div class="pastilles souples choix-vers" role="group" aria-label="C'était vers…">
     ${choix.map(({ h, texte }) => html`<button type="button" class="pastille" aria-pressed=${h === choisie ? 'true' : 'false'}
       onClick=${() => surChoix(h)}>${coche()}${libelleChoix(texte)}</button>`)}
   </div>`;

@@ -1,255 +1,98 @@
-// « Mes refuges » (v11, spec §8.1) : ses titres, un par ligne, et jusqu'à trois playlists, chacune un nom et un lien. Ouvert
-// depuis Bien-être et depuis Réglages › Mon plan. Tout est facultatif et l'app ne propose rien. Tout s'écrit seul au fil de la
-// frappe, en file comme Mon plan, et part dans la sauvegarde avec lui. En tête des playlists, les lignes qui ont un lien : c'est
-// d'ici qu'on écoute depuis Bien-être (spec §8.4), sans réseau venant de l'app. Un lien refusé (ni https, ni spotify, ni
-// music) n'est pas gardé, sans message ; « ?si=… » est retiré (domain/refuges.js).
-// v11 (7/11) · Choisir dans son compte Spotify (spec §8.3), la seule exception à « zéro réseau », et seulement d'ici, au toucher
-// sur « Choisir dans mon compte » (plateforme/spotify.js). Au retour, la liste de ses playlists s'affiche en mémoire de l'écran,
-// jamais en base ; chaque toucher sur une playlist l'ajoute ou la retire de ses refuges, trois au plus. Le code, si le retour
-// est arrivé dans Safari, se colle ici. Sans identifiant de l'app Spotify, ni bouton ni champ de code.
-import { html, useEffect, useRef, useState } from '../lib.js';
+// « Mes refuges » (v11, spec §8 ; v12, spec v12 §6.1) : une simple liste, ouverte depuis Bien-être et depuis Réglages › Mon
+// plan. De haut en bas :
+// - l'en-tête, avec « Modifier » à droite, vers ses réglages (#/refuges/reglages, ecrans/refuges-reglages.js) ;
+// - « Coller le code de Spotify », vers ses réglages, seulement tant qu'une demande de connexion attend son retour ;
+// - la carte de la playlist suivie (« Détente »), qui ouvre Spotify d'un toucher, puis les autres playlists qui ont un lien ;
+// - « Un toucher ouvre Spotify. », une fois ;
+// - ses morceaux, chacun ouvre Spotify sur lui ; « La suite est dans Spotify. » au-delà du plafond, sans aucun nombre ;
+// - « Mes titres », en lecture seule.
+// Sans playlist qui a un lien : une phrase, « Choisir dans mon compte », « Coller le code de Spotify » si une demande attend,
+// et « Coller un lien » (tous deux vers les réglages).
+// Rien n'est lu que la base, relue à chacune de ses écritures (une mise à jour finie après « Retour ») : aucune requête à
+// l'ouverture. La connexion à Spotify ne part qu'au toucher sur « Choisir dans mon compte » ; son retour arrive ici (main.js),
+// et l'écran le passe aux réglages, où la connexion se finit (la liste du compte, le champ du code, les messages). Tant qu'une
+// demande attend son retour, « Coller le code de Spotify » mène à ce champ : la page du code (arrivée dans Safari) dit de le
+// coller dans Mes refuges. Tout est facultatif et l'app ne propose rien.
+import { html, useEffect, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
-import { ChampTexte } from '../composants/texte.js';
-import { LignesPlaylists, lireRefuges } from '../composants/refuges.js';
-import { coche, libelleChoix } from '../composants/coche.js';
-import { afficherToast, fermerToast } from '../composants/toast.js';
-import { repo } from '../../donnees.js';
-import { useIndicateur, ecrireAvecEssais } from '../hooks.js';
+import { LignesPlaylists, ListeMorceaux, lireRefuges, ECHECS_SPOTIFY } from '../composants/refuges.js';
+import { useEtatApp } from '../hooks.js';
 import { etatApp } from '../../store.js';
-import {
-  MAX_PLAYLISTS, avecPlaylist, normaliserRefuges, refugesVides, nomPlaylist, choisieDeSpotify, basculerSpotify, sansSpotify,
-} from '../../domain/refuges.js';
-import { connexionDisponible, ouvrirConnexion, lireAttente, finirConnexion } from '../../plateforme/spotify.js';
+import { versHash } from '../../routeur.js';
+import { normaliserRefuges, playlistSuivie, lienAOuvrir } from '../../domain/refuges.js';
+import { connexionDisponible, ouvrirConnexion, lireAttente } from '../../plateforme/spotify.js';
 
-// L'écran d'où il a été ouvert (Bien-être, Mon plan), sinon Bien-être.
-function revenir() {
+const REGLAGES = versHash('refuges-reglages');
+
+// L'écran d'où Mes refuges a été ouvert (Bien-être, Mon plan), retenu tant que l'app reste ouverte : ses réglages s'ouvrent
+// d'ici et y reviennent. Sinon Bien-être.
+let origine = null;
+function retenirOrigine() {
   const precedente = etatApp.lire().routePrecedente;
-  location.hash = precedente && !/^#\/refuges(\/|$)/.test(precedente) ? precedente : '#/bien-etre';
+  if (precedente && !/^#\/refuges(\/|$)/.test(precedente)) origine = precedente;
 }
-
-// Rien de noté : la méta vaut null, pour que l'aperçu d'un import n'annonce rien à perdre.
-const aEcrire = (r) => (refugesVides(r) ? null : r);
-
-// Les lignes de saisie : une par playlist notée, puis une ligne vide s'il en reste moins de trois. Chacune a une clé à elle,
-// le temps de l'écran : une ligne vidée disparaît (domain/refuges.js), et les champs, non contrôlés, doivent suivre leur
-// playlist. Vidée en dernière position, elle devient la ligne vide sur place, sans perdre le clavier ; vidée au milieu, toutes
-// les lignes repartent de zéro, pour qu'aucun champ ni brouillon ne parle d'une autre ligne que la sienne.
-function lignesApres(cles, cle, i, avant, apres, neuve) {
-  const notees = cles.slice(0, avant);
-  if (apres === avant + 1) return [...notees, cle, ...(apres < MAX_PLAYLISTS ? [neuve()] : [])];
-  if (apres === avant - 1) {
-    if (i === apres) return [...notees.slice(0, i), cle];
-    return Array.from({ length: Math.min(apres + 1, MAX_PLAYLISTS) }, neuve);
-  }
-  return cles;
+function revenir() {
+  location.hash = origine || versHash('bien-etre');
 }
-
-// Le message d'un échec de la connexion : les liens déjà notés ne bougent pas.
-const ECHECS = {
-  refus: 'Spotify refuse cette connexion. Tes liens notés restent.',
-  autre: 'La connexion n\'a pas abouti. Tes liens notés restent.',
-};
 
 export function MesRefuges() {
+  useState(retenirOrigine); // une fois, à l'ouverture
   const [refuges, setRefuges] = useState(null);
-  const [cles, setCles] = useState([]);
-  const lignes = useRef([]);
-  const compte = useRef(0);
-  const file = useRef(Promise.resolve());
-  const [, signaler] = useIndicateur();
-  // Le toast de « Retirer ces playlists » encore ouvert (son identifiant), que toute autre écriture des playlists ferme.
-  const retrait = useRef(null);
-  const oublierRetrait = () => {
-    if (retrait.current) fermerToast(retrait.current);
-    retrait.current = null;
-  };
-  const neuve = () => { compte.current += 1; return compte.current; };
-  const poserCles = (c) => { lignes.current = c; setCles(c); };
-  // Toutes les lignes de saisie repartent de zéro : une par playlist notée, puis la ligne vide s'il en reste moins de trois.
-  const recompter = (r) => poserCles(Array.from({ length: Math.min(r.playlists.length + 1, MAX_PLAYLISTS) }, neuve));
-  // La connexion à Spotify : la demande en attente d'un code, la liste lue (en mémoire de l'écran), l'échec, l'attente d'une
-  // réponse, le code gardé après une coupure du réseau.
-  const spotify = connexionDisponible();
-  const [attente, setAttente] = useState(() => spotify && Boolean(lireAttente(window)));
-  const [liste, setListe] = useState(null);
-  const [echec, setEchec] = useState(null);
+  const [echec, setEchec] = useState(false);
   const [enCours, setEnCours] = useState(false);
-  const [codeGarde, setCodeGarde] = useState(null);
+  const spotify = connexionDisponible();
+  // Une demande de connexion qui attend le retour de Spotify (le code, s'il est arrivé dans Safari, se colle dans les réglages).
+  const attendue = () => spotify && Boolean(lireAttente(window));
+  const [attente, setAttente] = useState(attendue);
+  const version = useEtatApp((e) => e.versionDonnees || 0);
 
-  // Réseau coupé : la demande reste (plateforme/spotify.js), et le code avec elle, déjà dans le champ, pour relancer d'un
-  // toucher. Sans cela, le code d'un retour dans l'app, retiré de l'adresse et jamais montré, ne pourrait pas se recoller.
-  const finir = (code) => {
-    setEchec(null);
-    setEnCours(true);
-    finirConnexion({ code, win: window })
-      .then((l) => { setListe(l); setCodeGarde(null); }, (e) => {
-        setEchec(e && e.raison === 'refus' ? 'refus' : 'autre');
-        setCodeGarde(e && e.raison === 'reseau' ? code : null);
-      })
-      .finally(() => { setEnCours(false); setAttente(Boolean(lireAttente(window))); });
-  };
-  // La page de Spotify s'ouvre ; si elle s'ouvre par-dessus l'app, le bouton reste utilisable, et le champ du code est là,
-  // vide : un code gardé appartenait à la demande d'avant.
-  const choisir = () => {
-    setEchec(null);
-    setCodeGarde(null);
-    setEnCours(true);
-    ouvrirConnexion({ win: window })
-      .then(() => setAttente(true), () => setEchec('autre'))
-      .finally(() => setEnCours(false));
-  };
-
+  // Le retour de Spotify, posé au démarrage (main.js) : il est laissé aux réglages, qui le prennent une seule fois.
   useEffect(() => {
-    lireRefuges().then((r) => {
-      recompter(r);
-      setRefuges(r);
-    });
-    // Le retour de Spotify, posé au démarrage (main.js) : pris une seule fois.
-    const retour = etatApp.lire().retourSpotify;
-    if (retour) {
-      etatApp.maj({ retourSpotify: null });
-      if (retour.issue === 'finir' && spotify) finir(retour.code);
-      else setEchec('autre');
-    }
+    if (etatApp.lire().retourSpotify) location.replace(REGLAGES);
   }, []);
+  // La base, relue à chaque écriture : l'écran montre toujours ce qui est noté. Des refuges illisibles se lisent vides ; une
+  // lecture dépassée par une autre ne s'affiche pas.
+  useEffect(() => {
+    if (etatApp.lire().retourSpotify) return undefined;
+    let actif = true;
+    lireRefuges().then((r) => { if (actif) setRefuges(r); }, () => { if (actif) setRefuges(normaliserRefuges(null)); });
+    return () => { actif = false; };
+  }, [version]);
 
-  // Écritures en file, chacune relue et réécrite dans sa transaction : rien ne s'écrase. La promesse rejette si l'écriture
-  // échoue : le champ garde alors son brouillon local.
-  const ecrire = (transformer) => {
-    const travail = file.current.then(() => ecrireAvecEssais(() => repo.meta.modifier('refuges', transformer), signaler));
-    file.current = travail.catch(() => {});
-    return travail;
-  };
-  const changerTitres = (titres) => ecrire((brut) => aEcrire(normaliserRefuges({ ...normaliserRefuges(brut), titres })))
-    .then((v) => setRefuges(normaliserRefuges(v)));
-  // La ligne est retrouvée par sa clé au moment d'écrire : la ligne vide, au bout, vaut le nombre de playlists (un ajout).
-  // Une ligne qui n'est plus affichée n'écrit rien.
-  const changerPlaylist = (cle, changement) => {
-    if (!lignes.current.includes(cle)) return Promise.resolve();
-    oublierRetrait();
-    let avant = 0;
-    let i = -1;
-    return ecrire((brut) => {
-      const r = normaliserRefuges(brut);
-      avant = r.playlists.length;
-      i = lignes.current.indexOf(cle);
-      return i < 0 ? brut : aEcrire(avecPlaylist(r, i, changement));
-    }).then((v) => {
-      const r = normaliserRefuges(v);
-      if (i >= 0) poserCles(lignesApres(lignes.current, cle, i, avant, r.playlists.length, neuve));
-      setRefuges(r);
+  // L'état vide : la page de Spotify s'ouvre ; si la demande ne peut pas être notée, rien ne part, et le message le dit.
+  const choisir = () => {
+    setEchec(false);
+    setEnCours(true);
+    ouvrirConnexion({ win: window }).catch(() => setEchec(true)).finally(() => {
+      setEnCours(false);
+      setAttente(attendue());
     });
   };
 
-  // Une écriture qui peut ajouter ou retirer des lignes ailleurs qu'au bout (les playlists de Spotify) : si la liste a changé,
-  // les lignes de saisie repartent de zéro. Une écriture qui échoue ne change rien à l'écran.
-  const remplacer = (transformer) => {
-    let avant = null;
-    return ecrire((brut) => {
-      const r = normaliserRefuges(brut);
-      avant = JSON.stringify(r.playlists);
-      return aEcrire(transformer(r));
-    }).then((v) => {
-      const r = normaliserRefuges(v);
-      if (JSON.stringify(r.playlists) !== avant) recompter(r);
-      setRefuges(r);
-      return true;
-    }, () => false);
-  };
-  const basculer = (p) => { oublierRetrait(); return remplacer((r) => basculerSpotify(r, p)); };
-  // « Retirer ces playlists », avec « Annuler » : les playlists d'avant le retrait (lues dans sa transaction) reviennent, à
-  // leur place ; les titres ne bougent pas. « Annuler » ne défait que le retrait : une autre écriture des playlists (une ligne
-  // tapée ou collée, une playlist choisie) ferme le toast, et une liste qui n'est plus celle laissée par le retrait n'est pas
-  // remplacée (un « Annuler » touché après une écriture venue d'ailleurs) : rien de ce qui a été écrit depuis ne se perd.
-  const retirer = () => {
-    oublierRetrait();
-    let avant = null;
-    let apres = null;
-    remplacer((r) => {
-      const reste = sansSpotify(r);
-      avant = r.playlists;
-      apres = JSON.stringify(reste.playlists);
-      return reste;
-    }).then((ok) => {
-      if (!ok) return;
-      retrait.current = afficherToast('Playlists de Spotify retirées', {
-        libelle: 'Annuler',
-        faire: () => {
-          retrait.current = null;
-          remplacer((r) => (JSON.stringify(r.playlists) === apres ? { ...r, playlists: avant } : r));
-        },
-      });
-    });
-  };
-
-  if (!refuges) return html`<main class="ecran fiche refuges"><${Entete} titre="Mes refuges" retour=${revenir} /></main>`;
-  const plein = refuges.playlists.length >= MAX_PLAYLISTS;
-  const deSpotify = refuges.playlists.some((p) => p.source === 'spotify');
+  const entete = html`<${Entete} titre="Mes refuges" retour=${revenir}
+    droite=${html`<a class="btn-lien modifier-refuges" href=${REGLAGES}>Modifier</a>`} />`;
+  if (!refuges) return html`<main class="ecran fiche refuges">${entete}</main>`;
+  const suivie = playlistSuivie(refuges);
+  const aOuvrir = refuges.playlists.some((p) => p.lien);
+  const versSpotify = refuges.playlists.some((p) => /^spotify:/.test(lienAOuvrir(p.lien) || ''));
+  const versCode = attente && html`<a class="btn-lien coller-code" href=${REGLAGES}>Coller le code de Spotify</a>`;
   return html`<main class="ecran fiche refuges">
-    <${Entete} titre="Mes refuges" retour=${revenir} />
-    <div class="champ-fiche">
-      <${ChampTexte} id="refuges-titres" etiquette="Mes titres" valeur=${refuges.titres} lignes=${4} placeholder="Un titre par ligne."
-        cleBrouillon="carnet:brouillon:refuges:titres" surEnregistrer=${changerTitres} />
-    </div>
-    <section class="champ-fiche playlists-refuges teinte-bien-etre" aria-labelledby="titre-mes-playlists">
-      <h2 class="etiquette" id="titre-mes-playlists">Mes playlists</h2>
+    ${entete}
+    ${aOuvrir ? html`${versCode}
       <${LignesPlaylists} playlists=${refuges.playlists} />
-      ${(spotify || deSpotify) && html`<div class="carte compte-spotify">
-        ${spotify && html`<button type="button" class="btn btn-plein" disabled=${enCours} aria-describedby="note-compte-spotify" onClick=${choisir}>Choisir dans mon compte</button>
-          <p class="note-import" id="note-compte-spotify">Une seule lecture : Emozio ne garde pas la connexion.</p>`}
-        ${spotify && attente && html`<${ChampCode} key=${codeGarde || ''} code=${codeGarde} enCours=${enCours} surFinir=${finir} />`}
-        ${echec && html`<p class="texte-import" role="status">${ECHECS[echec]}</p>`}
-        ${liste && html`<${ListeSpotify} liste=${liste} refuges=${refuges} plein=${plein} surBasculer=${basculer} />`}
-        ${deSpotify && html`<button type="button" class="btn" onClick=${retirer}>Retirer ces playlists</button>`}
-      </div>`}
-      ${cles.map((cle, i) => {
-        const p = refuges.playlists[i] || null;
-        const n = i + 1;
-        // Dès la frappe, avant l'écriture (500 ms plus tard) : « Annuler » ne remplacerait plus ce qui s'écrit.
-        return html`<div class="carte saisie-playlist" key=${cle} onInput=${oublierRetrait}>
-          <${ChampTexte} id=${`refuges-nom-${i}`} etiquette=${html`Nom<span class="visuellement-cache"> de la playlist ${n}</span>`}
-            valeur=${p && p.nom} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:nom-${i}`}
-            surEnregistrer=${(nom) => changerPlaylist(cle, { nom })} />
-          <${ChampTexte} id=${`refuges-lien-${i}`} etiquette=${html`Lien<span class="visuellement-cache"> de la playlist ${n}</span>`}
-            valeur=${p && p.lien} lignes=${1} dicter=${false} cleBrouillon=${`carnet:brouillon:refuges:lien-${i}`}
-            surEnregistrer=${(lien) => changerPlaylist(cle, { lien })} />
-        </div>`;
-      })}
-    </section>
+      ${versSpotify && html`<p class="discret note-refuges">Un toucher ouvre Spotify.</p>`}
+      ${suivie && html`<${ListeMorceaux} playlist=${suivie.p} rang=${suivie.i} />`}
+      ${suivie && suivie.p.morceaux && suivie.p.suite && html`<p class="discret note-refuges">La suite est dans Spotify.</p>`}`
+    : html`<div class="carte refuges-vide">
+      <p class="texte-import">Choisis ta playlist dans ton compte Spotify, ou colle son lien.</p>
+      ${spotify && html`<button type="button" class="btn btn-plein" disabled=${enCours} onClick=${choisir}>Choisir dans mon compte</button>`}
+      ${echec && html`<p class="note-import" role="status">${ECHECS_SPOTIFY.autre}</p>`}
+      ${versCode}
+      <a class="btn-lien" href=${REGLAGES}>Coller un lien</a>
+    </div>`}
+    ${refuges.titres && html`<section class="titres-refuges" aria-labelledby="titre-mes-titres">
+      <h2 class="libelle-section" id="titre-mes-titres">Mes titres</h2>
+      <p class="carte texte-lecture">${refuges.titres}</p>
+    </section>`}
   </main>`;
-}
-
-// Le code, quand le retour de Spotify est arrivé dans Safari (la page du code, ui/ecrans/code-spotify.js) : collé ici, il finit
-// la connexion avec la demande restée dans l'app. `code` : celui d'un essai coupé par le réseau, déjà écrit dans le champ (le
-// champ est remonté à chaque nouveau code gardé, par sa clé).
-function ChampCode({ code, enCours, surFinir }) {
-  const zone = useRef(null);
-  const valider = () => {
-    const saisi = zone.current && zone.current.value.trim();
-    if (saisi && !enCours) surFinir(saisi);
-  };
-  return html`<div class="code-compte">
-    <label class="etiquette" for="code-spotify">Code de Spotify</label>
-    <input id="code-spotify" ref=${zone} class="champ-ligne" defaultValue=${code || ''} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-      enterkeyhint="done" onKeyDown=${(e) => { if (e.key === 'Enter') valider(); }} />
-    <button type="button" class="btn" disabled=${enCours} onClick=${valider}>Finir la connexion</button>
-  </div>`;
-}
-
-// Les playlists lues dans son compte, nommées sous « Spotify » : un toucher en ajoute une à ses refuges (choisie, elle a sa
-// coche), un autre la retire. Avec trois playlists notées, les autres ne se choisissent plus (aria-disabled). Les noms sont du
-// texte, jamais du HTML.
-function ListeSpotify({ liste, refuges, plein, surBasculer }) {
-  if (!liste.length) return html`<p class="note-import">Aucune playlist dans ce compte.</p>`;
-  return html`<div class="liste-compte">
-    <h3 class="etiquette" id="titre-liste-spotify">Spotify</h3>
-    <div class="pastilles grille-choix liste-spotify" role="group" aria-labelledby="titre-liste-spotify">
-      ${liste.map((p, i) => {
-        const choisie = choisieDeSpotify(refuges, p.lien);
-        const bloquee = !choisie && plein;
-        return html`<button type="button" class="pastille" key=${p.lien} aria-pressed=${choisie ? 'true' : 'false'} aria-disabled=${bloquee ? 'true' : null}
-          onClick=${() => { if (!bloquee) surBasculer(p); }}>${coche()}<span class="texte-pastille">${libelleChoix(nomPlaylist(p, i))}</span></button>`;
-      })}
-    </div>
-  </div>`;
 }

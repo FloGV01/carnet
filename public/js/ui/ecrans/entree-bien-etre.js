@@ -12,7 +12,7 @@ export function EntreeBienEtre({ id }) {
   const retour = versHash('entree-bien-etre', { entree: id });
   return html`<main class="ecran fiche entree-bien-etre">
     <${Entete} titre=${entree.titre} retour=${() => { location.hash = versHash('bien-etre'); }} />
-    <ul class="liste carte carte-groupe teinte-bien-etre">
+    <ul class="liste carte carte-groupe">
       ${entree.elements.map((x) => html`<${LigneElement} key=${x} id=${x} retour=${retour} avecEpingle=${true} />`)}
     </ul>
     <p class="ligne-fixe">${LIGNE_FIXE}</p>

@@ -666,3 +666,14 @@ Version 11.0.0, construite du 05 au 08/11 en 11 tâches sur la branche `dev`. El
 - l'app s'appelle désormais **Emozio** (« Carnet » jusqu'à la v10) : seul ce que l'utilisateur voit change, et les fichiers exportés (`emozio-…`) ; la base, l'identifiant du format de sauvegarde, le cache et les clés locales gardent le nom interne `carnet` (`docs/decisions.md`, entrée du 07/11).
 
 Le détail, les appels du concepteur, l'exception réseau, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 08/11.
+
+## 20. v12 (09/11)
+
+Version 12.0.0, construite du 09 au 13/11 en 9 tâches sur la branche `dev`. Elle a sa propre spécification, `docs/superpowers/specs/2026-11-09-emozio-v12-design.md`, qui fait foi là où elle s'écarte de celle-ci et de celles des v7 à v11 :
+- **Mes refuges** devient une simple liste : la playlist suivie (« Détente ») s'ouvre dans Spotify d'un toucher, en lien direct vers l'app, et ses morceaux, lus chez Spotify à la connexion, s'ouvrent chacun d'un toucher, sans pochette ; la saisie de la v11 et « Mettre à jour la liste » passent dans ses réglages ; la même liste vient dans Moment difficile, après Mon plan ;
+- la connexion à Spotify lit aussi les morceaux d'une playlist (`v1/playlists/{id}/items`), 200 au plus ; aucun jeton n'est écrit, il reste en mémoire le temps de choisir une playlist, 10 min au plus ;
+- **un design simple et épuré, façon apps d'Apple** : une base neutre, une seule couleur d'accent, le vert, qui dit « choisi » ou « agir », jamais une valeur, et un choix fait garde sa coche ; les rubriques et les parcours n'ont plus de couleur (la palette 2b prend fin) ; les couleurs des zones et des familles sont réservées aux émotions ; les graphiques, les écrans de l'émotion et « Réveil la nuit » n'ont pas d'accent ; l'en-tête d'Aujourd'hui est façon App Store, et l'onglet actif a son icône pleine ; les rubriques du soir restent toutes visibles, dans le même ordre ;
+- hors de l'app installée, dans Safari, une nouvelle version qui attend s'applique seule, une fois, sauf sur la page du code de Spotify ;
+- la base reste en `DB_VERSION` 6 ; la sauvegarde passe au format 9 (les morceaux de la playlist suivie) ; l'Export PSY et la vue soignants ne changent pas.
+
+Le détail, les appels du concepteur, ce qui attend l'utilisateur et les textes à relire sont dans `docs/decisions.md`, à l'entrée du 09/11.

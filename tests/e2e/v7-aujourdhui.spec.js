@@ -18,21 +18,25 @@ test.beforeEach(async ({ page }) => {
 });
 
 const boite = (page, selecteur) => page.locator(selecteur).first().boundingBox();
-// Le titre du jour tel qu'il est affiché, sans « Aujourd'hui, » (réservé à VoiceOver).
-const titreVu = (page) => page.locator('h1').evaluate((h) => [...h.childNodes]
-  .filter((n) => !n.classList || !n.classList.contains('visuellement-cache')).map((n) => n.textContent).join('').trim());
+// Le titre du jour tel qu'il est écrit (v12 : le grand titre, puis le sur-titre, sans la virgule lue par VoiceOver) :
+// « Aujourd'hui Jeudi 15 octobre », « Mercredi 14 octobre ».
+const titreVu = (page) => page.locator('h1').evaluate((h) => {
+  const texte = (sel) => [...h.querySelector(sel).childNodes].filter((n) => !n.classList || !n.classList.contains('virgule-lue'))
+    .map((n) => n.textContent).join('').trim();
+  return `${texte('.grand-titre')} ${texte('.sur-titre')}`;
+});
 
 // ---------- Le soir en cartes ----------
 
-// Une carte de rubrique : son fond, son rayon, son carré (taille, couleur, icône) et son titre.
+// Une carte de rubrique : son fond, son rayon, son icône (taille, couleur), le carré qu'elle n'a plus (v12) et son titre.
 const carteDe = (page, nom) => page.locator('.carte-champ', { has: groupe(page, nom) }).evaluate((c) => {
   const s = getComputedStyle(c);
-  const carre = c.querySelector('.carre-rubrique');
+  const icone = c.querySelector('.tete-rubrique > svg');
   const titre = c.querySelector('.titre-rubrique');
-  const r = carre.getBoundingClientRect();
+  const r = icone.getBoundingClientRect();
   return {
-    fond: s.backgroundColor, rayon: s.borderTopLeftRadius, carre: [Math.round(r.width), Math.round(r.height)], rayonCarre: getComputedStyle(carre).borderTopLeftRadius,
-    fondCarre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre.querySelector('svg')).color,
+    fond: s.backgroundColor, rayon: s.borderTopLeftRadius, icone: [Math.round(r.width), Math.round(r.height), getComputedStyle(icone).color],
+    carre: c.querySelectorAll('.carre-rubrique, .tete-rubrique [class*="carre"]').length,
     titre: titre.textContent, couleurTitre: getComputedStyle(titre).color, graisse: getComputedStyle(titre).fontWeight,
   };
 });
@@ -63,17 +67,16 @@ test('le soir avec les zones sûres de l\'iPhone, en clair et en sombre : six ru
     // au-dessus de la bande.
     atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
-    // Chaque rubrique : une carte --surface de rayon 14, un carré de 28 (rayon 7) à sa couleur, l'icône en -on, le titre en 600.
-    for (const [nom, couleur, libelle] of [['Lieu', 'lieu', 'Lieu'], ['Sommeil', 'sommeil', 'Sommeil'], ['Contact humain', 'contact', 'Contact humain'],
-      ['Sport / mouvement', 'sport', 'Sport / mouvement'], ['Traitement pris', 'traitement', 'Traitement pris']]) {
+    // Chaque rubrique (v12, spec §5.4) : une carte --surface de rayon 16, sans carré coloré, l'icône de 20 en --text-2,
+    // le titre en 600.
+    for (const [nom, libelle] of [['Lieu', 'Lieu'], ['Sommeil', 'Sommeil'], ['Contact humain', 'Contact humain'],
+      ['Sport / mouvement', 'Sport / mouvement'], ['Traitement pris', 'Traitement pris']]) {
       const c = await carteDe(page, nom);
       const quoi = `${schema} · ${nom}`;
       expect(c.fond, quoi).toBe(rgb(t.surface));
-      expect(c.rayon, quoi).toBe('14px');
-      expect(c.carre, quoi).toEqual([28, 28]);
-      expect(c.rayonCarre, quoi).toBe('7px');
-      expect(c.fondCarre, quoi).toBe(rgb(t[`c-${couleur}`]));
-      expect(c.icone, quoi).toBe(rgb(t[`c-${couleur}-on`]));
+      expect(c.rayon, quoi).toBe('16px');
+      expect(c.carre, quoi).toBe(0);
+      expect(c.icone, quoi).toEqual([20, 20, rgb(t['text-2'])]);
       expect(c.titre, quoi).toBe(libelle);
       expect(c.graisse, quoi).toBe('600');
       expect(contraste(c.couleurTitre, c.fond), quoi).toBeGreaterThanOrEqual(4.5);
@@ -102,8 +105,8 @@ test('« J\'ai fini pour ce soir » : en couleur action, sans fond, avec son ic�
     expect(s.fond, schema).toBe('rgba(0, 0, 0, 0)');
     expect(s.graisse).toBe('600');
     expect(s.icone).toBe(true);
-    const memo = await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => getComputedStyle(b).backgroundColor);
-    expect(memo, `${schema} · Mémo vocal neutre`).toBe(rgb(t.surface));
+    const memo = await page.getByRole('button', { name: 'Mémo vocal' }).evaluate((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).boxShadow]);
+    expect(memo, `${schema} · Mémo vocal neutre : transparent, avec son contour (v12)`).toEqual(['rgba(0, 0, 0, 0)', `${rgb(t.contour)} 0px 0px 0px 1px inset`]);
   }
 });
 
@@ -182,6 +185,43 @@ test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résu
     atteignable(await margesAFondDePage(page, ['.carte-champ:has(#points-positifs)', '.carte-champ:has(#gratitudes)', '.fini-bouton']), schema);
     await page.evaluate(() => window.scrollTo(0, 0));
   }
+});
+
+// v12 (8/9) : App s'abonne à l'état après son premier affichage. Une version qui attend, signalée entre les deux (dès le
+// démarrage, dans l'app installée), n'était pas vue : le bandeau ne paraissait pas. Ici, le signal part juste après le rendu
+// de main.js, avant les effets d'App. Relecture de la tâche 8 : pour que le test échoue sans la correction, rien d'autre ne
+// doit réafficher App, avec tout l'état, entre son abonnement et le bandeau.
+// - Le premier lancement (viderBase) écrit la méta explosionsDepuis sans l'attendre (main.js). Écrite au chargement testé,
+//   son surChangement (etatApp.maj) réaffichait App, bandeau compris, même sans la correction : on l'attend avant de
+//   recharger.
+// - Les effets du premier affichage passent d'un seul tenant, ceux d'App en dernier (la racine, après ses enfants) ; le
+//   premier abonnement qui suit le signal ouvre ce passage. Aucun changement d'état ne doit suivre ce passage tant que le
+//   bandeau n'a pas paru. Celui d'Aujourd'hui (jourContexte), pendant le passage, arrive avant l'abonnement d'App.
+test('v12 : une version signalée juste après le premier affichage, avant l\'abonnement d\'App : le bandeau paraît', async ({ page }) => {
+  await page.waitForFunction(async () => Boolean(await window.__carnet.repo.meta.lire('explosionsDepuis')));
+  await page.addInitScript(() => {
+    new MutationObserver((_, obs) => {
+      if (!window.__carnet || !document.querySelector('#app main')) return;
+      obs.disconnect();
+      const e = window.__carnet.etatApp;
+      e.maj({ majDisponible: true });
+      window.__apres = [];
+      let passage = 'attendu';
+      const { abonner, maj } = e;
+      e.abonner = (f) => {
+        if (passage === 'attendu') { passage = 'en cours'; queueMicrotask(() => { passage = 'fini'; }); }
+        return abonner(f);
+      };
+      e.maj = (x) => {
+        if (passage === 'fini' && !document.querySelector('.bandeau')) window.__apres.push(typeof x === 'function' ? 'fonction' : Object.keys(x).join('+'));
+        return maj(x);
+      };
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.reload();
+  await expect(page.locator('.bandeau')).toBeVisible();
+  await expect(page.getByText('Nouvelle version prête')).toBeVisible();
+  expect(await page.evaluate(() => window.__apres), 'changements d\'état entre l\'abonnement d\'App et le bandeau').toEqual([]);
 });
 
 test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte, avec les zones sûres de l\'iPhone', async ({ page }) => {
@@ -264,39 +304,64 @@ test('grand texte (17 à 28 px, 390 et 375) : rien ne sort des cartes, choix fai
 
 // ---------- En-tête ----------
 
-test('en-tête 2b : « Jeudi 15 octobre » en 23/600 avec un chevron bas, ‹ en couleur action, › atténué sur aujourd\'hui', async ({ page }) => {
+// v12 (4/9, spec §5.4) : l'en-tête façon App Store. Le sur-titre en capitales, 13/600 en --text-2, avec son chevron bas ; le
+// grand titre, 34/41 en 700 ; le titre entier ouvre le sélecteur de date ; ‹ › dans des ronds neutres de 36, des cibles de
+// 44 ; › en --desactive sur aujourd'hui. Le nom accessible ne change pas.
+test('en-tête façon App Store : le sur-titre « JEUDI 15 OCTOBRE ⌄ » en 13/600, le grand titre « Aujourd\'hui » en 34/700, ‹ › dans des ronds neutres, › grisé sur aujourd\'hui ; un autre jour, « Mercredi 14 » sous « OCTOBRE »', async ({ page }) => {
+  const mesure = () => page.locator('.entete-jour').evaluate((e) => {
+    const s = (x, pseudo) => getComputedStyle(x, pseudo);
+    const [h1, grand, sur] = ['h1', '.grand-titre', '.sur-titre'].map((x) => e.querySelector(x));
+    const [rh, rg, rs] = [h1, grand, sur].map((x) => x.getBoundingClientRect());
+    const chevron = sur.querySelector('svg');
+    const date = e.querySelector('input[type="date"]').getBoundingClientRect();
+    const rond = (b) => ({ cible: [b.getBoundingClientRect().width, b.getBoundingClientRect().height], couleur: s(b).color,
+      rond: [Number.parseFloat(s(b, '::before').width), s(b, '::before').borderTopLeftRadius, s(b, '::before').backgroundColor],
+      centre: Math.round(b.getBoundingClientRect().top + b.getBoundingClientRect().height / 2 - (rg.top + rg.height / 2)),
+      aDroite: b.getBoundingClientRect().left >= rh.right, desactive: b.disabled, opacite: s(b).opacity });
+    const [precedent, suivant] = [...e.querySelectorAll('.nav-jour')].map(rond);
+    return {
+      grand: [grand.textContent, Number.parseFloat(s(grand).fontSize), Math.round(Number.parseFloat(s(grand).lineHeight)), s(grand).fontWeight, s(grand).color],
+      sur: [sur.textContent.trim(), Math.round(Number.parseFloat(s(sur).fontSize)), s(sur).fontWeight, s(sur).textTransform, s(sur).color],
+      surAuDessus: rs.bottom <= rg.top + 0.5,
+      chevron: [Math.round(chevron.getBoundingClientRect().width), chevron.getBoundingClientRect().right <= rs.right + 0.5],
+      dateCouvre: date.left <= rh.left + 0.5 && date.right >= Math.max(rg.right, rs.right) - 0.5 && date.top <= rs.top + 0.5 && date.bottom >= rg.bottom - 0.5 && date.height >= 44,
+      precedent, suivant,
+    };
+  });
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
-    // Affiché : « Jeudi 15 octobre » ; lu par VoiceOver : « Aujourd'hui, Jeudi 15 octobre ».
     const titre = page.getByRole('heading', { level: 1 });
     await expect(titre).toHaveAccessibleName('Aujourd\'hui, Jeudi 15 octobre');
-    expect(await titreVu(page)).toBe('Jeudi 15 octobre');
-    const s = await page.locator('.entete-jour').evaluate((e) => {
-      const h1 = e.querySelector('h1');
-      const chevron = e.querySelector('h1 svg').getBoundingClientRect();
-      const date = e.querySelector('input[type="date"]').getBoundingClientRect();
-      const [precedent, suivant] = [...e.querySelectorAll('.nav-jour')];
-      const r = h1.getBoundingClientRect();
-      return {
-        taille: Math.round(Number.parseFloat(getComputedStyle(h1).fontSize)), graisse: getComputedStyle(h1).fontWeight, chevron: [Math.round(chevron.width), chevron.right <= r.right && chevron.top >= r.top && chevron.bottom <= r.bottom],
-        couleurChevron: getComputedStyle(e.querySelector('h1 svg')).color,
-        dateCouvre: date.left <= r.left && date.right >= r.right && date.top <= r.top && date.bottom >= r.bottom,
-        precedent: [getComputedStyle(precedent).color, precedent.getBoundingClientRect().width, precedent.getBoundingClientRect().left > r.right],
-        suivant: [getComputedStyle(suivant).opacity, suivant.disabled, suivant.getBoundingClientRect().height],
-      };
-    });
-    expect(s.taille).toBe(23);
-    expect(s.graisse).toBe('600');
-    expect(s.chevron).toEqual([16, true]);
-    expect(s.couleurChevron, schema).toBe(rgb(t['text-2']));
-    expect(s.dateCouvre, 'le titre ouvre le sélecteur de date').toBe(true);
-    expect(s.precedent, schema).toEqual([rgb(t.action), 44, true]);
-    expect(s.suivant).toEqual(['0.4', true, 44]);
+    expect(await titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
+    const m = await mesure();
+    expect(m.grand, schema).toEqual(['Aujourd\'hui, ', 34, 41, '700', rgb(t.text)]);
+    expect(m.sur, schema).toEqual(['Jeudi 15 octobre', 13, '600', 'uppercase', rgb(t['text-2'])]);
+    expect(contraste(m.sur[4], rgb(t.bg)), schema).toBeGreaterThanOrEqual(4.5);
+    expect(m.surAuDessus, 'le sur-titre au-dessus du grand titre').toBe(true);
+    expect(m.chevron).toEqual([13, true]);
+    expect(m.dateCouvre, 'le titre ouvre le sélecteur de date').toBe(true);
+    // ‹ › : des cibles de 44, des ronds de 36 à la couleur --rond, jamais l'accent ; centrés sur le grand titre, à sa droite.
+    for (const b of [m.precedent, m.suivant]) {
+      expect(b.cible, schema).toEqual([44, 44]);
+      expect(b.rond, schema).toEqual([36, '50%', rgb(t.rond)]);
+      expect(Math.abs(b.centre), schema).toBeLessThanOrEqual(1);
+      expect(b.aDroite).toBe(true);
+    }
+    expect([m.precedent.couleur, m.precedent.desactive], schema).toEqual([rgb(t.text), false]);
+    expect([m.suivant.couleur, m.suivant.desactive, m.suivant.opacite], schema).toEqual([rgb(t.desactive), true, '1']);
   }
   await page.getByRole('button', { name: 'Jour précédent' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Mercredi 14 octobre');
-  expect(await page.getByRole('button', { name: 'Jour suivant' }).evaluate((b) => [b.disabled, getComputedStyle(b).opacity])).toEqual([false, '1']);
+  expect(await titreVu(page)).toBe('Mercredi 14 octobre');
+  const m = await mesure();
+  expect(m.grand.slice(0, 2)).toEqual(['Mercredi 14', 34]);
+  expect(m.sur.slice(0, 4)).toEqual(['octobre', 13, '600', 'uppercase']);
+  expect([m.suivant.desactive, m.suivant.couleur]).toEqual([false, rgb(sombre.text)]);
+  // Le 1er du mois : « Jeudi 1er » sous « OCTOBRE ».
+  await aller(page, '#/jour/2026-10-01');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Jeudi 1er octobre');
+  expect(await titreVu(page)).toBe('Jeudi 1er octobre');
 });
 
 // ---------- Ma journée et le résumé (point de vigilance 5) ----------
@@ -326,11 +391,12 @@ test('point de vigilance 5 · Ma journée mêle un ancien relevé chiffré et de
         point: s.backgroundColor === 'rgba(0, 0, 0, 0)' ? `creux ${s.borderTopColor}` : s.backgroundColor,
       };
     }));
-    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent.
+    // Le point d'un relevé à zone : la couleur des bulles (-fill, relecture finale de la v9), son liseré à l'accent. Un
+    // épisode, neutre (v12) : en --text-2.
     expect(lignes, schema).toEqual([
       { heure: '09:05', texte: 'Irrité · énergie basse', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '10:20', texte: 'humeur 6 · énergie moyenne', lien: true, point: `creux ${rgb(t['text-2'])}` },
-      { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['c-episode']) },
+      { heure: '12:30', texte: 'Colère · 5', lien: true, point: rgb(t['text-2']) },
       { heure: 'vers 14 h', texte: 'Furieux', lien: true, point: rgb(t['c-zone-rouge-fill']) },
       { heure: '18:30', texte: 'Sérénité', lien: true, point: `creux ${rgb(t['text-2'])}` },
       { heure: '01:10', texte: 'Craintif', lien: true, point: rgb(t['c-zone-rouge-fill']) },
@@ -407,8 +473,9 @@ test('Ma journée : un relevé a un repère rond, un épisode ou un symptôme un
 // ---------- Replis en liste groupée ----------
 
 // v8 : « Sport en détail » et « Contact en détail » sont passés dans leur carte (Q5) ; « Nuit en détail », masqué par défaut,
-// reste là pour une nuit déjà notée.
-test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un carré à la couleur de la rubrique, le résumé sous le libellé', async ({ page }) => {
+// reste là pour une nuit déjà notée. v12 (5/9, relecture) : le filet entre deux replis fait 0,5 px (spec §5.4), comme ceux de
+// Réglages et de Bien-être (v7-controle) ; il gardait le 1 px de la v7.
+test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, une icône d\'accent sans carré et un chevron en --contour (v12), des filets de 0,5 décalés de 52, le résumé sous le libellé', async ({ page }) => {
   await repo(page, () => window.__carnet.repo.journal.patch('2026-10-15', {
     heureCoucher: '23:20', heureLever: '07:10', reveilsNocturnes: 1, sportMouvement: true, activites: [{ type: 'typeSport:marche', duree: 'dureeSport:de_30_a_60' }],
     pese: ['pese:bruit', 'pese:lumiere', 'pese:monde', 'pese:changement', 'pese:attente'], recharge: ['recharge:seul', 'recharge:calme'],
@@ -428,12 +495,16 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
           const resume = r.querySelector('.repli-resume');
           const filet = i > 0 ? getComputedStyle(r, '::before') : null;
           return {
-            hauteur: tete.getBoundingClientRect().height, carre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre).color,
+            hauteur: tete.getBoundingClientRect().height, carre: getComputedStyle(carre).backgroundColor, icone: getComputedStyle(carre.querySelector('svg')).color,
+            fleche: getComputedStyle(tete.querySelector('.repli-fleche')).color,
             taille: Math.round(carre.getBoundingClientRect().width), gauche: Math.round(carre.getBoundingClientRect().left - carte.left),
             graisse: getComputedStyle(r.querySelector('.repli-titre')).fontWeight,
             resume: resume && { dessous: resume.getBoundingClientRect().top >= titre.bottom - 1, gauche: Math.abs(resume.getBoundingClientRect().left - titre.left) < 1,
               taille: Math.round(Number.parseFloat(getComputedStyle(resume).fontSize)), ellipse: getComputedStyle(resume).textOverflow, couleur: getComputedStyle(resume).color },
-            filet: filet && Number.parseFloat(getComputedStyle(r).paddingLeft) + Number.parseFloat(filet.marginLeft),
+            // Le filet (son ::before, posé sur le haut de la rangée) : où il commence depuis le bord de la carte, son épaisseur, et
+            // où il finit depuis l'autre bord.
+            filet: filet && [Math.round(r.getBoundingClientRect().left - carte.left + Number.parseFloat(filet.left)), filet.height,
+              Math.round(carte.right - r.getBoundingClientRect().right + Number.parseFloat(filet.right))],
             chevron: Boolean(tete.querySelector(':scope > .repli-fleche')),
           };
         }),
@@ -441,19 +512,21 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
     });
     const quoi = (i) => `${schema} · rangée ${i + 1}`;
     expect(m.fond).toBe(rgb(t.surface));
-    expect(m.rayon).toBe('14px');
-    const couleurs = ['sommeil', 'energie'];
+    expect(m.rayon).toBe('16px');
     m.rangees.forEach((r, i) => {
       expect(r.hauteur, quoi(i)).toBeGreaterThanOrEqual(58);
       expect(r.taille, quoi(i)).toBe(28);
       expect(r.gauche, quoi(i)).toBe(12);
       expect(r.graisse, quoi(i)).toBe('500');
       expect(r.chevron, quoi(i)).toBe(true);
-      if (i > 0) expect(r.filet, `${quoi(i)} : filet décalé de 52`).toBe(52);
-      if (couleurs[i]) {
-        expect(r.carre, quoi(i)).toBe(rgb(t[`c-${couleurs[i]}`]));
-        expect(r.icone, quoi(i)).toBe(rgb(t[`c-${couleurs[i]}-on`]));
-      } else expect(r.carre, `${quoi(i)} : Notes libres, neutre`).toBe(rgb(t['surface-2']));
+      // La première rangée n'a pas de filet ; les suivantes, un filet de 0,5 qui commence après l'icône (12 + 28 + 12) et va
+      // jusqu'au bord droit de la carte.
+      expect(r.filet, `${quoi(i)} : filet de 0,5 décalé de 52`).toEqual(i === 0 ? null : [52, '0.5px', 0]);
+      // v12 (spec §5.4) : plus de carré ni de couleur de rubrique ; un repli ouvre quelque chose, son icône est à l'accent, et
+      // son chevron en --contour (3:1 sur la carte).
+      expect([r.carre, r.icone, r.fleche], quoi(i)).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte']), rgb(t.contour)]);
+      expect(contraste(r.icone, m.fond), quoi(i)).toBeGreaterThanOrEqual(3);
+      expect(contraste(r.fleche, m.fond), quoi(i)).toBeGreaterThanOrEqual(3);
     });
     // Résumés : sous le libellé, en 14 px --text-2, une ligne coupée par une ellipse ; AA sur la carte.
     for (const i of [0, 1]) {
@@ -472,46 +545,56 @@ test('replis en liste groupée 2b : une carte, des rangées de 58 au moins, un c
 
 // ---------- Bande du bas (P5) ----------
 
-test('bande du bas : « Émotion » est le plus large et ouvre Émotion du moment ; « Moment difficile » sur deux lignes ; « + Épisode » en couleur action', async ({ page }) => {
+// v12 (4/9, spec §5.4) : la bande sur --barre, un filet en haut ; « Émotion » est le seul aplat d'accent, « Moment difficile »
+// et « + Épisode » sont neutres (la carte et le contour) ; chacun son icône, sans carré, et le même corps de texte.
+test('bande du bas : « Émotion », le plus large, seul aplat d\'accent, ouvre Émotion du moment ; « Moment difficile » sur deux lignes et « + Épisode » neutres, au contour ; le même corps de texte pour les trois', async ({ page }) => {
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
     await page.reload();
     const bande = page.locator('.actions-flottantes');
     await expect(bande.getByRole('link')).toHaveCount(3);
+    const fondBande = await bande.evaluate((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).boxShadow]);
+    expect(fondBande, schema).toEqual([rgb(t.barre), `${rgb(t.line)} 0px 0.5px 0px 0px inset`]);
     const m = await bande.evaluate((b) => [...b.children].map((a) => {
       const r = a.getBoundingClientRect();
-      const carre = a.querySelector('.carre-action');
+      const icone = a.querySelector(':scope > svg');
       const libelle = a.querySelector('.libelle-action');
       return {
         nom: a.getAttribute('aria-label') || a.textContent.trim(), largeur: r.width, hauteur: r.height, fond: getComputedStyle(a).backgroundColor, texte: getComputedStyle(a).color,
-        carre: carre && [Math.round(carre.getBoundingClientRect().width), getComputedStyle(carre).backgroundColor, getComputedStyle(carre).color],
+        contour: getComputedStyle(a).boxShadow, carre: a.querySelectorAll('[class*="carre"]').length,
+        icone: icone && [Math.round(icone.getBoundingClientRect().width), getComputedStyle(icone).color],
         lignes: libelle && Math.round(libelle.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(libelle).lineHeight)),
         taille: libelle && Math.round(Number.parseFloat(getComputedStyle(libelle).fontSize)), graisse: libelle && getComputedStyle(libelle).fontWeight,
       };
     }));
     const [difficile, emotion, episode] = m;
     expect(m.map((x) => x.nom)).toEqual(['Moment difficile', 'Émotion du moment', 'Épisode']);
-    for (const x of m) expect(x.hauteur).toBe(48);
+    for (const x of m) {
+      expect(x.hauteur).toBe(48);
+      expect([x.taille, x.graisse], `${x.nom} : le même corps de texte`).toEqual([15, '600']);
+      expect(x.carre, `${x.nom} : plus de carré`).toBe(0);
+      expect(x.icone && x.icone[1], `${schema} · ${x.nom} : l'icône à la couleur du texte`).toBe(x.texte);
+      expect(contraste(x.texte, x.fond), `${schema} · ${x.nom}`).toBeGreaterThanOrEqual(4.5);
+    }
     expect(emotion.largeur).toBeGreaterThan(difficile.largeur);
     expect(emotion.largeur).toBeGreaterThan(episode.largeur);
     expect(difficile.largeur).toBeGreaterThanOrEqual(112);
     expect(difficile.largeur).toBeLessThanOrEqual(114);
     expect(difficile.lignes, 'Moment difficile sur deux lignes').toBe(2);
-    expect([difficile.taille, difficile.graisse]).toEqual([13, '600']);
-    for (const [x, couleur] of [[difficile, 'difficile'], [emotion, 'humeur']]) {
-      expect(x.fond, `${schema} · ${x.nom}`).toBe(rgb(t.surface));
-      expect(x.carre, `${schema} · ${x.nom}`).toEqual([28, rgb(t[`c-${couleur}`]), rgb(t[`c-${couleur}-on`])]);
-      expect(contraste(x.texte, x.fond)).toBeGreaterThanOrEqual(4.5);
+    expect([emotion.fond, emotion.texte, emotion.contour], `${schema} · Émotion, seul aplat d'accent`).toEqual([rgb(t.accent), rgb(t['sur-accent']), 'none']);
+    for (const x of [difficile, episode]) {
+      expect([x.fond, x.texte, x.contour], `${schema} · ${x.nom}, neutre`).toEqual([rgb(t.surface), rgb(t.text), `${rgb(t.contour)} 0px 0px 0px 1px inset`]);
     }
-    expect([episode.fond, episode.texte], schema).toEqual([rgb(t.action), rgb(t['action-on'])]);
   }
   await page.getByRole('link', { name: 'Émotion du moment' }).click();
   await expect(page.getByRole('dialog', { name: 'Émotion du moment' })).toBeVisible();
-  // Sur un jour passé, pas de bouton Émotion : les deux autres se partagent la bande.
+  // Sur un jour passé, pas de bouton Émotion, donc pas d'aplat : les deux autres se partagent la bande.
   await aller(page, '#/jour/2026-10-12');
   await expect.poll(() => titreVu(page)).toBe('Lundi 12 octobre');
   await expect(page.getByRole('link', { name: 'Émotion du moment' })).toHaveCount(0);
   await expect(page.locator('.actions-flottantes > *')).toHaveCount(2);
+  expect(await page.locator('.actions-flottantes > *').evaluateAll((els) => els.map((a) => getComputedStyle(a).backgroundColor)))
+    .toEqual([rgb(sombre.surface), rgb(sombre.surface)]);
 });
 
 // ---------- Changer de jour en glissant (B4) ----------
@@ -520,7 +603,7 @@ test('bande du bas : « Émotion » est le plus large et ouvre Émotion du momen
 
 
 test('glisser change de jour : vers la droite la veille, vers la gauche le lendemain, jamais au-delà d\'aujourd\'hui', async ({ page }) => {
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   await glisser(page, '.carte-champ .tete-rubrique', 120, 8);
   await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
   await expect.poll(() => titreVu(page)).toBe('Mercredi 14 octobre');
@@ -530,12 +613,12 @@ test('glisser change de jour : vers la droite la veille, vers la gauche le lende
   await expect(page).toHaveURL(/#\/jour\/2026-10-14$/);
   await glisser(page, '.liste-evenements, .evenements-jour', -100, -10);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   // Jamais au-delà d'aujourd'hui.
   await glisser(page, '.carte-champ .tete-rubrique', -150);
   await page.clock.runFor(300);
   await expect(page).toHaveURL(/#\/aujourdhui$/);
-  await expect.poll(() => titreVu(page)).toBe('Jeudi 15 octobre');
+  await expect.poll(() => titreVu(page)).toBe('Aujourd\'hui Jeudi 15 octobre');
   // Un geste rapide de 40 px suffit ; un geste lent de 40 px, non.
   await glisser(page, '.carte-champ .tete-rubrique', 40, 0, 400);
   await page.clock.runFor(300);

@@ -16,5 +16,5 @@ const memo = ({ id, date, assurerFiche }) => html`<${MemoVocal} parentStore="sym
 
 export function Symptome({ id }) {
   return html`<${ParcoursFiche} store="symptomes" route="symptome" titre="Symptôme" nomFiche="Symptôme" etapes=${ETAPES_SYMPTOME}
-    textes=${TEXTES_SYMPTOME} avecHeure=${false} id=${id} memo=${memo} teinte="sy" />`;
+    textes=${TEXTES_SYMPTOME} avecHeure=${false} id=${id} memo=${memo} />`;
 }

@@ -1,4 +1,4 @@
-// Sauvegardes témoins écrites par les versions publiées (formats 1 à 7, scripts/temoins.mjs) :
+// Sauvegardes témoins écrites par les versions publiées (formats 1 à 8, scripts/temoins.mjs) :
 // elles s'importent toujours au format courant, sans perte, et un export suivi d'un import reste stable.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -29,6 +29,7 @@ const TEMOINS = [
   { fichier: 'format-5.json', format: 5, app: '7.0.0', memos: 0 },
   { fichier: 'format-6.json', format: 6, app: '8.0.0', memos: 0 },
   { fichier: 'format-7.json', format: 7, app: '10.0.0', memos: 0 },
+  { fichier: 'format-8.json', format: 8, app: '11.0.0', memos: 0 },
 ];
 // Le témoin JSON d'un format (le zip du format 3 vient après le JSON).
 const temoin = (format) => TEMOINS.find((t) => t.format === format);
@@ -268,14 +269,13 @@ test('v9 : le témoin au format 6 passe au format 7 sans changement, énergie se
   assert.equal(await repo.meta.lire('schema'), 6);
 });
 
-// v11 : une sauvegarde de la v10 passe au format 8 sans aucun changement (mise à niveau vide). Ses nuits gardent leurs
-// heures entières, aucune gratitude, aucun « Ce que j'en retiens » ni aucun refuge n'est inventé, et le mot à soi, le mot
-// sans famille, la séance du minuteur, les épingles et la voix des consignes restent tels quels.
+// v11 : une sauvegarde de la v10 passe au format 8 sans aucun changement (mise à niveau vide), puis au format courant. Ses
+// nuits gardent leurs heures entières, aucune gratitude, aucun « Ce que j'en retiens » ni aucun refuge n'est inventé, et le
+// mot à soi, le mot sans famille, la séance du minuteur, les épingles et la voix des consignes restent tels quels.
 test('v11 : le témoin au format 7 passe au format 8 sans changement, mot à soi compris', async () => {
   const { brut, analyse, repo } = await importer(temoin(7));
   assert.equal(brut.formatVersion, 7);
-  assert.equal(FORMAT_VERSION, 8);
-  assert.equal(analyse.sauvegarde.formatVersion, 8);
+  assert.equal(analyse.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(analyse.erreurs, []);
   assert.deepEqual(analyse.sauvegarde.data, brut.data, 'rien n\'est transformé');
   assert.deepEqual(analyse.sauvegarde.counts, brut.counts);
@@ -301,6 +301,29 @@ test('v11 : le témoin au format 7 passe au format 8 sans changement, mot à soi
   assert.deepEqual(await repo.seances.lire(minuteur.id), minuteur);
   assert.deepEqual(await repo.meta.lire('favorisBienEtre'), brut.data.meta.find((m) => m.cle === 'favorisBienEtre').valeur);
   assert.equal((await repo.meta.lire('respiration')).voix, true);
+  assert.equal(await repo.meta.lire('schema'), 6);
+});
+
+// v12 : une sauvegarde de la v11 passe au format 9 sans aucun changement (mise à niveau vide). Sa nuit à 7 h 30, ses
+// gratitudes, « Ce que j'en retiens » et Mes refuges restent tels quels, et aucun morceau n'est inventé.
+test('v12 : le témoin au format 8 passe au format 9 sans changement, Mes refuges compris, sans morceau inventé', async () => {
+  const { brut, analyse, repo } = await importer(temoin(8));
+  assert.equal(brut.formatVersion, 8);
+  assert.equal(FORMAT_VERSION, 9);
+  assert.equal(analyse.sauvegarde.formatVersion, 9);
+  assert.deepEqual(analyse.erreurs, []);
+  assert.deepEqual(analyse.sauvegarde.data, brut.data, 'rien n\'est transformé');
+  assert.deepEqual(analyse.sauvegarde.counts, brut.counts);
+  const nuit = brut.data.journal.find((j) => j.heuresSommeil === 7.5);
+  assert.deepEqual(await repo.journal.lire(nuit.date), nuit);
+  assert.ok(nuit.gratitudes);
+  const retenu = brut.data.episodes.find((e) => e.ceQueJeRetiens);
+  assert.deepEqual(await repo.episodes.lire(retenu.id), retenu);
+  // Mes refuges : tels quels, une playlist choisie dans le compte et une collée, sans morceaux ni suite.
+  const refuges = brut.data.meta.find((m) => m.cle === 'refuges').valeur;
+  assert.deepEqual(await repo.meta.lire('refuges'), refuges);
+  assert.deepEqual(refuges.playlists.map((p) => p.source), ['spotify', null]);
+  assert.ok(refuges.playlists.every((p) => !('morceaux' in p) && !('suite' in p)), 'aucun morceau inventé');
   assert.equal(await repo.meta.lire('schema'), 6);
 });
 
@@ -392,4 +415,17 @@ test('le script refuse un témoin incomplet', () => {
     seul7('une séance du minuteur'));
   assert.throws(() => controlerTemoin(sans7((s) => { parCle(s, 'favorisBienEtre').valeur = []; })), seul7('des exercices épinglés (favorisBienEtre)'));
   assert.throws(() => controlerTemoin(sans7((s) => { delete parCle(s, 'respiration').valeur.voix; })), seul7('la voix des consignes (respiration.voix)'));
+
+  // Format 8 (v11) : ce que la v11 ajoute, chacun seul en cause.
+  const huit = charger(temoin(8)).brut;
+  const sans8 = (modifier) => { const s = structuredClone(huit); modifier(s); return enc.encode(JSON.stringify(s)); };
+  const seul8 = (manque) => ({ message: `témoin au format 8 incomplet :\n- ${manque}` });
+  const refugesDe = (s) => parCle(s, 'refuges').valeur;
+  assert.throws(() => controlerTemoin(sans8((s) => { for (const j of s.data.journal) if (j.heuresSommeil === 7.5) j.heuresSommeil = 7; })), seul8('une nuit à 7 h 30'));
+  assert.throws(() => controlerTemoin(sans8((s) => { for (const j of s.data.journal) j.gratitudes = null; })), /des gratitudes/);
+  assert.throws(() => controlerTemoin(sans8((s) => { for (const e of s.data.episodes) e.ceQueJeRetiens = null; })), /Ce que j'en retiens/);
+  assert.throws(() => controlerTemoin(sans8((s) => { refugesDe(s).titres = null; })), seul8('des titres (méta refuges)'));
+  assert.throws(() => controlerTemoin(sans8((s) => { for (const p of refugesDe(s).playlists) p.source = null; })), seul8('une playlist choisie dans le compte Spotify (méta refuges)'));
+  assert.throws(() => controlerTemoin(sans8((s) => { for (const p of refugesDe(s).playlists) p.source = 'spotify'; })), seul8('une playlist collée (méta refuges)'));
+  assert.throws(() => controlerTemoin(sans8((s) => { s.data.meta = s.data.meta.filter((m) => m.cle !== 'refuges'); })), /des titres \(méta refuges\)/);
 });

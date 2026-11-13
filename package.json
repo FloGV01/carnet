@@ -1,6 +1,6 @@
 {
   "name": "suivi-audhd",
-  "version": "11.0.0",
+  "version": "12.0.0",
   "private": true,
   "type": "module",
   "description": "Emozio : PWA personnelle de suivi quotidien, 100 % locale.",

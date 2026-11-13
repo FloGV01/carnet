@@ -4,7 +4,8 @@ import { viderBase, aller, appPrete, groupe } from '../aides/saisie.js';
 import { canaux, contraste, jetons } from '../aides/couleurs.js';
 import { vueMoment, toucherMot, noter, continuer, terminer } from '../aides/emotion.js';
 import { installerParole, cacher, montrer } from '../aides/lecteur.js';
-import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMouvements, mouvements } from '../aides/controle.js';
+import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMouvements, mouvements, verserControle as verser, rondsAccent, accentHorsDeSaPlace,
+  liensSurSurface2 } from '../aides/controle.js';
 
 // v7 (9/9) · Contrôle global (plan v6.2, tâches 6 et 7) : on parcourt les écrans principaux, avec des données inventées,
 // en clair et en sombre.
@@ -40,69 +41,21 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // entrées, le Diagnostic et « Ouvrir une playlist » ; la confirmation de « Revenir » et l'Aide iPhone), dans ce parcours et,
 // en plus, dans le leur, comme ceux de la v10. Le soir y gagne le contrôle des 44 pt, qui échouait déjà en v10 sous
 // « Jour précédent » (corrigé : `.sous-jour`, ecrans.css). En très grand texte (33 à 53), Mes refuges, les roues et Mes
-// gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v11-spotify.spec.js), à cause de sa garde réseau.
+// gratitudes. Les écrans de la connexion à Spotify sont contrôlés à part (v12-spotify.spec.js), à cause de sa garde réseau.
+// v12 (6/9) : Mes refuges, une simple liste : vide, puis plein avec ses morceaux et « La suite est dans Spotify. » ; ses
+// réglages (la saisie de la v11) ; en très grand texte, un titre de morceau de 70 signes sans espace. v12 (7/9) : Moment
+// difficile avec ses morceaux, après Mon plan ; le Diagnostic et « Ouvrir un morceau ».
+// v12 (5/9) : sur chaque écran du parcours, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6) : aucun rond sans texte ni
+// icône ne l'a pour fond ou pour contour, aucun graphique, écran de l'émotion ni « Réveil la nuit » n'en a de trace, et en clair,
+// aucun lien vert ne se pose sur --surface-2. Le parcours passe aussi par un jour de Mes jours touché, son détail ouvert.
+// Réglages et Le soir ont des icônes sans carré. v12 (9/9) : le débordement de côté, sur le parcours entier, en clair et en
+// sombre, jusqu'au très grand texte (33 à 53), hors des écrans hérités de la v11 (HERITES), à partir de leur taille d'alors.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
 
-const PLAN = {
-  premiersSignes: 'Mâchoire serrée, je parle plus vite.', quandCaMonte: 'Je m\'éloigne cinq minutes.',
-  siSurcharge: 'Casque antibruit.', pourRecuperer: 'Marcher dehors.', prevenir: 'Un proche, par message.',
-  siAlors: [{ si: 'le bruit monte', alors: 'je mets le casque' }],
-};
-
-// Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
-// deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
-// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »).
-// Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
-// la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
-// une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
-// bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
-// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. v9 (8/8) : un mot à soi (Flottant, vert,
-// sans famille) et Fatigué, chacun dans un relevé. Renvoie les identifiants utiles.
-async function verser(page) {
-  return page.evaluate(async (plan) => {
-    const r = window.__carnet.repo;
-    const jours = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15'];
-    for (const [i, d] of jours.entries()) {
-      await r.journal.patch(d, {
-        lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: i === 5 ? null : ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
-        heuresSommeil: i % 4 === 3 ? null : 4 + (i % 7),
-        contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
-        pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
-        gratitudes: i % 3 ? null : 'Merci au collègue.',
-      });
-    }
-    await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
-    await r.humeurs.creer({ date: '2026-10-09', heure: '18:00', humeur: 4, energie: 'energie:basse' });
-    const emotions = ['roue:colere:irrite', 'roue:serenite:calme', 'roue:joie:curieux', 'roue:tristesse', 'roue:peur:preoccupe', 'roue:surprise:perplexe', 'roue:degout:hesitant'];
-    const faisais = [['activiteMoment:travail'], ['activiteMoment:repos'], ['activiteMoment:trajet', 'activiteMoment:travail']];
-    for (const [i, d] of jours.slice(2).entries()) {
-      await r.humeurs.creer({ date: d, heure: '12:00', emotion: emotions[i % emotions.length], energie: 'energie:moyenne', faisais: faisais[i % 3] });
-      await r.humeurs.creer({ date: d, heure: '19:30', emotion: emotions[(i + 3) % emotions.length], energie: i % 2 ? 'energie:basse' : 'energie:haute',
-        faisais: faisais[(i + 1) % 3] });
-    }
-    const ep = await r.episodes.creer({ date: '2026-10-14', heure: '18:40', declencheur: 'declencheur:surcharge_sensorielle', emotion: 'emotion:colere',
-      intensite: 7, dessous: 'dessous:fatigue_debordement', reaction: 'reaction:explosion', situation: 'Open space bruyant.' });
-    await r.symptomes.creer({ date: '2026-10-13', symptome: 'symptome:ruminations', intensite: 5, duree: 'duree:moins_une_heure' });
-    const rdv = await r.rdv.creer({ date: '2026-10-22', heure: '14:00', professionnel: 'professionnel:psychiatre',
-      questions: [{ texte: 'Le sommeil du week-end est plus décalé.', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }] });
-    await r.rdv.creer({ date: '2026-10-07', heure: '10:30', professionnel: 'professionnel:psychologue', compteRendu: 'Travail sur les premiers signes.' });
-    const tr = await r.traitements.creer({ date: '2026-09-28', changement: 'Comprimé A : matin 1 → 1½', effetsSecondaires: ['effetSecondaire:aucun'], effetRessenti: 'effetRessenti:mieux' });
-    await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });
-    await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
-    await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
-    await r.seances.creer({ date: '2026-10-11', heure: '09:30', exercice: 'respiration-abdominale', origine: 'bien-etre', dureeS: 180, fin: true, programme: 'respiration-abdominale' });
-    await r.meta.ecrire('motsPerso', { 'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'vert', famille: null,
-      definition: 'Un peu ailleurs, sans attache.', archive: false, createdAt: '2026-10-01T08:00:00.000Z' } });
-    await r.humeurs.creer({ date: '2026-10-15', heure: '20:00', emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' });
-    await r.humeurs.creer({ date: '2026-10-14', heure: '20:00', emotion: 'roue:aucune:fatigue', energie: 'energie:basse' });
-    await r.meta.ecrire('monPlan', plan);
-    await r.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par ce qui se répète, et ça dure.' });
-    await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
-    return { ep: ep.id, rdv: rdv.id, tr: tr.id };
-  }, PLAN);
-}
+// Le plan et les données inventées du contrôle (verser) sont dans tests/aides/controle.js depuis la v12 (4/9) : la hauteur
+// de la page du soir (v12-design.spec.js) se mesure sur les mêmes.
 
 // Ce qui sort de l'écran de côté : la page qui défile horizontalement, un élément visible hors des 390 px, ou une ligne
 // de texte qui dépasse de sa boîte jusque hors de l'écran. N'est pas compté ce qui est dans une zone qui défile de côté,
@@ -154,7 +107,8 @@ const tirets = (page) => page.evaluate(() => [...document.querySelectorAll('body
 // sur son gris clair en clair depuis la v11, couleur du texte dans Réglages). Relecture de la tâche 8 : cet anneau ne vaut coche que s'il se voit, un contour plein
 // d'au moins 2 px, à 2 px au moins du disque, à 3:1 au moins sur son fond (le premier ancêtre opaque, comme plus haut).
 // L'épingle allumée (v10) a sa forme aussi : son dessin se remplit ; sa couleur est mesurée par `epinglesFaibles`. La valeur
-// notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près) et sa graisse de 700.
+// notée d'une roue (v11) aussi : sa place au milieu de la bande (à 1 px près), sur la fenêtre (v12 : un aplat d'accent,
+// .notee) et sa graisse de 600 au moins (700 jusqu'à la v11).
 const sansCoche = (page) => page.evaluate(() => {
   const rgba = (c) => {
     const m = /rgba?\(([^)]+)\)/.exec(c || '');
@@ -186,7 +140,7 @@ const sansCoche = (page) => page.evaluate(() => {
     if (b.classList.contains('epingle') && getComputedStyle(b.querySelector('svg')).fill !== 'none') return false;
     if (b.classList.contains('roue-valeur')) {
       const [d, r] = [b.closest('.roue-defile').getBoundingClientRect(), b.getBoundingClientRect()];
-      if (Math.abs(r.left + r.width / 2 - (d.left + d.width / 2)) <= 1 && Number(getComputedStyle(b).fontWeight) >= 700) return false;
+      if (Math.abs(r.left + r.width / 2 - (d.left + d.width / 2)) <= 1 && b.closest('.roue-choix.notee') && Number(getComputedStyle(b).fontWeight) >= 600) return false;
     }
     const svg = b.querySelector(':scope > .coche svg');
     return !svg || svg.getBoundingClientRect().width < 10;
@@ -285,11 +239,15 @@ const ECRANS_V10 = [
 ];
 
 // Les écrans nouveaux de la v11, sur le même modèle : chacun part de son adresse, ou de l'écran qui le précède ici, et pose
-// ce qu'il lui faut. Mes refuges, inventés : deux titres, une playlist venue de Spotify (nommé à côté) et une collée.
+// ce qu'il lui faut. Mes refuges, inventés : deux titres, une playlist venue de Spotify (nommé à côté) et une collée. v12 : la
+// playlist de Spotify a ses morceaux, inventés, et une suite ; ses identifiants sont factices (22 signes), le dépôt est public.
+const ID_FACTICE = (debut) => debut.padEnd(22, '0');
+const MORCEAUX = ['Pluie lente', 'Le matin calme', 'Rivière douce', 'Sous les pins', 'Marée basse', 'Brume du lac', 'Nuit claire', 'Pas à pas']
+  .map((titre, i) => ({ id: ID_FACTICE(`mo${i + 1}`), titre, artiste: i % 3 === 2 ? null : 'Les Vagues Douces' }));
 const REFUGES = {
   titres: 'Pluie lente\nLe matin calme',
   playlists: [
-    { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/abc', source: 'spotify' },
+    { nom: 'Pour souffler', lien: `https://open.spotify.com/playlist/${ID_FACTICE('pl1')}`, source: 'spotify', morceaux: MORCEAUX, suite: true },
     { nom: 'Pour marcher', lien: 'https://music.apple.com/fr/playlist/marcher/pl.u-abc', source: null },
   ],
 };
@@ -353,29 +311,42 @@ const ECRANS_V11 = [
     await zone.fill('Partir avant que ça monte.');
     await expect.poll(() => p.evaluate(() => window.__carnet.repo.episodes.tous().then((l) => l.map((e) => e.ceQueJeRetiens)))).toContain('Partir avant que ça monte.');
   }, '.recap ~ .champ-recap #episodes-ceQueJeRetiens'],
-  // v11 (6/11, 7/11) : Mes refuges vide (le bouton « Choisir dans mon compte », jamais touché ici), puis plein : ses titres, une
-  // playlist de Spotify, nommé à côté, et « Retirer ces playlists », une collée ; chacune s'écoute d'un toucher.
+  // v11 (6/11, 7/11 ; v12, 6/9) : Mes refuges vide (sa phrase, « Choisir dans mon compte », jamais touché ici, et « Coller un
+  // lien »), puis plein : une playlist de Spotify, nommé à côté, une collée, chacune s'écoute d'un toucher ; ses morceaux,
+  // « La suite est dans Spotify. » et ses titres, en lecture seule. Puis ses réglages : la saisie de la v11, les boutons de
+  // Spotify et « Retirer ces playlists ».
   ['Mes refuges, vide', async (p) => {
     await p.evaluate(() => window.__carnet.repo.meta.ecrire('refuges', null));
     await remonter(p, '#/refuges');
-  }, 'main.refuges #refuges-nom-0'],
+  }, 'main.refuges .refuges-vide .btn-plein'],
   ['Mes refuges, plein', async (p) => {
     await p.evaluate((r) => window.__carnet.repo.meta.ecrire('refuges', r), REFUGES);
     await remonter(p, '#/refuges');
     await expect(p.locator('main.refuges a.lien-refuge')).toHaveCount(2);
-  }, 'main.refuges a.lien-refuge'],
-  // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan.
-  ['Moment difficile, playlists et titres', async (p) => {
+    await expect(p.locator('main.refuges .ligne-morceau')).toHaveCount(MORCEAUX.length);
+  }, 'main.refuges .titres-refuges'],
+  ['Réglages de Mes refuges', (p) => p.locator('main.refuges').getByRole('link', { name: 'Modifier', exact: true }).click(),
+    'main.refuges-reglages #refuges-nom-0'],
+  // v11 (6/11) : Moment difficile, ses playlists sous « Une chose à la fois » et ses titres avec Mon plan. v12 (7/9) : ses
+  // morceaux après Mon plan, sous le nom de la playlist, et « La suite est dans Spotify. ».
+  ['Moment difficile, playlists, titres et morceaux', async (p) => {
     await remonter(p, '#/moment-difficile');
     await expect(p.locator('.plan-moment')).toContainText('Pluie lente');
-  }, '.moment-difficile a.lien-refuge'],
+    await expect(p.locator('.moment-difficile a.lien-refuge')).toHaveCount(2);
+    await expect(p.locator('.moment-difficile .morceaux-moment .ligne-morceau')).toHaveCount(MORCEAUX.length);
+    await expect(p.locator('.moment-difficile .morceaux-moment .note-refuges')).toHaveText('La suite est dans Spotify.');
+  }, '.moment-difficile .morceaux-moment .ligne-morceau'],
   // v11 (6/11) : Bien-être et ses cinq entrées, Mes refuges après le Programme.
   ['Bien-être, cinq entrées', async (p) => {
     await aller(p, '#/bien-etre');
     await expect(p.getByRole('list', { name: 'Entrées' }).getByRole('link')).toHaveText(['Me calmer vite', 'Dormir ou me rendormir', 'Me concentrer', 'Programme', 'Mes refuges']);
   }, '.bien-etre .entrees .ligne-carte'],
-  // v11 (6/11) : le Diagnostic, « Ouvrir une playlist » et ses trois formes du lien, jamais suivies.
-  ['Diagnostic, Ouvrir une playlist', (p) => aller(p, '#/diagnostic'), '.diag section[aria-labelledby="titre-ouvrir-playlist"] a.btn'],
+  // v11 (6/11) : le Diagnostic, « Ouvrir une playlist » et ses trois formes du lien, jamais suivies. v12 (7/9) : « Ouvrir un
+  // morceau », les deux formes du premier morceau gardé.
+  ['Diagnostic, Ouvrir un morceau', async (p) => {
+    await aller(p, '#/diagnostic');
+    await expect(p.locator('.diag section[aria-labelledby="titre-ouvrir-morceau"] a.btn')).toHaveText(['Morceau seul', 'Morceau dans sa playlist']);
+  }, '.diag section[aria-labelledby="titre-ouvrir-morceau"] a.btn'],
   // v11 (10/11) : « Revenir à l'état d'avant l'import » demande confirmation : une copie posée en base, comme après un import.
   ['Confirmation « Revenir »', async (p) => {
     await p.evaluate(() => window.__carnet.repo.tx(['snapshots'], 'readwrite', (t) => {
@@ -455,6 +426,10 @@ const ECRANS = (ids) => [
   ['Épisode rouvert', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, `#/episode/${ids.ep}`); }, '.recap'],
   ['Moment difficile', async (p) => { await aller(p, '#/aujourdhui'); await aller(p, '#/moment-difficile'); }, '.plan-moment'],
   ['Analyse', (p) => aller(p, '#/analyse'), '.analyse .selecteur-periode'],
+  // v12 (5/9) : le dernier jour de Mes jours touché, son détail ouvert et son lien « Voir ce jour » (sur le fond de l'écran, et non
+  // sur --surface-2 : spec §5.3).
+  ['Analyse, un jour de Mes jours touché', (p) => p.locator('figure.graphe', { hasText: 'Mes jours' }).locator('rect.g-zone').last().click(),
+    'figure.graphe .detail-colonne a.lien'],
   // v9 (8/8) : « Tes zones », ses bulles comptées, puis sa barre par semaine en tableau.
   ['Analyse, Tes zones en tableau', (p) => p.locator('section.tes-zones').getByRole('button', { name: 'Voir en tableau' }).click(),
     'section.tes-zones figure.g-zones-semaines table'],
@@ -549,14 +524,22 @@ test.beforeEach(async ({ page }) => {
   await viderBase(page);
 });
 
+// v12 (5/9) : sur chaque écran, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6). La règle de forme : aucun rond sans
+// texte ni icône ne l'a pour fond ou pour contour ; le point de vigilance 3 : aucune trace de lui dans les graphiques, sur les
+// écrans de l'émotion ni sur « Réveil la nuit » ; et, en clair, aucun lien vert sur --surface-2 (tests/aides/controle.js).
 for (const schema of ['light', 'dark']) {
-  test(`contraste ${schema === 'light' ? 'en clair' : 'en sombre'} : tout texte visible des écrans principaux a au moins 4,5:1 sur son fond ; ni tirets, ni choix fait sans coche`, async ({ page }) => {
-    test.setTimeout(180000);
+  test(`contraste ${schema === 'light' ? 'en clair' : 'en sombre'} : tout texte visible des écrans principaux a au moins 4,5:1 sur son fond ; ni tirets, ni choix fait sans coche ; l'accent vert à sa place`, async ({ page }) => {
+    test.setTimeout(240000);
+    const t = schema === 'light' ? clair : sombre;
+    const accents = [rgb(t.accent), rgb(t['accent-texte'])];
     const fautes = await parcourir(page, schema, async (nom) => [
       ...await contrastesFaibles(page, nom.startsWith('Confirmation') ? '.boite-confirmation' : 'body'),
       ...await epinglesFaibles(page),
       ...(await tirets(page)).map((x) => `tirets : ${x}`),
       ...(await sansCoche(page)).map((x) => `choix fait sans coche : ${x}`),
+      ...(await rondsAccent(page, accents)).map((x) => `rond à l'accent : ${x}`),
+      ...(await accentHorsDeSaPlace(page, accents)).map((x) => `accent hors de sa place : ${x}`),
+      ...(schema === 'light' ? await liensSurSurface2(page, rgb(t['accent-texte']), rgb(t['surface-2'])) : []),
     ]);
     expect(fautes).toEqual({});
   });
@@ -667,20 +650,42 @@ test('le contrôle du mouvement voit ce qui a déjà fini de bouger : une animat
   expect(await essais(), 'la liste se vide à chaque contrôle').toEqual([]);
 });
 
-test('à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l\'écran de côté', async ({ page }) => {
-  test.setTimeout(240000);
-  const fautes = await parcourir(page, 'light', async () => {
-    const f = [];
-    for (const taille of [null, 23]) {
-      if (taille) await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
-      await stabiliser(page);
-      f.push(...(await debordements(page)).map((x) => `${taille ? `${taille} px` : 'défaut'} : ${x}`));
-    }
-    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
-    return f;
+// v12 (9/9) : le parcours entier, en clair et en sombre, au texte par défaut, en grand texte (23 px) et en très grand texte
+// (33, 40, 47 et 53 px). Jusqu'à 23 px, rien ne sort de l'écran de côté, nulle part. En très grand texte non plus, sauf sur les
+// écrans hérités (HERITES), et seulement à partir de la taille où ils débordaient déjà en v11 : leur très grand texte est hors de
+// la v12 (spec v12 §3 ; docs/decisions.md, v10 et v11, « En attente de l'utilisateur »). Relevé avec ce même test sur le code de
+// la v11 (f5b6c8b) : la v12 n'en ajoute aucun ; Aujourd'hui et le soir (six écrans) ne débordent plus qu'à partir de 47 px, contre
+// 40, Réglages › Rappels plus du tout (tâche 8), et Réglages (avec le bandeau ou la confirmation « Revenir ») qu'à 53 px, contre 40 :
+// la version et son empreinte y passent à la ligne. Sans cela, la taille où Réglages débordait dépendait des lettres de l'empreinte,
+// donc de chaque version. La liste est exacte : un écran qui se met à déborder, ou plus tôt, échoue ; un écran hérité qui déborde
+// plus tard, ou plus du tout, doit y être mis à jour. Le soir entier à 33 px a aussi son test, plus bas.
+const HERITES = {
+  'Aujourd\'hui': 47, 'Aujourd\'hui, Sport en détail': 47, 'Épisode, étape 1': 33, 'Épisode rouvert': 33, 'Historique': 53, 'Historique, filtres': 53,
+  'Le soir, trois roues vides': 47, 'Le soir, trois roues notées': 47, 'Le soir, Sport et Contact en détail': 47, 'Le soir, Mes gratitudes': 47,
+  'Épisode rouvert, Ce que j\'en retiens': 33, 'Confirmation « Revenir »': 53, 'Soins, Rendez-vous': 47, 'Soins, Traitement': 40, 'Rendez-vous': 47,
+  'Confirmation': 47, 'En consultation': 40, 'Traitement': 47, 'Vue soignants': 47, 'Réglages': 53, 'Réglages › Émotions, Mes mots': 53,
+  'Bandeau de mise à jour': 53,
+};
+for (const schema of ['light', 'dark']) {
+  test(`à 390 px ${schema === 'light' ? 'en clair' : 'en sombre'}, au texte par défaut, en grand texte (23 px) et en très grand texte (33 à 53), rien ne sort de l'écran de côté, hors des écrans hérités, à partir de leur taille de la v11`, async ({ page }) => {
+    test.setTimeout(600000);
+    const debordants = {};
+    const fautes = await parcourir(page, schema, async (nom) => {
+      const f = [];
+      for (const taille of [null, 23, 33, 40, 47, 53]) {
+        await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+        await stabiliser(page);
+        const d = await debordements(page);
+        if (d.length && taille >= 33 && !debordants[nom]) debordants[nom] = taille;
+        if (!(taille >= HERITES[nom])) f.push(...d.map((x) => `${taille ? `${taille} px` : 'défaut'} : ${x}`));
+      }
+      await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+      return f;
+    });
+    expect(fautes).toEqual({});
+    expect(debordants, 'les écrans hérités, et la taille où ils commencent à déborder').toEqual(HERITES);
   });
-  expect(fautes).toEqual({});
-});
+}
 
 // v11 (8/11) : la capsule du mot choisi, à la carte du bas (elle reste dans la carte, avant la flèche) et à l'écran 3 (elle tient
 // dans l'écran, et son texte, qui passe à la ligne s'il le faut, y reste). Rien ne défile de côté. En sombre, sans capsule, le
@@ -768,19 +773,50 @@ test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableau
   expect(fautes).toEqual({});
 });
 
+// v12 (9/9) : la ligne « Version » de Réglages › À propos montre l'empreinte de la version, dont les lettres n'ont pas la largeur
+// fixe des chiffres. Quelle que soit l'empreinte, des plus étroites aux plus larges, elle ne sort pas de l'écran en très grand
+// texte (33 à 53) : elle passe à la ligne, à 8 px au moins de son libellé. Sans cela, HERITES changerait d'une version à l'autre.
+// Les autres valeurs d'À propos (« non » de « Stockage protégé », « 160,1 ko »…) restent aussi à 8 px au moins de leur libellé.
+test('très grand texte (33 à 53) : la ligne « Version » de Réglages passe à la ligne, quelle que soit l\'empreinte ; aucune valeur d\'À propos ne touche son libellé', async ({ page }) => {
+  test.setTimeout(120000);
+  await aller(page, '#/reglages');
+  const version = page.locator('.a-propos .version-app');
+  await expect(version).toHaveText(/^\d+\.\d+\.\d+ · [0-9a-f]{12}$/);
+  const lignes = page.locator('.a-propos .ligne-info:has(> span + span)');
+  await expect(lignes).toHaveCount(5);
+  const fautes = {};
+  for (const c of ['1', '0', 'f', 'a', 'd', 'e', 'b', 'c']) {
+    await version.evaluate((e, x) => { e.textContent = `12.0.0 · ${x.repeat(12)}`; }, c);
+    for (const taille of [null, 33, 40, 47, 53]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+      await stabiliser(page);
+      const f = await debordements(page, '.a-propos .ligne-info:has(.version-app)');
+      const ecarts = await lignes.evaluateAll((l) => l.map(({ children: [a, b] }) => [a.textContent.trim(), b.getBoundingClientRect().left - a.getBoundingClientRect().right]));
+      for (const [libelle, ecart] of ecarts) if (ecart < 7.5) f.push(`${libelle} : à ${Math.round(ecart)} px de son libellé`);
+      if (f.length) fautes[`${c} × 12, ${taille ? `${taille} px` : 'défaut'}`] = f;
+    }
+    await expect(version, 'l\'empreinte essayée est restée à l\'écran').toHaveText(`12.0.0 · ${c.repeat(12)}`);
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect(fautes).toEqual({});
+});
+
 // v11 (11/11) : en très grand texte (33 à 53), Mes refuges plein ne sort pas de l'écran de côté, page comprise. Le soir, à 33 px,
 // non plus, en entier, page comprise. À partir de 40 px, seul ce que la v11 y ajoute est contrôlé : les trois roues notées et la
 // carte Mes gratitudes, écrite. Le reste du soir y déborde encore (« nuit dernière », « Télétravail », le résumé d'un relevé),
 // comme en v10, à l'identique (page de 395, 449 puis 496 px) : un écran hérité, hors de la v11 (spec v11 §3 ; docs/decisions.md,
-// v10, « En attente de l'utilisateur »).
-test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px, et ses trois roues notées et Mes gratitudes écrites au-delà, ne sortent pas de l\'écran de côté', async ({ page }) => {
+// v10, « En attente de l'utilisateur »). v12 (6/9) : Mes refuges a ses morceaux, dont un titre et un artiste de 70 signes sans
+// espace (point de vigilance 4), et ses réglages sont contrôlés de même.
+test('très grand texte (33 à 53) : Mes refuges plein, ses morceaux et ses réglages, le soir entier à 33 px, et ses trois roues notées et Mes gratitudes écrites au-delà, ne sortent pas de l\'écran de côté', async ({ page }) => {
   test.setTimeout(180000);
   await verser(page);
+  const long = 'x7'.repeat(35);
+  const refugesLongs = { ...REFUGES, playlists: [{ ...REFUGES.playlists[0], morceaux: [{ id: ID_FACTICE('mo99'), titre: long, artiste: long }, ...MORCEAUX] }, REFUGES.playlists[1]] };
   await page.evaluate(async (r) => {
     await window.__carnet.repo.meta.ecrire('refuges', r);
     await window.__carnet.repo.journal.patch('2026-10-15', { heuresSommeil: 7.5, sportMouvement: true, activites: [{ duree: 'dureeSport:de_30_a_60' }],
       contactHumain: true, contacts: [{ effet: 'contactEffet:ressourcant' }], gratitudes: 'Merci à la voisine pour le colis.' });
-  }, REFUGES);
+  }, refugesLongs);
   await page.reload();
   await appPrete(page);
   const nouveauDuSoir = '.aujourdhui .roue-choix, .aujourdhui .carte-champ:has(#gratitudes)';
@@ -795,61 +831,73 @@ test('très grand texte (33 à 53) : Mes refuges plein, le soir entier à 33 px,
     if (soir.length) fautes[`le soir, ${taille} px`] = soir;
     await remonter(page, '#/refuges');
     await expect(page.locator('main.refuges a.lien-refuge')).toHaveCount(2);
+    await expect(page.locator('main.refuges .ligne-morceau')).toHaveCount(MORCEAUX.length + 1);
+    await expect(page.locator('main.refuges .titre-morceau').first()).toHaveText(long);
     await stabiliser(page);
     const refuges = await debordements(page);
     if (refuges.length) fautes[`Mes refuges, ${taille} px`] = refuges;
+    await remonter(page, '#/refuges/reglages');
+    await expect(page.locator('main.refuges-reglages #refuges-nom-1')).toBeVisible();
+    await stabiliser(page);
+    const reglagesRefuges = await debordements(page);
+    if (reglagesRefuges.length) fautes[`Réglages de Mes refuges, ${taille} px`] = reglagesRefuges;
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});
 });
 
-// Le style d'un carré d'icône et de la rangée qui le porte, et le filet de la rangée suivante (son ::before).
-const carres = (page, liste) => page.locator(liste).evaluate((ul) => [...ul.querySelectorAll(':scope > li')].map((li) => {
-  const c = li.querySelector('.carre-ligne');
+// Le style de l'icône d'une rangée (sa place de 28) et de la rangée qui la porte, et le filet de la rangée suivante (son ::before).
+const icones = (page, liste) => page.locator(liste).evaluate((ul) => [...ul.querySelectorAll(':scope > li')].map((li) => {
+  const c = li.querySelector('.icone-ligne');
   const r = c && c.getBoundingClientRect();
   const filet = getComputedStyle(li, '::before');
+  const chevron = li.querySelector('.ligne-carte > svg:last-child');
   return {
     texte: li.textContent.trim(), fond: c && getComputedStyle(c).backgroundColor, icone: c && getComputedStyle(c.querySelector('svg')).color,
-    taille: r && [Math.round(r.width), Math.round(r.height)], rayon: c && getComputedStyle(c).borderTopLeftRadius,
-    hauteur: Math.round(li.getBoundingClientRect().height),
-    filet: filet.content === 'none' || filet.content === 'normal' ? null : Math.round(parseFloat(filet.left)),
-    gaucheCarre: r && Math.round(r.left - ul.getBoundingClientRect().left),
+    place: r && [Math.round(r.width), Math.round(r.height)], dessin: c && Math.round(c.querySelector('svg').getBoundingClientRect().width),
+    hauteur: Math.round(li.getBoundingClientRect().height), chevron: chevron && getComputedStyle(chevron).color,
+    filet: filet.content === 'none' || filet.content === 'normal' ? null : [Math.round(parseFloat(filet.left)), filet.height],
+    gaucheIcone: r && Math.round(r.left - ul.getBoundingClientRect().left),
   };
 }));
 
-test('Réglages et Le soir en listes groupées 2b : carrés de 28 (rayon 7), neutres ou à la couleur du parcours, filets décalés après le carré, en clair et en sombre', async ({ page }) => {
+test('Réglages et Le soir en listes groupées 2b : des icônes de 22 sans carré (v12), à l\'accent sur une rangée qui ouvre un écran, en --text-2 sur une rangée qui nomme une rubrique ; chevrons en --contour, filets de 0,5 décalés après l\'icône, en clair et en sombre', async ({ page }) => {
   for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
     await aller(page, '#/reglages');
     await expect(page.locator('#titre-moment-difficile')).toBeVisible();
-    const md = await carres(page, 'ul[aria-labelledby="titre-moment-difficile"]');
+    const md = await icones(page, 'ul[aria-labelledby="titre-moment-difficile"]');
     expect(md.map((x) => x.texte)).toEqual(['Mon plan', 'Moment difficile', 'Me ressourcer', 'Aide iPhone']);
-    const attendus = [['c-difficile', 'c-difficile-on'], ['c-difficile', 'c-difficile-on'], ['c-energie', 'c-energie-on'], ['surface-2', 'text']];
     md.forEach((x, i) => {
-      expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[attendus[i][0]]));
-      expect(x.icone, `${schema} ${x.texte}`).toBe(rgb(t[attendus[i][1]]));
-      expect(contraste(x.fond, x.icone), `${schema} ${x.texte} : icône`).toBeGreaterThanOrEqual(3);
-      expect(x.taille).toEqual([28, 28]);
-      expect(x.rayon).toBe('7px');
-      expect(x.gaucheCarre).toBe(12);
+      // Une rangée qui ouvre un écran : son icône à l'accent, sans carré ni couleur de parcours ; son chevron en --contour.
+      expect([x.fond, x.icone, x.chevron], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte']), rgb(t.contour)]);
+      expect(contraste(x.icone, rgb(t.surface)), `${schema} ${x.texte} : icône`).toBeGreaterThanOrEqual(3);
+      expect(contraste(x.chevron, rgb(t.surface)), `${schema} ${x.texte} : chevron`).toBeGreaterThanOrEqual(3);
+      expect(x.place).toEqual([28, 28]);
+      expect(x.dessin).toBe(22);
+      expect(x.gaucheIcone).toBe(12);
       expect(x.hauteur).toBeGreaterThanOrEqual(52);
-      // La première rangée n'a pas de filet ; les suivantes, un filet qui commence après le carré (12 + 28 + 12).
-      expect(x.filet).toBe(i === 0 ? null : 52);
+      // La première rangée n'a pas de filet ; les suivantes, un filet de 0,5 qui commence après l'icône (12 + 28 + 12).
+      expect(x.filet).toEqual(i === 0 ? null : [52, '0.5px']);
     });
-    const saisie = await carres(page, 'ul[aria-labelledby="titre-ma-saisie"]');
-    for (const x of saisie) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t['surface-2']));
-    // Le soir : chaque champ a le carré de sa rubrique, comme sa carte sur Aujourd'hui.
+    const saisie = await icones(page, 'ul[aria-labelledby="titre-ma-saisie"]');
+    for (const x of saisie) expect([x.fond, x.icone], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte'])]);
+    // Le soir : chaque champ a l'icône de sa rubrique, en --text-2, sans carré, comme sa carte sur Aujourd'hui (v12) : la
+    // rangée nomme une rubrique (son interrupteur la règle), elle n'ouvre rien.
     await aller(page, '#/reglages/journee');
     await expect(page.locator('.ma-journee .avec-carres')).toBeVisible();
-    const soir = await carres(page, '.ma-journee .avec-carres');
-    const couleurs = { Lieu: 'lieu', Sommeil: 'sommeil', Humeur: 'humeur', 'Contact humain': 'contact', 'Sport / mouvement': 'sport',
-      'Explosions (compteur du soir)': 'explosions', 'Traitement pris': 'traitement', 'Mes points positifs': 'positifs',
-      // v11 : Mes gratitudes, juste après, à la couleur des points positifs.
-      'Mes gratitudes': 'positifs',
+    const soir = await icones(page, '.ma-journee .avec-carres');
+    const champs = ['Lieu', 'Sommeil', 'Humeur', 'Contact humain', 'Sport / mouvement', 'Explosions (compteur du soir)', 'Traitement pris',
+      'Mes points positifs',
+      // v11 : Mes gratitudes, juste après les points positifs.
+      'Mes gratitudes',
       // v8 : « Nuit en détail », masqué par défaut, avec ce qu'il contient en secondaire.
-      'Nuit en détailcoucher, lever, réveils': 'sommeil', 'Ce qui a pesé · ce qui a rechargé': 'energie' };
-    expect(soir.map((x) => x.texte)).toEqual(Object.keys(couleurs));
-    for (const x of soir) expect(x.fond, `${schema} ${x.texte}`).toBe(rgb(t[`c-${couleurs[x.texte]}`]));
+      'Nuit en détailcoucher, lever, réveils', 'Ce qui a pesé · ce qui a rechargé'];
+    expect(soir.map((x) => x.texte)).toEqual(champs);
+    for (const x of soir) {
+      expect([x.fond, x.icone], `${schema} ${x.texte}`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['text-2'])]);
+      expect(x.gaucheIcone, `${schema} ${x.texte}`).toBe(12);
+    }
   }
 });
 
@@ -918,7 +966,7 @@ test('Réglages, Rappels et guide d\'installation : chaque guillemet tient à so
   expect(await guillemetsSeuls(page)).toEqual([]);
 });
 
-test('Historique 2b : « Semaine du… » en libellé de section, puces neutres avec l\'icône de leur rubrique à sa couleur, en clair et en sombre', async ({ page }) => {
+test('Historique 2b : « Semaine du… » en libellé de section, puces neutres avec l\'icône de leur rubrique en --text-2 (v12), en clair et en sombre', async ({ page }) => {
   await page.evaluate(() => window.__carnet.repo.journal.patch('2026-10-14', { lieu: 'lieu:bureau', sommeilRessenti: 'sommeil:mal', contactHumain: true }));
   for (const [schema, t] of [['light', clair], ['dark', sombre]]) {
     await page.emulateMedia({ colorScheme: schema });
@@ -931,11 +979,11 @@ test('Historique 2b : « Semaine du… » en libellé de section, puces neutres 
       icone: p.querySelector('svg') && getComputedStyle(p.querySelector('svg')).color,
     })));
     expect(puces.map((p) => p.texte)).toEqual(['Bureau', 'nuit mal', 'contact oui']);
-    puces.forEach((p, i) => {
+    puces.forEach((p) => {
       expect(p.fond).toBe(rgb(t['surface-2']));
       expect(p.couleur).toBe(rgb(t.text));
       expect(contraste(p.fond, p.couleur)).toBeGreaterThanOrEqual(4.5);
-      expect(p.icone).toBe(rgb(t[`c-${['lieu', 'sommeil', 'contact'][i]}`]));
+      expect(p.icone).toBe(rgb(t['text-2']));
     });
   }
 });

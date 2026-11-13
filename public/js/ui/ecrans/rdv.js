@@ -36,7 +36,7 @@ export function Rdv({ id: idRoute }) {
     <${Entete} titre="Rendez-vous" retour=${retour}
       droite=${html`<span class="indicateur-fiche" role="status">${indicateur === 'ok' ? 'Enregistré' : ''}</span>`} />
     ${id ? html`<${BoutonConsultation} href=${versHash('consultation', { id })} />`
-      : html`<button type="button" class="pilule teintee teinte-trt btn-consultation" onClick=${enConsultation}><span class="carre-pilule" aria-hidden="true">${Icones.bulle({ trait: 2 })}</span>En consultation</button>`}
+      : html`<button type="button" class="pilule btn-consultation" onClick=${enConsultation}>${Icones.bulle({ trait: 2 })}En consultation</button>`}
     <div class="ligne-date-heure">
       <div class="champ-date">
         <${LibelleChamp} icone="soins" pour="rdv-date">Date</${LibelleChamp}>

@@ -937,9 +937,7 @@ test('v9 : l\'import remplace les mots à soi, l\'aperçu le dit, « Revenir » 
 
 // ---- v11 ----
 
-test('v11 : le format 9 est refusé, un format 8 tronqué aussi, une sauvegarde au format 7 passe au format 8 sans rien transformer', () => {
-  assert.equal(FORMAT_VERSION, 8);
-  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 9, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+test('v11 : un format 8 tronqué est refusé, une sauvegarde au format 7 passe au format 8 sans rien transformer', () => {
   assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 8, counts: { journal: 2 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
   const v7 = {
     format: 'carnet-sauvegarde', formatVersion: 7, schemaVersion: 6, exportedAt: '2026-11-04T19:00:00.000Z',
@@ -954,7 +952,7 @@ test('v11 : le format 9 est refusé, un format 8 tronqué aussi, une sauvegarde 
   assert.deepEqual(MISES_A_NIVEAU[7](v7), { ...v7, formatVersion: 8 });
   const a = analyserFichiers(json(v7));
   assert.deepEqual(v7, avant, 'mise à niveau pure');
-  assert.equal(a.sauvegarde.formatVersion, 8);
+  assert.equal(a.sauvegarde.formatVersion, FORMAT_VERSION);
   assert.deepEqual(a.sauvegarde.data, v7.data, 'rien n\'est transformé');
   assert.deepEqual(a.erreurs, []);
   assert.deepEqual([a.valides.journal[0].heuresSommeil, a.valides.journal[0].gratitudes], [7, null], 'aucune gratitude inventée');
@@ -981,7 +979,7 @@ test('v11 : une nuit à 7 h 30, des gratitudes, « Ce que j\'en retiens » et Me
 
   const [f] = await exporter(a.repo, { versionApp: '11.0.0' });
   const contenu = contenuDe(f);
-  assert.equal(contenu.formatVersion, 8);
+  assert.equal(contenu.formatVersion, FORMAT_VERSION);
   assert.equal(contenu.data.journal.find((j) => j.date === '2026-09-30').heuresSommeil, 7.5);
   assert.deepEqual(contenu.data.meta.find((m) => m.cle === 'refuges'), { cle: 'refuges', valeur: refuges });
 
@@ -1130,4 +1128,106 @@ test('v11 : un import sur un Carnet vide ne prend pas de copie ; une journée, M
   assert.equal(estBaseVide({ humeurs: [{ id: 'hu_1' }] }), false);
   assert.equal(estBaseVide({ listes: [{ ...bureau, id: 'lieu:u-x', origine: 'import' }] }), false, 'une liste recréée par un import');
   assert.equal(estBaseVide({ meta: [{ cle: 'favorisBienEtre', valeur: [] }] }), false, 'une méta à lui, même vidée');
+});
+
+// ---- v12 ----
+
+// Des morceaux inventés (le dépôt est public) : identifiants factices de 22 signes, titres et artistes imaginaires.
+const idFactice = (debut) => debut.padEnd(22, '0');
+const LIEN_PL = `https://open.spotify.com/playlist/${idFactice('pl1')}`;
+const morceauFactice = (n) => ({ id: idFactice(`mo${n}`), titre: `Marée basse ${n}`, artiste: n % 2 ? 'Orchestre du Soir' : null });
+
+test('v12 : le format 10 est refusé, un format 9 tronqué aussi, une sauvegarde au format 8 passe au format 9 sans rien transformer', () => {
+  assert.equal(FORMAT_VERSION, 9);
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 10, counts: {}, data: {} })), (e) => e.code === 'BACKUP_VERSION_FUTURE');
+  assert.throws(() => analyserFichiers(json({ format: 'carnet-sauvegarde', formatVersion: 9, counts: { journal: 2 }, data: { journal: [] } })), (e) => e.code === 'BACKUP_INCOMPLET');
+  const v8 = {
+    format: 'carnet-sauvegarde', formatVersion: 8, schemaVersion: 6, exportedAt: '2026-11-08T19:00:00.000Z',
+    counts: { journal: 1, meta: 1 },
+    data: {
+      journal: [{ date: '2026-11-07', heuresSommeil: 7.5, gratitudes: 'Le pain partagé avec la voisine.' }],
+      meta: [{ cle: 'refuges', valeur: { titres: 'Une chanson calme', playlists: [{ nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify' }] } }],
+    },
+  };
+  const avant = structuredClone(v8);
+  assert.deepEqual(MISES_A_NIVEAU[8](v8), { ...v8, formatVersion: 9 });
+  const a = analyserFichiers(json(v8));
+  assert.deepEqual(v8, avant, 'mise à niveau pure');
+  assert.equal(a.sauvegarde.formatVersion, 9);
+  assert.deepEqual(a.sauvegarde.data, v8.data, 'rien n\'est transformé');
+  assert.deepEqual(a.erreurs, []);
+  assert.deepEqual(a.valides.meta, v8.data.meta, 'aucun morceau inventé');
+});
+
+test('v12 : les morceaux de la playlist suivie survivent à un export suivi d\'un import, aux mêmes octets', async () => {
+  const a = nouveauRepo();
+  await remplir(a.repo);
+  const morceaux = [...Array.from({ length: 199 }, (_, i) => morceauFactice(i + 1)), { id: idFactice('mo200'), titre: '<b>Gras</b> 🎵', artiste: 'Les Vagues Douces, Orchestre du Soir' }];
+  const refuges = {
+    titres: 'Une chanson calme',
+    playlists: [
+      { nom: 'Collée', lien: 'music://music.apple.com/fr/playlist/x', source: null },
+      { nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify', morceaux, suite: true },
+    ],
+  };
+  await a.repo.meta.ecrire('refuges', refuges);
+
+  const [f] = await exporter(a.repo, { versionApp: '12.0.0' });
+  const contenu = contenuDe(f);
+  assert.equal(contenu.formatVersion, 9);
+  assert.deepEqual(contenu.data.meta.find((m) => m.cle === 'refuges'), { cle: 'refuges', valeur: refuges });
+  const texte = new TextDecoder().decode(octetsDe(f));
+  for (const mot of ['jeton', 'access_token', 'Bearer', 'code_verifier']) assert.ok(!texte.includes(mot), `aucun ${mot} dans la sauvegarde`);
+
+  const analyse = analyserFichiers([{ nom: f.nom, octets: octetsDe(f) }]);
+  assert.deepEqual(analyse.erreurs, []);
+  const b = nouveauRepo();
+  await remplacer(b.repo, analyse);
+  assert.deepEqual(await b.repo.meta.lire('refuges'), refuges);
+  const [g] = await exporter(b.repo, { versionApp: '12.0.0' });
+  assert.ok(Buffer.from(octetsDe(g)).equals(Buffer.from(octetsDe(f))));
+});
+
+// Point de vigilance 2 : une sauvegarde abîmée ou modifiée à la main. Ses morceaux sont remis dans la forme que l'app écrit,
+// sans erreur, et rien d'autre du fichier n'est perdu.
+test('v12 : des morceaux abîmés ou écrits à la main sont remis en forme à l\'import, sans erreur', () => {
+  const fichier = (formatVersion, valeur) => ({
+    format: 'carnet-sauvegarde', formatVersion, schemaVersion: 6, exportedAt: '2026-11-09T19:00:00.000Z',
+    counts: { journal: 1, meta: 1 },
+    data: { journal: [{ date: '2026-11-08', pointsPositifs: 'Marche' }], meta: [{ cle: 'refuges', valeur }] },
+  });
+  const refugesDe = (a) => (a.valides.meta.find((m) => m.cle === 'refuges') || {}).valeur;
+  const brut = {
+    titres: 'Une chanson calme',
+    jeton: 'jamais gardé',
+    playlists: [
+      { nom: 'Musique', lien: 'https://music.apple.com/fr/playlist/x', morceaux: [morceauFactice(1)], suite: true },
+      { nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify', jeton: 'jamais gardé', suite: 'oui',
+        morceaux: [
+          null, 'texte', 12, { id: 'court', titre: 'T' }, { id: `${idFactice('mo1')}0`, titre: 'T' }, { id: idFactice('mo2') },
+          { ...morceauFactice(3), jeton: 'jamais gardé', lien: 'spotify:track:x' }, { id: idFactice('mo4'), titre: '  Vague  ', artiste: 7 },
+          ...Array.from({ length: 205 }, (_, i) => morceauFactice(10 + i)),
+        ] },
+      { nom: 'Deuxième', lien: `spotify:playlist:${idFactice('pl2')}`, morceaux: [morceauFactice(5)], suite: true },
+      { nom: 'De trop', lien: `https://open.spotify.com/playlist/${idFactice('pl3')}`, morceaux: [morceauFactice(6)] },
+    ],
+  };
+  const avant = structuredClone(brut);
+  for (const version of [8, 9]) {
+    const a = analyserFichiers(json(fichier(version, brut)));
+    assert.deepEqual(brut, avant, 'le fichier lu n\'est pas modifié');
+    assert.deepEqual(a.erreurs, [], `format ${version}`);
+    const voulus = [morceauFactice(3), { id: idFactice('mo4'), titre: 'Vague', artiste: null }, ...Array.from({ length: 198 }, (_, i) => morceauFactice(10 + i))];
+    assert.deepEqual(refugesDe(a), {
+      titres: 'Une chanson calme',
+      playlists: [
+        { nom: 'Musique', lien: 'https://music.apple.com/fr/playlist/x', source: null },
+        { nom: 'Pour souffler', lien: LIEN_PL, source: 'spotify', morceaux: voulus },
+        { nom: 'Deuxième', lien: `spotify:playlist:${idFactice('pl2')}`, source: null },
+      ],
+    }, `format ${version} : sur une seule ligne, celle d'une playlist Spotify, 200 au plus, sans clé inconnue ; « suite » ne vaut que true`);
+    assert.equal(refugesDe(a).playlists[1].morceaux.length, 200);
+    assert.ok(!JSON.stringify(a.valides.meta).includes('jamais gardé'));
+    assert.equal(a.resume.journees, 1, 'le reste du fichier est lu');
+  }
 });

@@ -196,5 +196,5 @@ export function Minuteur() {
     </div>`;
     pied = html`<div class="actions-lecteur"><button type="button" class="lien-discret terminer-lecteur" onClick=${() => finir(false)}>Arrêter</button></div>`;
   }
-  return html`<${CadreParcours} titre=${titre} teinte="bien-etre" icone=${etat === 'avant' ? 'historique' : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
+  return html`<${CadreParcours} titre=${titre} icone=${etat === 'avant' ? 'historique' : undefined} surFermer=${fermer} pied=${pied}>${corps}</${CadreParcours}>`;
 }

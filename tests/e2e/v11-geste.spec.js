@@ -61,14 +61,16 @@ const deuxSensRien = async (page, selecteur, hash) => {
 
 // ---------- Les écrans à « Retour » ----------
 
+// v12 (6/9) : les réglages de Mes refuges reviennent à Mes refuges, d'où qu'on les ouvre.
 const POUSSES = [
   ['#/historique', 'Historique', '#/analyse'],
   ['#/comprendre/energie', 'Comprendre', '#/analyse'],
   ['#/reglages/journee', 'Le soir', '#/reglages'],
   ['#/bien-etre/calmer', 'Me calmer vite', '#/bien-etre'],
+  ['#/refuges/reglages', 'Réglages de Mes refuges', '#/refuges'],
 ];
 
-test('le doigt vers la droite fait comme « Retour » : Historique et Comprendre vers l\'Analyse, Le soir vers Réglages, une entrée vers Bien-être', async ({ page }) => {
+test('le doigt vers la droite fait comme « Retour » : Historique et Comprendre vers l\'Analyse, Le soir vers Réglages, une entrée vers Bien-être, les réglages de Mes refuges vers Mes refuges', async ({ page }) => {
   for (const [hash, nom, attendu] of POUSSES) {
     await ouvrir(page, hash);
     await expect(titre(page, nom)).toBeVisible();
@@ -490,7 +492,7 @@ test('vigilance 2 · une page plus large que l\'écran (53 px : Traitement, Rend
 });
 
 // Contre-relecture : un ResizeObserver posé sur body faisait naître par intermittence « ResizeObserver loop completed with
-// undelivered notifications » (v11-refuges, « Diagnostic, Ouvrir une playlist », 2 fois sur 40 sous charge) : la hauteur de
+// undelivered notifications » (v11-refuges, aujourd'hui v12-refuges, « Diagnostic, Ouvrir une playlist », 2 fois sur 40 sous charge) : la hauteur de
 // body suit le chargement des données, et elle changeait encore après le rappel, dans la même image. La garde des e2e compte
 // cette erreur. Seul le témoin de l'Entete (1em, caché) est observé, pour la taille du texte ; jamais body ni html.
 test('vigilance 2 · le débord de côté se mesure sans observer body ni html : seul le témoin de la taille du texte est observé', async ({ page }) => {

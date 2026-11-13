@@ -21,8 +21,14 @@ export const contrastesFaibles = (page, racine = 'body') => page.evaluate((sel) 
   const lin = (v) => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
   const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-  // Le fond : la couleur du premier ancêtre opaque (le fond de la page à défaut).
+  // Le fond : la couleur du premier ancêtre opaque (le fond de la page à défaut). La valeur notée d'une roue (v12) se lit sur
+  // la fenêtre du milieu, le ::before de sa roue (un aplat d'accent), et non sur la piste.
   const fond = (el) => {
+    const roue = el.matches && el.matches('.roue-valeur[aria-pressed="true"]') && el.closest('.roue-choix.notee');
+    if (roue) {
+      const c = rgba(getComputedStyle(roue, '::before').backgroundColor);
+      if (c && c[3] >= 0.99) return c;
+    }
     for (let e = el; e; e = e.parentElement) {
       const c = rgba(getComputedStyle(e).backgroundColor);
       if (c && c[3] >= 0.99) return c;
@@ -121,3 +127,151 @@ export const mouvements = (page) => page.evaluate(() => {
   if (disque && getComputedStyle(disque).transform !== 'matrix(0.8, 0, 0, 0.8, 0, 0)') fautes.push(`disque du souffle : ${getComputedStyle(disque).transform}`);
   return fautes;
 });
+
+// ---------- L'accent vert, à sa place (v12, spec §5.3, §5.5 et §5.6 ; point de vigilance 3) ----------
+// Trois contrôles, qui lisent les styles calculés de l'écran affiché, pseudo-éléments ::before et ::after compris, et rendent
+// leurs fautes. `accents` : les valeurs calculées de l'accent du thème (--accent et --accent-texte de la racine, « rgb(r, g, b) »).
+// Un seul page.evaluate, sans code fabriqué dans la page (la CSP refuse eval) : `quoi` choisit le contrôle.
+const controlerAccent = (page, quoi, accents, surface2 = null) => page.evaluate(([q, acc, gris]) => {
+  // « rgb(r, g, b) » d'une couleur calculée opaque ; null pour une couleur transparente ou à demi.
+  const opaque = (c) => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return p.length > 3 && p[3] < 1 ? null : `rgb(${p[0]}, ${p[1]}, ${p[2]})`;
+  };
+  // Les couleurs peintes d'un style : [propriété, couleur].
+  const peintes = (s, { texte = true } = {}) => [
+    ...(texte ? [['color', s.color]] : []), ['background', s.backgroundColor], ['fill', s.fill], ['stroke', s.stroke],
+    ...['Top', 'Right', 'Bottom', 'Left'].filter((c) => parseFloat(s[`border${c}Width`]) > 0 && s[`border${c}Style`] !== 'none').map((c) => [`border-${c}`, s[`border${c}Color`]]),
+    ...(s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 ? [['outline', s.outlineColor]] : []),
+    ...(s.boxShadow.match(/rgba?\([^)]*\)/g) || []).map((c) => ['box-shadow', c]),
+  ];
+  const vert = (c) => acc.includes(opaque(c));
+  const nom = (el, pseudo) => `${el.tagName.toLowerCase()}.${String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className).trim().split(/\s+/).join('.')}${pseudo || ''}`;
+  const vu = (el, s) => s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
+  const pseudos = (el) => [null, '::before', '::after'].map((p) => [p, getComputedStyle(el, p)])
+    .filter(([p, s]) => (!p || (s.content !== 'none' && s.content !== 'normal')) && vu(el, s));
+  const fautes = [];
+  if (q === 'ronds') {
+    // La règle de forme (spec §5.3) : l'accent n'est jamais un rond ni un point, ronds et bulles appartenant aux émotions.
+    // Aucun élément rond sans texte ni icône (un disque : un rayon de 50 % au moins, sur une boîte presque carrée ; ou un
+    // point : moins de 16 px de côté) n'a l'accent pour fond ou pour contour. Un rond qui porte une icône (▶ du lecteur) ou un
+    // texte est une commande : il peut porter l'accent. Les ronds d'un SVG (circle, ellipse) non plus, ni en fond ni en trait.
+    const contenu = (el) => Boolean(el.textContent.trim()) || Boolean(el.querySelector('svg, img'));
+    for (const el of document.querySelectorAll('body *')) {
+      if (el instanceof SVGElement) {
+        const s = getComputedStyle(el);
+        if (!['circle', 'ellipse'].includes(el.tagName) || !vu(el, s)) continue;
+        for (const [prop, c] of [['fill', s.fill], ['stroke', s.stroke]]) if (vert(c)) fautes.push(`${nom(el)} : ${prop} à l'accent`);
+        continue;
+      }
+      if (contenu(el)) continue;
+      for (const [pseudo, s] of pseudos(el)) {
+        const r = el.getBoundingClientRect();
+        const [l, h] = pseudo ? [parseFloat(s.width), parseFloat(s.height)] : [r.width, r.height];
+        if (!(l > 0) || !(h > 0)) continue;
+        const rayon = Math.min(...['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'].map((c) => {
+          const v = s[`border${c}Radius`].split(' ')[0];
+          return v.endsWith('%') ? (parseFloat(v) / 100) * Math.min(l, h) : parseFloat(v) || 0;
+        }));
+        if (!(rayon >= Math.min(l, h) / 2 - 0.5 && Math.abs(l - h) <= 2) && !(l < 16 && h < 16)) continue;
+        for (const [prop, c] of peintes(s, { texte: false })) if (vert(c)) fautes.push(`${nom(el, pseudo)} (${Math.round(l)} × ${Math.round(h)}) : ${prop} à l'accent`);
+      }
+    }
+  } else if (q === 'lieux') {
+    // Le point de vigilance 3 : aucune trace de l'accent dans un graphique (spec §5.5 ; il reste sur les contrôles autour,
+    // « Voir en tableau », « Voir ce jour », « Pourquoi ? »), sur les écrans de l'émotion (.moment-plein, §5.6) ni sur « Réveil
+    // la nuit » (.ecran-noir, §5.2) : ni texte, ni fond, ni bord, ni contour, ni ombre, ni remplissage, ni trait.
+    for (const zone of document.querySelectorAll('figure.graphe, .moment-plein, .ecran-noir')) {
+      const graphe = zone.matches('figure.graphe');
+      for (const el of [zone, ...zone.querySelectorAll('*')]) {
+        if (graphe && el.closest('a, button')) continue;
+        for (const [pseudo, s] of pseudos(el)) {
+          for (const [prop, c] of peintes(s)) if (vert(c)) fautes.push(`${zone.className.split(' ')[0]} › ${nom(el, pseudo)} : ${prop} à l'accent`);
+        }
+      }
+    }
+  } else {
+    // Un lien vert (un texte à --accent-texte) ne se pose jamais sur --surface-2 en clair (spec §5.3 : 4,49:1, sous 4,5). Le
+    // fond est celui du premier ancêtre opaque.
+    const fond = (el) => {
+      for (let e = el; e; e = e.parentElement) {
+        const c = opaque(getComputedStyle(e).backgroundColor);
+        if (c) return c;
+      }
+      return opaque(getComputedStyle(document.documentElement).backgroundColor);
+    };
+    for (const el of document.querySelectorAll('body *')) {
+      if (el instanceof SVGElement || ![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.data.trim())) continue;
+      const s = getComputedStyle(el);
+      if (vu(el, s) && vert(s.color) && fond(el) === gris) fautes.push(`« ${el.textContent.trim().slice(0, 30)} » (${nom(el)}) : un lien vert sur --surface-2`);
+    }
+  }
+  return [...new Set(fautes)];
+}, [quoi, accents, surface2]);
+export const rondsAccent = (page, accents) => controlerAccent(page, 'ronds', accents);
+export const accentHorsDeSaPlace = (page, accents) => controlerAccent(page, 'lieux', accents);
+// `lien` : la couleur calculée de --accent-texte ; `surface2` : celle de --surface-2.
+export const liensSurSurface2 = (page, lien, surface2) => controlerAccent(page, 'liens', [lien], surface2);
+
+// Le plan et les données du contrôle global (v7-controle.spec.js, déplacés ici en v12 : la hauteur de la page du soir,
+// v12-design.spec.js, se mesure sur les mêmes).
+export const PLAN_CONTROLE = {
+  premiersSignes: 'Mâchoire serrée, je parle plus vite.', quandCaMonte: 'Je m\'éloigne cinq minutes.',
+  siSurcharge: 'Casque antibruit.', pourRecuperer: 'Marcher dehors.', prevenir: 'Un proche, par message.',
+  siAlors: [{ si: 'le bruit monte', alors: 'je mets le casque' }],
+};
+
+// Des données inventées et banales : quelques soirs, des relevés (anciennes notes et émotions), un épisode, un symptôme,
+// deux rendez-vous, un changement de traitement, une note, une séance. Ce soir, « Mes points positifs » est vide : son
+// texte d'aide est mesuré ; « Mes gratitudes » (v11) aussi, et deux jours de la semaine en ont (« Tes gratitudes »).
+// Le prochain rendez-vous a une question abordée, posée par son sujet (v8) : la fiche montre
+// la pastille « Sommeil » choisie et le texte gris d'une question abordée. v8 (9/9) : des nuits en heures (Mes nuits,
+// une nuit sans qualité a sa barre creuse, une nuit sans durée n'a que son texte), deux séances du Programme menées au
+// bout et un sens de mot corrigé (Réglages › Émotions) ; les relevés d'émotion ont ce que je faisais (une ou deux
+// activités), pour que « Émotions selon ce que je faisais » (Q18) se dessine. v9 (8/8) : un mot à soi (Flottant, vert,
+// sans famille) et Fatigué, chacun dans un relevé. Renvoie les identifiants utiles.
+export async function verserControle(page) {
+  return page.evaluate(async (plan) => {
+    const r = window.__carnet.repo;
+    const jours = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15'];
+    for (const [i, d] of jours.entries()) {
+      await r.journal.patch(d, {
+        lieu: i % 3 ? 'lieu:bureau' : 'lieu:conge_repos', sommeilRessenti: i === 5 ? null : ['sommeil:mal', 'sommeil:moyen', 'sommeil:bien'][i % 3],
+        heuresSommeil: i % 4 === 3 ? null : 4 + (i % 7),
+        contactHumain: i % 2 === 0, sportMouvement: i % 3 === 0, traitementPris: 'traitementPris:oui',
+        pointsPositifs: i % 2 ? null : 'Une bonne marche.', pese: ['pese:bruit'], recharge: ['recharge:calme'],
+        gratitudes: i % 3 ? null : 'Merci au collègue.',
+      });
+    }
+    await r.humeurs.creer({ date: '2026-10-08', heure: '10:00', humeur: 6, energie: 'energie:moyenne' });
+    await r.humeurs.creer({ date: '2026-10-09', heure: '18:00', humeur: 4, energie: 'energie:basse' });
+    const emotions = ['roue:colere:irrite', 'roue:serenite:calme', 'roue:joie:curieux', 'roue:tristesse', 'roue:peur:preoccupe', 'roue:surprise:perplexe', 'roue:degout:hesitant'];
+    const faisais = [['activiteMoment:travail'], ['activiteMoment:repos'], ['activiteMoment:trajet', 'activiteMoment:travail']];
+    for (const [i, d] of jours.slice(2).entries()) {
+      await r.humeurs.creer({ date: d, heure: '12:00', emotion: emotions[i % emotions.length], energie: 'energie:moyenne', faisais: faisais[i % 3] });
+      await r.humeurs.creer({ date: d, heure: '19:30', emotion: emotions[(i + 3) % emotions.length], energie: i % 2 ? 'energie:basse' : 'energie:haute',
+        faisais: faisais[(i + 1) % 3] });
+    }
+    const ep = await r.episodes.creer({ date: '2026-10-14', heure: '18:40', declencheur: 'declencheur:surcharge_sensorielle', emotion: 'emotion:colere',
+      intensite: 7, dessous: 'dessous:fatigue_debordement', reaction: 'reaction:explosion', situation: 'Open space bruyant.' });
+    await r.symptomes.creer({ date: '2026-10-13', symptome: 'symptome:ruminations', intensite: 5, duree: 'duree:moins_une_heure' });
+    const rdv = await r.rdv.creer({ date: '2026-10-22', heure: '14:00', professionnel: 'professionnel:psychiatre',
+      questions: [{ texte: 'Le sommeil du week-end est plus décalé.', abordee: false }, { texte: 'Parler de : sommeil', abordee: true }] });
+    await r.rdv.creer({ date: '2026-10-07', heure: '10:30', professionnel: 'professionnel:psychologue', compteRendu: 'Travail sur les premiers signes.' });
+    const tr = await r.traitements.creer({ date: '2026-09-28', changement: 'Comprimé A : matin 1 → 1½', effetsSecondaires: ['effetSecondaire:aucun'], effetRessenti: 'effetRessenti:mieux' });
+    await r.notes.creer({ date: '2026-10-14', heure: '22:05', texte: 'Les après-midi au bureau sont plus durs.' });
+    await r.seances.creer({ date: '2026-10-13', heure: '18:10', exercice: 'coherence', origine: 'bien-etre', dureeS: 300 });
+    await r.seances.creer({ date: '2026-10-14', heure: '18:10', exercice: 'les-sons', origine: 'bien-etre', dureeS: 315, fin: true, programme: 'les-sons' });
+    await r.seances.creer({ date: '2026-10-11', heure: '09:30', exercice: 'respiration-abdominale', origine: 'bien-etre', dureeS: 180, fin: true, programme: 'respiration-abdominale' });
+    await r.meta.ecrire('motsPerso', { 'roue:perso:u-0a1b2c3d': { libelle: 'Flottant', zone: 'vert', famille: null,
+      definition: 'Un peu ailleurs, sans attache.', archive: false, createdAt: '2026-10-01T08:00:00.000Z' } });
+    await r.humeurs.creer({ date: '2026-10-15', heure: '20:00', emotion: 'roue:perso:u-0a1b2c3d', energie: 'energie:basse' });
+    await r.humeurs.creer({ date: '2026-10-14', heure: '20:00', emotion: 'roue:aucune:fatigue', energie: 'energie:basse' });
+    await r.meta.ecrire('monPlan', plan);
+    await r.meta.ecrire('definitionsRoue', { 'roue:colere:irrite': 'Agacé par ce qui se répète, et ça dure.' });
+    await r.meta.ecrire('traitementActuel', { depuis: '2026-06-15', lignes: [{ id: 'l1', nom: 'Comprimé A', doses: { matin: '1½', midi: null, apresMidi: null, soir: '½', coucher: null } }] });
+    return { ep: ep.id, rdv: rdv.id, tr: tr.id };
+  }, PLAN_CONTROLE);
+}

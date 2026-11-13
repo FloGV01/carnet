@@ -65,7 +65,7 @@ test('la loupe de l\'écran 1 : champ actif ; « epuise » trouve Épuisé, à l
   // Le mot à la couleur de sa zone (le bleu), lisible sur le noir ; le début de sa définition en gris. v11 (8/11) : en clair,
   // le texte de sa zone (-text), lisible sur le gris clair. Le thème change écran ouvert : rien n'est recalculé.
   const couleurs = () => trouve(vue, 'Épuisé').evaluate((b) => [getComputedStyle(b.querySelector('.mot-resultat')).color, getComputedStyle(b.querySelector('.extrait-resultat')).color]);
-  for (const [schema, fond, attendu] of [['dark', 'rgb(0, 0, 0)', 'rgb(120, 159, 255)'], ['light', 'rgb(231, 234, 238)', 'rgb(49, 80, 169)']]) {
+  for (const [schema, fond, attendu] of [['dark', 'rgb(0, 0, 0)', 'rgb(120, 159, 255)'], ['light', 'rgb(242, 242, 247)', 'rgb(49, 80, 169)']]) {
     await page.emulateMedia({ colorScheme: schema });
     const [motTrouve, extrait] = await couleurs();
     expect(motTrouve, schema).toBe(attendu);
@@ -272,7 +272,7 @@ test('plein écran, noir en sombre et gris clair en clair, pour la loupe et le m
     return { fond: getComputedStyle(ecran).backgroundColor, onglets: document.querySelectorAll('nav.onglets').length,
       deCote: document.documentElement.scrollWidth > innerWidth || scrollX !== 0 };
   });
-  const FONDS = { dark: 'rgb(0, 0, 0)', light: 'rgb(231, 234, 238)' };
+  const FONDS = { dark: 'rgb(0, 0, 0)', light: 'rgb(242, 242, 247)' };
   for (const schema of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: schema });
     const attendu = { fond: FONDS[schema], onglets: 0, deCote: false };

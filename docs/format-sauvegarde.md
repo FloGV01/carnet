@@ -12,8 +12,8 @@
 ## sauvegarde.json
 
 ```json
-{ "format": "carnet-sauvegarde", "formatVersion": 8, "schemaVersion": 6,
-  "exportedAt": "2026-11-12T19:02:11.412Z", "app": { "version": "11.0.0" },
+{ "format": "carnet-sauvegarde", "formatVersion": 9, "schemaVersion": 6,
+  "exportedAt": "2026-11-12T19:02:11.412Z", "app": { "version": "12.0.0" },
   "partie": { "numero": 1, "total": 2 },
   "counts": { "journal": 2, "episodes": 1, "symptomes": 0, "traitements": 0, "rdv": 1, "humeurs": 3, "notes": 1, "seances": 2, "listes": 204, "meta": 2, "audios": 1 },
   "data": { "journal": [], "episodes": [], "symptomes": [], "traitements": [], "rdv": [], "humeurs": [], "notes": [], "seances": [], "listes": [], "meta": [],
@@ -24,6 +24,11 @@
 - **Champ `partie`** : présent seulement dans un export en plusieurs fichiers.
 - **Enregistrements** : ils suivent le schéma du plan (§5.3). Les références de liste sont des identifiants (`liste:slug`), jamais des libellés.
 - **Méta non exportées** : `schema`, `installation`, `derniereEcriture` et `derniereSauvegarde`.
+- **formatVersion 9 (v12)** :
+  - méta `refuges` : une ligne de `playlists` peut porter les morceaux de la playlist suivie, `morceaux` et `suite`, présents seulement s'ils ne sont pas vides : `{ "nom": "Pour souffler", "lien": "https://open.spotify.com/playlist/…", "source": "spotify", "morceaux": [ { "id": "…", "titre": "Pluie lente", "artiste": "Les Vagues Douces" } ], "suite": true }`. Une seule ligne les porte : la première qui en a, et dont le lien est une playlist Spotify (`https://open.spotify.com/playlist/<id>`, avec ou sans `intl-xx/`, ou `spotify:playlist:<id>`). `id` est l'identifiant Spotify du morceau, 22 lettres ou chiffres ; `titre` est un texte obligatoire, `artiste` un texte (les artistes joints par « , ») ou `null`, tous deux coupés à 200 signes (un emoji compte pour un) et gardés comme du texte ; 200 morceaux au plus, dans l'ordre de la playlist, doublons compris ; `suite` ne vaut que `true` et dit que la playlist a plus de morceaux que ceux gardés. Un morceau ne garde ni lien, ni pochette, ni date : le lien `spotify:track:<id>` est fabriqué à l'affichage. Aucun jeton n'y est jamais écrit. À l'import, les morceaux sont remis dans cette forme, sans erreur : ceux d'une ligne qui n'est pas une playlist Spotify, ou d'une seconde ligne, sont oubliés ; une entrée sans identifiant valable ou sans titre est écartée ; une clé inconnue est perdue ; au-delà de 200, ils sont coupés ; un tableau vide fait disparaître le champ ; `suite` qui ne vaut pas `true`, ou sans morceaux, disparaît. Les morceaux n'entrent ni dans l'Export PSY ni dans la vue soignants ;
+  - méta `refuges` : avec la source `"spotify"`, le lien peut aussi être `spotify:playlist:<id>` (22 lettres ou chiffres), le repli quand Spotify ne donne pas le lien de son lecteur public.
+
+  Une sauvegarde en formatVersion 8 passe au format 9 à l'import sans aucun changement : elle n'a pas de morceaux. Le numéro change pour qu'une app de la v11 refuse proprement un fichier de la v12 (« plus récent que l'app »).
 - **formatVersion 8 (v11)** :
   - champ `heuresSommeil` dans le journal : la durée de la nuit, de 4 à 10 **par demi-heure** (4, 4,5, 5, … 9,5, 10, soit 13 valeurs), où 4 veut dire « 4 h ou moins » et 10 « 10 h ou plus », ou `null`. Les bornes de la v8 ne bougent pas. Un autre nombre, un texte (`"7"`) ou un booléen rend la journée illisible, avec le message « heuresSommeil : de 4 à 10 par demi-heure attendu ». Une demi-heure s'écrit « 7 h 30 » dans l'app et l'Export PSY, jamais « 7,5 » ;
   - champ `gratitudes` dans le journal (« Mes gratitudes ») : un texte, ou `null`. Il n'entre ni dans l'Export PSY ni dans la vue soignants ;
@@ -81,7 +86,7 @@ L'import remplace toujours, il ne fusionne jamais. Les étapes :
    - `counts` correspond à la longueur des tableaux ;
    - les ZIP sont intègres (CRC).
 2. **Normalisation** : chaque enregistrement passe par `normaliser` en mode import. Les éléments illisibles sont listés puis ignorés.
-3. **Identifiant de liste inconnu** : il recrée un élément archivé « Élément sans libellé (id) », pour qu'aucun enregistrement ne soit perdu. De même, un mot à soi cité par un relevé et absent de `motsPerso` est recréé mis de côté, « Mot sans libellé » (v9). Les méta `motsPerso` et `refuges` (v11) sont remises dans la forme que l'app écrit, sans erreur.
+3. **Identifiant de liste inconnu** : il recrée un élément archivé « Élément sans libellé (id) », pour qu'aucun enregistrement ne soit perdu. De même, un mot à soi cité par un relevé et absent de `motsPerso` est recréé mis de côté, « Mot sans libellé » (v9). Les méta `motsPerso` et `refuges` (v11, morceaux compris depuis la v12) sont remises dans la forme que l'app écrit, sans erreur.
 4. **Aperçu** : contenu du fichier, ce qui serait effacé (notes et séances comprises), mémos absents des fichiers choisis, et les deux dates si le fichier est plus ancien que la dernière saisie.
 5. **Application** :
    - copie de secours `avant-import`, 3 au maximum, sans les audios ;

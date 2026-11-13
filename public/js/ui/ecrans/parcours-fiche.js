@@ -47,7 +47,7 @@ function revenir(origine) {
 // « Ce que j'en retiens » (v11, spec §7) : sur l'épisode rouvert, sous la carte Après coup, même ancien et même sans Après
 // coup. Rangé à part d'apresCoup, il n'en touche pas le jour : un vieil épisode ne repart pas vers PSY. Vide, il ne dit rien
 // (ni consigne, ni « facultatif »). Hors de TEXTES_EPISODE : la feuille « Voir » d'En consultation ne le montre pas.
-export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, teinte, avecPlan = false, sortieDirecte = false }) {
+export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, avecHeure, id: idRoute, memo, avecPlan = false, sortieDirecte = false }) {
   const [items, setItems] = useState(null);
   const [fiche, setFiche] = useState(null);
   const [etape, setEtape] = useState(0);
@@ -219,7 +219,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     });
     // Le récapitulatif d'une fiche rouverte se relit (v11, spec §11) : le doigt vers la droite y fait comme « Fermer ». Celui
     // d'une fiche neuve, menée jusque-là, finit une saisie : aucun geste, comme à ses étapes.
-    return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
+    return html`<${CadreParcours} titre=${titre} etape="recap" nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
       relecture=${rouvert} pied=${html`<button type="button" class="btn btn-plein terminer" onClick=${fermer}>Terminer</button>`}>
       <div class="etape-recap">
       <h2 class="titre-question">Récapitulatif</h2>
@@ -256,7 +256,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
     glisse.current = { etape, classe: avant === null ? '' : typeof avant === 'number' && etape < avant ? 'entree-arriere' : 'entree-avant' };
   }
   const opts = et.type === 'intensite' ? INTENSITES : options(items, et.liste, fiche[et.champ]);
-  return html`<${CadreParcours} titre=${titre} teinte=${teinte} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
+  return html`<${CadreParcours} titre=${titre} etape=${etape} nbEtapes=${etapes.length} surFermer=${fermer} sousTitre=${ligneDatePlan}
     pied=${html`<button type="button" class="btn-lien" disabled=${etape === 0} onClick=${() => { annulerSuivant(); setEtape(etape - 1); }}>${Icones.retour({ trait: 2 })}Retour</button>
       <button type="button" class="btn-lien" onClick=${() => avancer(etape)}>Passer${Icones.chevron({ trait: 2 })}</button>`}>
     <div class=${`etape${et.courte ? ' courte' : ''} ${glisse.current.classe}`} key=${etape}>
@@ -265,7 +265,7 @@ export function ParcoursFiche({ store, route, titre, nomFiche, etapes, textes, a
       <div><h2 class="titre-question">${et.question}</h2>${et.sousQuestion && html`<p class="sous-question">${et.sousQuestion}</p>`}</div>
       <${Pastilles} etiquette=${et.recap} options=${opts} valeur=${fiche[et.champ] ?? null} surChoix=${choisir(etape, et.champ)}
         colonnes=${et.type === 'intensite' ? 5 : 2} classe=${et.type === 'intensite' ? 'chiffres grille-choix' : 'grille-choix'}
-        ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null} teinte=${teinte}
+        ariaPrefixe=${et.type === 'intensite' ? 'Intensité' : null}
         surAjouter=${et.type === 'intensite' ? null : async (texte) => {
           const item = await repo.listes.creer(et.liste, texte);
           setItems(await repo.listes.items());

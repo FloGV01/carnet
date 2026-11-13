@@ -11,16 +11,20 @@
 // v11 (spec §8.4) : ses playlists de Mes refuges, une ligne chacune sous « Une chose à la fois », un toucher sort d'Emozio
 // vers l'app de musique ; ses titres avec le reste de Mon plan. Rien n'est lu que la base : aucune requête d'ici, où l'heure
 // d'une demande dirait celle d'un moment difficile. Sans playlist ni titre, rien n'apparaît.
+// v12 (spec v12 §6.6) : la carte de la playlist reste à sa place, en lien direct vers l'app. Ses morceaux, gardés en base,
+// viennent après Mon plan, sous un titre au nom de la playlist, avec la liste de Mes refuges (un toucher ouvre Spotify sur un
+// morceau), et « La suite est dans Spotify. » au-delà du plafond : plus haut, jusqu'à 200 rangées repousseraient Mon plan de
+// plusieurs écrans en pleine crise. Ni demande réseau, ni « Mettre à jour la liste » : ce qui est noté seulement.
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { CadreParcours } from '../composants/parcours.js';
 import { Lecteur, lancerLecture } from '../composants/lecteur.js';
 import { Respiration } from '../composants/respiration.js';
 import { ContenuPlan, lirePlan } from '../composants/mon-plan.js';
 import { UneChose, lireUneChose } from '../composants/une-chose.js';
-import { LignesPlaylists, lireRefuges } from '../composants/refuges.js';
+import { LignesPlaylists, ListeMorceaux, lireRefuges } from '../composants/refuges.js';
 import { exerciceDe } from '../../domain/exercices.js';
 import { cartesPlan, planVide } from '../../domain/mon-plan.js';
-import { normaliserRefuges } from '../../domain/refuges.js';
+import { normaliserRefuges, playlistSuivie, nomPlaylist } from '../../domain/refuges.js';
 import { versHash } from '../../routeur.js';
 import { Icones } from '../icones.js';
 
@@ -73,14 +77,17 @@ export function MomentDifficile() {
   const lu = plan && refuges;
   const titres = refuges && refuges.titres;
   const rienDEcrit = lu && planVide(plan) && !titres;
+  // Les morceaux de la playlist suivie, s'il y en a : sous Mon plan, une fois le plan lu, pour qu'ils n'arrivent pas avant lui.
+  const suivie = lu ? playlistSuivie(refuges) : null;
+  const morceaux = suivie && suivie.p.morceaux ? suivie : null;
   const quitterCartes = (vers) => () => { retour.current = vers; setCartesOuvertes(false); };
   const fermer = () => { location.hash = '#/aujourdhui'; };
   if (cartesOuvertes && cartes.length > 0) {
-    return html`<${CadreParcours} titre="Une chose à la fois" teinte="difficile" surFermer=${quitterCartes('acces')}>
+    return html`<${CadreParcours} titre="Une chose à la fois" surFermer=${quitterCartes('acces')}>
       <${UneChose} cartes=${cartes} surToutVoir=${quitterCartes('plan')} />
     </${CadreParcours}>`;
   }
-  return html`<${CadreParcours} titre="Moment difficile" teinte="difficile" surFermer=${fermer}
+  return html`<${CadreParcours} titre="Moment difficile" surFermer=${fermer}
     pied=${html`<a class="btn-lien" href="#/episode/nouveau">${Icones.plus({ trait: 2 })}Noter un épisode</a>`}>
     <div class="etape moment-difficile">
       <${ExercicesCourts} />
@@ -93,13 +100,18 @@ export function MomentDifficile() {
       <section class="carte plan-moment" aria-labelledby="titre-plan-moment">
         <div class="plan-moment-tete">
           <h2 class="titre-plan-moment" id="titre-plan-moment" tabindex="-1" ref=${titrePlan}>
-            <span class="carre-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
+            <span class="icone-plan" aria-hidden="true">${Icones.monPlan()}</span>Mon plan</h2>
           ${lu && !rienDEcrit && html`<a class="btn-lien modifier-plan" href="#/mon-plan" aria-label="Modifier mon plan">Modifier</a>`}
         </div>
         ${lu && (rienDEcrit
           ? html`<a class="btn-lien action" href="#/mon-plan">Écrire mon plan</a>`
           : html`<${ContenuPlan} plan=${plan} titres=${titres} />`)}
       </section>
+      ${morceaux && html`<section class="morceaux-moment" aria-labelledby="titre-morceaux-moment">
+        <h2 class="libelle-section" id="titre-morceaux-moment">${nomPlaylist(morceaux.p, morceaux.i)}</h2>
+        <${ListeMorceaux} playlist=${morceaux.p} rang=${morceaux.i} />
+        ${morceaux.p.suite && html`<p class="discret note-refuges">La suite est dans Spotify.</p>`}
+      </section>`}
     </div>
   </${CadreParcours}>`;
 }

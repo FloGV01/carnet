@@ -42,9 +42,11 @@ test('la carte « Mes gratitudes » est juste sous les points positifs, de même
   expect(Math.abs(bg.x - bp.x)).toBeLessThanOrEqual(0.5);
   expect(Math.abs(bg.width - bp.width)).toBeLessThanOrEqual(0.5);
   expect(Math.abs((bg.y - (bp.y + bp.height)) - (bp.y - avant.bas))).toBeLessThanOrEqual(1);
-  // De même forme : même hauteur au repos, même teinte, une zone de deux lignes avec sa consigne et la dictée.
+  // De même forme : même hauteur au repos, la même carte (sans teinte depuis la v12), une zone de deux lignes avec sa consigne
+  // et la dictée.
   expect(Math.abs(bg.height - bp.height)).toBeLessThanOrEqual(1);
-  await expect(gr).toHaveClass(/teinte-pos/);
+  expect(await gr.getAttribute('class')).toBe(await pos.getAttribute('class'));
+  await expect(gr).toHaveClass('champ-jour carte-champ');
   await expect(gr).toContainText('Mes gratitudes');
   await expect(zone(page)).toHaveAttribute('placeholder', CONSIGNE);
   await expect(zone(page)).toHaveAttribute('aria-label', 'Mes gratitudes');
@@ -56,8 +58,11 @@ test('la carte « Mes gratitudes » est juste sous les points positifs, de même
   expect((await gr.textContent()).trim()).toBe('Mes gratitudes');
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    const carre = await gr.locator('.carre-rubrique, .carre-icone').first().evaluate((e) => getComputedStyle(e).backgroundColor);
-    expect(carre, `${schema} : carré de la carte`).toBe(rgb(t['c-positifs']));
+    // v12 (4/9) : plus de carré, l'icône de la rubrique en --text-2, la même que celle des points positifs.
+    const [icone, iconePos] = await Promise.all([gr, pos].map((c) => c.locator('.tete-rubrique > svg').evaluate((e) => [getComputedStyle(e).color, e.innerHTML])));
+    expect(icone[0], `${schema} : icône de la carte, neutre (v12)`).toBe(rgb(t['text-2']));
+    expect(icone).toEqual(iconePos);
+    await expect(gr.locator('.carre-rubrique')).toHaveCount(0);
   }
   // Rien n'est noté sans frappe.
   expect(await entreeDuJour(page)).toBeFalsy();
@@ -90,7 +95,7 @@ test('écrire s\'enregistre seul et se retrouve après rechargement ; rien ne pa
   expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.endsWith(':gratitudes')))).toEqual([]);
 });
 
-test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points positifs », affichée, au carré des points positifs ; elle se masque et se déplace', async ({ page }) => {
+test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points positifs », affichée, à l\'icône des points positifs ; elle se masque et se déplace', async ({ page }) => {
   await aller(page, '#/reglages/journee');
   await expect(page.getByRole('switch', { name: 'Afficher Mes gratitudes' })).toBeVisible();
   const libelles = await page.locator('.ma-journee .ligne-champ-reglage .ligne-libelle').allTextContents();
@@ -100,9 +105,11 @@ test('Réglages › Le soir : « Mes gratitudes » juste après « Mes points po
   const ligne = (nom) => page.locator('.ma-journee .ligne-champ-reglage', { hasText: nom });
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    const [gr, pos] = await Promise.all(['Mes gratitudes', 'Mes points positifs'].map((n) => ligne(n).locator('.carre-ligne').evaluate((e) => getComputedStyle(e).backgroundColor)));
-    expect(gr, `${schema} : carré de Mes gratitudes`).toBe(rgb(t['c-positifs']));
-    expect(gr).toBe(pos);
+    const [gr, pos] = await Promise.all(['Mes gratitudes', 'Mes points positifs'].map((n) => ligne(n).locator('.icone-ligne')
+      .evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector('svg')).color, e.querySelector('path').getAttribute('d')])));
+    // L'icône seule, sans carré, en --text-2 (v12 : la rangée nomme une rubrique, elle n'ouvre rien), celle des points positifs.
+    expect(gr.slice(0, 2), `${schema} : icône de Mes gratitudes`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['text-2'])]);
+    expect(gr).toEqual(pos);
   }
   // Montée d'un cran : avant les points positifs, ici et sur Aujourd'hui.
   await page.getByRole('button', { name: 'Monter Mes gratitudes' }).click();

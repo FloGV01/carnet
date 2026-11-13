@@ -37,7 +37,8 @@ test('aucune URL http(s) dans public/ (hors espace de noms SVG), sauf les deux h
     if (rel(f) === SPOTIFY) { vues = urls.length; urls = urls.filter((u) => !deSpotify(u)); }
     assert.deepEqual(urls, [], rel(f));
   }
-  assert.equal(vues, 3, 'les trois adresses de Spotify : authorize, api/token, v1/me/playlists');
+  // v12 (2/9) : une quatrième, la base des morceaux d'une playlist (v1/playlists, suivie de /{id}/items).
+  assert.equal(vues, 4, 'les quatre adresses de Spotify : authorize, api/token, v1/me/playlists, v1/playlists');
   assert.equal(deSpotify('https://accounts.spotify.com.autre.test/x'), false);
   assert.equal(deSpotify('http://api.spotify.com/v1'), false);
   assert.equal(deSpotify('https://open.spotify.com/playlist/x'), false);

@@ -6,6 +6,11 @@
 // fond continue écran verrouillé. v11 (spec §8.5) : « Ouvrir une playlist », les trois formes du lien de la première playlist
 // de Mes refuges (lien web, nouvelle fenêtre, lien direct vers l'app), pour noter laquelle ouvre l'app de musique et où l'on
 // revient. Le lien n'entre jamais dans le rapport : seule la forme touchée y est notée.
+// v12 (spec v12 §6.2) : « Ouvrir un morceau » remplace « Ouvrir une playlist », dont l'essai est fait (seul le lien direct
+// vers l'app ouvrait Spotify, c'est celui de la v12). Deux liens sur le premier morceau gardé dans Mes refuges, le morceau
+// seul et le morceau dans sa playlist (formesDuMorceau), pour noter ce qui joue après lui. Le rapport ne note que le nom de
+// la forme touchée, jamais un titre ni un identifiant. Sans morceau, la rubrique le dit, sans lien. Sa note passe par
+// pourAffichage, comme celle du son de fond : en grand texte, « : » ne commence jamais une ligne (relecture de la tâche 7).
 import { html, useEffect, useRef, useState } from '../lib.js';
 import { Entete } from '../composants/entete.js';
 import { suspendreSon } from '../composants/signal-sonore.js';
@@ -25,7 +30,7 @@ import { repo } from '../../donnees.js';
 import { creerPdfJpeg } from '../../export/pdf.js';
 import { zonesSures, hauteurUtile } from '../mesures.js';
 import { lireRefuges } from '../composants/refuges.js';
-import { formesDuLien, playlistsAOuvrir } from '../../domain/refuges.js';
+import { formesDuMorceau, playlistSuivie } from '../../domain/refuges.js';
 
 const enc = new TextEncoder();
 const ESSAI_FOND_S = 120;
@@ -70,13 +75,17 @@ export function Diagnostic() {
   const fond = useRef(null);
   const finFond = useRef(null);
   const zoneDicter = useRef(null);
-  // La première playlist de Mes refuges qui a un lien : undefined tant qu'elle n'est pas lue, null s'il n'y en a pas.
-  const [playlist, setPlaylist] = useState(undefined);
+  // Le premier morceau gardé dans Mes refuges, avec sa playlist : undefined tant que les refuges ne sont pas lus, null s'il n'y
+  // en a pas. Seule la playlist suivie a des morceaux, et c'est une playlist Spotify.
+  const [essai, setEssai] = useState(undefined);
   const ecran = useEcran();
   const noter = (test, resultat) => setJournal((j) => [...j, `${test} : ${resultat}`]);
 
   useEffect(() => {
-    lireRefuges().then((r) => setPlaylist(playlistsAOuvrir(r)[0] || null), () => setPlaylist(null));
+    lireRefuges().then((r) => {
+      const suivie = playlistSuivie(r);
+      setEssai(suivie && suivie.p.morceaux ? { morceau: suivie.p.morceaux[0], playlist: suivie.p } : null);
+    }, () => setEssai(null));
     (async () => {
       const stockage = await etatStockage();
       setInfos({
@@ -224,13 +233,13 @@ export function Diagnostic() {
         <p class="discret">${pourAffichage('Lance 2 min de bruit rose. À vérifier : verrouille l\'iPhone, le son doit continuer, puis s\'éteindre en fondu à la fin des 2 min. Il joue aussi en mode silencieux et met la musique en pause.')}</p>
       </div>
     </section>
-    <section class="section" aria-labelledby="titre-ouvrir-playlist">
-      <h2 id="titre-ouvrir-playlist">Ouvrir une playlist</h2>
-      ${playlist === null && html`<p class="discret">Note d'abord une playlist dans Mes refuges.</p>`}
-      ${playlist && html`<div class="actions">
-        ${formesDuLien(playlist.lien).map((f) => html`<a class="btn" href=${f.href} ...${f.nouvelle ? { target: '_blank' } : {}}
-          rel=${f.nouvelle ? 'noopener noreferrer' : 'noreferrer'} onClick=${() => noter('Ouvrir une playlist', f.nom)}>${f.nom}</a>`)}
-        <p class="discret">À noter : où ça s'ouvre, où on revient.</p>
+    <section class="section" aria-labelledby="titre-ouvrir-morceau">
+      <h2 id="titre-ouvrir-morceau">Ouvrir un morceau</h2>
+      ${essai === null && html`<p class="discret">Aucun morceau noté dans Mes refuges.</p>`}
+      ${essai && html`<div class="actions">
+        ${formesDuMorceau(essai.morceau, essai.playlist).map((f) => html`<a class="btn" href=${f.href} rel="noreferrer"
+          onClick=${() => noter('Ouvrir un morceau', f.nom)}>${f.nom}</a>`)}
+        <p class="discret">${pourAffichage('Le premier morceau de Mes refuges. À noter : où ça s\'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient.')}</p>
       </div>`}
     </section>
     <section class="section">

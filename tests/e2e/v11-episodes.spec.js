@@ -82,12 +82,14 @@ test('en haut de l\'Analyse, « Épisodes › » à côté d\'« Historique › 
   expect(Math.abs((e.x + e.width) - (c.x + c.width))).toBeLessThanOrEqual(0.5);
   expect(e.y + e.height).toBeLessThanOrEqual(c.y);
   expect(e.height).toBeGreaterThanOrEqual(44);
-  // Le carré de la porte, à la couleur des épisodes ; celui de l'Historique ne change pas.
+  // L'icône de la porte, sans carré, à l'accent comme celle de l'Historique (v12 : une porte ouvre quelque chose, et les
+  // épisodes n'ont plus de couleur).
   for (const [schema, t] of THEMES) {
     await page.emulateMedia({ colorScheme: schema });
-    const [carreEp, carreHist] = await Promise.all([porteEpisodes(page), porteHistorique(page)].map((p) => p.locator('.carre-porte').evaluate((x) => getComputedStyle(x).backgroundColor)));
-    expect(carreEp, `${schema} : carré d'Épisodes`).toBe(rgb(t['c-episode']));
-    expect(carreHist, `${schema} : carré d'Historique`).toBe(rgb(t['surface-2']));
+    const [iconeEp, iconeHist] = await Promise.all([porteEpisodes(page), porteHistorique(page)].map((p) => p.locator('.icone-porte')
+      .evaluate((x) => [getComputedStyle(x).backgroundColor, getComputedStyle(x.querySelector('svg')).color])));
+    expect(iconeEp, `${schema} : icône d'Épisodes`).toEqual(['rgba(0, 0, 0, 0)', rgb(t['accent-texte'])]);
+    expect(iconeHist, `${schema} : icône d'Historique`).toEqual(iconeEp);
   }
   // En grand texte : « Épisodes » passe sous « Historique », sur toute la largeur ; la page ne défile pas de côté.
   for (const taille of [23, 33, 53]) {

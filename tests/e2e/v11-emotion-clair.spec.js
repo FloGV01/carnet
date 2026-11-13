@@ -18,8 +18,9 @@ import { couleurCase, couleurLisible } from '../../public/js/ui/carte-geometrie.
 // Données inventées. Horloge : jeudi 15 octobre 2026, 21:00 (390 × 844).
 const { clair } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
-const FOND_CLAIR = 'rgb(231, 234, 238)';
-const FONCE = 'rgb(24, 27, 31)';
+// v12 (3/9) : le fond du clair et l'encre suivent la base (#f2f2f7, #000000).
+const FOND_CLAIR = 'rgb(242, 242, 247)';
+const FONCE = 'rgb(0, 0, 0)';
 const BLANC = 'rgb(255, 255, 255)';
 const NOIR = 'rgb(0, 0, 0)';
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
@@ -54,7 +55,7 @@ test('en clair, le fond gris clair d\'Aujourd\'hui sur l\'écran 1, la carte, l\
   await expect(carte(vue)).toBeVisible();
   expect(await fondEcran(page), 'carte').toBe(FOND_CLAIR);
   // Le voile du haut prend la couleur du fond ; le verre de la carte, blanc translucide aussi.
-  expect((await style(vue.locator('.carte-fondu'), 'backgroundImage'))[0]).toMatch(/^linear-gradient\(rgba\(231, 234, 238, 0\.6\)/);
+  expect((await style(vue.locator('.carte-fondu'), 'backgroundImage'))[0]).toMatch(/^linear-gradient\(rgba\(242, 242, 247, 0\.6\)/);
   expect(await style(vue.locator('.ecran-carte .verre').first(), 'backgroundColor')).toEqual(['rgba(255, 255, 255, 0.78)']);
   await toucherMot(vue, 'Calme');
   await expect(carteDuBas(vue)).toBeVisible();

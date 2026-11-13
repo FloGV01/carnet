@@ -1,4 +1,4 @@
-// Sauvegardes témoins aux formats 1 à 7 (tests/fixtures/temoins/), écrites par le code même des
+// Sauvegardes témoins aux formats 1 à 8 (tests/fixtures/temoins/), écrites par le code même des
 // versions publiées. Chaque tag est extrait avec git worktree dans un dossier temporaire hors du
 // dépôt, retiré à la fin même en cas d'erreur. Sa base (fake-indexeddb) est remplie de données
 // inventées par son creerRepository, puis exportée par son construireSauvegarde.
@@ -22,6 +22,7 @@ const VERSIONS = [
   { tag: 'v7.0.0', format: 5, json: 'format-5.json', exporteLe: '2026-10-23T19:30:00.000Z' },
   { tag: 'v8.0.0', format: 6, json: 'format-6.json', exporteLe: '2026-10-26T19:30:00.000Z' },
   { tag: 'v10.0.0', format: 7, json: 'format-7.json', exporteLe: '2026-11-04T19:30:00.000Z' },
+  { tag: 'v11.0.0', format: 8, json: 'format-8.json', exporteLe: '2026-11-08T19:30:00.000Z' },
 ];
 const dec = new TextDecoder();
 
@@ -124,10 +125,11 @@ export function controlerTemoin(octets) {
     exiger((d.humeurs || []).some((h) => h.emotion === null && h.humeur === null && typeof h.energie === 'string'), 'un relevé à énergie seule');
     exiger((d.humeurs || []).some((h) => h.emotion === 'roue:peur:accable'), 'un relevé Accablé');
   }
+  // Une méta de la sauvegarde, par sa clé (formats 7 et suivants).
+  const meta = (cle) => ((d.meta || []).find((m) => m.cle === cle) || {}).valeur;
   // Format 7 (v9 et v10) : un mot à soi et un relevé qui le cite, un mot sans famille, une séance du minuteur, des
   // exercices épinglés et la voix des consignes.
   if (f >= 7) {
-    const meta = (cle) => ((d.meta || []).find((m) => m.cle === cle) || {}).valeur;
     const perso = meta('motsPerso');
     const mots = perso && typeof perso === 'object' ? Object.keys(perso).filter((id) => id.startsWith('roue:perso:u-')) : [];
     exiger(mots.length > 0, 'un mot à soi (méta motsPerso)');
@@ -136,6 +138,18 @@ export function controlerTemoin(octets) {
     exiger((d.seances || []).some((x) => x.exercice === 'minuteur'), 'une séance du minuteur');
     exiger(Array.isArray(meta('favorisBienEtre')) && meta('favorisBienEtre').length > 0, 'des exercices épinglés (favorisBienEtre)');
     exiger((meta('respiration') || {}).voix === true, 'la voix des consignes (respiration.voix)');
+  }
+  // Format 8 (v11) : une nuit à la demi-heure, des gratitudes, « Ce que j'en retiens », et Mes refuges avec des titres, une
+  // playlist choisie dans le compte Spotify et une playlist collée.
+  if (f >= 8) {
+    const refuges = meta('refuges');
+    const lignes = refuges && Array.isArray(refuges.playlists) ? refuges.playlists : [];
+    exiger((d.journal || []).some((j) => j.heuresSommeil === 7.5), 'une nuit à 7 h 30');
+    exiger((d.journal || []).some((j) => typeof j.gratitudes === 'string'), 'des gratitudes');
+    exiger((d.episodes || []).some((e) => typeof e.ceQueJeRetiens === 'string'), '« Ce que j\'en retiens »');
+    exiger(refuges && typeof refuges.titres === 'string', 'des titres (méta refuges)');
+    exiger(lignes.some((p) => p && p.source === 'spotify' && p.lien), 'une playlist choisie dans le compte Spotify (méta refuges)');
+    exiger(lignes.some((p) => p && p.source === null && p.lien), 'une playlist collée (méta refuges)');
   }
   if (zip) {
     const noms = new Set(entrees.map((e) => e.nom));
@@ -178,6 +192,8 @@ async function remplir(repo, horloge, format) {
   // Ce que les v9 et v10 ajoutent (format 7) : un mot à soi et un relevé qui le cite, un mot sans famille, une séance du
   // minuteur, des exercices épinglés et la voix des consignes.
   const v10 = format >= 7;
+  // Ce que la v11 ajoute (format 8) : une nuit à la demi-heure, des gratitudes, « Ce que j'en retiens » et Mes refuges.
+  const v11 = format >= 8;
 
   // Listes : un lieu renommé (l'ancien libellé reste en alias), un lieu créé par l'utilisateur,
   // un symptôme créé puis disparu de la base (son id devient inconnu).
@@ -258,6 +274,11 @@ async function remplir(repo, horloge, format) {
   }
   a('2026-09-28T00:35:00.000Z');
   await repo.episodes.creer({ date: '2026-09-28', heure: '02:30', situation: 'Réveil en pleine nuit', emotion: 'emotion:anxiete', intensite: 5 });
+  // v11 : « Ce que j'en retiens », écrit sur l'épisode rouvert.
+  if (v11) {
+    a('2026-09-28T08:00:00.000Z');
+    await repo.episodes.modifier(episode.id, { ceQueJeRetiens: 'Demander l\'ordre du jour la veille.' });
+  }
 
   if (v6) {
     a('2026-09-28T16:00:00.000Z');
@@ -311,7 +332,10 @@ async function remplir(repo, horloge, format) {
     await repo.humeurs.creer({ date: '2026-09-29', heure: '20:55', emotion: 'roue:aucune:fatigue', energie: 'energie:basse', faisais: ['activiteMoment:travail'] });
   }
   a('2026-09-29T19:50:00.000Z');
-  await repo.journal.patch('2026-09-29', { lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien', ...(v8 ? { heuresSommeil: 7 } : {}) });
+  await repo.journal.patch('2026-09-29', {
+    lieu: 'lieu:teletravail', humeur: 6, sommeilRessenti: 'sommeil:bien', ...(v8 ? { heuresSommeil: v11 ? 7.5 : 7 } : {}),
+    ...(v11 ? { gratitudes: 'Le thé partagé avec la voisine.' } : {}),
+  });
   await repo.listes.archiver('lieu:clinique');
 
   // Méta de l'utilisateur.
@@ -341,6 +365,16 @@ async function remplir(repo, horloge, format) {
   }
   if (v8) await repo.meta.ecrire('definitionsRoue', { 'roue:joie:curieux': 'Envie d\'en savoir plus sur ce qui arrive.' });
   if (v10) await repo.meta.ecrire('favorisBienEtre', ['soupir', 'minuteur']);
+  // v11 : Mes refuges, dans la forme que l'app écrit. Identifiants de playlist factices (22 signes), le dépôt est public.
+  if (v11) {
+    await repo.meta.ecrire('refuges', {
+      titres: 'Une chanson calme\nUne autre, plus lente',
+      playlists: [
+        { nom: 'Pour souffler', lien: 'https://open.spotify.com/playlist/TemoinPourSouffler0001', source: 'spotify' },
+        { nom: 'Pour marcher', lien: 'https://open.spotify.com/playlist/TemoinPourMarcher00001', source: null },
+      ],
+    });
+  }
   // v7 : une séance après minuit, qui compte pour la veille.
   if (v7) {
     a('2026-09-29T23:35:00.000Z');

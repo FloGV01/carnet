@@ -7,18 +7,18 @@ import { Interrupteur } from '../composants/interrupteur.js';
 import { Icones } from '../icones.js';
 import { repo } from '../../donnees.js';
 import { normaliserJournee, deplacerChamp, NOMS_CHAMPS, MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, MASQUE_NUIT, NOM_NUIT } from '../../domain/journee.js';
-import { CarreIcone } from '../composants/rubrique.js';
+import { IconeLigne } from '../composants/rubrique.js';
 
-// Le carré de chaque champ (2b) : l'icône et la couleur de sa rubrique, comme ses cartes sur Aujourd'hui.
-const CARRES = {
-  lieu: ['lieu', 'lieu'], sommeil: ['sommeil', 'sommeil'], humeur: ['humeur', 'humeur'], contact: ['contact', 'contact'],
-  sport: ['sport', 'sport'], explosions: ['explosions', 'expl'], traitement: ['traitement', 'trt'], positifs: ['positifs', 'pos'],
-  gratitudes: ['positifs', 'pos'], [MASQUE_PESE_RECHARGE]: ['peseRecharge', 'energie'], [MASQUE_NUIT]: ['sommeil', 'sommeil'],
+// L'icône de chaque champ (2b) : celle de sa rubrique, comme ses cartes sur Aujourd'hui ; en --text-2, sans carré (v12 : les
+// rubriques n'ont plus de couleur, et la rangée nomme une rubrique, elle n'ouvre rien).
+const ICONES = {
+  lieu: 'lieu', sommeil: 'sommeil', humeur: 'humeur', contact: 'contact', sport: 'sport', explosions: 'explosions',
+  traitement: 'traitement', positifs: 'positifs', gratitudes: 'positifs', [MASQUE_PESE_RECHARGE]: 'peseRecharge', [MASQUE_NUIT]: 'sommeil',
 };
 // Les replis qui se masquent comme un champ, sans place dans l'ordre : « Nuit en détail » (coucher, lever, réveils ;
 // masqué par défaut depuis la v8) et « Ce qui a pesé · ce qui a rechargé ».
 const REPLIS = [[MASQUE_NUIT, NOM_NUIT, 'coucher, lever, réveils'], [MASQUE_PESE_RECHARGE, NOM_PESE_RECHARGE, null]];
-const Carre = ({ champ }) => (CARRES[champ] ? html`<${CarreIcone} icone=${CARRES[champ][0]} teinte=${CARRES[champ][1]} />` : null);
+const Icone = ({ champ }) => (ICONES[champ] ? html`<${IconeLigne} icone=${ICONES[champ]} />` : null);
 
 // meta.journee, lue puis changée par « Le soir » et par Rappels : chaque changement passe par une file
 // et se fait sur la valeur relue en base, pour que deux touchers rapprochés ne s'écrasent pas.
@@ -56,7 +56,7 @@ export function MaJournee() {
     <${Entete} titre="Le soir" retour=${retour} />
     <p class="texte-secondaire">Les champs de la saisie du soir. Un champ masqué garde ses données passées.</p>
     <ul class="liste carte carte-groupe avec-carres">${j.ordre.map((c, i) => html`<li class="ligne-champ-reglage" key=${c}>
-      <${Carre} champ=${c} /><span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
+      <${Icone} champ=${c} /><span class="ligne-libelle">${NOMS_CHAMPS[c]}</span>
       <div class="ordre">
         <button type="button" class="fleche" data-fleche=${`${c}:-1`} aria-label=${`Monter ${NOMS_CHAMPS[c]}`} aria-disabled=${i === 0 ? 'true' : 'false'} onClick=${deplacer(c, -1, i === 0)}>${Icones.monter()}</button>
         <button type="button" class="fleche" data-fleche=${`${c}:1`} aria-label=${`Descendre ${NOMS_CHAMPS[c]}`} aria-disabled=${i === j.ordre.length - 1 ? 'true' : 'false'} onClick=${deplacer(c, 1, i === j.ordre.length - 1)}>${Icones.descendre()}</button>
@@ -65,7 +65,7 @@ export function MaJournee() {
         surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== c) : [...x.masques, c] }))} />
     </li>`)}
       ${REPLIS.map(([cle, nom, sous]) => html`<li class="ligne-champ-reglage" key=${cle}>
-        <${Carre} champ=${cle} /><span class="ligne-libelle">${nom}${sous && html`<span class="ligne-sous">${sous}</span>`}</span>
+        <${Icone} champ=${cle} /><span class="ligne-libelle">${nom}${sous && html`<span class="ligne-sous">${sous}</span>`}</span>
         <${Interrupteur} etiquette=${`Afficher ${nom}`} actif=${!j.masques.includes(cle)}
           surChanger=${(v) => changer((x) => ({ ...x, masques: v ? x.masques.filter((m) => m !== cle) : [...x.masques, cle] }))} />
       </li>`)}

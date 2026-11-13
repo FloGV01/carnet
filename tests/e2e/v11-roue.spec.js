@@ -62,12 +62,13 @@ test('vide : 13 valeurs dans l\'ordre, rien de marqué, 7 h au milieu sur un fon
     await expect(roue(page).getByRole('button')).toHaveText(VALEURS);
     await expect(presses(page)).toHaveCount(0);
     await centree(page, '7 h');
-    expect(await fondDuMilieu(page), schema).toBe(rgb(t.surface));
+    expect(await fondDuMilieu(page), schema).toBe(rgb(t.fenetre));
   }
   // Sous Mal · Moyen · Bien, dans la carte Sommeil ; le lien « Durée › » de la v8 est parti.
   const g = await roue(page).evaluate((r) => {
     const carte = r.closest('.carte-champ');
-    return { sommeil: carte.classList.contains('teinte-sommeil'), sous: r.getBoundingClientRect().top >= carte.querySelector('.segmente').getBoundingClientRect().bottom,
+    // v12 : la carte n'a plus de teinte ; c'est la carte Sommeil, par son titre.
+    return { sommeil: carte.querySelector('.titre-rubrique').textContent === 'Sommeil', sous: r.getBoundingClientRect().top >= carte.querySelector('.segmente').getBoundingClientRect().bottom,
       liens: carte.querySelectorAll('.lien-rubrique').length };
   });
   expect(g).toEqual({ sommeil: true, sous: true, liens: 0 });
@@ -99,17 +100,17 @@ test('toucher une valeur la note et la centre ; la retoucher l\'efface, et la ba
     await expect.poll(() => heures(page), schema).toBe(8);
     await expect(valeur(page, '8 h')).toHaveAttribute('aria-pressed', 'true');
     await centree(page, '8 h');
-    expect(await fondDuMilieu(page), schema).toBe(rgb(t['c-sommeil-tint']));
-    // Notée : en 700, à la couleur du texte de la rubrique, lisible sur sa teinte.
+    expect(await fondDuMilieu(page), schema).toBe(rgb(t.accent));
+    // Notée (v12) : sur un aplat d'accent, en 600 et en --sur-accent, lisible.
     const s = await valeur(page, '8 h').evaluate((b) => ({ graisse: getComputedStyle(b).fontWeight, couleur: getComputedStyle(b).color }));
-    expect(s, schema).toEqual({ graisse: '700', couleur: rgb(t['c-sommeil-text']) });
-    expect(contraste(s.couleur, rgb(t['c-sommeil-tint'])), schema).toBeGreaterThanOrEqual(4.5);
+    expect(s, schema).toEqual({ graisse: '600', couleur: rgb(t['sur-accent']) });
+    expect(contraste(s.couleur, rgb(t.accent)), schema).toBeGreaterThanOrEqual(4.5);
     // Retouchée : effacée, rien de marqué, 7 h au milieu, le fond neutre.
     await valeur(page, '8 h').click();
     await expect.poll(() => heures(page), schema).toBeNull();
     await expect(presses(page)).toHaveCount(0);
     await centree(page, '7 h');
-    expect(await fondDuMilieu(page), schema).toBe(rgb(t.surface));
+    expect(await fondDuMilieu(page), schema).toBe(rgb(t.fenetre));
     // Une valeur hors de la vue se touche aussi : la bande l'amène au milieu.
     await valeur(page, '10 h ou plus').click();
     await expect.poll(() => heures(page), schema).toBe(10);
@@ -421,7 +422,7 @@ test('accessibilité : un vrai bouton par valeur, 44 × 44 au moins, sans curseu
 // le texte se voit, l'alpha le plus bas sur l'étendue visible de ce texte mêle sa couleur à son fond (la fenêtre du
 // milieu, sinon le fond de la bande) : le contraste de ce mélange sur ce fond. Rend [{ nom, alpha, contraste }].
 async function sousLeMasque(page) {
-  const PEINTS = [['background', '#000'], ['--surface', '#000'], ['--c-tint', '#000'], ['--text', 'transparent'], ['--c-text', 'transparent']];
+  const PEINTS = [['background', '#000'], ['box-shadow', 'none'], ['--fenetre', '#000'], ['--accent', '#000'], ['--text', 'transparent'], ['--sur-accent', 'transparent']];
   const vues = await roue(page).evaluate((g, peints) => {
     document.activeElement?.blur();
     const d = g.querySelector('.roue-defile');

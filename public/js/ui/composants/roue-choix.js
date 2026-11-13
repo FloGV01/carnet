@@ -8,7 +8,7 @@ import { vidanges } from '../../store.js';
 // bouton, avec son texte et aria-pressed : VoiceOver les parcourt et les active un par un (pas de curseur ARIA fait main,
 // auquel il répond mal sur iPhone).
 // - Vide : rien n'est marqué, la bande est centrée sur `centre` (par défaut l'option du milieu), sur un fond neutre, et
-//   cela ne note rien. La valeur notée est au milieu, sur la teinte de la carte (--c-tint), en 700 et en --c-text.
+//   cela ne note rien. La valeur notée est au milieu, sur un aplat d'accent (v12), en 600 et en --sur-accent.
 // - Toucher une valeur la note et la centre ; retoucher la valeur notée l'efface, et la bande revient sur `centre`.
 // - Glisser : seul un geste du doigt qui a fait défiler la bande écrit, la valeur au centre, quand la bande s'arrête. Ni
 //   un doigt posé puis levé sans défilement, ni la page qui défile le doigt posé sur la bande (la bande ne reçoit alors
@@ -27,7 +27,7 @@ import { vidanges } from '../../store.js';
 //   et avant une fermeture forcée de la base (vidanges), comme un texte : l'appelant donne une `key` avec la date, et le
 //   rappel d'origine écrit sur le jour d'origine.
 // Les écouteurs sont passifs : rien n'est empêché, le défilement reste celui d'iOS. Toutes les valeurs ont la largeur de
-// la plus longue, en 700 (mesurée, puis posée par CSSOM, en em pour le texte : elle suit la taille du texte), jamais plus
+// la plus longue, en 600 (mesurée, puis posée par CSSOM, en em pour le texte : elle suit la taille du texte), jamais plus
 // large que la bande : au-delà, le libellé passe à la ligne. La taille du texte peut changer écran ouvert, sans `resize`
 // (Centre de contrôle › Taille du texte) : la largeur d'une valeur, en em, change avec elle, et la roue se recale.
 const FIN_GLISSEMENT_MS = 150;
@@ -74,7 +74,7 @@ export function RoueChoix({ etiquette, options, valeur, surChoix, centre }) {
     if (Math.abs(left - m.b.scrollLeft) < 0.5) return;
     m.b.scrollTo({ left, behavior: enDouceur ? 'smooth' : 'auto' });
   };
-  // La largeur commune : le texte de la plus longue valeur, en 700, à sa largeur naturelle (.roue-mesure), en em (il suit
+  // La largeur commune : le texte de la plus longue valeur, en 600, à sa largeur naturelle (.roue-mesure), en em (il suit
   // la taille du texte), avec la marge de la chasse, plus les marges intérieures du bouton, en px (elles ne grandissent pas).
   const mesurer = () => {
     const g = groupe.current;

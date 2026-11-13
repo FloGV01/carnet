@@ -1,54 +1,67 @@
-/* Jetons de design : piste 2b « Cartes noires » de Claude Design
-   (docs/design/retour-claude-design-v2/design_handoff_carnet_refonte/tokens.css), couleurs telles quelles,
-   à la police système (choix de l'utilisateur, 20/10 : pas de Lexend, rien à télécharger).
-   Clair = gris froid, sombre = noir profond, selon le réglage de l'iPhone (prefers-color-scheme).
+/* Jetons de design. v12 (spec docs/superpowers/specs/2026-11-09-emozio-v12-design.md, §5) : une base neutre comme iOS, en
+   clair un fond gris très pâle et des cartes blanches, en sombre un fond noir et des cartes gris foncé, à la police système
+   (choix de l'utilisateur, 20/10 : rien à télécharger). Une seule couleur d'accent, le vert « B » (§5.3), qui veut dire
+   « choisi » ou « agir », jamais une valeur, jamais « fait » ni « réussi ». Les rubriques n'ont plus de couleur à elles :
+   la couleur ne dit qu'une émotion (les 4 zones, et les 7 familles dans l'Analyse et Réglages › Émotions), en plus de
+   l'accent et de --danger. Le thème suit le réglage de l'iPhone (prefers-color-scheme).
 
-   Chaque couleur X a six rôles :
+   Les familles et les zones ont six rôles, lus par leurs classes (.emo-*, .zone-*) sous des noms courts :
    --c-X         icône, point, graphique (≥ 3:1 sur le fond) ;
    --c-X-fill    fond du choix fait ;
    --c-X-on      texte et coche sur -fill (AA) ;
    --c-X-tint    fond teinté ;
    --c-X-tint-2  teinte plus soutenue ;
    --c-X-text    texte coloré (AA sur le fond, les cartes et la teinte).
-   -fill et -on sont les mêmes dans les deux thèmes. Une couleur est un repère (une rubrique, un parcours),
-   jamais une valeur bonne ou mauvaise. */
+   -fill et -on sont les mêmes dans les deux thèmes. */
 :root {
   color-scheme: light dark;
 
-  /* Base */
-  --bg: #e7eaee;
+  /* Base (spec §5.2). --surface-2 : un remplissage discret, jamais un choix, et jamais le fond d'un lien vert (4,49:1 en
+     clair, sous 4,5). --barre : la bande du bas et les onglets. --line : les filets décoratifs. --contour : ce qui se
+     touche sans être choisi (choix non faits, champs, roues), à 3:1 au moins sur le fond, la carte et --surface-2.
+     --text-2 : AA sur le fond, la carte et --surface-2. */
+  --bg: #f2f2f7;
   --surface: #ffffff;
-  --surface-2: #eef0f4;
-  --line: #c2c4c8;
-  --text: #181b1f;
-  --text-2: #585b61;
-  --action: #181b1f;
-  --action-on: #fdfdfd;
-  /* Fond d'un bouton ou d'un champ non choisi : --surface sur le fond de l'écran, --surface-2 dans une carte. */
-  --fond-choix: var(--surface);
-
-  /* Rubriques du soir */
-  --c-lieu: #937c61; --c-lieu-fill: #cfb69a; --c-lieu-on: #171008; --c-lieu-tint: #f6ede2; --c-lieu-tint-2: #ecddcd; --c-lieu-text: #67543e;
-  --c-sommeil: #5f74e4; --c-sommeil-fill: #829afc; --c-sommeil-on: #0e111b; --c-sommeil-tint: #e9eeff; --c-sommeil-tint-2: #d5dffe; --c-sommeil-text: #3d4daa;
-  --c-contact: #1090a3; --c-contact-fill: #27d0eb; --c-contact-on: #071417; --c-contact-tint: #d5f5fc; --c-contact-tint-2: #b6eaf5; --c-contact-text: #0c6371;
-  --c-sport: #279936; --c-sport-fill: #6bd672; --c-sport-on: #0c140c; --c-sport-tint: #e1f5e0; --c-sport-tint-2: #caeaca; --c-sport-text: #046b1b;
-  --c-traitement: #8c6aca; --c-traitement-fill: #b392f6; --c-traitement-on: #131019; --c-traitement-tint: #f0ebff; --c-traitement-tint-2: #e3dafb; --c-traitement-text: #624595;
-  --c-positifs: #938013; --c-positifs-fill: #efd127; --c-positifs-on: #141207; --c-positifs-tint: #f4efd5; --c-positifs-tint-2: #e9e1b7; --c-positifs-text: #665801;
-  /* Parcours */
-  --c-humeur: #ca4b85; --c-humeur-fill: #ff88b9; --c-humeur-on: #190e12; --c-humeur-tint: #fee7ef; --c-humeur-tint-2: #ffd1e1; --c-humeur-text: #93285c;
-  --c-episode: #b156b7; --c-episode-fill: #dc7ee2; --c-episode-on: #160f16; --c-episode-tint: #fbe7fc; --c-episode-tint-2: #f3d4f4; --c-episode-text: #803385;
-  --c-symptome: #02967c; --c-symptome-fill: #1ae7c2; --c-symptome-on: #081511; --c-symptome-tint: #d7f7ed; --c-symptome-tint-2: #baecdd; --c-symptome-text: #056755;
-  --c-difficile: #5885ab; --c-difficile-fill: #85b4dc; --c-difficile-on: #0a131a; --c-difficile-tint: #e5f0fa; --c-difficile-tint-2: #d1e2f1; --c-difficile-text: #365c7b;
-  /* Énergie (pesé, rechargé, énergie basse) et explosions (brun sourd, jamais rouge) */
-  --c-energie: #b96a00; --c-energie-fill: #fca34c; --c-energie-on: #181008; --c-energie-tint: #ffeada; --c-energie-tint-2: #fbd8bb; --c-energie-text: #804802;
-  --c-explosions: #a7725a; --c-explosions-fill: #c79077; --c-explosions-on: #190f0a; --c-explosions-tint: #f9ebe5; --c-explosions-tint-2: #f0dad1; --c-explosions-text: #784c38;
-  /* Graphiques : rampe sommeil Mal · Moyen · Bien, une seule teinte */
-  --chart-sommeil-1: #c5d0f3; --chart-sommeil-2: #7e93e2; --chart-sommeil-3: #4455c2;
+  --surface-2: #eeeef0;
+  --barre: #f9f9f9;
+  --line: #c6c6c8;
+  --contour: #86868b;
+  --text: #000000;
+  --text-2: #6c6c70;
+  --desactive: #c7c7cc;
+  /* La roue de choix : une piste, et au milieu une fenêtre, neutre tant que rien n'est noté, détachée par une ombre légère
+     (la maquette ; un contour de plus doublerait celui de la piste). */
+  --piste: #eeeef0;
+  --fenetre: #ffffff;
+  --fenetre-ombre: 0 1px 3px rgba(0, 0, 0, .16), 0 0 0 .5px rgba(0, 0, 0, .08);
+  /* Un rond neutre autour d'une icône (‹ › de l'en-tête d'Aujourd'hui, v12) : la carte, détachée par une ombre légère en
+     clair, par un filet en sombre. Jamais l'accent : un rond appartient aux émotions (spec §5.3). */
+  --rond: #ffffff;
+  --rond-ombre: 0 1px 3px rgba(0, 0, 0, .10), 0 0 0 .5px rgba(0, 0, 0, .10);
+  /* L'accent, le rendu B (spec §5.3) : l'aplat d'un choix fait ou d'une action, le texte et la coche posés dessus, et le
+     texte d'un lien ou d'une icône qui ouvre quelque chose (AA sur le fond, la carte et la barre). Jamais un rond ni un
+     point sans icône : ronds et bulles appartiennent aux émotions ; seul un bouton rond qui porte une icône (le ▶ du
+     lecteur) peut le porter. */
+  --accent: #1c7d36;
+  --sur-accent: #ffffff;
+  --accent-texte: #1c7d36;
+  /* Alias gardés : leurs usages basculent sur l'accent sans être touchés. Les écrans de l'émotion (.moment-plein) et
+     « Réveil la nuit » (.ecran-noir) les redéclarent à l'encre, avec l'accent. */
+  --action: var(--accent);
+  --action-on: var(--sur-accent);
+  /* Fond d'un choix ou d'un champ non fait : transparent ; son contour (--contour) passe par box-shadow: inset. */
+  --fond-choix: transparent;
+  /* L'encre des graphiques (spec §5.5) : tout ce qui n'est pas une émotion. Une rampe à 3 pas, du plus discret au plus
+     marqué ; le pas le plus discret prend un contour en --donnee-2. */
+  --donnee: #48484a;
+  --donnee-1: #c7c7cc;
+  --donnee-2: #8e8e93;
+  --donnee-3: #3a3a3c;
 
   /* Roue des émotions (v7, spec §4.1) : la teinte de chaque famille vient de la roue de l'utilisateur, ajustée
-     pour AA, sur la même recette que le lot (OKLCH : accent L 0,60 en clair et 0,78 en sombre, texte 0,46 et 0,80).
-     Sérénité, ajoutée, est turquoise, entre Joie (vert) et Surprise (bleu). Ces couleurs valent pour la roue et
-     les graphiques d'émotions SEULEMENT : ailleurs, jamais de rouge ni de vert pour dire bien ou mal. */
+     pour AA, sur la recette du lot 2b (OKLCH : accent L 0,60 en clair et 0,78 en sombre, texte 0,46 et 0,80).
+     Sérénité, ajoutée, est turquoise, entre Joie (vert) et Surprise (bleu). Ces couleurs valent pour les graphiques
+     d'agrégat de l'Analyse et Réglages › Émotions SEULEMENT (v12) : ailleurs, jamais de rouge ni de vert pour dire bien ou mal. */
   --c-emo-colere: #db423c; --c-emo-colere-fill: #ff7267; --c-emo-colere-on: #1a0e0d; --c-emo-colere-tint: #fee9e6; --c-emo-colere-tint-2: #ffd4ce; --c-emo-colere-text: #9f2220;
   --c-emo-degout: #c56001; --c-emo-degout-fill: #ff9550; --c-emo-degout-on: #190f0a; --c-emo-degout-tint: #ffeade; --c-emo-degout-tint-2: #fed6bf; --c-emo-degout-text: #894101;
   --c-emo-tristesse: #888505; --c-emo-tristesse-fill: #c6c458; --c-emo-tristesse-on: #131308; --c-emo-tristesse-tint: #f0f0da; --c-emo-tristesse-tint-2: #e3e3b9; --c-emo-tristesse-text: #5e5b02;
@@ -71,23 +84,24 @@
   --c-zone-vert: #009860; --c-zone-vert-fill: #4ce39b; --c-zone-vert-on: #09140e; --c-zone-vert-tint: #dff5e7; --c-zone-vert-tint-2: #c2ebd2; --c-zone-vert-text: #006941;
 
   /* Les écrans de l'émotion (v11, spec §9) : ils suivent le thème, comme le reste de l'app. En clair, le fond d'Aujourd'hui,
-     des cartes blanches, le verre blanc translucide, les ronds pleins foncés (prototype-clair.css) ; en sombre, le noir de
-     How We Feel, aux valeurs de la v9, inchangées. Les bulles et leur texte noir n'en dépendent pas.
+     des cartes blanches, le verre blanc translucide, les ronds pleins à l'encre (prototype-clair.css ; v12 : l'encre et le
+     voile suivent la base) ; en sombre, le noir de How We Feel, aux valeurs de la v9, inchangées. Les bulles et leur texte
+     noir n'en dépendent pas. Ils n'ont pas d'accent (spec v12, §5.6 ; .moment-plein, ecrans.css).
      --moment-voile se lit en rgba(var(--moment-voile), alpha) : le voile du haut de la carte, à la couleur du fond. */
-  --moment-texte: #181b1f;
+  --moment-texte: #000000;
   --moment-gris: var(--text-2);
   --moment-verre: rgba(255, 255, 255, .78);
   --moment-verre-carte: rgba(255, 255, 255, .78);
-  --moment-verre-texte: #181b1f;
-  --moment-voile: 231, 234, 238;
+  --moment-verre-texte: #000000;
+  --moment-voile: 242, 242, 247;
   --moment-carte-bas: #ffffff;
   /* Le rond « Continuer », « Terminer » et le rond d'« Ajouter mon mot » : le plein, et son texte (ou sa flèche). */
-  --moment-plein: #181b1f;
+  --moment-plein: #000000;
   --moment-plein-on: #ffffff;
   --moment-choix: var(--surface);
   --moment-contour: #7d8087;
   --moment-filet: var(--line);
-  --moment-focus: #181b1f;
+  --moment-focus: #000000;
 
   /* « Effacer définitivement », dernier pas de « Tout effacer » : le seul bouton rouge de l'app, hors du lot 2b, gardé
      (v7, tâche 9) parce qu'il signale une action sans retour, jamais une valeur. AA : 6,7:1 en clair, 8,3:1 en sombre.
@@ -100,7 +114,9 @@
   --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --police-mono: ui-monospace, "SF Mono", Menlo, monospace;
   --t-ecran: 1.765rem; --l-ecran: 2.235rem;       /* 30 / 38 : titre d'écran, question d'un parcours */
-  --t-jour: 1.353rem; --l-jour: 1.765rem;         /* 23 / 30 : titre du jour */
+  /* Le grand titre d'Aujourd'hui (v12, spec §5.2 et §5.4) : 34 / 41 en 700, plafonné à 48 px en très grand texte. */
+  --t-grand-titre: min(2rem, 48px); --l-grand-titre: min(2.412rem, 58px);
+  --t-titre-section: 1.294rem; --l-titre-section: 1.647rem; /* 22 / 28 : titre de section (Ma journée, v12) */
   --t-parcours: 1.471rem; --l-parcours: 1.882rem; /* 25 / 32 : titre d'un parcours */
   --t-bloc: 1rem; --l-bloc: 1.294rem;             /* 17 / 22 : titre de bloc ou de rubrique */
   --t-section: 0.735rem; --ls-section: .07em;     /* 12,5 : libellé de section, en capitales */
@@ -109,21 +125,20 @@
   --t-petit: 0.824rem;                            /* 14 : résumé d'un repli, pastille */
   --t-note: 0.765rem;                             /* 13 */
   --t-legende: 0.706rem;                          /* 12 */
-  --t-onglet: 11px;                               /* comme les onglets d'iOS, sans grandir */
+  --t-onglet: 10px;                               /* comme les onglets d'iOS, sans grandir (v12 : 10, spec §5.2) */
   --t-grille: 1.176rem;                           /* 20 : grille de 1 à 10 */
   --t-grille-lg: 1.235rem;                        /* 21 : intensité */
   --t-tuile: 1.882rem;                            /* 32 : tuile chiffrée (2b) */
   --t-chiffre: 1.647rem;
 
-  /* Formes : bouton 12, pastille 10, carte 14, feuille du bas 24, carré d'icône 7 */
-  --r-icone: 7px;
+  /* Formes : bouton 12, pastille 10, carte 16 (v12, spec §5.2 ; 14 jusqu'à la v11), feuille du bas 24 */
   --r-petit: 10px;
   --r-moyen: 12px;
   --r-bouton: 12px;
-  --r-carte: 14px;
+  --r-carte: 16px;
   --r-feuille: 24px;
 
-  /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 14 (2b) */
+  /* Espacements : 6 entre deux boutons, 8 entre deux blocs, marge latérale de 16 (v12, spec §5.2 ; 14 jusqu'à la v11) */
   --esp-1: 4px;
   --esp-2: 8px;
   --esp-3: 12px;
@@ -131,7 +146,7 @@
   --esp-5: 24px;
   --esp-6: 32px;
   --ecart: 6px;
-  --marge: 14px;
+  --marge: 16px;
 
   /* Cibles et hauteurs : toute cible fait 44 au moins */
   --cible: 44px;
@@ -163,27 +178,26 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #000000;
-    --surface: #1e1f21;
-    --surface-2: #2d2e30;
-    --line: #47484a;
-    --text: #bfc0c3;
-    --text-2: #97989b;
-    --action: #eaebed;
-    --action-on: #000000;
-
-    --c-lieu: #ccb397; --c-lieu-tint: #261c11; --c-lieu-tint-2: #362919; --c-lieu-text: #d0baa1;
-    --c-sommeil: #9fb3fc; --c-sommeil-tint: #161c36; --c-sommeil-tint-2: #20284b; --c-sommeil-text: #a7bafe;
-    --c-contact: #1fcde8; --c-contact-tint: #002228; --c-contact-tint-2: #00323a; --c-contact-text: #1fd4f0;
-    --c-sport: #68d36f; --c-sport-tint: #0c230d; --c-sport-tint-2: #133416; --c-sport-text: #7bd77f;
-    --c-traitement: #c1a6fc; --c-traitement-tint: #221b31; --c-traitement-tint-2: #2f2543; --c-traitement-text: #c7aefe;
-    --c-positifs: #d2b723; --c-positifs-tint: #241e00; --c-positifs-tint-2: #332b01; --c-positifs-text: #d8be34;
-    --c-humeur: #ff8ebc; --c-humeur-tint: #311420; --c-humeur-tint-2: #441c2d; --c-humeur-text: #fe9ac2;
-    --c-episode: #ed8ef3; --c-episode-tint: #2b162c; --c-episode-tint-2: #3b1f3d; --c-episode-text: #ee9af3;
-    --c-symptome: #0dd5b2; --c-symptome-tint: #00241c; --c-symptome-tint-2: #00342a; --c-symptome-text: #09dcb8;
-    --c-difficile: #8ebde6; --c-difficile-tint: #141f29; --c-difficile-tint-2: #1d2d3b; --c-difficile-text: #9ac3e7;
-    --c-energie: #fc9e3f; --c-energie-tint: #301903; --c-energie-tint-2: #422301; --c-energie-text: #fea753;
-    --c-explosions: #e2a88f; --c-explosions-tint: #281a14; --c-explosions-tint-2: #39261e; --c-explosions-text: #e4b19a;
-    --chart-sommeil-1: #394473; --chart-sommeil-2: #6073c7; --chart-sommeil-3: #9fb3fe;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --barre: #161618;
+    --line: #38383a;
+    --contour: #7c7c80;
+    --text: #ffffff;
+    --text-2: #98989f;
+    --desactive: #48484a;
+    --piste: #111113;
+    --fenetre: #48484c;
+    --fenetre-ombre: inset 0 0 0 .5px rgba(255, 255, 255, .10);
+    --rond: #2c2c2e;
+    --rond-ombre: inset 0 0 0 .5px rgba(255, 255, 255, .10);
+    --accent: #30d158;
+    --sur-accent: #000000;
+    --accent-texte: #30d158;
+    --donnee: #aeaeb2;
+    --donnee-1: #48484a;
+    --donnee-2: #8e8e93;
+    --donnee-3: #e5e5ea;
 
     --c-emo-colere: #ff968a; --c-emo-colere-tint: #321411; --c-emo-colere-tint-2: #461d19; --c-emo-colere-text: #ffa196;
     --c-emo-degout: #ff9b5a; --c-emo-degout-tint: #301605; --c-emo-degout-tint-2: #442007; --c-emo-degout-text: #ffa56d;
@@ -220,32 +234,23 @@
   :root { --duree: 0ms; --duree-anim: 0ms; --duree-glisse: 0ms; }
 }
 /* Un écran noir dans les deux thèmes : « Réveil la nuit » (v10, spec §5.2), dont le noir sert à ne pas éclairer la chambre.
-   Les jetons de base y prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent.
-   Les écrans de l'émotion, noirs ainsi de la v9 à la v10, suivent le thème depuis la v11 (--moment-*, ci-dessus). */
+   Les jetons de base y prennent leurs valeurs du thème sombre (ci-dessus), pour les choix et les textes qu'ils portent,
+   sauf l'accent (v12, spec §5.2) : la nuit ne s'éclaire jamais en vert, ses actions restent à l'encre. --action et
+   --action-on sont redéclarés ici, en valeurs : sur la racine, ils valent déjà le vert. Les écrans de l'émotion, noirs ainsi
+   de la v9 à la v10, suivent le thème depuis la v11 (--moment-*, ci-dessus). */
 .ecran-noir {
   color-scheme: dark;
-  --bg: #000000; --surface: #1e1f21; --surface-2: #2d2e30; --line: #47484a; --text: #bfc0c3; --text-2: #97989b;
-  --action: #eaebed; --action-on: #000000; --fond-choix: var(--surface);
+  --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e; --barre: #161618; --line: #38383a; --contour: #7c7c80;
+  --text: #ffffff; --text-2: #98989f; --desactive: #48484a; --piste: #111113; --fenetre: #48484c;
+  --fenetre-ombre: inset 0 0 0 .5px rgba(255, 255, 255, .10);
+  --accent: #eaebed; --sur-accent: #000000; --accent-texte: #eaebed;
+  --action: #eaebed; --action-on: #000000; --fond-choix: transparent;
 }
 
-/* Teinte locale d'une rubrique, d'un parcours ou d'une famille d'émotions : les composants lisent ses six rôles
-   sous des noms courts (--c, --c-fill, --c-on, --c-tint, --c-tint-2, --c-text), sans style en ligne.
-   Sans teinte, un choix fait prend la couleur action (segments, période, onglets). */
-.teinte-lieu { --c: var(--c-lieu); --c-fill: var(--c-lieu-fill); --c-on: var(--c-lieu-on); --c-tint: var(--c-lieu-tint); --c-tint-2: var(--c-lieu-tint-2); --c-text: var(--c-lieu-text); }
-.teinte-sommeil { --c: var(--c-sommeil); --c-fill: var(--c-sommeil-fill); --c-on: var(--c-sommeil-on); --c-tint: var(--c-sommeil-tint); --c-tint-2: var(--c-sommeil-tint-2); --c-text: var(--c-sommeil-text); }
-.teinte-contact { --c: var(--c-contact); --c-fill: var(--c-contact-fill); --c-on: var(--c-contact-on); --c-tint: var(--c-contact-tint); --c-tint-2: var(--c-contact-tint-2); --c-text: var(--c-contact-text); }
-.teinte-sport { --c: var(--c-sport); --c-fill: var(--c-sport-fill); --c-on: var(--c-sport-on); --c-tint: var(--c-sport-tint); --c-tint-2: var(--c-sport-tint-2); --c-text: var(--c-sport-text); }
-.teinte-trt { --c: var(--c-traitement); --c-fill: var(--c-traitement-fill); --c-on: var(--c-traitement-on); --c-tint: var(--c-traitement-tint); --c-tint-2: var(--c-traitement-tint-2); --c-text: var(--c-traitement-text); }
-.teinte-pos { --c: var(--c-positifs); --c-fill: var(--c-positifs-fill); --c-on: var(--c-positifs-on); --c-tint: var(--c-positifs-tint); --c-tint-2: var(--c-positifs-tint-2); --c-text: var(--c-positifs-text); }
-.teinte-humeur { --c: var(--c-humeur); --c-fill: var(--c-humeur-fill); --c-on: var(--c-humeur-on); --c-tint: var(--c-humeur-tint); --c-tint-2: var(--c-humeur-tint-2); --c-text: var(--c-humeur-text); }
-.teinte-ep { --c: var(--c-episode); --c-fill: var(--c-episode-fill); --c-on: var(--c-episode-on); --c-tint: var(--c-episode-tint); --c-tint-2: var(--c-episode-tint-2); --c-text: var(--c-episode-text); }
-.teinte-sy { --c: var(--c-symptome); --c-fill: var(--c-symptome-fill); --c-on: var(--c-symptome-on); --c-tint: var(--c-symptome-tint); --c-tint-2: var(--c-symptome-tint-2); --c-text: var(--c-symptome-text); }
-/* Moment difficile (et « Une chose à la fois », teinte « jour » depuis la v6). Bien-être (v7) prend la couleur de la
-   cohérence cardiaque, sa première pratique. */
-.teinte-difficile, .teinte-jour, .teinte-bien-etre { --c: var(--c-difficile); --c-fill: var(--c-difficile-fill); --c-on: var(--c-difficile-on); --c-tint: var(--c-difficile-tint); --c-tint-2: var(--c-difficile-tint-2); --c-text: var(--c-difficile-text); }
-.teinte-energie { --c: var(--c-energie); --c-fill: var(--c-energie-fill); --c-on: var(--c-energie-on); --c-tint: var(--c-energie-tint); --c-tint-2: var(--c-energie-tint-2); --c-text: var(--c-energie-text); }
-.teinte-expl { --c: var(--c-explosions); --c-fill: var(--c-explosions-fill); --c-on: var(--c-explosions-on); --c-tint: var(--c-explosions-tint); --c-tint-2: var(--c-explosions-tint-2); --c-text: var(--c-explosions-text); }
-/* Familles de la roue des émotions, dans l'ordre de la roue. */
+/* Teinte locale d'une famille d'émotions ou d'une zone : les composants lisent ses six rôles sous des noms courts (--c,
+   --c-fill, --c-on, --c-tint, --c-tint-2, --c-text), sans style en ligne. Sans teinte (v12 : les rubriques n'en ont plus),
+   chaque règle a son repli : l'accent pour un choix fait, une encre neutre pour le reste.
+   Familles de la roue des émotions, dans l'ordre de la roue. */
 .emo-colere { --c: var(--c-emo-colere); --c-fill: var(--c-emo-colere-fill); --c-on: var(--c-emo-colere-on); --c-tint: var(--c-emo-colere-tint); --c-tint-2: var(--c-emo-colere-tint-2); --c-text: var(--c-emo-colere-text); }
 .emo-degout { --c: var(--c-emo-degout); --c-fill: var(--c-emo-degout-fill); --c-on: var(--c-emo-degout-on); --c-tint: var(--c-emo-degout-tint); --c-tint-2: var(--c-emo-degout-tint-2); --c-text: var(--c-emo-degout-text); }
 .emo-tristesse { --c: var(--c-emo-tristesse); --c-fill: var(--c-emo-tristesse-fill); --c-on: var(--c-emo-tristesse-on); --c-tint: var(--c-emo-tristesse-tint); --c-tint-2: var(--c-emo-tristesse-tint-2); --c-text: var(--c-emo-tristesse-text); }
