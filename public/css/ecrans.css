@@ -595,7 +595,9 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
    chevron. */
 .evenements-jour { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .libelle-section { font-size: var(--t-section); font-weight: 600; letter-spacing: var(--ls-section); text-transform: uppercase; color: var(--text-2); padding-bottom: 4px; }
-.titre-section { font: 700 var(--t-titre-section)/var(--l-titre-section) var(--police); letter-spacing: .01em; color: var(--text); padding: 0 4px; }
+/* Le titre de section vaut aussi pour l'Analyse (spec §5.2 : 22/28 en 700). En très grand texte, un mot qui ne tient plus
+   sur la ligne passe à la ligne au lieu de sortir de l'écran (v12, contrôle global : « Mouvement », à 53 px). */
+.titre-section { font: 700 var(--t-titre-section)/var(--l-titre-section) var(--police); letter-spacing: .01em; color: var(--text); padding: 0 4px; overflow-wrap: anywhere; }
 .liste-evenements { list-style: none; margin: 0; padding: 0 0 0 14px; }
 .liste-evenements:empty { display: none; }
 .liste-evenements > li + li { border-top: 1px solid var(--line); }
@@ -673,8 +675,14 @@ html:has(main.aujourdhui) { scroll-padding-bottom: calc(var(--hauteur-onglets) +
 /* Le libellé prend la place : l'interrupteur va à droite, comme dans Réglages › Le soir (v6.1). */
 .ligne-interrupteur .ligne-libelle { flex: 1; }
 .libelle-carte { font-size: var(--t-sous); }
-.a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); }
+/* v12 (9/9), contrôle global : en très grand texte, chaque valeur reste à 8 px au moins de son libellé (« Stockage protégé » et
+   « non » se touchaient dès 40 px). */
+.a-propos .ligne-info { font-size: var(--t-sous); min-height: var(--cible); gap: 8px; }
 .a-propos .ligne-info > span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
+/* v12 (9/9), contrôle global : en très grand texte, la version et son empreinte (« 12.0.0 · », puis 12 signes) passent à la ligne au
+   lieu de sortir de l'écran. Les lettres de l'empreinte n'ont pas la largeur fixe des chiffres : sans cela, la taille où la ligne
+   débordait changeait d'une version à l'autre. */
+.a-propos .version-app { min-width: 0; overflow-wrap: anywhere; }
 
 /* Import et Tout effacer */
 .import, .effacer { gap: 16px; }

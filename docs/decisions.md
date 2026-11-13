@@ -213,9 +213,9 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
 - **Bien-être** : un onglet, avec la cohérence cardiaque et la sophrologie. L'Historique rejoint l'Analyse. Onglets : Aujourd'hui · Analyse · Bien-être · Soins · Réglages.
 - **Raccourci de crise** : le bouton « Moment difficile » d'Aujourd'hui reste, avec la cohérence cardiaque en tête.
 - **Bien-être dans l'Analyse** : une rangée de Mes jours et « Autour du Bien-être » dans Comprendre.
-- **Apparence** : piste 2b · Cartes noires, police système (pas de Lexend : rien à télécharger), pas de rubriques remplies repliées en pastilles, glisser pour changer de jour en plus de ‹ ›, couleurs de Claude Design telles quelles.
+- **Apparence** : piste 2b · Cartes noires, police système (pas de Lexend : rien à télécharger), pas de rubriques remplies repliées en pastilles, glisser pour changer de jour en plus de ‹ ›, couleurs de Claude Design telles quelles. Levé en v12 : une base neutre façon iOS et une seule couleur d'accent, le vert ; les rubriques n'ont plus de couleur (voir l'entrée v12.0.0, « Règles levées ou changées »).
 - **API Claude** : seulement pendant le développement. Carnet reste sans réseau.
-- **Règle levée à sa demande** : la roue garde ses couleurs (Colère rouge, Joie vert…), pour la roue et les graphiques d'émotions seulement. Ailleurs, jamais de rouge ni de vert pour dire bien ou mal.
+- **Règle levée à sa demande** : la roue garde ses couleurs (Colère rouge, Joie vert…), pour la roue et les graphiques d'émotions seulement. Ailleurs, jamais de rouge ni de vert pour dire bien ou mal. Toujours vrai en v12 : le vert de l'accent dit « choisi » ou « agir », jamais une valeur (voir l'entrée v12.0.0).
 
 ### Appels du concepteur, à vérifier (spec §9)
 
@@ -234,12 +234,12 @@ Source : les notes de l'utilisateur du 20/10 et le retour de Claude Design (pist
 
 ### Refonte 2b (plan v6.2)
 
-- Piste 2b, police système (`-apple-system`, aux tailles, graisses et interlignes du lot), couleurs du lot comparées une à une par un test, thème du système. Sélection commune à tous les choix : fond `-fill`, texte `-on`, 600 (700 pour un chiffre) et une coche, jamais la couleur seule. Cibles de 44 pt au moins, animations de 200 ms au plus, supprimées avec « Réduire les animations ».
-- **B1 · Icônes** : les 39 du lot, sans leurs métadonnées, au trait de 2, plus la feuille (Bien-être) et l'émotion. Pas d'icône dans les grilles de choix ; les icônes de lieu ne servent pas.
+- Piste 2b, police système (`-apple-system`, aux tailles, graisses et interlignes du lot), couleurs du lot comparées une à une par un test, thème du système. Sélection commune à tous les choix : fond `-fill`, texte `-on`, 600 (700 pour un chiffre) et une coche, jamais la couleur seule (levé en v12 pour la couleur : l'aplat de l'accent vert, le texte en `--sur-accent`, la coche gardée ; voir l'entrée v12.0.0). Cibles de 44 pt au moins, animations de 200 ms au plus, supprimées avec « Réduire les animations ».
+- **B1 · Icônes** : les 39 du lot, sans leurs métadonnées, au trait de 2, plus la feuille (Bien-être) et l'émotion. Pas d'icône dans les grilles de choix ; les icônes de lieu ne servent pas. Levé en v12 : les 5 icônes de l'onglet actif sont pleines (voir l'entrée v12.0.0, « Règles levées ou changées »).
 - **B2 · Thème** : celui du système (`prefers-color-scheme`), sans réglage dans l'app.
 - **B3 · Vue soignants et PDF** : la page reste claire. Les familles d'émotions s'y distinguent aussi par un motif et par l'ordre de la roue : la page se lit imprimée en noir et blanc.
 - **B4 · Glissement** : sur Aujourd'hui et la page d'un jour, vers la droite la veille, vers la gauche le lendemain, jamais au-delà d'aujourd'hui ; au moins 60 px ou un geste rapide, avec |dx| > 1,5 × |dy| ; ignoré depuis un champ, une feuille, un parcours ou un élément qui défile de côté ; le défilement vertical reste celui d'iOS.
-- **B5 · Couleurs** : une couleur par rubrique du soir et par parcours (Émotion du moment en rose, Épisode, Symptôme, Moment difficile) ; l'énergie (orange) pour pesé, rechargé et énergie basse ; les explosions en brun sourd. L'action (liens, Terminer, + Épisode, Retour, Passer) est en encre neutre ; onglets, segments et période aussi.
+- **B5 · Couleurs** : une couleur par rubrique du soir et par parcours (Émotion du moment en rose, Épisode, Symptôme, Moment difficile) ; l'énergie (orange) pour pesé, rechargé et énergie basse ; les explosions en brun sourd. L'action (liens, Terminer, + Épisode, Retour, Passer) est en encre neutre ; onglets, segments et période aussi. Levé en v12 : plus de couleur par rubrique ni par parcours, et l'action, les onglets, les segments et la période passent à l'accent vert (voir l'entrée v12.0.0, « Règles levées ou changées »).
 - **P5 et P6**, qui attendaient Claude Design depuis la v6.1, sont faits : la bande du bas avec « Émotion », le plus large (tâche 4), et les réponses près du pouce (tâches 3 et 8).
 
 ### Choix faits pendant la construction
@@ -300,7 +300,7 @@ Si l'assistant PSY de l'utilisateur attend « humeur 5 » par jour ou « humeur 
 - **Aujourd'hui, écarts au lot 2b** pour garder P2 (Après coup sans défiler) et P3 (« J'ai fini » sans défiler) à 390 × 844, et le soir sans défilement à 390 × 797 après minuit ou avec le bandeau « Nouvelle version prête » : les choix des cartes font 44 de haut au lieu de 48, les cartes ont 8 de marge haute et basse, 4 entre la tête et les choix, et 6 entre deux blocs (4 avec le bandeau). À revoir sur l'iPhone.
 - **La roue et les exercices** : l'utilisateur relit les mots de la roue (l'image était peu nette) et les textes des exercices (plus bas) avant la publication.
 - **CLAUDE.md, vocabulaire de la roue** (plan v7, tâche 9) : la ligne suivante n'entre dans CLAUDE.md, sous « Règles qui priment sur tout », qu'avec l'accord de l'utilisateur : « **Le vocabulaire de la roue des émotions ne se lisse jamais non plus.** Il est dans `public/js/domain/roue.js`, figé une fois publié : un ajout se fait à la fin, jamais de renommage. »
-- **« Effacer définitivement » en rouge** : le dernier pas de « Tout effacer » garde son bouton rouge (`--danger`, AA en clair et en sombre), seul rouge de l'app hors de la roue. Le README du lot 2b dit « Il n'y a pas de rouge ». À confirmer, ou à passer en encre neutre comme les autres actions.
+- **« Effacer définitivement » en rouge** : le dernier pas de « Tout effacer » garde son bouton rouge (`--danger`, AA en clair et en sombre), seul rouge de l'app hors de la roue. Le README du lot 2b dit « Il n'y a pas de rouge ». À confirmer, ou à passer en encre neutre comme les autres actions. En v12, il reste rouge, comme sur iOS pour ce qui détruit (spec v12 §5.2), toujours à confirmer (voir l'entrée v12.0.0).
 - **La rubrique du soir « Humeur »** (grille de 1 à 10, masquée par défaut depuis la v6) reste dans Réglages › Le soir avec son interrupteur, à côté de l'« Émotion du moment ». Réaffichée, elle remet une note de 1 à 10 dans la saisie du soir. Cette note nourrit ensuite « Humeur (notes) » dans Mes jours et la Vue soignants, et « humeur du soir 6 » dans l'Export PSY, pour chaque soir à venir. La spec dit que « la note de 1 à 10 disparaît » (§2) et que l'humeur du soir « reste masquée » (§4.3), sans trancher. Deux voies : retirer « Humeur » des champs réaffichables quand la base n'a aucune humeur du soir ; ou la renommer « Humeur du soir (note de 1 à 10) » et la garder comme reliquat voulu. Rien n'est changé en attendant.
 
 ### À essayer sur l'iPhone
@@ -1770,3 +1770,141 @@ Le détail, à cocher, est dans `docs/recette-iphone.md`, « v11 » : le geste d
 - **Bien-être et Mon plan** : l'entrée « Mes refuges » ; dans Moment difficile, la rubrique « Mes titres » de Mon plan. L'aperçu de l'import nomme « les refuges ».
 - **Le Diagnostic** (`ui/ecrans/diagnostic.js`) : « Ouvrir une playlist », « Note d'abord une playlist dans Mes refuges. », « Lien web », « Lien web, nouvelle fenêtre », « Lien direct vers l'app », « À noter : où ça s'ouvre, où on revient. ».
 - **Réglages** (`ui/ecrans/reglages.js`, `ui/ecrans/aide-iphone.js`) : la confirmation « Revenir à l'état d'avant l'import ? », « Ce qui est noté ici sera remplacé par ce qu'il y avait avant l'import du … Les mémos vocaux d'avant l'import ne reviennent pas. », action « Revenir » ; l'Aide iPhone, son introduction et « Changer d'icône sans rien perdre », dont la note « La copie ne garde pas les brouillons en cours, les réglages du lecteur ni les replis ouverts. Le micro sera sans doute à réautoriser. ».
+
+## 2026-11-09 : v12.0.0, la musique de Détente et un design simple
+
+Source : ses retours d'usage après la v11, puis ses réponses des 08 et 09/11. Spec : `docs/superpowers/specs/2026-11-09-emozio-v12-design.md`, qui fait foi. Plan : `docs/superpowers/plans/2026-11-09-emozio-v12.md`, en 9 tâches, une par commit, chacune relue puis corrigée, construites du 09 au 13/11. Repérages et maquettes, hors dépôt : `.superpowers/v12/`. **Version 12.0.0**, à publier en une fois, avec l'accord de l'utilisateur.
+
+La sauvegarde passe au `FORMAT_VERSION` 9 (`docs/format-sauvegarde.md`). La base reste en `DB_VERSION` 6, confirmé : les morceaux vivent dans la méta `refuges`, et `migrations.lock.json` ne change pas. Les vocabulaires figés (roue, `declencheur`, `dessous`) et les 144 couleurs de la carte ne changent pas. Le nom interne reste `carnet`.
+
+### Décisions de l'utilisateur (spec §2, 08 et 09/11)
+
+- **Ses retours** : écouter sa playlist « Détente » d'un toucher (« Je voulais juste pouvoir cliquer sur les musiques et que ça joue dessus »), et un design général à reprendre : l'interface du soir « froide », sans cohérence de couleurs, ni avec la carte des émotions.
+- **Le lien** : toucher la carte Détente n'ouvrait rien. Au Diagnostic, seul « Lien direct vers l'app » (`spotify:playlist:ID`) ouvrait Spotify sur son iPhone. Il a refusé un correctif 11.0.1 : la correction attendait la v12.
+- **« Voir les morceaux »**, la proposition acceptée telle quelle (« Oui, ça me va ») : Mes refuges devient une simple liste, Détente en haut, ses morceaux dessous, un toucher sur l'un d'eux ouvre Spotify dessus ; la liste est lue une fois à la connexion, avec « Mettre à jour la liste » ; les réglages passent dans un coin discret ; la même liste vient dans Moment difficile. Il a Spotify **Premium**, et n'utilise que Détente.
+- **Le design** : il a écarté six pistes, puis trois, puis les couleurs chaudes (« Je veux quelque chose de simple et épuré et facile d'utilisation »). Ce qui gêne : « Trop de couleurs » ; il veut « une unité », sur le modèle des apps d'Apple. Les rubriques du soir qu'il utilise : « tout », donc **rien n'est replié ni caché**. La proposition finale : « Oui, on part là-dessus. » L'accent : « Vert iPhone », puis le rendu **B** parmi trois.
+- **La confiance et l'estime de soi : annulées.** L'icône de la v11 est réglée chez lui : dans Safari, il a fallu toucher « Nouvelle version prête » avant « Sur l'écran d'accueil » (voir « La nouvelle version dans Safari »).
+
+### Appels du concepteur, à relire (spec §10)
+
+Ce sont les choix de la spec, non les siens :
+1. **Le jeton** : en mémoire, 10 minutes au plus, à usage unique (la voie D, plus bas).
+2. **Un choix de playlist qui échoue** ne fait rien perdre, et « Annuler » suit tout choix écrit.
+3. **Les droits Spotify** : `playlist-read-collaborative` s'ajoute à `playlist-read-private`.
+4. **Le vert** n'est jamais un point ni un disque ; les repères d'étapes sont à l'encre.
+5. **Moment difficile** : les morceaux viennent après Mon plan.
+6. **Mes refuges** : « Mettre à jour la liste » est dans les réglages ; « Mes titres » est en lecture seule sur l'écran principal.
+7. **Le plafond** : 200 morceaux. **Le lien par défaut** d'un morceau : le morceau seul.
+8. **Le design** : la coche gardée ; les écrans de l'émotion sans accent ; les graphiques à l'encre ; les 7 familles gardées dans l'Analyse ; `--danger` rouge ; les épisodes neutres ; la page du soir à +120 px au plus.
+9. **Safari** : une nouvelle version s'applique seule hors de l'app installée, et l'aide dit de fermer l'onglet puis de rouvrir l'adresse, non de toucher le bandeau.
+
+### Règles levées ou changées
+
+- **La palette 2b prend fin** (« couleurs de Claude Design telles quelles », v7 ; « B5 · Couleurs » ; les couleurs de rubrique validées le 2 octobre, `docs/design/integration.md`) : plus aucune couleur par rubrique du soir ni par parcours. Les 12 couleurs du lot (lieu, sommeil, contact, sport, traitement, positifs, humeur, épisode, symptôme, difficile, énergie, explosions), la rampe `--chart-sommeil-*`, les `.teinte-*` et `--r-icone` sont retirés. L'action, les onglets, les segments et la période, en encre neutre depuis la v7, passent à l'accent vert.
+- **B1 · Icônes** (v7 : toutes au trait, seul « arrêt » plein) : les 5 icônes de l'onglet actif sont pleines, comme les SF Symbols « .fill » : la forme change avec la couleur.
+- **La sélection 2b** (fond `-fill` de la rubrique, texte `-on`, 600, et une coche) : l'aplat de l'accent, le texte en `--sur-accent` 600, et **la coche gardée** (« jamais la couleur seule »), contre la maquette. Le rebond `scale(1.07)` d'une pastille choisie est retiré : rien ne change de taille au toucher.
+- **« Jamais de rouge ni de vert pour dire bien ou mal »** (v7) : toujours vrai. Le vert de l'accent dit « choisi » ou « agir », jamais une valeur, ni « fait », ni « réussi ».
+- **`--danger`** (v7, « À confirmer ») : il reste rouge, comme sur iOS pour ce qui détruit (spec §5.2). Toujours à confirmer.
+- Les règles levées sont annotées « Levé en v12 » dans leurs entrées d'origine (v7).
+
+### Les jetons (spec §5.2 et §5.3, tâche 3)
+
+- **La base, neutre comme iOS** (clair / sombre) : `--bg` #F2F2F7 / #000000, `--surface` #FFFFFF / #1C1C1E, `--surface-2` #EEEEF0 / #2C2C2E (un remplissage discret, jamais un choix), `--line` #C6C6C8 / #38383A (filets de 0,5 px), `--text` #000000 / #FFFFFF, `--text-2` #6C6C70 / #98989F. Ni crème ni dégradé.
+- **Les jetons nouveaux** : `--barre` #F9F9F9 / #161618 (la bande du bas et les onglets) ; `--contour` #86868B / #7C7C80 (choix non faits, champs, roues : 3:1 au moins sur le fond, la carte et `--surface-2`) ; `--desactive` #C7C7CC / #48484A ; `--piste` #EEEEF0 / #111113 et `--fenetre` #FFFFFF / #48484C (la roue) ; `--donnee` #48484A / #AEAEB2 et la rampe `--donnee-1..3` (les graphiques) ; `--accent`, `--sur-accent`, `--accent-texte`.
+- **Les alias gardés** : `--action` et `--action-on` valent `--accent` et `--sur-accent` ; `--fond-choix` est transparent, le contour passant par `box-shadow: inset`.
+- **Les formes** : cartes au rayon 16, marge 16, grand titre 34/41 en 700, titre de section 22/28 en 700, sur-titre de 13 px en 600, en capitales, libellé d'onglet de 10 px.
+- **Gardés tels quels** : `--c-emo-*`, `--c-zone-*` et leurs classes, `--danger`. `--moment-*` suivent la base en clair. `theme-color` : #F2F2F7 en clair, #000000 en sombre.
+
+### L'accent B et sa règle de sens (spec §5.3)
+
+- **Les valeurs** : en clair, l'aplat #1C7D36, texte et coche blancs (5,20:1), liens #1C7D36 (4,66:1 sur le fond, 5,20:1 sur la carte, 4,94:1 sur la barre) ; en sombre, l'aplat #30D158, texte noir (10,39:1), liens #30D158 (8,42:1 sur la carte). Recalculés par `jetons.test.js`.
+- **Le sens** : « choisi » ou « agir », jamais une valeur. Il marque un choix fait, le bouton principal, l'onglet actif, les liens et les icônes qui ouvrent quelque chose. Les questions abordées de Soins et « Faite le… » du Programme sont à l'encre.
+- **La forme** : en sombre, le vert est proche de la menthe des zones (ΔE OKLab ≈ 0,07). C'est la forme qui les sépare : l'accent n'est jamais un rond ni un point, qui appartiennent aux émotions. Un choix fait est un rectangle arrondi, avec son texte et sa coche. Seuls un bouton rond qui porte une icône (▶ du lecteur, « Continuer » hors des écrans de l'émotion) et la partie remplie du volume peuvent le porter. Un test le garde, sur chaque écran du contrôle global.
+- **Un lien vert ne se pose jamais sur `--surface-2` en clair** (4,49:1, sous 4,5) : le détail d'un jour de Mes jours et le panneau d'édition du traitement passent sur le fond.
+- **Les écrans de l'émotion (`.moment-plein`) n'ont pas d'accent** : leurs actions restent à l'encre, comme en v11, `--accent*` et `--action*` y pointant sur `--moment-plein`. Sinon un mot sans zone peindrait ses activités choisies en vert, et on lirait « zone verte » à tort. « Réveil la nuit » (`.ecran-noir`) redéclare l'accent à l'encre : la nuit ne s'éclaire jamais en vert.
+
+### La règle des graphiques (spec §5.5, tâche 5)
+
+- La couleur y dit une émotion, et seulement une émotion : les zones pour un relevé (Mes jours, Tes zones), les familles pour les comptes par famille.
+- Tout le reste est à l'encre neutre `--donnee*` : nuits, énergie, explosions, épisodes, Bien-être, lieu, contact, mouvement. L'accent n'entre jamais dans un graphique ; il reste sur les contrôles autour (période, mesure, « Voir en tableau »).
+- Les séries restent distinctes par leur place, leur forme (point, anneau, trait, barre, encoche, losange) et une rampe à 3 pas, dont le pas le plus discret a un contour à 3:1. « Peu de valeurs » passe en barre creuse au contour à 3:1.
+
+### Les écrans (tâches 4 et 5)
+
+- **Aujourd'hui** : l'en-tête façon App Store, la date en sur-titre (« JEUDI 15 OCTOBRE ⌄ », ou le mois un autre jour) au-dessus du grand titre (« Aujourd'hui », ou « Mercredi 14 »), plafonné à 48 px en très grand texte ; le titre entier ouvre le choix de la date. Le nom accessible ne change pas (« Aujourd'hui, Jeudi 15 octobre »). ‹ › sont dans des ronds neutres, ensemble.
+- **Les cartes du soir** : rayon 16, l'icône de la rubrique en `--text-2`, sans carré coloré ; cartes resserrées (12/14, 10 entre deux cartes). **La page du soir grandit de 105 px** depuis la v11 (1716 px contre 1611, à 390 × 844), sous la cible de +120 : elle se remplit toujours en moins de 30 s, rien n'a changé de place.
+- **La bande du bas** sur `--barre` : « Émotion » seul en aplat d'accent, « Moment difficile » et « + Épisode » neutres au contour. **Les onglets** sur `--barre` : l'actif en vert, son icône pleine et son libellé en 600, sans pilule.
+- **Ma journée** : un titre en 22/28 ; les épisodes et les symptômes en petit carré neutre ; les relevés gardent le point de leur zone.
+- **Les autres écrans** : plus de carré coloré dans les listes ; l'icône d'une rangée est à l'accent quand elle ouvre quelque chose, en `--text-2` quand elle nomme une rubrique ; chevrons en `--contour`. Les parcours : repères faits et en cours à l'encre, l'étape en cours cerclée de `--contour`. L'Analyse : portes à l'icône d'accent, tuiles sans point. Bien-être : « Reprendre » seul aplat, les ▶ des listes en icônes d'accent sans fond, le cercle et le disque de la respiration neutres. Moment difficile : « Commencer » seul aplat. Réglages : interrupteurs au rail d'accent et au bouton blanc.
+
+### La musique (tâches 1, 2, 6 et 7)
+
+- **Les liens** (`lienAOuvrir`, pur, à l'affichage seulement) : un lien `https://open.spotify.com/…` devient `spotify:{type}:ID` ; `spotify:` et `music:` restent ; `https://music.apple.com/…` devient `music://…`. Les données gardent le lien noté. Un autre lien https reste tel quel, avec une note dans les réglages.
+- **Mes refuges** (`#/refuges`) : « Modifier » à droite, vers ses réglages ; la carte de la playlist suivie en tête, qui ouvre Spotify d'un toucher, puis les autres ; « Un toucher ouvre Spotify. » ; ses morceaux, façon liste d'Apple, le titre puis l'artiste, sans pochette ni icône, chacun un lien `spotify:track:ID` ; « La suite est dans Spotify. » au-delà de 200, sans nombre ; « Mes titres » en lecture seule. Vide : une phrase, « Choisir dans mon compte » et « Coller un lien ».
+- **Ses réglages** (`#/refuges/reglages`, onglet Bien-être) reprennent la saisie de la v11 : « Mettre à jour la liste » et « Changer de playlist » quand une playlist est suivie, sinon « Choisir dans mon compte » ; le code ; la liste du compte ; « Retirer ces playlists ». Le retour, geste compris, mène à Mes refuges.
+- **La lecture des morceaux** : `GET v1/playlists/{id}/items`, l'identifiant vérifié (22 signes) avant l'adresse, pages de 50, 4 au plus, `next` jamais suivi, `suite: true` au-delà. Une entrée `null`, un fichier local, un épisode, un identifiant invalide ou un morceau sans titre sont écartés ; titre et artiste coupés à 200 signes, du texte, jamais du HTML. « Mettre à jour la liste » relit les morceaux de la playlist suivie, sans relire la liste du compte.
+- **Les erreurs nouvelles** : `morceaux` (403, ou 200 sans `items` : une playlist qui n'est pas à lui ; la playlist reste notée), `expiree`. Les messages de la v11 disent « Ta liste reste ».
+- **Moment difficile** : la carte de la playlist reste à sa place ; les morceaux viennent après Mon plan, sous le nom de la playlist, avec la même liste. Aucune requête, rien pour mettre à jour.
+- **Le Diagnostic** : « Ouvrir un morceau » remplace « Ouvrir une playlist », avec deux formes du premier morceau gardé (`formesDuMorceau`) : « Morceau seul » (`spotify:track:ID`) et « Morceau dans sa playlist » (`…?context=spotify%3Aplaylist%3APID`). Le rapport ne note que le nom de la forme touchée.
+- **Ni l'Export PSY ni la vue soignants** ne lisent les morceaux ; ils vont dans la sauvegarde.
+
+### La voie D du jeton (spec §6.4, tâches 2 et 6)
+
+- Pour lire les morceaux d'une playlist touchée **après** l'affichage de la liste du compte, `finirConnexion` rend `{ liste, lireMorceaux }`. `lireMorceaux(id)` est une fermeture qui détient le jeton : elle ne sert qu'**une fois**, expire après **10 minutes**, et l'écran l'oublie en se démontant. **Le jeton n'est jamais écrit** : ni en base, ni dans `localStorage`, ni dans `etatApp`, ni dans une sauvegarde.
+- **Rien n'est écrit avant la réponse des morceaux.** Avec des morceaux : la playlist touchée est notée avec eux (`choisirSpotify`). `morceaux` : elle est notée sans eux, avec le message. Une coupure du réseau ou une réponse d'une autre forme : rien n'est écrit, la fermeture reste valable, on peut retoucher. `expiree` ou `refus` : rien n'est écrit, le message invite à recommencer. Après tout choix écrit, « Annuler » rend les refuges d'avant ; quitter les réglages ferme ce toast.
+- Le but de la connexion (`choisir` ou `maj`) et la playlist d'une mise à jour vont dans l'attente PKCE, `carnet:spotify:attente` ; une attente sans but vaut `choisir`.
+- **`CLAUDE.md`**, ligne « Zéro réseau » : l'exception dit « Mettre à jour la liste » et `v1/playlists/{id}/items`, et « aucun jeton n'est gardé (jamais écrit ; en mémoire le temps de choisir une playlist, 10 min au plus) ». Une ligne nouvelle dit l'accent vert et les couleurs réservées aux émotions.
+
+### Le format 9 (tâche 1)
+
+- `morceaux: [{ id, titre, artiste }]` et `suite: true`, sur **une seule** ligne de `refuges.playlists`, la première qui en a et dont le lien est une playlist Spotify, présents seulement s'ils ne sont pas vides ; 200 morceaux au plus ; une clé inconnue est perdue. Un lien changé vers une autre playlist perd les morceaux ; un nom changé, ou le même lien recollé, les garde.
+- `FORMAT_VERSION = 9`, `MISES_A_NIVEAU[8]` ne transforme rien. Le témoin `format-8.json` est écrit par la v11.0.0 ; les témoins 1 à 7 restent identiques. Les formats 1 à 9 s'importent ; une sauvegarde abîmée ou écrite à la main est remise en forme sans erreur (point de vigilance 2).
+
+### La nouvelle version dans Safari (tâche 8)
+
+- Hors de l'app installée (`estModeApp()` faux), sur le guide, une nouvelle version qui attend s'applique seule (`appliquerMaj()`) : une fois, puis un seul rechargement, jamais en boucle. Jamais sur la page du code de Spotify, où un rechargement perdrait le code. Dans l'app installée, rien ne change : le bandeau reste.
+- Ce correctif ne joue qu'à partir de la v12 : une page de la v11 encore ouverte dans Safari ne l'a pas.
+- **L'Aide iPhone**, « Changer d'icône sans rien perdre » : l'étape Safari commence par « Dans Safari, ferme l'onglet d'Emozio s'il est ouvert, puis rouvre l'adresse : la page se met à jour. », au lieu de toute mention du bandeau. Le texte de la spec v12, accepté par l'utilisateur, l'emporte sur les étapes de la spec v11 (commentaire de `aide-iphone.js`).
+
+### Contrôle global (tâche 9)
+
+- **Le test de contrôle** (`v7-controle.spec.js`) parcourt 99 écrans, contre 97 en v11 (s'ajoutent les réglages de Mes refuges et un jour de Mes jours touché ; Mes refuges, Moment difficile et le Diagnostic y ont leurs morceaux). En clair et en sombre : contraste 4,5:1, ni tirets, aucun choix fait sans coche, aucun rond à l'accent, aucune trace d'accent dans les graphiques, les écrans de l'émotion et « Réveil la nuit », aucun lien vert sur `--surface-2` en clair, aucune violation de la CSP.
+- **Le débordement de côté, tous les écrans, en clair et en sombre**, au texte par défaut, en grand texte (23 px) et en très grand texte (33, 40, 47 et 53 px) : rien ne sort de l'écran, sauf sur 22 écrans hérités, et seulement à partir de la taille où ils débordaient déjà en v11 (`HERITES`). Relevé avec le même test sur le code de la v11 : la v12 n'en ajoute aucun ; Aujourd'hui et le soir (six écrans) ne débordent plus qu'à partir de 47 px, contre 40, Réglages › Rappels plus du tout (tâche 8), et Réglages (avec le bandeau ou la confirmation « Revenir ») qu'à 53 px, contre 40. La liste est exacte : un écran qui se met à déborder, ou plus tôt, fait échouer le test.
+- **Le premier correctif que ce contrôle exigeait** : à 53 px, le titre « Avec qui, comment c'était · Mouvement » de l'Analyse sortait de l'écran (page de 399 px). Le titre de section de Ma journée, en 22/28 et 700 (spec §5.2), vaut aussi pour l'Analyse, plus large que le 600 de la v11 : « Mouvement » ne tenait plus. Un mot qui ne tient plus sur une ligne entière s'y coupe (`overflow-wrap: anywhere`) : à 53 px, « Mouveme » puis « nt ». Rien ne change aux tailles où le mot tient.
+- **Le second correctif** : dans Réglages › À propos, la ligne « Version » (« 12.0.0 · » et l'empreinte de la version) sortait de l'écran à partir de 40 px, de 4 px en v11. Les lettres de l'empreinte n'ont pas la largeur fixe des chiffres : selon l'empreinte, la ligne débordait à 40 ou à 47 px, et le contrôle aurait changé à chaque version. Elle passe à la ligne (`overflow-wrap: anywhere`) ; Réglages ne déborde plus qu'à 53 px, par son grand titre, comme en v11. Les autres valeurs d'À propos collaient à leur libellé dès 40 px (« Stockage protégé » et « non ») : chaque valeur en reste à 8 px au moins. Un test essaie les empreintes des plus étroites aux plus larges, de 33 à 53 px, et mesure ces écarts.
+- **Aucune trace des 12 couleurs de rubrique** dans `public/` : ni leurs 126 valeurs de la v11 (hors deux, partagées avec Dégoût et Peur), ni leurs noms, ni une classe `teinte-` (`jetons.test.js`).
+- **Captures**, dans WebKit à 390 × 844, en clair et en sombre, gardées hors du dépôt, comparées aux maquettes : Aujourd'hui, Mes refuges et ses réglages, Moment difficile, Bien-être, l'Analyse, Réglages, un épisode rouvert, la carte des émotions sans accent, l'Analyse à 53 px, son titre passé à la ligne, et Réglages › À propos à 40 et 53 px, la version passée à la ligne, chaque valeur à distance de son libellé. La maquette est en violet, l'app en vert, avec la coche : c'est la spec. Rien d'autre à corriger.
+- **Version 12.0.0** (package.json, precache) ; `node scripts/temoins.mjs --verifier` passe.
+
+### Écarts au texte de la spec
+
+- **§6.3, `fields`** : la page des morceaux est demandée sans `fields`. La référence de Spotify « Get Playlist Items » ne montre aucun exemple de `item(…)` ; dans le doute, la lecture reste tolérante (`entree.item ?? entree.track`) et ne filtre pas.
+- **§6.2, la note sous un lien incertain** : « Ce lien peut ne rien ouvrir depuis Emozio. », au lieu de « risque » (`tests/aides/mots-interdits.js`, spec §4).
+- **§6.1, « Coller le code de Spotify »** : tant qu'une demande de connexion attend son retour, Mes refuges, vide ou plein, montre ce lien vers le champ du code des réglages : la page du code (« colle-le dans Mes refuges ») mène ainsi quelque part (relecture de la tâche 6).
+- **Le très grand texte des écrans hérités** (spec §3) : hors de la v12, il n'est pas corrigé (voir « Contrôle global »).
+
+### En attente de l'utilisateur
+
+- **La recette de l'iPhone**, « v12 » : Détente et un morceau, la lecture, ce qui joue après, la forme « dans sa playlist », « Mettre à jour la liste », le vert, la page du soir, l'ajout depuis Safari.
+- **Spotify** : à la première connexion de la v12, la page de Spotify peut redemander son accord, car la v12 demande aussi le droit de lire les playlists collaboratives. Si Détente n'est pas à lui, Spotify ne donne pas ses morceaux : le message le dit, la playlist reste notée et s'ouvre toujours ; il peut la copier dans une playlist à lui. L'app reste en mode développement chez Spotify (5 utilisateurs au plus, son propriétaire doit avoir Premium), à la merci d'un prochain changement de règles.
+- **La forme d'un morceau** : si « Morceau dans sa playlist » enchaîne sur Détente au Diagnostic, une version suivante pourra la prendre par défaut.
+- **Installer la v12** : une page de la v11 encore ouverte dans Safari n'a pas le correctif ; fermer l'onglet puis rouvrir l'adresse.
+- **`--danger`** rouge, et les autres appels du concepteur (plus haut), à relire.
+- **Les textes nouveaux** (plus bas) sont des propositions, à relire après la publication.
+- **Les points de la v10 et de la v11 restent ouverts** (spec §3) : le ▶ d'un favori, l'épingle du Programme, le très grand texte des écrans hérités (la liste `HERITES`), et les autres points de l'entrée v11.0.0.
+- **Hors de la v12** (spec §3) : la confiance et l'estime de soi, jouer la musique dans Emozio ou commander Spotify, les pochettes, un réglage de couleur d'accent, l'export PDF et la page A4 (palette claire, B3), ce qui touche à une commercialisation, les pistes créatives écartées.
+
+### À essayer sur l'iPhone
+
+Le détail, à cocher, est dans `docs/recette-iphone.md`, « v12 ».
+
+### Textes nouveaux à relire après la publication
+
+Écrits pour Emozio, d'après la spec et le plan. Un texte se corrige dans le fichier indiqué ; les identifiants ne changent pas.
+
+- **Mes refuges** (`ui/ecrans/refuges.js`, `ui/composants/refuges.js`) : « Modifier », « Un toucher ouvre Spotify. », « La suite est dans Spotify. », « Choisis ta playlist dans ton compte Spotify, ou colle son lien. », « Coller un lien », « Coller le code de Spotify » ; pour VoiceOver, « Morceaux de Détente » (le nom de la playlist).
+- **Ses réglages** (`ui/ecrans/refuges-reglages.js`) : « Réglages de Mes refuges », « Changer de playlist », « Mettre à jour la liste », « Ce lien peut ne rien ouvrir depuis Emozio. », « Playlist choisie » et « Annuler ».
+- **Les messages de Spotify** (`ui/composants/refuges.js`) : « Spotify ne donne pas les morceaux de cette playlist : seule une playlist à toi les donne. Elle reste notée. Dans Spotify, tu peux la copier dans une playlist à toi. », « La connexion a expiré : touche « Choisir dans mon compte » de nouveau. » (ou « Changer de playlist »), « La connexion n'a pas abouti. Ta liste reste. », « Spotify refuse cette connexion. Ta liste reste. ».
+- **Le Diagnostic** (`ui/ecrans/diagnostic.js`, `domain/refuges.js`) : « Ouvrir un morceau », « Morceau seul », « Morceau dans sa playlist », « Le premier morceau de Mes refuges. À noter : où ça s'ouvre, si la lecture démarre, ce qui joue ensuite, où on revient. », « Aucun morceau noté dans Mes refuges. ».
+- **L'Aide iPhone** (`ui/ecrans/aide-iphone.js`) : « Dans Safari, ferme l'onglet d'Emozio s'il est ouvert, puis rouvre l'adresse : la page se met à jour. Ensuite, Partager › Sur l'écran d'accueil. Le nom, « Emozio », reste modifiable dans l'aperçu. Si l'aperçu montre la nouvelle icône, Ajouter. Sinon, annule et recommence. ».
+- **Aujourd'hui** (`ui/composants/entete-jour.js`) : la date en capitales au-dessus du grand titre, et pour un autre jour, « Mercredi 14 » sous le mois.

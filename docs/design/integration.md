@@ -8,12 +8,14 @@ d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
 
 - **Jetons** (`public/css/tokens.css`) : palette sable et ardoise, plus une couleur par rubrique
   (`--c-*` plein, `--t-*` teinte). Ce sont des repères, jamais une valeur bonne ou mauvaise. Contrastes
-  plein sur teinte de 5,1:1 à 8,4:1. Le sombre suit le réglage de l'iPhone.
+  plein sur teinte de 5,1:1 à 8,4:1. Le sombre suit le réglage de l'iPhone. Levé en v12 : une base neutre
+  façon iOS et une seule couleur d'accent, le vert ; les rubriques n'ont plus de couleur (voir la section v12).
 - **Typographie** : titres en serif système (New York) jusqu'à la v7, en police système ensuite ; texte en SF Pro. Les tailles sont en rem sur
   une base de 17 px. Sur iPhone seulement, cette base suit la taille du texte d'iOS (Dynamic Type).
-- **Icônes** : une seule famille au trait (`public/js/ui/icones.js`), tracés de la maquette.
+- **Icônes** : une seule famille au trait (`public/js/ui/icones.js`), tracés de la maquette. En v12, l'onglet actif
+  prend une icône pleine.
 - **Sélection** : fond plein de la rubrique, graisse 600 et rayon qui passe de 12 à 22. La sélection
-  ne repose jamais sur la couleur seule.
+  ne repose jamais sur la couleur seule. En v12 : l'aplat de l'accent vert, sa coche gardée, rien ne change de taille.
 - **Écrans** : Aujourd'hui (rubriques teintées, résumé dans l'en-tête), parcours Épisode et Symptôme
   (phrase résumé, question en serif jusqu'à la v7, glissement entre étapes, récapitulatif en carte), Historique
   (puces par rubrique, loupe, filtres en pastilles), Soins (carte du prochain rendez-vous, questions
@@ -55,7 +57,7 @@ d'analyse, export PSY, Dicter, vrai micro, sauvegarde ZIP).
 
 Tous les points ci-dessous sont validés tels qu'intégrés.
 
-1. Les couleurs de rubrique, surtout sport (olive, proche du vert) et explosions (ambre).
+1. Les couleurs de rubrique, surtout sport (olive, proche du vert) et explosions (ambre). Levé en v12 : les rubriques n'ont plus de couleur.
 2. Le mode « En consultation » : c'est une fonction nouvelle, absente du cahier des charges.
 3. Le parcours « Pas à pas » : c'est un mode de saisie de plus, avec 9 touchers au lieu de 7.
 4. Les intitulés du symptôme : la maquette dit « Symptôme » et « Durée », l'app garde « Quel symptôme ? »
@@ -134,3 +136,17 @@ Aucun écran de la v11 n'est dessiné par Claude Design. Spécification : `docs/
 - **Mes gratitudes** : la forme de « Mes points positifs », à sa couleur. **Mes refuges** : un écran de Bien-être en champs et cartes groupées, une ligne par playlist avec l'icône `musique` et l'icône de sortie au trait. **La porte « Épisodes »** : le carré des épisodes, à côté d'« Historique ».
 - **L'icône** : la piste B, « Les quatre zones », sur fond noir, avec le nom « Emozio » dessous (manifest, `apple-mobile-web-app-title`) ; `theme-color` `#e7eaee` en clair, `#000000` en sombre.
 - **Vérification** : captures (WebKit, 390 × 844, clair et sombre, jusqu'à 53 px de texte), hors dépôt, et le test de contrôle étendu aux écrans de la v11.
+
+## v12 : un design simple façon Apple, l'accent vert et la fin de la palette 2b (09/11)
+
+Aucun écran de la v12 n'est dessiné par Claude Design : la « proposition finale », validée par l'utilisateur le 09/11, est une maquette faite avec lui (`.superpowers/v12/maquettes/`, hors dépôt). Spécification : `docs/superpowers/specs/2026-11-09-emozio-v12-design.md` ; le détail est dans `docs/decisions.md`, à l'entrée du 09/11.
+
+- **La palette 2b prend fin** : plus de couleur par rubrique ni par parcours (les 12 couleurs du lot, la rampe du sommeil, les `.teinte-*`, `--r-icone`). La base est neutre, comme iOS : en clair, un fond gris très pâle (`--bg` #F2F2F7) et des cartes blanches ; en sombre, un fond noir et des cartes gris foncé (#1C1C1E). `--barre` pour la bande du bas et les onglets, `--contour` pour ce qui se touche sans être choisi (3:1 au moins), `--piste` et `--fenetre` pour la roue.
+- **Une seule couleur d'accent, le vert « B »** : #1C7D36 et texte blanc en clair, #30D158 et texte noir en sombre. Il veut dire « choisi » ou « agir », jamais une valeur ni « fait » : un choix fait, le bouton principal, l'onglet actif, les liens et les icônes qui ouvrent quelque chose. Jamais un rond ni un point (ils appartiennent aux émotions), jamais sur `--surface-2` pour un lien en clair (4,49:1, sous 4,5).
+- **Ce qui reste coloré** : les 4 zones, la couleur d'un relevé ; les 7 familles, dans les agrégats de l'Analyse et Réglages › Émotions ; l'accent ; `--danger`, rouge comme sur iOS.
+- **Les choix** : non faits, transparents au contour, en 400 ; faits, en aplat d'accent, le texte en 600 et **la coche gardée**, contre la maquette. Rien ne change de taille au toucher.
+- **Aujourd'hui** : l'en-tête façon App Store (la date en sur-titre, en capitales, au-dessus d'un grand titre en gras, plafonné en très grand texte), des cartes sans carré coloré, l'icône de la rubrique en gris ; la bande du bas sur `--barre`, « Émotion » seul en aplat ; les onglets sur `--barre`, l'actif en vert avec son icône pleine. La page du soir grandit de 105 px.
+- **Les graphiques** sont à l'encre (`--donnee*`), jamais à l'accent : la couleur n'y dit qu'une émotion. Les séries restent distinctes par leur place, leur forme et une rampe à 3 pas.
+- **Les écrans de l'émotion et « Réveil la nuit » n'ont pas d'accent** : leurs actions restent à l'encre. **La maquette est en violet**, avec un accent sur ces écrans : la spec l'emporte, vert partout ailleurs, aucun accent ici.
+- `theme-color` : #F2F2F7 en clair, #000000 en sombre ; le manifest prend le clair.
+- **Vérification** : captures (WebKit, 390 × 844, clair et sombre, en très grand texte pour les écrans touchés), hors dépôt, et le contrôle global sur tous les écrans, en clair et en sombre, jusqu'à 53 px de texte.

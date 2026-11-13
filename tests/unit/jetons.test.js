@@ -150,6 +150,50 @@ test('v12 : les rubriques n\'ont plus de couleur : ni --c-<rubrique>, ni --chart
   assert.deepEqual(teintes.map(([n]) => n), ['danger']);
 });
 
+// v12 (9/9), contrôle global : les 12 couleurs de rubrique du lot 2b et la rampe du sommeil, telles que la v11.0.0 les
+// déclarait (six rôles en clair, quatre en sombre), ne reviennent nulle part dans public/ : ni leurs valeurs (écrites en dur
+// dans une feuille, un écran, une icône ou le manifest), ni leurs noms, ni une classe teinte-. Deux valeurs sont aussi celles
+// d'une famille d'émotion, qui les garde (le texte posé sur Dégoût et sur Peur) : elles ne comptent pas.
+const LOT_2B = {
+  lieu: '#937c61 #cfb69a #171008 #f6ede2 #ecddcd #67543e #ccb397 #261c11 #362919 #d0baa1',
+  sommeil: '#5f74e4 #829afc #0e111b #e9eeff #d5dffe #3d4daa #9fb3fc #161c36 #20284b #a7bafe',
+  contact: '#1090a3 #27d0eb #071417 #d5f5fc #b6eaf5 #0c6371 #1fcde8 #002228 #00323a #1fd4f0',
+  sport: '#279936 #6bd672 #0c140c #e1f5e0 #caeaca #046b1b #68d36f #0c230d #133416 #7bd77f',
+  traitement: '#8c6aca #b392f6 #131019 #f0ebff #e3dafb #624595 #c1a6fc #221b31 #2f2543 #c7aefe',
+  positifs: '#938013 #efd127 #141207 #f4efd5 #e9e1b7 #665801 #d2b723 #241e00 #332b01 #d8be34',
+  humeur: '#ca4b85 #ff88b9 #190e12 #fee7ef #ffd1e1 #93285c #ff8ebc #311420 #441c2d #fe9ac2',
+  episode: '#b156b7 #dc7ee2 #160f16 #fbe7fc #f3d4f4 #803385 #ed8ef3 #2b162c #3b1f3d #ee9af3',
+  symptome: '#02967c #1ae7c2 #081511 #d7f7ed #baecdd #056755 #0dd5b2 #00241c #00342a #09dcb8',
+  difficile: '#5885ab #85b4dc #0a131a #e5f0fa #d1e2f1 #365c7b #8ebde6 #141f29 #1d2d3b #9ac3e7',
+  energie: '#b96a00 #fca34c #181008 #ffeada #fbd8bb #804802 #fc9e3f #301903 #422301 #fea753',
+  explosions: '#a7725a #c79077 #190f0a #f9ebe5 #f0dad1 #784c38 #e2a88f #281a14 #39261e #e4b19a',
+  'chart-sommeil': '#c5d0f3 #7e93e2 #4455c2 #394473 #6073c7 #9fb3fe',
+};
+
+test('v12 : aucune trace des 12 couleurs de rubrique du lot 2b dans public/ : ni leurs valeurs, ni leurs noms, ni une classe teinte-', () => {
+  assert.equal(Object.keys(LOT_2B).length, 13);
+  const emotions = new Set(THEMES.flatMap(([, t]) => Object.entries(t).filter(([n]) => /^c-(emo|zone)-/.test(n)).map(([, v]) => String(v).toLowerCase())));
+  const valeurs = Object.values(LOT_2B).flatMap((l) => l.split(' '));
+  assert.equal(valeurs.length, 12 * 10 + 6);
+  const gardees = valeurs.filter((v) => emotions.has(v));
+  assert.deepEqual(gardees, ['#131019', '#190f0a']);
+  const retirees = valeurs.filter((v) => !emotions.has(v));
+  const fichiers = lister(join(RACINE, 'public'), (p) => /\.(css|js|html|svg|webmanifest|json)$/.test(p) && !p.includes('/vendor/'));
+  assert.ok(fichiers.some((f) => f.endsWith('manifest.webmanifest')) && fichiers.some((f) => f.endsWith('.svg')) && fichiers.length > CSS.length + JS.length);
+  const noms = new RegExp(`--c-(${Object.keys(LOT_2B).filter((n) => n !== 'chart-sommeil').join('|')})\\b|--chart-sommeil|\\bteinte-[a-z]|\\bteinte=`, 'g');
+  const fautes = [];
+  for (const f of fichiers) {
+    const texte = lire(f).toLowerCase();
+    for (const v of retirees) if (texte.includes(v)) fautes.push(`${rel(f)} : ${v}`);
+    for (const m of texte.matchAll(noms)) fautes.push(`${rel(f)} : ${m[0]}`);
+  }
+  assert.deepEqual(fautes, []);
+  // Le contrôle voit bien un nom revenu, et le vert du sport parmi les valeurs cherchées.
+  assert.ok(retirees.includes('#279936') && retirees.includes('#4455c2'));
+  assert.ok(['<div class="carte teinte-sport">', 'color: var(--c-sport-fill)', 'stroke: var(--chart-sommeil-2)', 'teinte=${t}'].every((x) => x.match(noms)));
+  assert.ok(!'--c-emo-joie-fill --c-zone-vert'.match(noms));
+});
+
 // v12, point de vigilance 3 : les écrans de l'émotion (.moment-plein) et « Réveil la nuit » (.ecran-noir) n'ont aucun
 // accent. Leurs règles redéclarent --accent, --sur-accent, --accent-texte, --action et --action-on à l'encre (des gris
 // sans teinte, dans les deux thèmes), et aucune feuille ne lit l'accent dans ces écrans.

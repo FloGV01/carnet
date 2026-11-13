@@ -48,7 +48,8 @@ import { stabiliser, contrastesFaibles, ciblesPetites, motsInterdits, ecouterMou
 // v12 (5/9) : sur chaque écran du parcours, l'accent vert reste à sa place (spec §5.3, §5.5 et §5.6) : aucun rond sans texte ni
 // icône ne l'a pour fond ou pour contour, aucun graphique, écran de l'émotion ni « Réveil la nuit » n'en a de trace, et en clair,
 // aucun lien vert ne se pose sur --surface-2. Le parcours passe aussi par un jour de Mes jours touché, son détail ouvert.
-// Réglages et Le soir ont des icônes sans carré.
+// Réglages et Le soir ont des icônes sans carré. v12 (9/9) : le débordement de côté, sur le parcours entier, en clair et en
+// sombre, jusqu'au très grand texte (33 à 53), hors des écrans hérités de la v11 (HERITES), à partir de leur taille d'alors.
 // Horloge : jeudi 15 octobre 2026, 21:00.
 const { clair, sombre } = jetons(readFileSync(new URL('../../public/css/tokens.css', import.meta.url), 'utf8'));
 const rgb = (hex) => `rgb(${canaux(hex).join(', ')})`;
@@ -649,20 +650,42 @@ test('le contrôle du mouvement voit ce qui a déjà fini de bouger : une animat
   expect(await essais(), 'la liste se vide à chaque contrôle').toEqual([]);
 });
 
-test('à 390 px, au texte par défaut et en grand texte (23 px), rien ne sort de l\'écran de côté', async ({ page }) => {
-  test.setTimeout(240000);
-  const fautes = await parcourir(page, 'light', async () => {
-    const f = [];
-    for (const taille of [null, 23]) {
-      if (taille) await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}px`; }, taille);
-      await stabiliser(page);
-      f.push(...(await debordements(page)).map((x) => `${taille ? `${taille} px` : 'défaut'} : ${x}`));
-    }
-    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
-    return f;
+// v12 (9/9) : le parcours entier, en clair et en sombre, au texte par défaut, en grand texte (23 px) et en très grand texte
+// (33, 40, 47 et 53 px). Jusqu'à 23 px, rien ne sort de l'écran de côté, nulle part. En très grand texte non plus, sauf sur les
+// écrans hérités (HERITES), et seulement à partir de la taille où ils débordaient déjà en v11 : leur très grand texte est hors de
+// la v12 (spec v12 §3 ; docs/decisions.md, v10 et v11, « En attente de l'utilisateur »). Relevé avec ce même test sur le code de
+// la v11 (f5b6c8b) : la v12 n'en ajoute aucun ; Aujourd'hui et le soir (six écrans) ne débordent plus qu'à partir de 47 px, contre
+// 40, Réglages › Rappels plus du tout (tâche 8), et Réglages (avec le bandeau ou la confirmation « Revenir ») qu'à 53 px, contre 40 :
+// la version et son empreinte y passent à la ligne. Sans cela, la taille où Réglages débordait dépendait des lettres de l'empreinte,
+// donc de chaque version. La liste est exacte : un écran qui se met à déborder, ou plus tôt, échoue ; un écran hérité qui déborde
+// plus tard, ou plus du tout, doit y être mis à jour. Le soir entier à 33 px a aussi son test, plus bas.
+const HERITES = {
+  'Aujourd\'hui': 47, 'Aujourd\'hui, Sport en détail': 47, 'Épisode, étape 1': 33, 'Épisode rouvert': 33, 'Historique': 53, 'Historique, filtres': 53,
+  'Le soir, trois roues vides': 47, 'Le soir, trois roues notées': 47, 'Le soir, Sport et Contact en détail': 47, 'Le soir, Mes gratitudes': 47,
+  'Épisode rouvert, Ce que j\'en retiens': 33, 'Confirmation « Revenir »': 53, 'Soins, Rendez-vous': 47, 'Soins, Traitement': 40, 'Rendez-vous': 47,
+  'Confirmation': 47, 'En consultation': 40, 'Traitement': 47, 'Vue soignants': 47, 'Réglages': 53, 'Réglages › Émotions, Mes mots': 53,
+  'Bandeau de mise à jour': 53,
+};
+for (const schema of ['light', 'dark']) {
+  test(`à 390 px ${schema === 'light' ? 'en clair' : 'en sombre'}, au texte par défaut, en grand texte (23 px) et en très grand texte (33 à 53), rien ne sort de l'écran de côté, hors des écrans hérités, à partir de leur taille de la v11`, async ({ page }) => {
+    test.setTimeout(600000);
+    const debordants = {};
+    const fautes = await parcourir(page, schema, async (nom) => {
+      const f = [];
+      for (const taille of [null, 23, 33, 40, 47, 53]) {
+        await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+        await stabiliser(page);
+        const d = await debordements(page);
+        if (d.length && taille >= 33 && !debordants[nom]) debordants[nom] = taille;
+        if (!(taille >= HERITES[nom])) f.push(...d.map((x) => `${taille ? `${taille} px` : 'défaut'} : ${x}`));
+      }
+      await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+      return f;
+    });
+    expect(fautes).toEqual({});
+    expect(debordants, 'les écrans hérités, et la taille où ils commencent à déborder').toEqual(HERITES);
   });
-  expect(fautes).toEqual({});
-});
+}
 
 // v11 (8/11) : la capsule du mot choisi, à la carte du bas (elle reste dans la carte, avant la flèche) et à l'écran 3 (elle tient
 // dans l'écran, et son texte, qui passe à la ligne s'il le faut, y reste). Rien ne défile de côté. En sombre, sans capsule, le
@@ -745,6 +768,34 @@ test('très grand texte (33 à 53) : l\'Analyse et Comprendre, replis et tableau
       f.push(...await page.locator('main figure.graphe').evaluateAll((gs) => gs.filter((g) => g.scrollHeight > g.clientHeight + 0.5).map((g) => `défile en hauteur : ${g.textContent.slice(0, 30)}`)));
       if (f.length) fautes[`${route}, ${taille} px`] = f;
     }
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  expect(fautes).toEqual({});
+});
+
+// v12 (9/9) : la ligne « Version » de Réglages › À propos montre l'empreinte de la version, dont les lettres n'ont pas la largeur
+// fixe des chiffres. Quelle que soit l'empreinte, des plus étroites aux plus larges, elle ne sort pas de l'écran en très grand
+// texte (33 à 53) : elle passe à la ligne, à 8 px au moins de son libellé. Sans cela, HERITES changerait d'une version à l'autre.
+// Les autres valeurs d'À propos (« non » de « Stockage protégé », « 160,1 ko »…) restent aussi à 8 px au moins de leur libellé.
+test('très grand texte (33 à 53) : la ligne « Version » de Réglages passe à la ligne, quelle que soit l\'empreinte ; aucune valeur d\'À propos ne touche son libellé', async ({ page }) => {
+  test.setTimeout(120000);
+  await aller(page, '#/reglages');
+  const version = page.locator('.a-propos .version-app');
+  await expect(version).toHaveText(/^\d+\.\d+\.\d+ · [0-9a-f]{12}$/);
+  const lignes = page.locator('.a-propos .ligne-info:has(> span + span)');
+  await expect(lignes).toHaveCount(5);
+  const fautes = {};
+  for (const c of ['1', '0', 'f', 'a', 'd', 'e', 'b', 'c']) {
+    await version.evaluate((e, x) => { e.textContent = `12.0.0 · ${x.repeat(12)}`; }, c);
+    for (const taille of [null, 33, 40, 47, 53]) {
+      await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+      await stabiliser(page);
+      const f = await debordements(page, '.a-propos .ligne-info:has(.version-app)');
+      const ecarts = await lignes.evaluateAll((l) => l.map(({ children: [a, b] }) => [a.textContent.trim(), b.getBoundingClientRect().left - a.getBoundingClientRect().right]));
+      for (const [libelle, ecart] of ecarts) if (ecart < 7.5) f.push(`${libelle} : à ${Math.round(ecart)} px de son libellé`);
+      if (f.length) fautes[`${c} × 12, ${taille ? `${taille} px` : 'défaut'}`] = f;
+    }
+    await expect(version, 'l\'empreinte essayée est restée à l\'écran').toHaveText(`12.0.0 · ${c.repeat(12)}`);
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   expect(fautes).toEqual({});
