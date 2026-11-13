@@ -189,18 +189,39 @@ test('après minuit, « Encore jeudi jusqu\'à 4 h. » est sur la ligne du résu
 
 // v12 (8/9) : App s'abonne à l'état après son premier affichage. Une version qui attend, signalée entre les deux (dès le
 // démarrage, dans l'app installée), n'était pas vue : le bandeau ne paraissait pas. Ici, le signal part juste après le rendu
-// de main.js, avant les effets d'App.
+// de main.js, avant les effets d'App. Relecture de la tâche 8 : pour que le test échoue sans la correction, rien d'autre ne
+// doit réafficher App, avec tout l'état, entre son abonnement et le bandeau.
+// - Le premier lancement (viderBase) écrit la méta explosionsDepuis sans l'attendre (main.js). Écrite au chargement testé,
+//   son surChangement (etatApp.maj) réaffichait App, bandeau compris, même sans la correction : on l'attend avant de
+//   recharger.
+// - Les effets du premier affichage passent d'un seul tenant, ceux d'App en dernier (la racine, après ses enfants) ; le
+//   premier abonnement qui suit le signal ouvre ce passage. Aucun changement d'état ne doit suivre ce passage tant que le
+//   bandeau n'a pas paru. Celui d'Aujourd'hui (jourContexte), pendant le passage, arrive avant l'abonnement d'App.
 test('v12 : une version signalée juste après le premier affichage, avant l\'abonnement d\'App : le bandeau paraît', async ({ page }) => {
+  await page.waitForFunction(async () => Boolean(await window.__carnet.repo.meta.lire('explosionsDepuis')));
   await page.addInitScript(() => {
     new MutationObserver((_, obs) => {
       if (!window.__carnet || !document.querySelector('#app main')) return;
       obs.disconnect();
-      window.__carnet.etatApp.maj({ majDisponible: true });
+      const e = window.__carnet.etatApp;
+      e.maj({ majDisponible: true });
+      window.__apres = [];
+      let passage = 'attendu';
+      const { abonner, maj } = e;
+      e.abonner = (f) => {
+        if (passage === 'attendu') { passage = 'en cours'; queueMicrotask(() => { passage = 'fini'; }); }
+        return abonner(f);
+      };
+      e.maj = (x) => {
+        if (passage === 'fini' && !document.querySelector('.bandeau')) window.__apres.push(typeof x === 'function' ? 'fonction' : Object.keys(x).join('+'));
+        return maj(x);
+      };
     }).observe(document, { childList: true, subtree: true });
   });
   await page.reload();
   await expect(page.locator('.bandeau')).toBeVisible();
   await expect(page.getByText('Nouvelle version prête')).toBeVisible();
+  expect(await page.evaluate(() => window.__apres), 'changements d\'état entre l\'abonnement d\'App et le bandeau').toEqual([]);
 });
 
 test('bandeau « Nouvelle version prête » : son texte, puis ses deux boutons côte à côte, avec les zones sûres de l\'iPhone', async ({ page }) => {

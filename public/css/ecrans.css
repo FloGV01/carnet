@@ -355,14 +355,23 @@ rect:is(.g-sommeil-1, .g-energie-1) { stroke: var(--donnee-2); stroke-width: 1; 
 /* Le numéro d'une étape (« 3. », son espace comprise, environ 1 em) se pose dans le retrait, et peut mordre sur la marge de
    la page. v12 (relecture de la tâche 8) : 22 px ne suffisaient plus en très grand texte, et le numéro sortait de l'écran
    à gauche (« 3. » coupé dès 47 px). Le retrait suit alors le texte ; il reste de 22 px jusqu'à 33 px environ. */
-.etapes { margin: 0; padding-left: max(22px, 1.2em - var(--marge)); display: grid; gap: 12px; font-size: var(--t-corps); line-height: 1.45; }
-/* v12 (relecture de la tâche 8) : les textes de l'aide passent par pourAffichage, et un mot ne se sépare plus de ses
-   guillemets. En très grand texte (dès 43 px sur 390 de large), « « Concentration ». » ne tient plus sur une ligne :
-   la césure coupe alors les seuls mots longs (6 signes au moins de chaque côté, guillemets compris : « Emozio » reste
-   entier), au lieu que la page déborde de côté. « anywhere » ne sert que si l'iPhone ne sait pas couper. Au texte
-   courant et jusqu'à 40 px, rien ne change. */
+.etapes { margin: 0; padding-left: max(22px, 1.2em - var(--marge)); display: grid; gap: 12px; font-size: var(--t-corps); line-height: 1.45;
+  container: etapes / inline-size; }
+/* v12 (relecture de la tâche 8) : les textes de l'aide et du rappel passent par pourAffichage, et un mot ne se sépare plus
+   de ses guillemets. En très grand texte, sur 390 de large, « « Concentration ». » (Aide iPhone, dès 43 px) ou
+   « immédiatement » » (Rappels, dès 47 px) ne tient plus sur une ligne, d'autant que le retrait des étapes grandit. Sans
+   césure, le texte sortait de son bloc, puis la page débordait de côté (432 px de large à 53 px sur Rappels : relecture de
+   la tâche 8, deuxième passe). La césure coupe alors les seuls mots longs (6 signes au moins de chaque côté, guillemets
+   compris : « Emozio » reste entier). « anywhere » ne sert que si l'iPhone ne sait pas couper. Au texte courant et jusqu'à
+   40 px, rien ne change. Les étapes des deux pages (Aide iPhone et Rappels) se mesurent à leur propre colonne, retrait
+   déduit ; les titres et les notes de l'aide, à leur rubrique. */
+@container etapes (max-width: 8.5em) {
+  .etapes > li {
+    -webkit-hyphens: auto; hyphens: auto; -webkit-hyphenate-limit-before: 6; -webkit-hyphenate-limit-after: 6; overflow-wrap: anywhere;
+  }
+}
 @container rubrique (max-width: 9em) {
-  .aide-rubrique > .libelle-section, .aide-rubrique .etapes, .aide-rubrique .note-import {
+  .aide-rubrique > .libelle-section, .aide-rubrique .note-import {
     -webkit-hyphens: auto; hyphens: auto; -webkit-hyphenate-limit-before: 6; -webkit-hyphenate-limit-after: 6; overflow-wrap: anywhere;
   }
 }

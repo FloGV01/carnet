@@ -56,7 +56,8 @@ test('Sieste : la page dit que la Concentration et les sons restent allumés, et
 // efface ses données : aucune étape ne dit de supprimer quoi que ce soit avant la dernière, une fois la copie vérifiée.
 // Les étapes suivent le nom Emozio (accord de l'utilisateur du 07/11) : le nom sous l'icône se vérifie avec elle.
 // v12 (8/9, spec v12 §7) : l'étape Safari commence par la phrase de la spec v12, mot pour mot ; le bandeau n'existe pas dans
-// Safari, l'aide n'en parle pas.
+// Safari, l'aide n'en parle pas. Elle reste au tutoiement de cette phrase jusqu'au bout (relecture de la tâche 8 : elle
+// finissait par « Sinon, annuler et recommencer. », à l'infinitif de la v11).
 test('v11 : « Changer d\'icône sans rien perdre », les cinq étapes de la spec, rien à supprimer avant la dernière', async ({ page }) => {
   await aller(page, '#/reglages/aide-iphone');
   const icone = page.locator('section', { has: page.getByRole('heading', { name: 'Changer d\'icône sans rien perdre', level: 2 }) });
@@ -64,7 +65,7 @@ test('v11 : « Changer d\'icône sans rien perdre », les cinq étapes de la spe
   await expect(etapes).toHaveText([
     'Redémarrer l\'iPhone : l\'icône a peut-être changé. Si oui, et si son nom est « Emozio », c\'est fini.',
     'Dans l\'ancienne app : Réglages › Exporter, enregistrer dans Fichiers.',
-    'Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour. Ensuite, Partager › Sur l\'écran d\'accueil. Le nom, « Emozio », reste modifiable dans l\'aperçu. Si l\'aperçu montre la nouvelle icône, Ajouter. Sinon, annuler et recommencer.',
+    'Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour. Ensuite, Partager › Sur l\'écran d\'accueil. Le nom, « Emozio », reste modifiable dans l\'aperçu. Si l\'aperçu montre la nouvelle icône, Ajouter. Sinon, annule et recommence.',
     'Ouvrir la nouvelle app, Emozio, qui doit être vide : Réglages › Importer. Vérifier quelques jours dans l\'Historique.',
     'Ranger l\'ancienne app dans un dossier, et ne plus y écrire. La supprimer plus tard, ou jamais.',
   ]);
@@ -144,6 +145,20 @@ const lignesDeLaPage = (page) => page.evaluate(() => {
   return res;
 });
 
+// Les tailles mesurées : le texte par défaut, puis de 23 à 53 px (AX5).
+const TAILLES = [null, 23, 33, 40, 47, 53];
+const poserTaille = (page, taille) => page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+// Les fautes d'une mesure de lignesDeLaPage, à une taille donnée. « « Concentration ». » ou « immédiatement » », d'un tenant,
+// ne tiennent plus sur une ligne dès 43 px : la césure les coupe, en très grand texte seulement, plutôt que la page déborde de
+// côté. Jusqu'à 40 px, aucun mot n'est coupé ; « Emozio » ne l'est jamais.
+const fautesDe = (r, taille) => {
+  const coupes = taille && taille > 40 ? r.coupes.filter((m) => m === 'Emozio') : r.coupes;
+  const f = [...r.fautes, ...r.hors.map((x) => `hors de son bloc : ${x}`), ...coupes.map((m) => `mot coupé : ${m}`),
+    ...r.numeros.map((x) => `numéro hors de l'écran : ${x}`)];
+  if (r.largeur > 390) f.push(`page : ${r.largeur} px de large`);
+  return f;
+};
+
 test('v12 : les textes passent par pourAffichage ; du texte par défaut à 53 px, aucune ligne ne commence par « : » ni « » », aucune ne finit par « « », rien ne sort de côté', async ({ page }) => {
   await aller(page, '#/reglages/aide-iphone');
   await expect(page.getByRole('heading', { name: 'Aide iPhone', level: 1 })).toBeVisible();
@@ -153,22 +168,37 @@ test('v12 : les textes passent par pourAffichage ; du texte par défaut à 53 px
   for (const x of ['rouvre l\'adresse\u00a0: la page se met à jour', 'Le nom, «\u00a0Emozio\u00a0», reste modifiable', 'Concentration «\u00a0Moment difficile\u00a0»',
     'tout se règle dans l\'iPhone\u00a0: Emozio', 'micro sera sans doute à réautoriser.']) expect(texte).toContain(x);
   const fautes = {};
-  for (const taille of [null, 23, 33, 40, 47, 53]) {
-    await page.evaluate((t) => { document.documentElement.style.fontSize = t ? `${t}px` : ''; }, taille);
+  for (const taille of TAILLES) {
+    await poserTaille(page, taille);
     const ou = taille ? `${taille} px` : 'défaut';
     const r = await lignesDeLaPage(page);
     // L'étape Safari, là où la relecture l'a vue fautive : ses lignes ne commencent ni par « : » ni par « » ».
     expect(r.safari.length, `${ou} : les lignes de l'étape Safari`).toBeGreaterThan(taille ? 4 : 2);
     expect(r.safari.filter((l, k) => k > 0 && /^[:»]/.test(l)), `${ou} : étape Safari`).toEqual([]);
     if (taille === 53) expect(r.safari.some((l) => l.includes('« Emozio »')), '53 px : « Emozio » entier, avec ses guillemets').toBe(true);
-    // « « Concentration ». », d'un tenant, ne tient plus sur une ligne dès 43 px : la césure le coupe, en très grand texte
-    // seulement, plutôt que la page déborde de côté. Jusqu'à 40 px, aucun mot n'est coupé ; « Emozio » ne l'est jamais.
-    const coupes = taille && taille > 40 ? r.coupes.filter((m) => m === 'Emozio') : r.coupes;
-    const f = [...r.fautes, ...r.hors.map((x) => `hors de son bloc : ${x}`), ...coupes.map((m) => `mot coupé : ${m}`),
-      ...r.numeros.map((x) => `numéro hors de l'écran : ${x}`)];
-    if (r.largeur > 390) f.push(`page : ${r.largeur} px de large`);
+    const f = fautesDe(r, taille);
     if (f.length) fautes[ou] = f;
   }
-  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  await poserTaille(page, null);
+  expect(fautes).toEqual({});
+});
+
+// v12 (relecture de la tâche 8, deuxième passe) : les étapes de Rappels ont le même retrait que celles de l'Aide iPhone, qui
+// grandit en très grand texte, mais n'avaient pas sa césure. Leur colonne, plus étroite, faisait déborder les mots tenus à
+// leurs guillemets : « « Heure », « immédiatement » » ou « « Le » sortaient de leur bloc dès 47 px, et à 53 px la page
+// avait 432 px de large, le texte coupé au bord droit de l'écran. Même mesure que l'Aide, toute la page comprise : les
+// heures des rappels et les notes.
+test('v12 : Rappels, du texte par défaut à 53 px, aucune ligne ne commence par « : » ni « » », rien ne sort de côté, aucun numéro hors de l\'écran', async ({ page }) => {
+  await aller(page, '#/reglages/rappel');
+  await expect(page.getByRole('heading', { name: 'Rappels', level: 1 })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Heures des rappels' })).toBeVisible();
+  await expect(page.locator('main ol.etapes > li')).toHaveCount(4);
+  const fautes = {};
+  for (const taille of TAILLES) {
+    await poserTaille(page, taille);
+    const f = fautesDe(await lignesDeLaPage(page), taille);
+    if (f.length) fautes[taille ? `${taille} px` : 'défaut'] = f;
+  }
+  await poserTaille(page, null);
   expect(fautes).toEqual({});
 });
