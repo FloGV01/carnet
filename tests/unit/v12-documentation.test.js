@@ -76,6 +76,12 @@ test('docs/decisions.md : l\'entrée v12.0.0, la liste de la spec §8, ses écar
     '**Version 12.0.0**', '`node scripts/temoins.mjs --verifier`']) {
     assert.ok(controle.includes(x), `contrôle global : ${x}`);
   }
+  // Les 30 s du soir, la règle qui prime sur tout, ne sont chronométrées par aucun test : seule la hauteur est mesurée. L'entrée
+  // ne les donne pas pour acquises et renvoie à la recette, qui demande trois soirs en moins de 30 s (relecture de la tâche 9).
+  const cartes = section(v12, 'Les écrans (tâches 4 et 5)').split('\n').find((l) => l.startsWith('- **Les cartes du soir**'));
+  assert.ok(cartes.includes('rien n\'a changé de place ; les 30 s restent à vérifier sur l\'iPhone (recette v12, « La page du soir »)'), cartes);
+  assert.doesNotMatch(v12, /se remplit toujours en moins de 30 s/);
+  assert.match(sectionV12(doc('docs', 'recette-iphone.md')), /^- \[[ xX]\] \*\*La page du soir\*\* : trois soirs, chacun en moins de 30 s\./m);
   const ecarts = section(v12, 'Écarts au texte de la spec');
   for (const x of ['`fields`', '« Ce lien peut ne rien ouvrir depuis Emozio. »', '« Coller le code de Spotify »']) assert.ok(ecarts.includes(x), `écarts : ${x}`);
   const attente = section(v12, 'En attente de l\'utilisateur');
@@ -88,6 +94,29 @@ test('docs/decisions.md : l\'entrée v12.0.0, la liste de la spec §8, ses écar
     'Ta liste reste.', 'Dans Safari, ferme l\'onglet d\'Emozio s\'il est ouvert, puis rouvre l\'adresse : la page se met à jour.']) {
     assert.ok(textes.includes(x), `textes : ${x}`);
   }
+});
+
+// La règle de forme (spec §5.3) a son exception : un bouton rond qui porte une icône peut porter l'accent, et le ▶ du lecteur
+// (.bouton-lecture) est un disque à l'accent. Partout où la règle est écrite pour être suivie, l'exception la suit de près :
+// sinon une session qui lit « jamais un rond ni un point » retirerait l'accent du ▶ (relecture de la tâche 9).
+test('« jamais un rond ni un point » dit son exception, le bouton rond qui porte une icône, partout où la règle est écrite', () => {
+  const lieux = {
+    'CLAUDE.md': doc('CLAUDE.md'),
+    'docs/decisions.md, entrée v12.0.0': entreeV12(),
+    'docs/design/integration.md': doc('docs', 'design', 'integration.md'),
+    'public/css/tokens.css': doc('public', 'css', 'tokens.css'),
+  };
+  for (const [nom, texte] of Object.entries(lieux)) {
+    const plat = texte.replace(/\s+/g, ' ');
+    const occurrences = [...plat.matchAll(/jamais un rond ni un point/gi)];
+    assert.ok(occurrences.length > 0, `${nom} : la règle de forme absente`);
+    for (const o of occurrences) {
+      const suite = plat.slice(o.index, o.index + 300);
+      assert.ok(suite.includes('bouton rond qui porte une icône'), `${nom} : la règle sans son exception, « ${suite} »`);
+    }
+  }
+  const claude = doc('CLAUDE.md').split('\n').find((l) => l.startsWith('- **Une seule couleur d\'accent, le vert (v12).**'));
+  assert.ok(claude.includes('jamais un rond ni un point sans icône (seul un bouton rond qui porte une icône, comme le ▶ du lecteur, peut le porter)'), claude);
 });
 
 test('docs/decisions.md : les règles levées par la v12 sont annotées dans leurs entrées d\'origine (v7)', () => {

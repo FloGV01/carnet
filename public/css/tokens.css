@@ -40,7 +40,8 @@
   --rond-ombre: 0 1px 3px rgba(0, 0, 0, .10), 0 0 0 .5px rgba(0, 0, 0, .10);
   /* L'accent, le rendu B (spec §5.3) : l'aplat d'un choix fait ou d'une action, le texte et la coche posés dessus, et le
      texte d'un lien ou d'une icône qui ouvre quelque chose (AA sur le fond, la carte et la barre). Jamais un rond ni un
-     point : ronds et bulles appartiennent aux émotions. */
+     point sans icône : ronds et bulles appartiennent aux émotions ; seul un bouton rond qui porte une icône (le ▶ du
+     lecteur) peut le porter. */
   --accent: #1c7d36;
   --sur-accent: #ffffff;
   --accent-texte: #1c7d36;
